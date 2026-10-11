@@ -68,7 +68,7 @@ Don't worry about hitting a problem count. Being able to rewrite a solution days
 
 ## 4. Run the examples
 
-The core templates live in [patterns.py](code/patterns.py), require Python 3.10+, and use only the standard library. From the repository root:
+The templates in [patterns.py](code/patterns.py) and [deeper_patterns.py](code/deeper_patterns.py) run on Python 3.10+ with no third-party packages. Use **Python 3.11+** to run all the tests below: the tests read TOML configuration using [tomllib](https://docs.python.org/3.11/library/tomllib.html), which joined the standard library in 3.11. Run these commands from the repository root:
 
 ```bash
 python interview/code/patterns.py

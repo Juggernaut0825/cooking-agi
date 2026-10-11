@@ -52,6 +52,7 @@ import torch
 import torch.nn.functional as functional
 
 def ce_from_logits(logits, targets):
+    logits = logits.to(torch.promote_types(logits.dtype, torch.float32))
     shifted = logits - logits.max(dim=-1, keepdim=True).values
     log_partition = shifted.exp().sum(dim=-1).log()
     selected = shifted.gather(-1, targets.unsqueeze(-1)).squeeze(-1)
@@ -70,6 +71,10 @@ torch.testing.assert_close(
 ```
 
 这里没有先生成概率再取 `log`。后者可能先把很小的概率舍入成 0，再得到无穷大的 loss。实际训练优先用现成的稳定实现，手写代码是为了看清它在算什么。
+
+减去最大值只限制了每个指数项，还要留意**求和用什么精度**。例如 65,536 个 FP16 零 logits 对应的指数项全是 1；若求和结果仍存成 FP16，就会溢出，尽管正确 loss 只有 $\log 65536\approx11.09035$。因此代码先把 FP16/BF16 提升到 FP32 再计算，已有 FP64 则保留。这个转换不切断计算图：梯度仍回到原始 logits，并按原始 dtype 存储，不能因此免除低精度梯度的舍入或下溢。
+
+直接调用库函数也不等于自动开启 autocast：在本文核对的 PyTorch 2.8 CPU 上，直接给 `functional.cross_entropy` 传入上述 FP16 输入也会得到 `inf`；显式转 FP32，或在 CPU autocast 中调用库 CE，结果才是有限的。[2.8 的 CPU autocast 策略](https://docs.pytorch.org/docs/2.8/amp.html#cpu-ops-that-can-autocast-to-float32)会把库 CE 放到 FP32，但不会自动把任意手写 `exp → sum → log` 组合都提升。不同设备的策略不同，这里不把 CPU 结果外推到 CUDA。
 
 ## 硬标签和软标签，差在哪里？ {#soft-targets}
 
@@ -188,11 +193,14 @@ assert math.isclose(soft_mean.item(), 2 * math.log(2))
 
 先拿小张量检查，不急着跑大模型。本文代码能按顺序在 CPU 执行；更完整的[教学实现](../code/loss_contracts.py)还检查输入、空 mask、soft target 和一次 shift，配套[回归测试](../../site/tests/test_loss_contracts.py)包含梯度和极端数值对照。
 
+教学实现保留原有输入检查；检查通过后，软标签与 logits 的 CE 运算使用至少 FP32 的共同 dtype，任一输入为 FP64 就保留 FP64。不重新归一化或 detach 软标签，也不把 loss 转回低精度。提升精度不会恢复输入里已丢失的信息；忽略位置、有效 token 分母与一次 shift 的约定也不改变。
+
 | 检查 | 预期 |
 | --- | --- |
 | 所有 logits 加同一个常数 | CE 不变 |
 | 正确类别概率提高，目标不变 | 单样本硬标签 CE 下降 |
 | 用 one-hot 替代整数标签，且不加权 | loss 和梯度一致 |
+| FP16/BF16 的 65,536 类零 logits | 硬/软标签 loss 有限，原始 logits 的梯度与 FP32 对照一致（按原始 dtype 舍入） |
 | 增加不参与监督的 padding | 有效 token mean 不变 |
 | `z = −100, y = 1` 的 BCE | 有限 loss，仍有纠错梯度 |
 | 所有目标都被忽略 | 明确处理，不静默吞掉 NaN |

@@ -102,8 +102,10 @@ class Seq2SeqModel(nn.Module):
         return torch.stack(output, dim=1)
 
 
-def train_delay(kind: str, steps: int, delay: int = 8) -> None:
-    vocab_size, sequence_length, batch_size = 12, 28, 64
+def train_delay(kind: str, steps: int, delay: int = 8, sequence_length: int = 28) -> None:
+    if not 0 < delay < sequence_length:
+        raise ValueError("delay must satisfy 0 < delay < sequence_length")
+    vocab_size, batch_size = 12, 64
     model = DelayCopyModel(kind, vocab_size)
     optimizer = torch.optim.AdamW(model.parameters(), lr=3e-3)
     for step in range(1, steps + 1):
@@ -117,7 +119,7 @@ def train_delay(kind: str, steps: int, delay: int = 8) -> None:
         optimizer.step()
         if step == 1 or step % 50 == 0:
             accuracy = (logits.argmax(-1) == targets).float().mean().item()
-            print(f"step={step:4d} loss={loss.item():.4f} accuracy={accuracy:.3f}")
+            print(f"step={step:4d} loss={loss.item():.4f} train_accuracy={accuracy:.3f}")
 
 
 def train_reverse(kind: str, steps: int) -> None:
@@ -139,7 +141,7 @@ def train_reverse(kind: str, steps: int) -> None:
         if step == 1 or step % 50 == 0:
             generated = model.generate(source[:16], bos_id)
             accuracy = (generated == target[:16]).float().mean().item()
-            print(f"step={step:4d} loss={loss.item():.4f} greedy_accuracy={accuracy:.3f}")
+            print(f"step={step:4d} loss={loss.item():.4f} same_batch_greedy_accuracy={accuracy:.3f}")
 
 
 def main() -> None:
@@ -147,10 +149,16 @@ def main() -> None:
     parser.add_argument("--model", choices=("rnn", "lstm"), default="lstm")
     parser.add_argument("--task", choices=("delay", "reverse"), default="reverse")
     parser.add_argument("--steps", type=int, default=300)
+    parser.add_argument("--delay", type=int, default=8, help="delay task: positions to remember")
+    parser.add_argument("--length", type=int, default=28, help="delay task: input sequence length")
     args = parser.parse_args()
+    if args.steps < 1:
+        parser.error("--steps must be positive")
+    if args.task == "delay" and not 0 < args.delay < args.length:
+        parser.error("delay task requires 0 < --delay < --length")
     torch.manual_seed(7)
     if args.task == "delay":
-        train_delay(args.model, args.steps)
+        train_delay(args.model, args.steps, args.delay, args.length)
     else:
         train_reverse(args.model, args.steps)
 

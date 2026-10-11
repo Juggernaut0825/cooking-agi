@@ -4,31 +4,40 @@
 
 把上下文加长，只是允许模型接收更多输入。真正难的是：历史越来越长，哪些信息还要保留，下一步应该读哪些，以及这些取舍会不会损失任务需要的细节。
 
-这篇接着 [V2 / V3 / R1](deepseek.md) 往下读。先看注意力，再看残差和训练；不要把三个层面的变化混成一个“模型更强”。按 2026-10-08 的公开资料核对，不声称复现官方性能。
+这篇接着 [V2 / V3 / R1](deepseek.md) 往下读。先看注意力，再看残差和训练；不要把三个层面的变化混成一个“模型更强”。2026-10-10 核对范围是报告 v1 与 V4-Pro / V4-Flash preview 的公开配置和推理源码，不是对所有后续版本的概括，也不声称复现官方性能。
 
 ## 1. 两种注意力，各省哪一笔？
 
 [V4 模型卡](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro)介绍 CSA / HCA 混合架构：前者压缩后再稀疏选择，后者更重地压缩、读取压缩后的历史。它们交错安排在不同层，不是每层都先 CSA、再 HCA。两者都保留近处的滑动窗口。
 
+但不能把 Pro 和 Flash 画成完全一样。以下数值来自当天读取的配置；链接中的 `main` 会变化：
+
+| 配置项 | [V4-Pro config](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/main/config.json) | [V4-Flash config](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/main/config.json) |
+| --- | --- | --- |
+| 主干层数 `num_hidden_layers` | 61 | 43 |
+| 前两层 attention | HCA + 局部窗口 | 仅滑动窗口（SWA） |
+| CSA `index_topk` | 1024 | 512 |
+| 每个 MoE 层的 routed experts | 384 | 256 |
+
+两者的 CSA / HCA 压缩比例都是 4 / 128，局部窗口为 128；每 token 选 6 个 routed experts，另有 1 个 shared expert。前三个 MoE 层采用 token-ID hash 路由，而非内容 top-k；之后的 affinity 使用 `sqrtsoftplus`，不能直接照搬 V3 的 sigmoid。两者都配置 1 个额外 MTP 层；`compress_ratios` 最后的 `0` 对应这个纯 SWA 的 MTP 层，不是多出来的主干层。[配置解释所用源码：Gate / Transformer](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/main/inference/model.py)
+
 下面这张图只画历史的读法，省略投影、归一化和位置处理：
 
-```mermaid
-flowchart LR
-    A["历史隐藏状态"] --> B["CSA 层：较轻压缩"]
-    B --> C["选部分压缩条目"]
-    A --> D["HCA 层：较重压缩"]
-    D --> E["读全部压缩条目"]
-    F["最近的原始条目"] --> G["局部窗口"]
-    C --> H["当前层 attention"]
-    E --> H
-    G --> H
-```
+<figure class="worked-update worked-update--pairs" id="v4-history-paths" lang="zh-CN">
+  <figcaption>两种层配置：都保留局部窗口，远处的历史读法不同</figcaption>
+  <ol>
+    <li><strong>CSA 层</strong><span>历史状态 → 较轻压缩 → 选择部分条目。把选中条目与近期原始条目一起交给本层 attention。</span></li>
+    <li><strong>HCA 层</strong><span>历史状态 → 较重压缩 → 读取全部压缩条目。它们同样与局部窗口一起参与本层 attention。</span></li>
+  </ol>
+</figure>
 
 图里两条路代表**不同层的配置**，不是一个 head 把两套都跑一遍。CSA 的实际压缩有重叠：相邻块的两个投影参与合成，仍然每 m 个位置产出一个条目；不能把它误写成每 2m 个位置产出一个。细节见[报告 §2.3](https://arxiv.org/html/2606.19348v1#S2.SS3)。
 
+这里的主 attention 使用 shared-KV MQA，不是直接复用 V3 的 MLA 缓存公式。局部条目与压缩条目进入同一个归一化，分母还含可学习的 attention sink；不能分别 softmax 后直接相加。位置处理等细节仍以源码为准。
+
 ## 2. 算存储和算读取，要分开
 
-用自拟的小配置想一遍：历史 1,024 个位置，轻压缩比例 4，重压缩比例 128，稀疏读取 32 个条目，局部窗口 128。
+用一个缩小的记账例子想一遍：已处理 1,024 个位置，轻压缩比例 4，重压缩比例 128，稀疏读取 32 个条目，局部窗口 128。`history` 包含当前 query 所在位置；这是处理完该位置之后的账，而不是当前 token 之前的前缀长度。
 
 | 项目 | 轻压缩 + 选择 | 重压缩 + 全读 |
 | --- | --- | --- |
@@ -37,7 +46,7 @@ flowchart LR
 | 加上局部窗口的主 attention 条目数 | 最多 160 | 最多 136 |
 | 没算进去的部分 | 压缩器、indexer、投影、临时状态 | 压缩器、投影、临时状态 |
 
-这不是 V4 的实际配置，也不是延迟预测。原始 token 和压缩条目不是等量的信息，不能因为后者少就说它同样准确。并且**只读 32 个，不代表只存 32 个**：后续 query 可能选择别的条目。
+这里沿用 V4 的压缩比和窗口，但把 top-k 改成 32，不能当作实际 Pro / Flash 配置或延迟预测。原始 token 和压缩条目不是等量的信息，不能因为后者少就说它同样准确。并且**只读 32 个，不代表只存 32 个**：后续 query 可能选择别的条目。局部窗口与压缩块即使覆盖了同一段文本，也保留为不同条目；表中不是去重后的原始 token 数，也不计 sink 标量。
 
 ```python
 def attention_ledger(history, light_ratio, heavy_ratio, selected, window):
@@ -63,11 +72,13 @@ assert attention_ledger(1024, 4, 128, 32, 128)["heavy_main_reads"] == 136
 assert attention_ledger(9, 4, 128, 32, 128)["light_tail"] == 1
 ```
 
-这里按已完成块记账，尾部状态单列，未计其字节数。历史翻倍，压缩缓存通常仍会增长；固定大小的局部窗口并没有让整个系统变成常量空间。
+这里按已完成块记账，`light_tail` / `heavy_tail` 只表示当前未完成块的 token 数，不是完整的压缩器状态；CSA 还需要保留前一块的重叠状态。CSA 的 indexer 还会给可见的压缩候选打分，top-k 只限制后续主 attention 的读取，不能推出总计算是常数。历史翻倍，压缩缓存仍会增长；HCA 的主 attention 读取也会增加。
+
+算字节数还要区分论文方案和演示代码：报告 §2.3.4 讨论 RoPE 维度用 BF16、其余 KV 维度用 FP8；所读 `inference/model.py` 的演示缓存则以 BF16 保存并模拟量化。条目数不能直接证明实际显存占用。[报告](https://arxiv.org/html/2606.19348v1#S2.SS3.SSS4) · [推理源码](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/main/inference/model.py)
 
 ## 3. 两个容易藏住的错误
 
-**未来泄漏。** 用从 0 开始的位置，query 在 8，块宽 4。它可以用已经完成的 0–3、4–7 块，不能读取包含 8–11 的完整压缩块；后者含有未来。当前位置及附近可见内容由因果局部窗口处理。测试时，把未来 token 全部改掉，位置 8 的输出不应改变。
+**未来泄漏。** 用从 0 开始的位置，query 在 8，块宽 4：已经处理 9 个位置，有两个完成条目，不能读取包含 8–11 的完整压缩条目。对 CSA，第二个条目融合了 4–7 和前一块 0–3，不是只含 4–7；重叠不改变完成时间。所读源码按 `(query_position + 1) // block_width` 判断完成数量，因此在位置 7 就可以读取刚完成的第二个条目。测试应覆盖位置 3、4、7、8 等边界；改掉未来 token，不应改变当前位置的输出。当前位置及附近内容还由因果局部窗口保留。
 
 **不可逆的信息损失。** 假设一种简化压缩只保留均值，`[1, 9]` 和 `[5, 5]` 都变成 5。问“最大值是什么”，压缩之后就无法区分。V4 不是简单求均值，这个反例只是说明：压缩必须结合训练和任务验证，不能凭压缩比例推断质量。
 
@@ -81,7 +92,7 @@ $$
 X_{\ell+1}=B_\ell X_\ell+C_\ell F_\ell(A_\ell X_\ell).
 $$
 
-这里 $X$ 有多行残差流；$A$ 聚合输入，$F$ 是实际层，$C$ 把结果送回各流。$B$ 的非负元素、行和、列和受到约束；报告用有限次 Sinkhorn 归一化近似实现。[报告 §2.2](https://arxiv.org/html/2606.19348v1#S2.SS2)
+这里 $X\in\mathbb{R}^{n\times d}$ 有 $n$ 条残差流；$A\in\mathbb{R}^{1\times n}$ 聚合输入，$F$ 仍处理 $d$ 维向量，$C\in\mathbb{R}^{n\times1}$ 把结果送回各流。$B\in\mathbb{R}^{n\times n}$ 的非负元素、行和、列和受到约束；报告用有限次 Sinkhorn 归一化近似实现。[报告 §2.2](https://arxiv.org/html/2606.19348v1#S2.SS2)
 
 用一个**固定**矩阵算：
 
@@ -101,11 +112,13 @@ $$
 
 但这**不是整个模型的收缩证明**：还有 $CF(AX)$，而实际映射也依赖输入。有限次归一化还要检查误差，不能把“理论目标”当浮点实现的恒等式。
 
-Muon 则处理参数更新矩阵，属于 optimizer，不是 attention，也不是给残差矩阵做同一个约束。两者都可能关系到稳定性，但修改的位置完全不同。
+Muon 则处理参数更新矩阵，属于 optimizer，不是 attention，也不是给残差矩阵做同一个约束。两者都可能关系到稳定性，但修改的位置完全不同。V4 也不是所有参数都用 Muon：embedding、输出 head、RMSNorm，以及 mHC 的静态 bias / gating factors 等仍用 AdamW。[报告 §2.4](https://arxiv.org/html/2606.19348v1#S2.SS4)
 
 ## 5. 后训练：先训练专家，再合并能力
 
 [V4 官方说明](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash)区分领域专家的 SFT / GRPO 与之后的 on-policy distillation。此处“专家”是老师模型，不是 MoE 的某个 FFN expert；OPD 也不是直接平均老师权重。
+
+报告的 OPD 在学生自己生成的轨迹上向相应老师对齐，使用 full-vocabulary reverse KL；这不同于原始 R1-Distill 对筛选好的文本做 SFT。[报告 §5.1.2](https://arxiv.org/html/2606.19348v1#S5.SS1.SSS2)
 
 可以用一个自拟的两词词表理解分布比较。学生给 `[0.8, 0.2]`，老师给 `[0.5, 0.5]`：
 
@@ -114,7 +127,7 @@ D_{\mathrm{KL}}(p_s\Vert p_t)
 =0.8\log(1.6)+0.2\log(0.4)\approx0.193.
 $$
 
-这只算**某个前缀下**的 KL。完整训练还要决定前缀从哪里来、哪个老师负责、mask、分母和更新方式。学生生成的前缀与老师生成的前缀，会让训练遇到不同状态；不能换掉数据来源，却还把它叫同一个实验。更详细的训练取舍见[知识蒸馏](../../05-post-training/distillation.md)。
+这里用自然对数，单位为 **nats**，且只算**某个前缀下**的 KL；把方向反过来会得到约 0.223 nats，不是同一个目标。完整训练还要决定前缀从哪里来、哪个老师负责、mask、分母和更新方式。学生生成的前缀与老师生成的前缀，会让训练遇到不同状态；不能换掉数据来源，却还把它叫同一个实验。更详细的训练取舍见[知识蒸馏](../../05-post-training/distillation.md)。
 
 ## 6. 如果要复现，先检查什么？
 

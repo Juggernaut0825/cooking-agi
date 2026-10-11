@@ -61,7 +61,7 @@ The first needs no PyTorch. The second checks the same scores with PyTorch, then
 
 First clarify “unlabeled”: CLIP does not require a human class ID for each image, but image–text pairing is supervision. Noisy web descriptions are not arbitrary text without a learning target. Natural-language supervision relaxes fixed categories while making pair quality part of the training problem. [CLIP paper](https://arxiv.org/abs/2103.00020)
 
-1. **“Every other pairing is wrong.”** That is the single-positive target assignment, not a real-world guarantee. Two cat images may both suit a cat caption. Duplicate captions treated as negatives create conflicting supervision; try that setting in the experiment.
+1. **“Every other pairing is wrong.”** That is the single-positive target assignment, not a real-world guarantee. The duplicate-caption setting uses two cat images, each matching both identical cat captions, while the target accepts only one. Equal scores split probability, so each approaches at most 0.5 and the image-to-text pair loss cannot reach 0. The other valid caption becomes a false negative. This is separate from the wrong-score scenario where a cat image favors a bicycle caption.
 2. **“Gradient accumulation enlarges the contrastive pool.”** If each microbatch scores only its own candidates, cross-microbatch pairs never enter the denominator. Accumulation does not add them automatically; cross-device candidate sharing also requires an explicit implementation.
 3. **“Lower temperature is always better.”** It makes the highest score more decisive, including when that score is wrong. Temperature cannot repair incorrect pair labels.
 

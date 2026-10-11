@@ -81,7 +81,9 @@ L=-\log\sigma(r_A-r_B),\qquad
 \frac{\partial L}{\partial r_B}=1-p.
 $$
 
-Gradients are approximately −0.269 and +0.269, so descent raises A and lowers B. Adding 100 to both scores leaves probability and loss unchanged. The supervision constrains differences; an absolute reward of 100 is not a hundred times the quality of reward 1.
+The gradients with respect to the two output scores are approximately −0.269 and +0.269. If the scores were independent optimization variables, descent would raise A and lower B. A real reward model updates shared parameters, so its scores need not move in opposite directions. For example, with $r_A=2w,r_B=w$, increasing $w$ raises both scores while increasing their gap.
+
+Adding 100 to both scores leaves probability and loss unchanged. The supervision constrains differences; an absolute reward of 100 is not a hundred times the quality of reward 1.
 
 If annotators favor length, the model may learn a length shortcut. Test equal-quality answers of different lengths and similar-length answers of different factual quality. When annotators disagree, inspect genuine preference differences rather than treating all disagreement as labeling error.
 

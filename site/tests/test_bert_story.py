@@ -49,6 +49,14 @@ class BertStoryTests(unittest.TestCase):
                                 capture_output=True, text=True, check=True)
         self.assertIn("72 valid states", result.stdout)
 
+    def test_behavior_checks_reject_rendering_and_lifecycle_mutations(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js unavailable")
+        result = subprocess.run([node, str(ROOT / "site/tests/bert-story-mutations.cjs")],
+                                capture_output=True, text=True, check=True)
+        self.assertIn("20/20 rejected", result.stdout)
+
     def test_reading_order_and_static_fallback_in_both_languages(self):
         for suffix, language in [("", "zh"), (".en", "en")]:
             with self.subTest(language=language):

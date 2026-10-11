@@ -41,7 +41,9 @@ This is one paper's recipe, not a rule that all VLMs freeze vision. Check each a
 
 ## Which positions receive loss
 
-In this answer-generation teaching setup, the input contains the image, question, and true answer prefix. The objective predicts the next answer token. Visual, question, and padding positions do not directly contribute to answer-only loss, but they can influence predictions and carry gradients to trainable modules.
+In this answer-generation teaching setup, the input contains the image, question, and true answer prefix. The objective predicts the next answer token. Visual and question positions do not directly contribute to answer-only loss, but they remain valid context: they influence answers and can carry gradients to trainable modules.
+
+Padding is different. It fills out the batch shape and should be excluded from both the loss and the context attended to by valid answer positions. **The loss mask chooses which predictions are scored; the attention mask chooses which inputs can be read. Neither replaces the other.** Properly masked padding input positions should not provide information or gradient paths to the answer. This is a statement about those input positions, not a claim that shared embedding / output parameters never receive gradients from elsewhere. [PyTorch padding-mask documentation](https://docs.pytorch.org/docs/2.8/generated/torch.nn.MultiheadAttention.html)
 
 $$L=-\frac{1}{M}\sum_{t\in\mathcal A}\log p_\theta(a_t\mid I,q,a_{<t}),\qquad M=|\mathcal A|.$$
 

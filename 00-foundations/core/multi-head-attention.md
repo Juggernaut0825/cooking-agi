@@ -187,6 +187,39 @@ $$
 
 手写时用 **head dimension $d_k$**，不是整个模型的 $d_\text{model}$。如果模型还有 QK normalization 或可学习的温度，要以它的实际公式为准；缩放能缓解一个问题，不是训练稳定性的保证。
 
+### 手写反向：另一个位置的梯度也要算进去 {#softmax-backward}
+
+两个位置各分到一半权重：$\alpha=(0.5,0.5)$。如果 loss 只取第一个权重，增加第一个分数会让 loss 上升；增加第二个分数会抢走第一个位置的权重，让 loss 下降。因此，对两个分数的梯度是 $(0.25,-0.25)$，而不是 $(0.25,0)$。
+
+<details markdown="1">
+<summary>把这一行写成通用的 backward</summary>
+
+令 $g_i=\partial\ell/\partial\alpha_i$，表示后续计算传回每个权重的梯度。把前面的 Jacobian 乘上它，得到：
+
+$$
+\frac{\partial\ell}{\partial z_j}
+=\alpha_j\left(g_j-\sum_i\alpha_i g_i\right).
+$$
+
+`g * alpha * (1 - alpha)` 只留下对角项，漏了位置之间的影响。[FlashAttention Appendix B.2](https://arxiv.org/html/2205.14135v2#A2.SS2)也用完整的 softmax backward 推导注意力梯度；下面的 NumPy 例子只算一行、没有 Dropout，不是 FlashAttention kernel。
+
+```python
+import numpy as np
+
+def softmax_backward(probabilities, upstream):
+    weighted_mean = np.sum(probabilities * upstream, axis=-1, keepdims=True)
+    return probabilities * (upstream - weighted_mean)
+
+probabilities = np.array([0.5, 0.5])
+assert np.allclose(softmax_backward(probabilities, np.array([1.0, 0.0])),
+                   [0.25, -0.25])
+assert np.allclose(softmax_backward(probabilities, np.ones(2)), [0.0, 0.0])
+```
+
+第二个检查很容易记：若 loss 是所有权重之和，它始终等于 1，梯度当然是 0。只乘对角项会误算成 $(0.25,0.25)$。输入必须是沿同一轴归一化的权重，且与 upstream 同形；全 mask 行仍不在这个例子的定义范围内。
+
+</details>
+
 ## 为什么使用多头：目的不是增加维度 {#_4}
 
 $$
@@ -403,22 +436,33 @@ to have one clean, human-assigned semantic job.
 
 **用两个分数检查 mask。** `[0, 0]` 的 softmax 是 `[0.5, 0.5]`。只允许第一个位置时，先屏蔽得到 `[1, 0]`；softmax 后只置零得到 `[0.5, 0]`，输出就缩小了。如果再除以剩余权重之和，数学上也能得到 `[1, 0]`，但有限精度下可能遇到剩余权重下溢，所以通常在 softmax 前屏蔽。下面的教学代码会拒绝整行被屏蔽的输入，而不是悄悄产生 NaN。
 
-## 实验：验证三种实现等价 {#_6}
+## 实验：让手写版本与库实现对上 {#_6}
 
 <details class="code-drop" markdown="1">
 <summary><b>从零实现</b> · 纯 NumPy，不依赖任何框架</summary>
 
-白板上要能默出来的就是这一版。
+先把 Q/K/V、mask 和拆头并头写通。下面的 softmax 与完整脚本一样，至少用 FP32 计算并返回概率，避免长序列的 FP16 求和溢出；允许用负无穷屏蔽位置，但拒绝 NaN、正无穷和全屏蔽行。
 
 ```python
 import numpy as np
 
-def softmax(x, axis=-1):
-    if np.any(np.all(np.isneginf(x), axis=axis)):
+def softmax(logits, axis=-1):
+    values = np.asarray(logits)
+    if values.dtype.kind not in "biuf":
+        raise ValueError("Expected real logits")
+    converted = values.astype(np.result_type(values.dtype, np.float32), copy=False)
+    if values.dtype.kind in "iu" and any(
+            int(original) != int(floating) for original, floating in zip(values.flat, converted.flat)):
+        raise ValueError("Integer logits must be exactly representable in the computation dtype")
+    values = converted
+    if np.any(np.isnan(values) | np.isposinf(values)):
+        raise ValueError("Logits must be finite or -inf for masked positions")
+    if np.any(np.all(np.isneginf(values), axis=axis)):
         raise ValueError("Each query must have at least one allowed key")
-    x = x - np.max(x, axis=axis, keepdims=True)   # 数值稳定：先减最大值
-    e = np.exp(x)
-    return e / np.sum(e, axis=axis, keepdims=True)
+    shifted = values - np.max(values, axis=axis, keepdims=True)
+    weights = np.exp(shifted)
+    return weights / np.sum(weights, axis=axis, keepdims=True)
+
 
 def attention(q, k, v, mask=None):
     """q,k,v: (B, H, T, d_head)   mask: True = 屏蔽"""
@@ -519,6 +563,75 @@ output = F.scaled_dot_product_attention(
 ```
 
 能让从零实现的版本和 `nn.MultiheadAttention` 对上，比仅仅「能跑」更重要。对不上时定位差异，本身就是有效的调试练习。`nn.MultiheadAttention` 把 $W_Q, W_K, W_V$ 存成一个拼接的 `in_proj_weight`，而 `nn.Linear` 存的是 $(out, in)$，因此搬到 NumPy 时需要转置。
+
+但一次输出相同，还不能说明迁移完了。可以按下面的顺序查：
+
+| 检查什么 | 一个容易漏掉的地方 |
+| --- | --- |
+| 参数是否相同 | 开了 `bias=True`，就要同时复制 Q/K/V 和输出投影的 bias；只搬权重不是同一个模型 |
+| 数值条件是否相同 | 库模块也要用相同的 device、dtype；先用 CPU float64 排查，再检查实际精度下的误差 |
+| 可见位置是否相同 | 本例和 `nn.MultiheadAttention` 的布尔 mask 都是 `True` 表示屏蔽，SDPA 正好相反 |
+| 梯度是否相同 | 用相同的标量 loss 比较输入梯度；共享参数的手写与 SDPA 路径还要比较参数梯度 |
+
+完整脚本中的 `library_version` 会新建一个模块并复制参数，只用于对照；它的参数梯度不会回到原来的 `mha`。三条 PyTorch 路径覆盖了 bias、float32 / float64、逐头 mask 和梯度检查；NumPy 对照仍是无 bias 的小例子。这里都关闭 dropout，不是速度或显存测试。接口约定见 [PyTorch 2.8 MultiheadAttention](https://docs.pytorch.org/docs/2.8/generated/torch.nn.MultiheadAttention.html)。
+
+## 接上 KV cache，mask 要从哪里开始？ {#cached-causal-mask}
+
+前面画的是正方形：5 个 query 对 5 个 key。接上缓存后，假设已经有位置 0、1、2，现在一次追加位置 3、4。只计算两个新 query，但它们要读 5 个 key。
+
+因果关系没有变，仍然是“不能看未来”。变的是**query 的第 0 行，现在代表位置 3**，不是整段文本的位置 0。
+
+| 新 query 的位置 | key 0 | key 1 | key 2 | key 3 | key 4 |
+| --- | --- | --- | --- | --- | --- |
+| 3 | 可读 | 可读 | 可读 | 可读 | 屏蔽 |
+| 4 | 可读 | 可读 | 可读 | 可读 | 可读 |
+
+用一组小数字检查：令所有 Q/K 分数为 0，五个 value 分别为 `[10, 20, 30, 40, 50]`。每个 query 对允许的位置取平均，就能直接看出 mask 是否错位。
+
+<figure class="worked-update worked-update--pairs" lang="zh-CN" id="cached-mask-output">
+  <figcaption>接上缓存后，行号不再等于文本位置。</figcaption>
+  <ol>
+    <li><small>按实际位置对齐</small><strong>25，然后 30</strong><span>位置 3 读前四项，位置 4 读全部五项。</span></li>
+    <li><small>误用左上角下三角</small><strong>10，然后 15</strong><span>两行只读到第一项、前两项，漏掉了本来可用的历史。</span></li>
+  </ol>
+</figure>
+
+PyTorch 2.8 的 `F.scaled_dot_product_attention(..., is_causal=True)` 对非方阵采用**左上角对齐**，不会根据 KV 长度自动推断 query 在末尾。这里用实际位置构造 `attn_mask`，不同时传 `is_causal=True`。这是这个 API 的约定，不是说所有 attention kernel 都采用同一种对齐方式。[SDPA 文档](https://docs.pytorch.org/docs/2.8/generated/torch.nn.functional.scaled_dot_product_attention.html)
+
+<details class="code-drop" markdown="1">
+<summary>用 PyTorch 算出这四个数</summary>
+
+```python
+import torch
+import torch.nn.functional as F
+
+def cached_attention_example():
+    query = torch.zeros(1, 1, 2, 2, dtype=torch.float64)
+    key = torch.zeros(1, 1, 5, 2, dtype=torch.float64)
+    value = torch.tensor([10., 20., 30., 40., 50.], dtype=torch.float64)
+    value = value.view(1, 1, 5, 1)
+    query_positions = torch.tensor([3, 4])
+    key_positions = torch.arange(5)
+    allowed = key_positions[None, :] <= query_positions[:, None]
+    aligned = F.scaled_dot_product_attention(
+        query, key, value, attn_mask=allowed, dropout_p=0.0,
+    )
+    upper_left = F.scaled_dot_product_attention(
+        query, key, value, is_causal=True, dropout_p=0.0,
+    )
+    return aligned, upper_left, allowed
+
+aligned, upper_left, allowed = cached_attention_example()
+torch.testing.assert_close(aligned.flatten(), torch.tensor([25., 30.], dtype=torch.float64))
+torch.testing.assert_close(upper_left.flatten(), torch.tensor([10., 15.], dtype=torch.float64))
+print(aligned.flatten().tolist(), upper_left.flatten().tolist())
+```
+
+</details>
+
+如果只追加位置 4 一个 query，且传入的五个 key 全都有效，就没有未来位置需要挡住，可以不加 causal mask。**有 padding、滑动窗口或批内长度不同，就不能直接照搬这个简化。** 还要记得，functional SDPA 的 dropout 由 `dropout_p` 控制，外层调用 `eval()` 不会替它把这个参数改成 0。
+
+上面的数字只检验 mask，不是完整 decoder。完整模型还要检查 RoPE 位置、缓存身份，以及缓存前后的 logits 是否一致，见 [KV cache](../deep-dives/kv-cache-and-inference.md)。
 
 ## 面试常见问题 {#_7}
 

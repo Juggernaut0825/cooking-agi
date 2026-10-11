@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reading list · Local lab</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main>
+    <header><p data-copy="eyebrow">BUILD SOMETHING SMALL / 02</p><button id="language" type="button">中文</button></header>
+    <h1 data-copy="title">One thing to read next.</h1>
+    <p class="intro" data-copy="intro">A page, an API, a database. Add a note and follow the request.</p>
+    <ol class="flow" aria-label="Request path">
+      <li data-copy="browser">Browser</li><li data-copy="server">Python API</li><li>SQLite</li>
+    </ol>
+    <form id="add-note">
+      <label for="title" data-copy="label">What are you reading?</label>
+      <div class="entry"><input id="title" name="title" maxlength="120" required autocomplete="off" placeholder="BERT"><button id="save" type="submit" data-copy="save">Save</button></div>
+    </form>
+    <p id="message" role="status" aria-live="polite"></p>
+    <section aria-labelledby="list-title">
+      <div class="section-heading"><h2 id="list-title" data-copy="list">Your reading list</h2><button id="refresh" type="button" data-copy="refresh">Refresh</button></div>
+      <p class="muted" data-copy="limit">Showing the latest 100 items. Data stays on the server computer.</p>
+      <ul id="notes"></ul>
+    </section>
+    <details><summary data-copy="inspect">What request just happened?</summary><pre id="trace">GET /api/notes</pre><p data-copy="network">Open your browser's Network panel for the full request and response.</p></details>
+    <footer data-copy="boundary">Local learning exercise. No accounts or access control. Don't expose this server to the internet or store private data here.</footer>
+  </main>
+</body>
+</html>

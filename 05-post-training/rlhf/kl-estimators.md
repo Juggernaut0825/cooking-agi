@@ -41,6 +41,15 @@ $$
 
 按采样概率 0.8、0.2 加权，$k_1$ 和 $k_3$ 的期望都是约 0.1927；$k_2$ 约 0.1723。不能把两行直接各算一半——那相当于换了采样分布。
 
+<figure class="worked-update" lang="zh-CN" id="sample-and-mean">
+  <figcaption>只看 k₁ · 单条为负，与整体 KL 非负并不矛盾。</figcaption>
+  <ol>
+    <li><small>抽到 A · 概率 0.8</small><strong>+ 0.4700</strong><span>当前策略比 Reference 更偏向 A。</span></li>
+    <li><small>抽到 B · 概率 0.2</small><strong>− 0.9163</strong><span>当前策略给 B 的概率反而更低。</span></li>
+    <li><small>按当前策略加权</small><strong>平均 ≈ 0.1927</strong><span>0.8 × 0.4700 + 0.2 × (−0.9163)。</span></li>
+  </ol>
+</figure>
+
 ```python
 import math
 
@@ -81,6 +90,20 @@ $k_2$ 的理由不同。令 $z=\log r$，有 $k_3=e^z-1-z=\tfrac12z^2+O(z^3)$；
 
 **支持集条件不能漏。** 若 $q$ 只保留 A、$p$ 在 A/B 上各有一半概率，$\mathbb E_q[r]=0.5$ 而不是 1。Top-k / top-p 截断后的采样分布，与原始 softmax 不是同一个分布；不能直接把“模型 log-prob”当成“实际采样 log-prob”。
 
+<details markdown="1">
+<summary>非负的 k₃，也可能比 k₁ 抖得更厉害</summary>
+
+把当前策略改成 $q=[0.99,0.01]$，参照仍是 $p=[0.5,0.5]$。很少抽到的 B 上，$p/q=50$，所以 $k_3(B)\approx45.0880$；A 上则只有约 0.1881。
+
+| 当前策略 q | 单样本 k₁ 的方差 | 单样本 k₃ 的方差 |
+| --- | ---: | ---: |
+| `[0.8, 0.2]` | 0.3075 | 0.0382 |
+| `[0.99, 0.01]` | 0.2090 | 19.9583 |
+
+这里按 $\sum_xq(x)(k(x)-\mathbb E_q[k])^2$ 精确求和，没有跑采样实验。第二行的两个估计依然都无偏，但 k₃ 会偶尔冒出很大的值。若有 $n$ 个独立同分布样本，样本均值的方差才是这里的方差除以 $n$；序列内 token 通常不能直接当作独立样本。
+
+</details>
+
 ## 4. 旧样本会改变估计的含义 {#old-samples}
 
 更新前按旧策略 $\mu$ 采样，更新后重算当前 $q$ 的 log-prob。此时直接平均 $k_3$，得到的是 $\mathbb E_\mu[k_3(q,p)]$，不是自动变成 $D_{\rm KL}(q\|p)$。
@@ -109,6 +132,51 @@ $$
 把采好的 token 固定住，只对 $k_3$ 反传，会漏掉右边第二项。一个能直接验算的反例：$q=[\sigma(\theta),1-\sigma(\theta)]$，$\theta=\log4$，$p=[0.5,0.5]$。真正 KL 的导数约为 **0.2218**；固定采样权重、只对 $k_3$ 求导，其期望却是 **0.3000**。
 
 这不等于所有使用 $k_3$ 的训练都错了。算法可能明确定义一个旧数据上的 surrogate，也可能用重要性权重并保留所需梯度。要看完整目标，不能仅凭“这个 estimator 无偏”判断优化实现。[DeepSeekMath 的 GRPO 公式](https://arxiv.org/html/2402.03300v3#S4.SS1.SSS1)给出了这种非负 KL 项；这里额外拆开的是统计量与更新规则的区别。
+
+<details markdown="1">
+<summary>把三个公式都拿来做 loss，会得到什么梯度？</summary>
+
+仍固定一个前缀、相同的有限正支持集，以及不随参数变化的 Reference。令 $s_\theta(x)=\nabla_\theta\log q_\theta(x)$。**样本来自当前策略，但反传时不对抽样操作求导**，三个单样本 loss 的导数分别为：
+
+| 直接对哪一项反传 | 样本梯度 | 上面两 token 例子的梯度期望 |
+| --- | --- | ---: |
+| $k_1$ | $s_\theta$ | 0 |
+| $k_2$ | $\log(q/p)s_\theta$ | 0.2218 |
+| $k_3$ | $(1-p/q)s_\theta$ | 0.3000 |
+
+为什么 k₁ 的期望是 0？因为 $\mathbb E_q[s_\theta]=\sum_x\nabla_\theta q_\theta(x)=\nabla_\theta1=0$。而完整 KL 的梯度恰好是 $\mathbb E_q[\log(q/p)s_\theta]$，所以这里 k₂ 的期望梯度与它一致。**k₂ 的数值有偏，梯度却可以对；k₁ 的数值无偏，直接反传却不给出想要的期望梯度。**
+
+[Liu 等（2025），§5 与 Appendix C](https://arxiv.org/html/2510.01555v2)专门区分了这两种用途。这里的结论有 on-policy 和梯度路径的前提，不是让你把训练器里的 k₃ 一律换成 k₂。旧 rollout、clipping、prefix 分布和 reward shaping 都要放回完整目标里检查。尤其不能把“直接反传 k₁”和“把 detached k₁ 放进 reward”混为一谈。
+
+下面用有限差分检查这件事。`sampling` 在两次扰动间保持不变；完整 KL 的求和权重则跟着参数变。代码只依赖 Python 标准库，复用前面的 `kl_sample_terms`。
+
+```python
+def binary_policy(parameter):
+    positive = 1 / (1 + math.exp(-parameter))
+    return [positive, 1 - positive]
+
+def kl_objectives(parameter, sampling):
+    policy = binary_policy(parameter)
+    rows = [kl_sample_terms(math.log(value), math.log(0.5))
+            for value in policy]
+    exact = sum(value * math.log(value / 0.5) for value in policy)
+    fixed = [sum(weight * row[column] for weight, row in zip(sampling, rows))
+             for column in range(3)]
+    return [exact, *fixed]
+
+parameter = math.log(4)
+sampling = binary_policy(parameter)
+step = 1e-5
+upper = kl_objectives(parameter + step, sampling)
+lower = kl_objectives(parameter - step, sampling)
+derivatives = [(high - low) / (2 * step) for high, low in zip(upper, lower)]
+assert math.isclose(derivatives[0], derivatives[2], abs_tol=1e-8)
+print([round(value, 4) for value in derivatives])
+```
+
+依次输出完整 KL、固定样本 k₁ / k₂ / k₃ 的导数：`[0.2218, 0.0, 0.2218, 0.3]`（浮点误差可能显示 `-0.0`）。有限 batch 的梯度还会有采样噪声，这里算的是期望，不是一次真实模型更新。
+
+</details>
 
 ## 6. 放回训练代码，要检查什么？ {#implementation}
 

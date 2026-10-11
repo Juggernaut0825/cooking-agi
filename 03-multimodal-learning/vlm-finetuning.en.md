@@ -106,7 +106,9 @@ Long answers contribute more tokens. Mixing long OCR transcriptions with short a
 
 ## Length, freezing, and memory
 
-TRL v0.29.0 warns against unchecked VLM sequence truncation because it can remove image tokens. Its `max_length=None` recommendation disables that truncation; it does not provide unlimited memory. Still constrain image dimensions, image count, and text length, and inspect length tails. `assistant_only_loss` also requires a template that returns the relevant mask; enabling a flag is not sufficient validation. [Versioned TRL documentation](https://huggingface.co/docs/trl/v0.29.0/en/sft_trainer)
+TRL v0.29.0 warns against unchecked VLM sequence truncation because it can remove image tokens. Its `max_length=None` recommendation disables that truncation; it does not provide unlimited memory. Still constrain image dimensions, image count, and text length, and inspect length tails. [Versioned TRL documentation](https://huggingface.co/docs/trl/v0.29.0/en/sft_trainer)
+
+**This version rejects `assistant_only_loss=True` for VLMs, even if the template supplies an assistant mask.** For single-turn QA, use `prompt` / `completion` data with the answer in completion and `completion_only_loss=True`. That is not automatic assistant-turn selection in an arbitrary multi-turn conversation. For the latter, use validated custom labels / a collator while leaving the unsupported flag off. Setting it to `False` merely to get training running does not establish answer-only supervision. [v0.29.0 guard and collator implementation](https://github.com/huggingface/trl/blob/v0.29.0/trl/trainer/sft_trainer.py)
 
 | Trainable scope | What to test first | Cost or limitation |
 | --- | --- | --- |

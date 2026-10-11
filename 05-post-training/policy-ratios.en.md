@@ -2,7 +2,7 @@
 
 [中文](policy-ratios.md) · **English**
 
-> Last reviewed: 2026-10-08 · Prerequisites: [PPO clipping](rlhf/ppo-clipping.en.md) and [GRPO](rlhf/after-rlhf.en.md)
+> Last reviewed: 2026-10-10 · Prerequisites: [PPO clipping](rlhf/ppo-clipping.en.md) and [GRPO](rlhf/after-rlhf.en.md)
 
 An answer is correct overall, yet one token has become less likely. Should training raise the whole answer together, or give that token extra attention? GSPO and ASPO take different approaches. Start with where their weights enter the update, rather than the acronyms.
 
@@ -33,6 +33,8 @@ $$
 
 This is the **geometric mean** of token ratios, not their arithmetic mean or the raw sequence ratio $\prod_t\rho_t$. Taking the $T$-th root reduces length sensitivity in the numerical scale but changes the weight. It is not an unbiased whole-trajectory importance-sampling identity.
 
+When reading the paper's motivation, separate an unstable estimate from an invalid identity. With the required support, even a single importance-weighted sample can be unbiased, although its variance may be large. Sampling one token per position is not, by itself, a proof of invalidity. A token ratio leaving the old prefix distribution uncorrected is a different issue: in [this two-step example](rlhf/on-off-policy.en.md#prefix-distribution), every step-2 ratio is 1 while the response success rate changes from 0.35 to 0.65. GSPO's experimental results are worth examining; they do not establish that every token-level surrogate is invalid.
+
 ### Two tokens moving in opposite directions
 
 These are invented numbers, not a model measurement. Let $A=1$ and the token ratios be `[2, 0.5]`:
@@ -50,6 +52,10 @@ $$
 $$
 
 Every token has the same external coefficient $sA/T$, **not the same parameter gradient**: their network Jacobians still differ. The example also reveals a tradeoff: sequence aggregation can conceal large local changes.
+
+GSPO does not simply keep high-scoring answers. Change this example's $A$ to −1: $s$ remains 1, and the local derivative with respect to each selected log-probability is −0.5. The negative signal is still present. Clipping depends on the ratio and the direction of the advantage, not just the answer's score.
+
+MoE adds an implementation concern: [the paper's §5.3](https://arxiv.org/html/2507.18071v2#S5.SS3) reports training instability with routing changes. Different selected experts do not, by themselves, make the output probability ratio undefined. Check the shared prefix, actual sampling distribution and support, and whether rollout and training implementations compute consistent probabilities. Switching to GSPO does not replace those checks.
 
 ```python
 import math
@@ -125,7 +131,7 @@ Record rewards, lengths, ratio distributions, and valid-token counts on the same
 | Observation | Useful check | Insufficient evidence |
 | --- | --- | --- |
 | A few extreme token ratios | Does sequence aggregation stabilize updates or hide local outliers? | Mean ratio near 1 |
-| Different positive / negative weight distributions | Split by advantage sign; inspect detach and clipping | Any entropy decrease labeled as collapse |
+| Different weights for positive and negative advantages | Split by advantage sign; inspect detach and clipping | Any entropy decrease labeled as collapse |
 | Fewer active gradients | Report token and sequence mask rates separately | Directly comparing clip fractions at different granularities |
 | Better scores and much longer answers | Match inference budgets; inspect correctness and failure types | Treating length as reasoning ability |
 

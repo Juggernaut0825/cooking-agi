@@ -4,6 +4,8 @@
 
 [中文](README.md) · **English**
 
+Unsure what to prioritize? Start with the [interview route](../learn/choose-your-path.en.md#interviews). For preparation methods and interview reflections, see the [career notes](../career/README.en.md).
+
 Recognizing a concept, explaining it, and implementing it are different skills. This section separates preparation into three routes: ML / LLM fundamentals, ML coding, and Python with algorithm patterns. Pick the skill you need rather than treating everything as a checklist.
 
 The material uses public knowledge and original exercises, not confidential company questions. It is also useful for checking your understanding outside interview season.

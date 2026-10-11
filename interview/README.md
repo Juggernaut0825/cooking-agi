@@ -2,6 +2,8 @@
 
 **中文** · [English](README.en.md)
 
+还不知道该准备哪一块，先看[技术面怎么选路线](../learn/choose-your-path.md#interviews)。想看准备方法和经历复盘，可以去[求职笔记](../career/README.md)。
+
 看过不一定讲得清，讲得清也不一定写得出来。这里把技术准备分成 3 条线：ML / LLM 基础问答、ML Coding、Python 与 LeetCode。可以只练其中一项，不必先刷完一整份清单。
 
 内容来自公开知识和自拟练习，不收集公司的非公开面试题。平时想检查自己学得怎么样，也可以来这里练。

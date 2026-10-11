@@ -11,17 +11,28 @@ import numpy as np
 
 # --------------------------------------------------------------------------- #
 def softmax(x, axis=-1):
-    """Numerically stable softmax.
+    """Normalize real logits with optional -inf masks.
 
-    Subtracting the max changes nothing mathematically (exp(a-c)/sum(exp(a-c))
-    equals exp(a)/sum(exp(a)) for any c) but keeps exp() from overflowing when
-    the scores are large. Forgetting this is the classic interview slip.
+    Compute in at least float32, preserving float64 inputs. Each row needs
+    a finite logit; NaN and +inf are invalid rather than mask values.
+    Subtracting the maximum prevents exponential overflow, not underflow
+    of very small probabilities.
     """
-    if np.any(np.all(np.isneginf(x), axis=axis)):
+    values = np.asarray(x)
+    if values.dtype.kind not in "biuf":
+        raise ValueError("Expected real logits")
+    converted = values.astype(np.result_type(values.dtype, np.float32), copy=False)
+    if values.dtype.kind in "iu" and any(
+            int(original) != int(floating) for original, floating in zip(values.flat, converted.flat)):
+        raise ValueError("Integer logits must be exactly representable in the computation dtype")
+    values = converted
+    if np.any(np.isnan(values) | np.isposinf(values)):
+        raise ValueError("Logits must be finite or -inf for masked positions")
+    if np.any(np.all(np.isneginf(values), axis=axis)):
         raise ValueError("Each query must have at least one allowed key")
-    x = x - np.max(x, axis=axis, keepdims=True)
-    e = np.exp(x)
-    return e / np.sum(e, axis=axis, keepdims=True)
+    shifted = values - np.max(values, axis=axis, keepdims=True)
+    weights = np.exp(shifted)
+    return weights / np.sum(weights, axis=axis, keepdims=True)
 
 
 def scaled_dot_product_attention(q, k, v, mask=None):

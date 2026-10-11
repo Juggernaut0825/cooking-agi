@@ -3,13 +3,13 @@
 Three implementations of the same function:
 
   1. MultiHeadAttention      -- written out, the version to reproduce in an interview
-  2. F.scaled_dot_product_attention -- the fused kernel you would actually ship
+  2. F.scaled_dot_product_attention -- PyTorch selects a supported backend
   3. nn.MultiheadAttention   -- the library module
 
-The script asserts all three agree to ~1e-6, and cross-checks against the pure
-NumPy version in attention_numpy.py. Agreement is the point: a hand-rolled
-attention that matches `nn.MultiheadAttention` bit-for-nearly-bit is a much
-stronger claim than one that merely runs.
+The script checks a float32, bias-free fixture against all three versions and
+the pure NumPy implementation. It checks numerical tolerance, not bitwise
+identity or performance. All wrappers use boolean masks: True blocks a key.
+Masks must broadcast to (batch, heads, queries, keys).
 
 Run: python attention_torch.py
 """
@@ -60,7 +60,7 @@ def causal_mask(t, device=None):
 
 # --------------------------------------------------------------------------- #
 def sdpa_version(mha, x, mask):
-    """Same weights, but let PyTorch fuse the attention itself."""
+    """Same parameters; SDPA chooses the attention backend."""
     B, T, C = x.shape
     split = lambda p: p(x).view(B, T, mha.n_head, mha.d_head).transpose(1, 2)
     q, k, v = split(mha.wq), split(mha.wk), split(mha.wv)
@@ -75,16 +75,38 @@ def library_version(mha, x, mask):
 
     Its in_proj_weight is the [Wq; Wk; Wv] stack, which is why the from-scratch
     version above is usually written with three separate Linears -- they are the
-    same parameters, just sliced differently.
+    same parameters, just sliced differently. Biases, dtype, and device must
+    match too. This is an independent copy for comparison: its parameter
+    gradients do not flow back to mha.
     """
-    d_model = mha.wq.weight.shape[0]
-    ref = nn.MultiheadAttention(d_model, mha.n_head, bias=False, batch_first=True)
+    model_width = mha.wq.weight.shape[0]
+    has_bias = mha.wq.bias is not None
+    reference = nn.MultiheadAttention(
+        model_width, mha.n_head, bias=has_bias, batch_first=True,
+        device=mha.wq.weight.device, dtype=mha.wq.weight.dtype,
+    )
+    reference.train(mha.training)
     with torch.no_grad():
-        ref.in_proj_weight.copy_(torch.cat(
+        reference.in_proj_weight.copy_(torch.cat(
             [mha.wq.weight, mha.wk.weight, mha.wv.weight], dim=0))
-        ref.out_proj.weight.copy_(mha.wo.weight)
-    out, _ = ref(x, x, x, attn_mask=mask, need_weights=False)
-    return out
+        reference.out_proj.weight.copy_(mha.wo.weight)
+        if has_bias:
+            reference.in_proj_bias.copy_(torch.cat(
+                [mha.wq.bias, mha.wk.bias, mha.wv.bias], dim=0))
+            reference.out_proj.bias.copy_(mha.wo.bias)
+    reference_mask = mask
+    if mask is not None:
+        batch_size, sequence_length, _ = x.shape
+        blocked = torch.broadcast_to(
+            mask, (batch_size, mha.n_head, sequence_length, sequence_length),
+        )
+        if blocked.all(dim=-1).any():
+            raise ValueError("Each query must have at least one allowed key")
+        reference_mask = blocked.reshape(
+            batch_size * mha.n_head, sequence_length, sequence_length,
+        )
+    output, _ = reference(x, x, x, attn_mask=reference_mask, need_weights=False)
+    return output
 
 
 # --------------------------------------------------------------------------- #

@@ -93,6 +93,63 @@ class KLEstimatorTests(unittest.TestCase):
         with self.assertRaises(OverflowError):
             self.terms(-1000, -1)
 
+    def test_direct_losses_match_analytic_gradients(self):
+        objectives = self.namespace['kl_objectives']
+        policy = self.namespace['binary_policy']
+        for parameter in (-2.0, 0.0, math.log(4), 2.0):
+            with self.subTest(parameter=parameter):
+                sampling = policy(parameter)
+                positive = sampling[0]
+                step = 1e-5
+                actual = [(high - low) / (2 * step) for high, low in zip(
+                    objectives(parameter + step, sampling),
+                    objectives(parameter - step, sampling))]
+                expected = [positive * (1 - positive) * parameter,
+                            0, positive * (1 - positive) * parameter, positive - .5]
+                for observed, target in zip(actual, expected):
+                    self.assertAlmostEqual(observed, target, places=8)
+
+    def test_k2_gradient_equivalence_requires_current_sampling(self):
+        objectives = self.namespace['kl_objectives']
+        parameter, step = math.log(4), 1e-5
+        actual = [(high - low) / (2 * step) for high, low in zip(
+            objectives(parameter + step, [.5, .5]),
+            objectives(parameter - step, [.5, .5]))]
+        self.assertNotAlmostEqual(actual[0], actual[2])
+        self.assertNotAlmostEqual(actual[1], 0)
+
+    def test_nonnegative_estimator_can_have_larger_variance(self):
+        actual = []
+        for policy in ([.8, .2], [.99, .01]):
+            rows = [self.terms(math.log(value), math.log(.5)) for value in policy]
+            variances = []
+            for column in (0, 2):
+                mean = sum(value * row[column] for value, row in zip(policy, rows))
+                variances.append(sum(value * (row[column] - mean) ** 2
+                                     for value, row in zip(policy, rows)))
+            actual.append([round(value, 4) for value in variances])
+        self.assertEqual(actual, [[.3075, .0382], [.2090, 19.9583]])
+
+    def test_distillation_entropy_and_surprisal_examples(self):
+        distillation = ROOT / '05-post-training/distillation.md'
+        source = distillation.read_text()
+        snippet = re.findall(r'```python\n(.*?)```', source, re.S)[0]
+        namespace = {}
+        exec(compile(snippet, str(distillation), 'exec'), namespace)
+        values = [namespace[name] for name in ('teacher_entropy', 'forward_kl', 'cross_entropy')]
+        self.assertEqual([round(value, 4) for value in values], [.8237, .1272, .9509])
+        entropy = -sum(value * math.log(value) for value in (.99, .01))
+        self.assertEqual(round(entropy, 4), .0560)
+        self.assertEqual(round(-math.log(.01), 4), 4.6052)
+        self.assertLess(entropy, math.log(2))
+        for suffix, language in (('.md', 'zh-CN'), ('.en.md', 'en')):
+            content = (ROOT / ('05-post-training/distillation' + suffix)).read_text()
+            self.assertIn('id="entropy-loss-parts"', content)
+            self.assertIn(f'class="worked-update" lang="{language}"', content)
+            self.assertIn('{#entropy-and-surprise}', content)
+            self.assertIn('0.0560', content)
+            self.assertIn('0.6931', content)
+
 
 if __name__ == '__main__':
     unittest.main()

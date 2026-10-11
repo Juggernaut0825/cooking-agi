@@ -2,7 +2,7 @@
 
 **中文** · [English](review.en.md)
 
-> 阅读时间：约 3 分钟 · 难度：进阶 · 最近审阅：2026-10-09
+> 阅读时间：约 3 分钟 · 难度：进阶 · 最近审阅：2026-10-10
 
 ## 面试常见问题
 
@@ -16,7 +16,7 @@
 <details class="interview" markdown="1">
 <summary>循环给模型增加了什么，又没有增加什么？</summary>
 
-增加共享参数上的计算深度，不新增外部事实，也不新增每圈独立的权重。能否利用好这些计算是实验问题。约 2 bit/parameter 是合成知识实验的结果，不是容量定理；“多圈一定更准”也不成立。
+增加共享参数上的计算深度，不新增外部事实，也不新增每圈独立的权重。能否利用好这些计算是实验问题。约 2 bit/parameter 是小规模模型上合成知识实验的结果，不是发布的 Ouro checkpoint 的容量测量或容量定理；“多圈一定更准”也不成立。
 
 </details>
 
@@ -55,8 +55,8 @@ CoT 增加生成位置，looping 增加隐藏状态更新；两者能组合。�
   <ol>
     <li>为什么普通 Transformer 的深度和参数是绑在一起的，循环怎样把它们拆开？</li>
     <li>同样执行 12 次层计算，共享与独立参数的模型在哪些预算上不同？</li>
-    <li>ACT、PonderNet、Ouro 的退出 gate 分别怎样决定一个 token 什么时候停？</li>
-    <li>循环 4 圈的模型，KV cache 为什么默认是不循环时的 4 倍？</li>
+    <li>ACT 的累计值、PonderNet 的逐步采样和 Ouro 的累计退出概率阈值有什么区别？它们都必须逐 token 分配计算吗？</li>
+    <li>完整逐圈缓存何时随圈数成倍增长？为什么 Huginn 的 2+4+2 结构转 4 圈，相对 1 圈只有 2.5 倍 KV？</li>
     <li>哪些任务适合用 looped 模型，哪些不适合？</li>
   </ol>
 </div>
@@ -73,5 +73,5 @@ CoT 增加生成位置，looping 增加隐藏状态更新；两者能组合。�
 - [Relaxed Recursive Transformers](https://arxiv.org/abs/2410.20672)
 - [Mixture-of-Recursions](https://arxiv.org/abs/2507.10524)
 - [Scaling Latent Reasoning via Looped Language Models](https://arxiv.org/abs/2510.25741)：Ouro
-- [Continuous Depth Batching](https://arxiv.org/abs/2608.09444)：各圈共享 KV 的复现
-- [MELT](https://arxiv.org/abs/2605.07721)：免训练 KV 共享的评估
+- [Continuous Depth Batching](https://arxiv.org/html/2608.09444v2)：v2 附录 E.1 的 KV 共享评估
+- [MELT](https://arxiv.org/html/2605.07721v3)：v3 附录 B 的免训练 KV 共享评估

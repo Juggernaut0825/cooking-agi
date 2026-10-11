@@ -1,0 +1,11 @@
+{
+  "suite": "library-demo-v1",
+  "cases": [
+    {"id": "q1", "slice": "evidence", "prompt": "The library opens at 09:00. When does it open?", "expected": "09:00", "critical": false},
+    {"id": "q2", "slice": "evidence", "prompt": "The library closes at 18:00. When does it close?", "expected": "18:00", "critical": false},
+    {"id": "q3", "slice": "evidence", "prompt": "A reader may borrow four books. What is the limit?", "expected": "Four books", "critical": false},
+    {"id": "q4", "slice": "evidence", "prompt": "Loans last fourteen days. How long is a loan?", "expected": "Fourteen days", "critical": false},
+    {"id": "q5", "slice": "no-evidence", "prompt": "No Sunday schedule is provided. Is the library open on Sunday?", "expected": "Say the supplied information does not establish Sunday hours.", "critical": true},
+    {"id": "q6", "slice": "no-evidence", "prompt": "No fee policy is provided. What is the late fee?", "expected": "Say the supplied information does not establish a late fee.", "critical": true}
+  ]
+}

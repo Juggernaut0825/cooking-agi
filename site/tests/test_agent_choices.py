@@ -134,7 +134,8 @@ class AgentChoicesTests(unittest.TestCase):
         source = (ROOT / "site/static/tx-lab.js").read_text()
         section = source.split("var fig = TX.figure('tx-model-router'", 1)[1].split("/* --------------------------------------------- probability", 1)[0]
         self.assertIn("by construction", section)
-        self.assertIn("overhead are omitted", section)
+        self.assertIn("Checking overhead is omitted", section)
+        self.assertIn("routing adds fixed toy overheads", section)
         self.assertNotIn("a wrong guess is never caught", section)
         self.assertNotIn("p.judge", section)
 

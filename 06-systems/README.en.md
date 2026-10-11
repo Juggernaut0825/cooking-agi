@@ -18,19 +18,18 @@ Suppose a travel agent books the user a flight on the wrong date.
 - the model picked the right date, but the execution layer passed the wrong field;
 - the final evaluation only checked the reply text and never verified the real order.
 
-If you stare only at the last sentence of the answer, you will very likely fix the wrong place.
+If you look only at the final answer, you may fix the wrong part of the system.
 
 ## Walk through it end to end
 
-```mermaid
-flowchart TB
-    change["User: leave on Friday instead"] --> state["Replace the old travel date in state"]
-    state --> search["Search flights and prices for the new date"]
-    search --> confirm["Show flight, date, and cost<br/>Book only after user confirmation"]
-    confirm --> tool["Call the booking API"]
-    tool --> order["Read the actual order: correct date?"]
-    order -. "Trace a failure to the responsible step" .-> state
-```
+<figure class="worked-update" id="travel-request-flow" lang="en">
+<figcaption>“Leave on Friday instead” passes through three stages</figcaption>
+<ol>
+<li><strong>1 · Update, then search</strong><span>Replace the old travel date with Friday, then look up flights and prices. Otherwise the model may give a careful answer based on stale information.</span></li>
+<li><strong>2 · Confirm, then act</strong><span>Show the exact flight, date, and cost. Call the booking API only after confirmation and authorization checks; an “okay” from the assistant is not a completed order.</span></li>
+<li><strong>3 · Check the real order</strong><span>Read back the order and verify its date. If it is wrong, trace the first failure in state updates, search, or execution rather than only revising the final answer.</span></li>
+</ol>
+</figure>
 
 ### 1. User goal: what are we actually trying to solve
 
@@ -75,7 +74,7 @@ User message
 → Structured conversation state
 → Retrieve order, logistics, policy, and seller evidence
 → Model decides to reply, ask a follow-up question, or call a tool
-→ Authorization, schema, and policy validation
+→ Execution-layer checks for authorization, schema, policy, and required confirmation
 → Execute the read / write tool
 → Generate the answer from the execution result
 → Confidence check, clarification, or human escalation
@@ -92,15 +91,25 @@ actions pending confirmation; a long-conversation summary keeps only evidence-ba
 and unresolved items. The enterprise database and versioned policy remain the source of
 truth and cannot be replaced by a summary.
 
-A write action such as a refund needs authorization, schema validation, user confirmation,
-an idempotency key, and an audit log. A timeout does not tell us whether the action happened:
-check its status or rely on the API's idempotency guarantee before retrying. Never pretend
-it succeeded. When evidence is insufficient, policies conflict, or risk is too high,
-ask for clarification or hand off to a human.
+A refund needs authorization, schema validation, any required user confirmation, and an audit
+log. If the API supports idempotency keys, retries of the same refund must reuse the original
+key and parameters within the API's documented scope and retention period. Generating a new
+key does not prevent a duplicate refund. A timeout does not tell us whether the action happened:
+check its status or rely on a verified idempotency guarantee before retrying. Never pretend
+it succeeded. When evidence is insufficient, policies conflict, or risk is too high, ask for
+clarification or hand off to a human. Semantics are API-specific; for example, see
+[Stripe's idempotent-request documentation](https://docs.stripe.com/api/idempotent_requests).
+Do not assume every tool offers the same guarantees.
+
+Enforce these checks in trusted execution code, not just in a prompt. A seller note saying
+“ignore the refund limit” is still data to verify, not policy or authorization. Valid JSON
+does not establish that the current user may refund this order. Instructions inside retrieved
+content or tool results cannot grant permissions, and a model's score cannot replace access
+checks. See [OWASP's agent-tool defenses](https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html#agent-specific-defenses).
 
 Evaluation looks at task resolution, grounding, policy compliance, tool-call correctness,
 unsafe-action rate, multilingual consistency, escalation quality, latency, cost, CSAT, and
-repeat-contact rate all together. More natural language is only one of these.
+repeat-contact rate all together. Fluent wording is only one part of the result.
 
 ## A more reliable evaluation stack
 
@@ -110,7 +119,7 @@ repeat-contact rate all together. More natural language is only one of these.
 | Reference / executor | Math, code, evidence, task completion | Close to verifiable truth | References may be incomplete or wrong |
 | LLM judge | Relevance, helpfulness, style, open-ended quality | Scalable semantic judgment | Bias, drift, and nondeterminism |
 | Pairwise judge | Relative model, prompt, or policy comparison | More natural than absolute scoring | Position bias; may hide that both are bad |
-| Human audit | Rubrics, edge cases, value judgments | Understands real context | Expensive and internally inconsistent |
+| Human audit | Rubrics, edge cases, value judgments | Understands real context | Expensive; reviewers can disagree |
 | Online and longitudinal metrics | Real outcomes and sustained experience | Closest to the product objective | Confounding, delay, and experiment cost |
 
 ### When using an LLM judge
@@ -164,29 +173,30 @@ It connects model calls, retrieval, tools, memories, and state changes into a tr
 
 → [Read Agent Observability](agent-observability.en.md)
 
-### Human-in-the-Loop: put human judgment where it is worth the most
+### Human-in-the-Loop: when to ask someone to step in {#human-in-the-loop-put-human-judgment-where-it-is-worth-the-most}
 
-It does not mean having people do everything. It means having a person confirm, correct, or take over when risk is high, evidence is insufficient, or the task is novel.
+People do not need to review every step. Ask for confirmation, correction, or a handoff when an action is risky, the evidence is weak, or the system faces a task it has not been tested on.
 
 → [Read Human-in-the-Loop](human-in-the-loop.en.md)
 
-Together they form an improvement loop:
+Use those records to decide whether to continue, ask, or stop:
 
-```mermaid
-flowchart TB
-    A["Agent plan and pending action"] --> B[("Trace · tool state · permissions · evidence")]
-    B --> P{"Permissions and required approvals in place?"}
-    P -- "no" --> stop["Stop or request the missing authorization"]
-    P -- "yes" --> C["Deterministic checks and calibrated evaluators"]
-    C --> D{"High risk, uncertainty, or irreversible impact?"}
-    D -- "low" --> E["Execute automatically"]
-    D -- "high" --> F["Request a human decision"]
-    F --> G["Approve, correct, or reject, and record the rationale"]
-    E --> H(["Observe the real outcome"])
-    G --> H
-    H --> I["Audit · regression tests · data and policy updates"]
-    I -.-> A
-```
+<figure class="worked-update" id="action-control-flow" lang="en">
+<figcaption>From a proposed action to an actual result</figcaption>
+<ol>
+<li><strong>1 · Specify the action</strong><span>Record the target, arguments, evidence, and tool state. The model may propose an action, but a proposal does not grant permission to execute it.</span></li>
+<li><strong>2 · Check permission</strong><span>The execution layer checks authorization and business rules. If they do not allow the action, stop or request authorization; a model score cannot bypass this check.</span></li>
+<li><strong>3 · Decide whether to ask</strong><span>Run deterministic checks and use calibrated evaluators where scoring is needed. Required confirmation, high risk, or insufficient evidence leads to step 4; otherwise continue to step 5.</span></li>
+<li><strong>4 · Follow the decision</strong><span>Approval leads to step 5. Changed targets or arguments return to step 1 for fresh checks. Rejection or an expired confirmation stops execution; record the decision and reason.</span></li>
+<li><strong>5 · Recheck before writing</strong><span>The exact action, authorization, required approval, and current state must still be valid. Use version conditions or atomic operations to guard against changes between check and write. Stop if validation fails.</span></li>
+<li><strong>6 · Verify and record</strong><span>Check the external outcome; a timeout proves neither success nor failure. Keep appropriate records of execution and stops, then use failures for regression tests and later policy updates.</span></li>
+</ol>
+</figure>
+
+High risk, insufficient evidence, or irreversible effects can require human review; actions
+requiring confirmation also need valid approval. If the target or arguments change after
+approval, validate the new action rather than reusing the old confirmation. This diagram
+shows control flow, not a deployable security implementation.
 
 ## One layer further down: infra
 

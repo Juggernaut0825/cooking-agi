@@ -155,3 +155,5 @@ print(losses.detach().tolist(), current_log_probs.grad.tolist())
 它也没有给整次参数更新设下严格的 KL 上限：其他样本会共享参数，多轮更新还会累积影响。[Spinning Up 的 PPO 说明](https://spinningup.openai.com/en/latest/algorithms/ppo.html)因此还介绍了按 KL 提前停止更新的办法。PPO clipping 和 gradient clipping 也不同，后者直接处理梯度。
 
 GRPO 经常沿用这类裁剪目标，只是 advantage 的来源不同。想继续看这条区别，读 [GRPO、DPO、RLVR](after-rlhf.md)；如果不清楚旧策略和 Reference 的关系，回到 [Reference 与 Critic](reference-and-critic.md)。
+
+如果正在读训练代码，下一篇[同样是 clipping，为什么梯度不一样？](../clipping-variants.md)用相同输入比较 Dual-clip、CISPO 和 SAPO。第一次接触 PPO 的话，不必急着记这些名字。

@@ -38,9 +38,9 @@ Q 为 $[0,1]$、$\alpha=0.5$ 时，高价值动作概率约 0.8808，期望 Q �
 
 ## 自动温度的方向，可以用一个符号检查
 
-设要求策略熵至少达到 $H_{\rm target}$，固定策略时考虑温度目标 $L_\alpha=\alpha(H-H_{\rm target})$，对 $\alpha\ge0$ 做下降。当熵低于目标，导数为负，更新会增大 $\alpha$，增强鼓励随机性的力度；熵太高则反过来。
+设要求平均策略熵至少达到 $H_{\rm target}$，固定策略时考虑温度目标 $L_\alpha=\alpha(H-H_{\rm target})$，对 $\alpha\ge0$ 做下降。当熵低于目标，导数为负，更新会增大 $\alpha$，增强鼓励随机性的力度；熵太高则反过来。这是平均约束，不要求每个状态的熵都相等。
 
-用采样的 $-\log\pi(a\mid s)$ 估计熵时，这一步要停止策略梯度。实践中常优化 $\log\alpha$ 以保证温度为正；有的实现采用同方向但不同缩放的 surrogate，比较代码时要说明具体 loss。连续微分熵目标可以是负数，不能只凭负号判断是不是写错。
+令 $\eta=\log\alpha$，用采样的 $\hat H=-\log\pi(a\mid s)$ 估计熵，并记 $g=\operatorname{stopgrad}(\hat H-H_{\rm target})$。直接换元得到 $L_\eta=e^\eta g$，梯度为 $\alpha g$；常见 surrogate $\tilde L_\eta=\eta g$ 的梯度则为 $g$。两者方向相同，但不是同一个 loss，梯度尺度也不同。连续微分熵目标可以是负数：例如 $\hat H=-2,H_{\rm target}=-1$ 仍是熵不足，两种下降更新都会提高温度。
 
 ## 常用的双 Q 版本在算什么
 
@@ -78,7 +78,7 @@ $$
 -\sum_j\log(1-\tanh^2u_j).
 $$
 
-实际实现用数值稳定的等价式，别在 tanh 饱和处直接取 $\log0$。若再按环境边界缩放动作，还要计入缩放的 log-determinant。它对固定 Actor 梯度可能是常数，但会影响熵数值和温度目标的一致性。
+实际实现用数值稳定的等价式，别在 tanh 饱和处直接取 $\log0$。若使用环境动作坐标的密度，再按边界缩放时还要减去缩放的 log-determinant；也可以始终在归一化动作坐标下定义熵，但 Critic target 和温度 loss 必须沿用同一约定。例如把一维动作 $a$ 放大成 $a_{\rm env}=2a$，有 $\log\pi_{\rm env}=\log\pi-\log2$、$H_{\rm env}=H+\log2$；要表达同一个熵约束，$H_{\rm target}$ 也应加上 $\log2$。这个常数不直接改变固定 Q、固定温度时的 Actor 梯度，却会改变熵读数。
 
 稳定的单维 Jacobian 项可以写成：
 
@@ -100,9 +100,11 @@ $$
 
 | 更新什么 | 读取哪些量 | 哪些地方不能有梯度 |
 | --- | --- | --- |
-| 两个 Q | Replay 的 $(s,a)$ 与 soft target | Target Q、target 中的动作和 log-prob 整条分支 |
-| Actor | 当前状态、重参数化动作、当前两个 Q、log-prob | 不更新 Critic 参数，但保留 Q → 动作 → Actor |
+| 两个 Q | Replay 的 $(s,a)$ 与 soft target | 整条 target 分支，包括 Target Q、动作、log-prob 和 α |
+| Actor | 当前状态、重参数化动作、当前两个 Q、log-prob | 固定 α 和 Critic 参数，但保留 Q → 动作 → Actor |
 | 温度 α（若启用） | 策略熵与目标熵的差 | 这一步把策略的 log-prob 当固定观测 |
+
+两个 Target Q 初始复制当前 Q，通常每轮 Critic 更新后做 Polyak 同步；这个版本没有 Target Actor，也不额外加入 TD3 的 smoothing 噪声。真实终止时 $y=r$；若只是外部时间上限截断，仍从 reset 前的最后状态构造 soft bootstrap。
 
 策略梯度那篇的 score-function 更新，把已经采到的动作当作固定样本；这里则让梯度穿过动作回到 Actor。区别在估计方法，不单在动作是否连续：连续策略也可以使用 score-function。两条路径不能照搬彼此的 detach 位置。
 

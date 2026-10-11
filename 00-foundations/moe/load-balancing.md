@@ -123,7 +123,9 @@ $$L_z = \frac{1}{B}\sum_{i=1}^{B}\Big(\log \sum_{j=1}^{N} e^{x^{(i)}_j}\Big)^2$$
 
 1. 每个 expert 有一个 bias $b_i$，**只在挑 top-k 时**加到分数上；
 2. 选中以后，门控权重用原始 affinity score 算；bias 不直接进入门值公式，也不靠反向传播更新，但它改变了选中集合，因此会间接改变输出与任务梯度；
-3. 每步结束，超载的 expert 把 $b_i$ 调低 $\gamma$，空闲的调高 $\gamma$：前 14.3T token 用 $\gamma = 0.001$，最后 500B token 设成 0。
+3. 每步结束，负载高于目标平均值的 expert 把 $b_i$ 调低 $\gamma$，低于目标的调高 $\gamma$：前 14.3T token 用 $\gamma = 0.001$，最后 500B token 设成 0。
+
+低于目标不等于完全没活干。比如两个专家分到 `[6, 2]` 个 token，目标各为 4；第二个虽然已经处理了 2 个，仍要调高 bias，让后续更容易选到它。这是根据当前负载调整下一步的选择，不是承诺每一步都恰好均分，见 [DeepSeek-V3 §2.1.2](https://arxiv.org/html/2412.19437v1#S2.SS1.SSS2)。
 
 说它完全没有 balance loss 并不准确：DeepSeek-V3 还留了一项很小的序列级 balance loss（$\alpha = 0.0001$），防止单条序列内部失衡得太离谱。
 

@@ -460,7 +460,8 @@ def rewrite_links(html_text: str, page, repo: str, known: set) -> str:
                 return f'{attr}="{zh_path}{frag}"'
         if resolved not in known:
             return f'{attr}="{gh(raw, "tree" if raw.endswith("/") else "blob")}{frag}"'
-        return f'{attr}="{path}{frag}"'
+        query = "?lang=en" if resolved == "index.html" else ""
+        return f'{attr}="{path}{query}{frag}"'
 
     return re.sub(r'\b(href|src)="([^"]+)"', fix, html_text)
 
@@ -1008,12 +1009,19 @@ def expand_widgets(md_text: str, page=None) -> str:
 # --------------------------------------------------------------------------- #
 # page model
 # --------------------------------------------------------------------------- #
+def split_heading_id(heading: str):
+    match = re.search(r"\s+\{#([^{}\s]+)\}\s*$", heading)
+    if match:
+        return heading[:match.start()].strip(), match.group(1)
+    return heading.strip(), None
+
+
 def read_title(src: Path) -> str:
     """First h1 of a file. Needed for every page before any sidebar is built."""
     text = src.read_text(encoding="utf-8")
     heading = re.search(r"^#\s+(.+)$", text, re.M)
     if heading:
-        return heading.group(1).strip()
+        return split_heading_id(heading.group(1))[0]
     heading = re.search(r"<h1\b[^>]*>(.*?)</h1>", text, re.S | re.I)
     return html.unescape(strip_tags(heading.group(1))) if heading else src.stem
 
@@ -1280,8 +1288,9 @@ def build_page(page: Page, terms, repo: str, known: set):
     raw = protect_mermaid(raw)
 
     m = re.search(r"^#\s+(.+)$", raw, re.M)
-    page.title = m.group(1).strip() if m else read_title(page.src)
-    raw = re.sub(r"^#\s+.+$", "", raw, count=1, flags=re.M)
+    page.title, heading_id = split_heading_id(m.group(1)) if m else (read_title(page.src), None)
+    anchor = f'<span id="{html.escape(heading_id, quote=True)}"></span>' if heading_id else ""
+    raw = re.sub(r"^#\s+.+$", lambda match: anchor, raw, count=1, flags=re.M)
     if page.kind == "home":
         # Useful on GitHub, but redundant (and oddly circular) on the site itself.
         raw = re.sub(
@@ -1424,12 +1433,17 @@ def sidebar_html(page, sections, groups):
             f'<ul class="grp-body">{body}</ul></details></li>')
     zh = page.lang == 'zh'
     context = cats[scope]["zh" if zh else "en"] if scope in cats else ("本页导航" if zh else "On this page")
+    route_url = 'learn/choose-your-path.html' if zh else 'learn/choose-your-path.en.html'
+    route_link = (f'<a class="side-route-link" href="{page.rel(route_url)}">'
+                  f'{"按目标找路线" if zh else "Find a route for your goal"}'
+                  '<span aria-hidden="true"> →</span></a>') if page.url != route_url else ''
     local_toc = ""
     if scope not in cats:
         local_toc = (f'<div class="side-page-toc">{toc_html(page)}</div>' if getattr(page, "toc", [])
                      else f'<p class="side-empty">{"从顶部选择一个板块开始阅读。" if zh else "Choose a direction from the top navigation to get started."}</p>')
     return (
         f'<div class="side-context">{html.escape(context)}</div>'
+        f'{route_link}'
         '<div class="side-tools" hidden>'
         f'<div class="side-views" role="group" aria-label="{"导航视图" if zh else "Navigation view"}">'
         f'<button type="button" data-side-view="directory" aria-pressed="true" aria-controls="side-directory">'
@@ -1475,7 +1489,7 @@ def tabs_html(page):
     zh = page.lang == "zh"
     current = page_category(page)
     home = {"id": "home", "zh": "首页", "en": "Home"}
-    items = [(home, page.rel("index.zh.html" if zh else "index.html"))]
+    items = [(home, page.rel("index.zh.html" if zh else "index.html?lang=en"))]
     for cat in NAV.get("category", []):
         pair = category_home(cat)
         target = pair and (pair.get(page.lang) or pair["zh"])
@@ -1562,6 +1576,8 @@ def page_header_html(page):
     }
     if page.section.get("group") == "career":
         labels["article"] = "求职记录" if zh else "Career journal"
+    if page.section.get("group") == "study":
+        labels["article"] = "阅读导航" if zh else "Reading guide"
     read = f"约 {page.read_minutes} 分钟" if zh else f"{page.read_minutes} min read"
     position = ((f"本章 {page.position} / {page.section_count} 篇" if zh else f"Note {page.position} of {page.section_count}")
                 if page.kind != "home" and page.section_count > 1 else "")
@@ -1778,7 +1794,7 @@ def contributor_universe_html(people, page, site):
         for c in order)
     crew_issue = (f'https://github.com/{html.escape(site["repo"], quote=True)}'
                   f'/issues/new?template=add-me-to-the-crew.yml')
-    home = page.rel("index.zh.html" if zh else "index.html")
+    home = page.rel("index.zh.html" if zh else "index.html?lang=en")
     language = page.rel("contributors.en.html" if zh else "contributors.html")
     prefix = "../" * page.depth
     roles = [r for r in (("笔记与代码" if zh else "Notes & code"),
@@ -1887,7 +1903,10 @@ def reading_controls_html(page):
                 f'title="{unavailable}">{label}</span>')
     language = "en" if chinese else "zh-Hans"
     description = "切换到英文 / Read in English" if chinese else "切换到中文 / Read in Chinese"
-    href = html.escape(page.rel(sibling.url), quote=True)
+    target = sibling.url
+    if sibling.url == "index.html":
+        target += "?lang=en"
+    href = html.escape(page.rel(target), quote=True)
     return (f'<a class="lang-btn" href="{href}" lang="{language}" hreflang="{language}" data-language-switch="{"en" if chinese else "zh"}" '
             f'aria-label="{description}" title="{description}">{label}</a>')
 
@@ -1969,7 +1988,7 @@ def assemble(page, sections, people, nav, built, template):
             .replace("{{social_image}}", social_image)
             .replace("{{twitter_card}}", twitter_card)
             .replace("{{og_locale}}", "zh_CN" if zh else "en_US")
-            .replace("{{home}}", page.rel("index.zh.html" if zh else "index.html"))
+            .replace("{{home}}", page.rel("index.zh.html" if zh else "index.html?lang=en"))
             .replace("{{prefix}}", prefix)
             .replace("{{sidebar}}", sidebar_html(page, sections, nav.get("group", [])))
             .replace("{{sidebar_label}}", "笔记导航" if zh else "Note navigation")

@@ -4,7 +4,7 @@
 
 新模型 Recall 高了 3 个点，你准备宣布有效。先等一下：候选池一样吗？新旧模型测的是同一批 query 吗？少数用户有没有退化？换一个随机种子，还会是这个结果吗？
 
-这里不用先背统计检验。先算几个小例子，把“一个分数”拆成能检查的条件。所有数字都是教学数据，不是实验结果。想先看直觉，可以读[人群混合](#population-mix)；想跑代码，可以跳到[配对比较](#paired-comparison)。
+先算几个小例子，看看分数是怎么来的，再决定要用什么统计方法。所有数字都是教学数据，不是模型实测。只想先看懂，可以读[人群混合](#population-mix)和[同样涨分的两种情况](#paired-binary)；想自己算，再看[配对 bootstrap](#paired-bootstrap)。
 
 ## 1. 同一个 Recall 名字，可能不是同一道题
 
@@ -53,6 +53,69 @@ Matched sampling 可以让某些已测量条件更可比，但不会自动让不
 
 同一批 query 同时跑旧模型和新模型，记录每个 query 的差值 $d_i=m_i^{\mathrm{new}}-m_i^{\mathrm{old}}$。先看差值分布，再看平均。只比较两组无关样本的均值，会把题目难度变化也混进来。
 
+### 都从 70% 涨到 80%，区别在哪里？ {#paired-binary}
+
+如果每题只判对错，可以先把结果分成四类。下面是两种虚构的比较，每种都有 200 道题，每道题都保留新旧结果：
+
+<div class="worked-table" markdown="1">
+
+| 逐题发生了什么 | 比较 A | 比较 B |
+| --- | --- | --- |
+| 新旧都答对 | 100 | 140 |
+| 原来对，现在错 | 40 | 0 |
+| 原来错，现在对 | 60 | 20 |
+| 新旧都答错 | 0 | 40 |
+| 正确率变化 | 70% → 80% | 70% → 80% |
+
+</div>
+
+A 改对了 60 题，也弄错了原本会的 40 题；B 改对了 20 题，在这批题里没有退步。**净增都是 20 题，但变化的分布不同。** 只保存 70% → 80%，这层区别就丢了。
+
+对于“这两个固定模型的正确率是否相同”，可以用成对二分类的 McNemar 检验。它关注的是两类不一致结果：改善多少题，退步多少题。B 的变化更集中在改善方向；A 则有更多来回变化。检验还需要题目对之间独立、样本来自同一目标分布、判分规则固定等前提，不能把同一个用户的一百条近似问题当成一百份独立证据。
+
+<details markdown="1">
+<summary>想算一下：为什么不只看净增的 20 题？</summary>
+
+把改善数记为 $g$，退步数记为 $\ell$。两种情况的正确率差都是 $(g-\ell)/200=0.10$，但不一致的题数 $g+\ell$ 分别是 100 和 20。
+
+在新旧正确率相同的零假设及上述抽样条件下，给定不一致的题数后，改善数服从 $G\sim\mathrm{Binomial}(g+\ell,1/2)$。直觉上，变化如果没有偏向哪一个模型，不一致结果朝两个方向出现的机会就相同。对称的二项分布给出双侧精确 p 值：
+
+$$
+p=\min\left(1,\;2\sum_{j=0}^{\min(g,\ell)}\binom{g+\ell}{j}2^{-(g+\ell)}\right).
+$$
+
+下面直接用 Python 标准库算这张小表。输入是题数，不接受负数、小数或布尔值：
+
+```python
+from math import comb
+
+def exact_mcnemar(gained, lost):
+    if any(type(count) is not int or count < 0 for count in (gained, lost)):
+        raise ValueError("Counts must be nonnegative integers")
+    disagreements = gained + lost
+    if disagreements == 0:
+        return 1.0
+    tail_count = sum(comb(disagreements, count)
+                     for count in range(min(gained, lost) + 1))
+    return min(1.0, 2 * tail_count / (2 ** disagreements))
+
+comparison_a = exact_mcnemar(60, 40)
+comparison_b = exact_mcnemar(20, 0)
+assert abs(comparison_a - 0.0568879336409808) < 1e-12
+assert comparison_b == 2 / (2 ** 20)
+print(f"A: {comparison_a:.6f}; B: {comparison_b:.8f}")
+```
+
+结果约为 A：0.056888，B：0.00000191。同样的涨幅，在这个检验下支持“正确率不同”的证据强弱不同。p 值不是“新模型没用的概率”，也不是收益大小；B 更小，不代表它比 A 多提高了准确率。[statsmodels 的 McNemar 文档](https://www.statsmodels.org/stable/generated/statsmodels.stats.contingency_tables.mcnemar.html)说明了精确二项检验与卡方近似的区别；也可用 [SciPy 的双侧 binomtest](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.binomtest.html)核对。
+
+两边每题都判得一样时，代码约定返回 1；没有观察到不同结果，不等于证明两模型在所有任务上等价。检验也不替你决定可否上线：退步是否涉及关键任务、时延增加多少，还要另外看。
+
+</details>
+
+### 分数不只是对错时，再看配对 bootstrap {#paired-bootstrap}
+
+Recall 这样的逐题分数可以是 0.4、0.6，不适合直接当作 McNemar 的对错计数。我们要估计的仍然是平均差值，只是换一种办法看它对样本变化有多敏感。
+
 下面是一个最小的配对 bootstrap：每次重采样 query，同时保留它的新旧配对。它估计的是**给定这两次模型输出时，测试样本组成带来的不确定性**。
 
 ```python
@@ -90,3 +153,5 @@ Bootstrap 也不能替你测训练方差。要比较训练方法，还需要独�
 评估集也不能无限次当开发集使用。记录哪些样本用来调 rubric、选阈值和改模型，最后留一部分未参与这些决策的数据。训练 teacher 和最终 evaluator 相同并不必然无效，但不能把二者的一致当成独立证据；需要外部参考检验共同盲点。
 
 更具体的偏差例子见 [LLM-as-a-Judge](llm-as-a-judge/README.md)。如果还不确定失败发生在检索、上下文还是生成，回到[分层评估](evaluation-stack.md)先拆开查。
+
+想把这些检查做成能运行的小项目，可以接着看[评估报告与 CI](../practice/web-lab/eval-report.md)。那里只按预先约定的规则拦截回归，不会因为 CI 变绿就替模型盖上“整体更好”的章。

@@ -41,6 +41,15 @@ Let $q=[0.8,0.2]$ and $p=[0.5,0.5]$. A two-token vocabulary lets us enumerate th
 
 Weighting by sampling probabilities 0.8 and 0.2 gives about 0.1927 for both $k_1$ and $k_3$, but about 0.1723 for $k_2$. Giving the rows equal weight would change the sampling distribution.
 
+<figure class="worked-update" lang="en" id="sample-and-mean">
+  <figcaption>Looking at k₁ alone · a negative sample is compatible with nonnegative KL.</figcaption>
+  <ol>
+    <li><small>Sample A · probability 0.8</small><strong>+ 0.4700</strong><span>The current policy favors A more than the Reference does.</span></li>
+    <li><small>Sample B · probability 0.2</small><strong>− 0.9163</strong><span>The current policy assigns less probability to B.</span></li>
+    <li><small>Weight by the current policy</small><strong>Mean ≈ 0.1927</strong><span>0.8 × 0.4700 + 0.2 × (−0.9163).</span></li>
+  </ol>
+</figure>
+
 ```python
 import math
 
@@ -81,6 +90,20 @@ $k_2$ has a different justification. For $z=\log r$, $k_3=e^z-1-z=\tfrac12z^2+O(
 
 **Support matters.** If $q$ keeps only A while $p$ assigns half its mass to each of A and B, $\mathbb E_q[r]=0.5$, not 1. Top-k/top-p sampling changes the original softmax distribution. Model log-probabilities are not automatically actual sampling log-probabilities.
 
+<details markdown="1">
+<summary>Nonnegative k₃ can still fluctuate more than k₁</summary>
+
+Change the current policy to $q=[0.99,0.01]$, keeping $p=[0.5,0.5]$. On the rare B sample, $p/q=50$, giving $k_3(B)\approx45.0880$. On A, it is only about 0.1881.
+
+| Current policy q | Variance of one k₁ sample | Variance of one k₃ sample |
+| --- | ---: | ---: |
+| `[0.8, 0.2]` | 0.3075 | 0.0382 |
+| `[0.99, 0.01]` | 0.2090 | 19.9583 |
+
+These are exact sums of $\sum_xq(x)(k(x)-\mathbb E_q[k])^2$, not a sampling experiment. Both estimators remain unbiased in the second row, but k₃ occasionally produces a large value. For $n$ independent, identically distributed samples, the variance of the sample mean is the table value divided by $n$. Tokens within a sequence generally cannot be treated as independent samples.
+
+</details>
+
 ## 4. Old samples change the expectation {#old-samples}
 
 Suppose an old policy $\mu$ generates the samples, then an update changes the current policy to $q$. Averaging recomputed $k_3$ estimates $\mathbb E_\mu[k_3(q,p)]$, not automatically $D_{\rm KL}(q\|p)$.
@@ -109,6 +132,51 @@ $$
 Holding sampled tokens fixed and differentiating only $k_3$ omits the second term. A small counterexample: take $q=[\sigma(\theta),1-\sigma(\theta)]$, $\theta=\log4$, and $p=[0.5,0.5]$. The true KL derivative is about **0.2218**; differentiating $k_3$ under fixed sampling weights gives an expected gradient of **0.3000**.
 
 This does not make every use of $k_3$ incorrect. An algorithm may deliberately define an old-data surrogate, or retain the required derivatives through importance weights. Inspect the full objective, not just an estimator's unbiasedness label. [DeepSeekMath's GRPO equations](https://arxiv.org/html/2402.03300v3#S4.SS1.SSS1) include this nonnegative KL term; the distinction here is between a statistic and an update rule.
+
+<details markdown="1">
+<summary>What happens if each estimator is used directly as a loss?</summary>
+
+Keep the prefix fixed, assume the same finite positive support, and hold the Reference independent of the parameters. Write $s_\theta(x)=\nabla_\theta\log q_\theta(x)$. **Sample from the current policy, but do not differentiate the sampling operation.** The three sample-loss derivatives are:
+
+| Differentiate this term directly | Sample gradient | Expected gradient in the two-token example |
+| --- | --- | ---: |
+| $k_1$ | $s_\theta$ | 0 |
+| $k_2$ | $\log(q/p)s_\theta$ | 0.2218 |
+| $k_3$ | $(1-p/q)s_\theta$ | 0.3000 |
+
+Why is the first expectation zero? Because $\mathbb E_q[s_\theta]=\sum_x\nabla_\theta q_\theta(x)=\nabla_\theta1=0$. The full KL gradient is $\mathbb E_q[\log(q/p)s_\theta]$, which matches the k₂ row. **A biased value estimate can give the right expected gradient; an unbiased value estimate can give the wrong one when differentiated directly.**
+
+[Liu et al. (2025), §5 and Appendix C](https://arxiv.org/html/2510.01555v2) examine this distinction. The result depends on on-policy sampling and the gradient paths; it is not a blanket instruction to replace k₃ with k₂. Recheck old rollouts, clipping, prefix distributions, and reward shaping in the complete objective. In particular, differentiating k₁ directly is different from using detached k₁ in a reward.
+
+The following finite-difference check keeps `sampling` fixed across both perturbations. In the full KL, the summation weights change with the parameter. It uses only the Python standard library and the earlier `kl_sample_terms` function.
+
+```python
+def binary_policy(parameter):
+    positive = 1 / (1 + math.exp(-parameter))
+    return [positive, 1 - positive]
+
+def kl_objectives(parameter, sampling):
+    policy = binary_policy(parameter)
+    rows = [kl_sample_terms(math.log(value), math.log(0.5))
+            for value in policy]
+    exact = sum(value * math.log(value / 0.5) for value in policy)
+    fixed = [sum(weight * row[column] for weight, row in zip(sampling, rows))
+             for column in range(3)]
+    return [exact, *fixed]
+
+parameter = math.log(4)
+sampling = binary_policy(parameter)
+step = 1e-5
+upper = kl_objectives(parameter + step, sampling)
+lower = kl_objectives(parameter - step, sampling)
+derivatives = [(high - low) / (2 * step) for high, low in zip(upper, lower)]
+assert math.isclose(derivatives[0], derivatives[2], abs_tol=1e-8)
+print([round(value, 4) for value in derivatives])
+```
+
+The derivatives are `[0.2218, 0.0, 0.2218, 0.3]`: full KL followed by fixed-sample k₁, k₂, and k₃. Rounding may display `-0.0`. A finite batch also has sampling noise; this calculation checks expectations, not an actual model update.
+
+</details>
 
 ## 6. Checks before using it in training {#implementation}
 

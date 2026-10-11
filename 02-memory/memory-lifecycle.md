@@ -6,6 +6,8 @@
 
 **记住了多少不是重点。该用哪条、什么时候不该再用，才是。**这里用一个虚构的日程助手，把记忆的生命周期拆开。
 
+先看[两个时间的小例子](#two-clocks)，就能理解为什么“最新记录”不一定是答案；想做评估，可以直接看[怎样拆开找错和用错](#memory-evaluation)。
+
 ## 先分清事实、偏好和临时要求
 
 | 内容 | 可能的处理方式 | 为什么不能一律长期保存 |
@@ -44,6 +46,7 @@
   "scope": "scheduling",
   "source": "explicit_user_statement",
   "observed_at": "2026-09-28T09:00:00Z",
+  "valid_from": "2026-09-28T09:00:00Z",
   "valid_until": "2026-10-05T00:00:00Z",
   "supersedes_in_scope": ["preference-001"],
   "status": "active"
@@ -52,36 +55,61 @@
 
 这是教学用记录，不是推荐的行业标准。`supersedes_in_scope` 的意思是“在指定范围内覆盖”，而不是永久删除旧偏好；临时要求过期后，可能还需要回到原来的长期偏好。
 
+<span id="two-clocks"></span>
+
 ## 两个时间：什么时候得知，什么时候适用
 
 假设周一用户说“周三到周五在外地”。周一是系统**得知**这件事的时间，周三才是它开始**适用**的时间。如果只保留一列 `updated_at`，系统可能提前改掉周二的日程。
 
 记录可以有 `observed_at`、`valid_from`、`valid_until`。结束时间最好约定为不包含边界，例如区间 $[t_{\mathrm{start}},t_{\mathrm{end}})$；这样相邻两段不会在同一时刻都声称生效。还要固定时区：用户说的“周五晚上”不是天然的 UTC 时间。
 
+把这句话放到时间线上会更清楚。下面约定周一是第 1 天，周三到周五写成 $[3,6)$：
+
+<div class="worked-table" markdown="1">
+
+| 系统已经知道什么 | 要安排哪一天 | 该用哪条 |
+| --- | --- | --- |
+| 周一已收到出差说明 | 周二，第 2 天 | 原来的长期偏好 |
+| 周一已收到出差说明 | 周三，第 3 天 | 出差期间的例外 |
+| 周六，例外已过期 | 周六，第 6 天 | 恢复长期偏好 |
+| 直到周四才收到出差说明 | 回放周三当时的决定 | 不能偷用周四才得知的信息 |
+
+</div>
+
+最后一行很容易漏掉。今天回看，当然知道那周发生了什么；但评估系统当时能否答对，输入只能包含当时已知的信息。`day` 回答“安排哪天”，`known_at` 回答“允许用截至哪天收到的记录”。不传 `known_at` 时，下面的例子把两者都设为同一天。
+
 下面用整数表示天数，把解析自然语言、时区换算先拿掉，只检查读取规则。旧偏好不能先被删掉，否则临时例外结束后，就没法恢复。
 
 ```python
-def current_memories(records, user, scope, day):
+def current_memories(records, user, scope, day, *, known_at=None):
+    cutoff = day if known_at is None else known_at
     eligible = [record for record in records
                 if record["user"] == user and record["scope"] == scope
                 and record["status"] == "active"
+                and record["observed"] <= cutoff
                 and record["start"] <= day < record["end"]]
     overridden = {target for record in eligible for target in record["overrides"]}
     return [record["id"] for record in eligible if record["id"] not in overridden]
 
 records = [
-    dict(id="usual", user="demo", scope="meetings", status="active", start=0, end=100, overrides=[]),
-    dict(id="trip", user="demo", scope="meetings", status="active", start=3, end=6, overrides=["usual"]),
-    dict(id="other", user="someone-else", scope="meetings", status="active", start=0, end=100, overrides=[]),
+    dict(id="usual", user="demo", scope="meetings", status="active", observed=0, start=0, end=100, overrides=[]),
+    dict(id="trip", user="demo", scope="meetings", status="active", observed=1, start=3, end=6, overrides=["usual"]),
+    dict(id="other", user="someone-else", scope="meetings", status="active", observed=0, start=0, end=100, overrides=[]),
 ]
 assert current_memories(records, "demo", "meetings", 2) == ["usual"]
 assert current_memories(records, "demo", "meetings", 3) == ["trip"]
 assert current_memories(records, "demo", "meetings", 6) == ["usual"]
+assert current_memories(records, "demo", "meetings", 3, known_at=1) == ["trip"]
+records[1]["observed"] = 4
+assert current_memories(records, "demo", "meetings", 3, known_at=3) == ["usual"]
+assert current_memories(records, "demo", "meetings", 3, known_at=4) == ["trip"]
 records[0]["status"] = "deleted"
 assert current_memories(records, "demo", "meetings", 6) == []
 ```
 
 这个例子只处理已明确授权、范围已解析、覆盖关系无环的记录。生产实现还要拒绝跨用户覆盖、循环覆盖和含糊冲突；数据库权限必须真正隔离用户，不能只依赖调用方传来的 `user` 字符串。代码没有解决所有记忆问题，只让一个很容易写错的时间规则变得可检查。
+
+这里的 `status` 仍是当前状态，`known_at` 只防止读到过晚收到的记录，不会重建所有历史版本。真正回放一次旧决定，需要当时允许保留的状态快照；不能为了复盘而重新暴露用户已要求删除的内容。后面的删除测试应继续按当前权限执行。
 
 ## 写入和读取是两次判断
 
@@ -138,5 +166,20 @@ M1 原话 ──→ S1 摘要 ──→ V1 索引条目
 ## 这套办法的代价
 
 结构化记录更容易审计，但需要维护范围和过期规则；过于保守会频繁打断用户，过于积极会记下不该记的事。可以先在少量明确场景上做对照测试，不急着让模型记住所有对话。
+
+## 答错了，是没找到，还是用错了？ {#memory-evaluation}
+
+同样一句错误答案，背后可能是三件事：写入时就漏了有效期；正确记录没被检索到；记录找到了，回答却选了旧版本。只看最后的准确率，分不出下一步该改哪里。
+
+还是刚才的出差例子：先保存原话及有效区间，再检查检索结果有没有这条证据，最后检查回答是否只在周三至周五使用例外。可以在合成测试中直接把正确证据交给模型作为对照：如果这时仍答错，继续加检索条数未必能解决问题。这是定位实验，不是正式线上输入。
+
+想借用公开任务，可以从下面两份工作入手，但要分清测试范围：
+
+| 资料 | 适合参考什么 | 还需要自己补什么 |
+| --- | --- | --- |
+| [LongMemEval，ICLR 2025，§3–4](https://arxiv.org/html/2410.10813v2#S3) | 信息提取、跨会话推理、时间推理、知识更新、无法回答时不乱猜；把 indexing、retrieval、reading 分开 | 本产品的权限、删除传播、延迟，以及目标语言 |
+| [LoCoMo，2024，§4 与 §8](https://arxiv.org/html/2402.17753v1#S4) | 长对话问答、事件摘要和多模态对话；数据主要由模型生成后经人工检查 | 真实用户的表达和变更；论文的英语数据不能直接代表中文体验 |
+
+它们是测试设计的参考，不是 2026 年所有记忆系统的排名。复用 benchmark 时固定数据版本、历史范围、检索预算和评分脚本；本站没有运行这两项完整评测。问答分数再高，也不能代替“删除后是否还会读出来”这样的系统检查。
 
 继续读：[检索如何找到证据](../04-search/README.md) · [什么时候需要人来确认](../06-systems/human-in-the-loop.md)。

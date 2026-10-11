@@ -40,6 +40,8 @@ For example, “GRPO with verifiable rewards” is a valid combination. RLVR can
 
 Classic PPO typically trains a Critic to estimate expected return. GRPO instead samples several answers to the same prompt and constructs a relative signal from their rewards, without a separately trained Critic. The [DeepSeekMath paper](https://arxiv.org/abs/2402.03300) introduces this approach; it does not require rewards to come from a program.
 
+The group contains **several responses sampled from one policy for one prompt**, not a team of different models. The comparison updates that same policy; it does not aim to make every response in the group more likely.
+
 ### Four answers, one correct {#group-example}
 
 For example, a model writes four implementations for the same coding problem, and only the second passes the current test suite. Assigning 1 for a pass and 0 otherwise gives `[0, 1, 0, 0]`. This is a teaching example, not an experimental result; passing those tests does not prove correctness on every input.
@@ -113,6 +115,8 @@ Increasing the ratio from `1.3` to `1.6` does not increase this positive-advanta
 </details>
 
 Two roles are easy to confuse here. The **old policy** generated the batch, and its saved log-probabilities supply the ratio denominator. The **Reference** supplies a baseline for a KL constraint when one is enabled. Their weights may coincide at some point, but their jobs differ. With log-probabilities, compute the ratio as `exp(current_logp - old_logp)`, not by dividing them. If sampling settings change the generation distribution, check which distribution those probabilities describe.
+
+The Reference is neither the training dataset nor a gold answer. Given the same prompt and response prefix, the current policy might assign `[0.8, 0.2]` to two candidate tokens while the Reference assigns `[0.5, 0.5]`. KL compares those conditional distributions, not generated text directly against a dataset. See the [two-token KL example](kl-estimators.en.md#two-tokens) for exact sums and sampled estimates. The Reference stays fixed during an optimization phase; if an algorithm refreshes it between outer iterations, record that schedule rather than assuming it stays unchanged throughout training.
 
 Returning to that one-point reward: it records a pass on the current tests. The advantage gives a relative signal, and the probability ratio and clipping determine its contribution to the objective. None guarantees that the next answer will be correct. That still needs evaluation on new problems not used for training.
 

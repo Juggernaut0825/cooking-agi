@@ -1,0 +1,12 @@
+{
+  "suite": "library-demo-v1",
+  "run": "candidate-fixed-demo",
+  "results": [
+    {"id": "q1", "passed": true, "output": "It opens at 09:00."},
+    {"id": "q2", "passed": true, "output": "It closes at 18:00."},
+    {"id": "q3", "passed": true, "output": "Four books."},
+    {"id": "q4", "passed": true, "output": "Fourteen days."},
+    {"id": "q5", "passed": true, "output": "The supplied information does not say whether it opens on Sunday."},
+    {"id": "q6", "passed": true, "output": "The supplied information does not specify a late fee."}
+  ]
+}

@@ -6,6 +6,8 @@ Last month a user said, “Don't schedule evening meetings.” Today they say, �
 
 **The question isn't how much was stored, but which record applies and when it stops applying.** This note uses a fictional scheduling assistant.
 
+The [two-clock example](#two-clocks) shows why the newest record is not always the answer. For evaluation, jump to [separating retrieval errors from reading errors](#memory-evaluation).
+
 ## Separate facts, preferences, and temporary instructions
 
 | Content | Possible handling | Why not store everything indefinitely? |
@@ -44,6 +46,7 @@ Start with enough information to explain who said it, when, for how long it appl
   "scope": "scheduling",
   "source": "explicit_user_statement",
   "observed_at": "2026-09-28T09:00:00Z",
+  "valid_from": "2026-09-28T09:00:00Z",
   "valid_until": "2026-10-05T00:00:00Z",
   "supersedes_in_scope": ["preference-001"],
   "status": "active"
@@ -52,36 +55,61 @@ Start with enough information to explain who said it, when, for how long it appl
 
 This is a teaching example, not an industry standard. `supersedes_in_scope` means a scoped override, not permanent deletion of the old preference. After the exception expires, the longer-term preference may apply again.
 
+<span id="two-clocks"></span>
+
 ## Two times: when learned, and when applicable
 
 On Monday a user says, “I'll be away Wednesday through Friday.” Monday is when the system learns the fact; Wednesday is when it starts applying. With only an `updated_at` field, the system might change Tuesday’s schedule too early.
 
 Records can include `observed_at`, `valid_from`, and `valid_until`. An exclusive end boundary, $[t_{\mathrm{start}},t_{\mathrm{end}})$, prevents adjacent intervals from both claiming the same boundary. Resolve time zones as well: “Friday evening” is not inherently UTC.
 
+Put that statement on a timeline. Let Monday be day 1; Wednesday through Friday is $[3,6)$:
+
+<div class="worked-table" markdown="1">
+
+| Information available | Day being scheduled | Applicable record |
+| --- | --- | --- |
+| Trip notice received on Monday | Tuesday, day 2 | Usual preference |
+| Trip notice received on Monday | Wednesday, day 3 | Trip exception |
+| It is Saturday; the exception has expired | Saturday, day 6 | Usual preference resumes |
+| Trip notice only arrives on Thursday | Replay Wednesday's decision | Do not use information received on Thursday |
+
+</div>
+
+The last row is easy to miss. Looking back today, we know what happened that week. Evaluating what the system could answer then requires the information it had then. `day` is the day being scheduled; `known_at` is the cutoff for information received. The example defaults both to the same day when `known_at` is omitted.
+
 The example below represents days with integers, setting aside language parsing and time-zone conversion to test the read rule. Do not delete the original preference when adding a temporary exception, or it cannot resume afterward.
 
 ```python
-def current_memories(records, user, scope, day):
+def current_memories(records, user, scope, day, *, known_at=None):
+    cutoff = day if known_at is None else known_at
     eligible = [record for record in records
                 if record["user"] == user and record["scope"] == scope
                 and record["status"] == "active"
+                and record["observed"] <= cutoff
                 and record["start"] <= day < record["end"]]
     overridden = {target for record in eligible for target in record["overrides"]}
     return [record["id"] for record in eligible if record["id"] not in overridden]
 
 records = [
-    dict(id="usual", user="demo", scope="meetings", status="active", start=0, end=100, overrides=[]),
-    dict(id="trip", user="demo", scope="meetings", status="active", start=3, end=6, overrides=["usual"]),
-    dict(id="other", user="someone-else", scope="meetings", status="active", start=0, end=100, overrides=[]),
+    dict(id="usual", user="demo", scope="meetings", status="active", observed=0, start=0, end=100, overrides=[]),
+    dict(id="trip", user="demo", scope="meetings", status="active", observed=1, start=3, end=6, overrides=["usual"]),
+    dict(id="other", user="someone-else", scope="meetings", status="active", observed=0, start=0, end=100, overrides=[]),
 ]
 assert current_memories(records, "demo", "meetings", 2) == ["usual"]
 assert current_memories(records, "demo", "meetings", 3) == ["trip"]
 assert current_memories(records, "demo", "meetings", 6) == ["usual"]
+assert current_memories(records, "demo", "meetings", 3, known_at=1) == ["trip"]
+records[1]["observed"] = 4
+assert current_memories(records, "demo", "meetings", 3, known_at=3) == ["usual"]
+assert current_memories(records, "demo", "meetings", 3, known_at=4) == ["trip"]
 records[0]["status"] = "deleted"
 assert current_memories(records, "demo", "meetings", 6) == []
 ```
 
 This covers authorized records with resolved scope and acyclic override relationships. Production systems must reject cross-user overrides, cycles, and ambiguous conflicts. Database access must enforce user isolation rather than trusting a caller-provided `user` string. The code makes one error-prone temporal rule checkable; it does not solve all memory problems.
+
+Here `status` still reflects the current state. `known_at` excludes records received too late; it does not reconstruct every historical version. Replaying an old decision requires a state snapshot that may legitimately be retained, not renewed access to content the user asked to delete. The deletion tests below must continue to enforce current permissions.
 
 ## Writing and reading require different decisions
 
@@ -138,5 +166,20 @@ If only two out of ten tasks require memory, a good overall success rate does no
 ## Costs of this design
 
 Structured records improve auditability but require scope and expiration rules. Excessive caution interrupts users; excessive eagerness stores too much. Start with controlled comparisons in a few explicit scenarios rather than remembering every conversation.
+
+## Was the evidence missing, or used incorrectly? {#memory-evaluation}
+
+The same wrong answer can have three causes: the validity interval was lost during writing, the correct record was not retrieved, or the reader received it but used an older version. Final-answer accuracy alone does not tell you which component to change.
+
+For the trip example, check the stored statement and interval, then whether retrieval returns that evidence, then whether the answer applies the exception only from Wednesday through Friday. In a synthetic test, provide the correct evidence directly as a control. If the answer is still wrong, retrieving more records may not help. This is a diagnostic experiment, not the normal production input.
+
+Two public benchmarks offer useful starting points, with different scopes:
+
+| Resource | What it helps test | What you still need to add |
+| --- | --- | --- |
+| [LongMemEval, ICLR 2025, §3–4](https://arxiv.org/html/2410.10813v2#S3) | Extraction, multi-session reasoning, temporal reasoning, updates, and abstention; separates indexing, retrieval, and reading | Product-specific permissions, deletion propagation, latency, and target languages |
+| [LoCoMo, 2024, §4 and §8](https://arxiv.org/html/2402.17753v1#S4) | Long-dialogue QA, event summaries, and multimodal dialogue; mainly model-generated data checked by humans | Real users' wording and changes; the paper's English data does not establish Chinese-language quality |
+
+These are evaluation references, not a ranking of all memory systems in 2026. Fix the dataset version, available history, retrieval budget, and scoring script when reusing a benchmark. We have not run either full benchmark here. Strong QA results cannot replace checks that deleted information is no longer served.
 
 Continue: [Retrieving evidence](../04-search/README.en.md) · [When to ask a human](../06-systems/human-in-the-loop.en.md).

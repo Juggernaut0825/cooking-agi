@@ -50,16 +50,55 @@ $$
 
 第二步把旧统计乘 $2/3$，再加新块。最后仍得到 $25/3$。第三个 value 虽然是 0，分母还是增加了，不能把这个位置忽略。
 
+### Online 不代表概率可以立刻定下来 {#online-output}
+
+只看到前两个位置时，概率是 $[1/3,2/3]$；第三个位置加入后，前两项就变成了 $[1/6,2/6]$。后面还有多少分数没读到，分母就还没定下来。
+
+因此，online softmax 能一遍维护最大值和归一化分母，**不代表读到一个元素就能输出它最终的概率**。[2018 年的原论文](https://arxiv.org/html/1805.02867v2#S3)算法 3 仍有一个输出阶段。若要返回完整概率向量，还要重新读输入或保留所需数据；attention 则可以同时积累加权分子 $u$，最后只输出 $u/\ell$。这才是本例省下整行概率存储的原因。
+
+<details markdown="1">
+<summary>两个块已经分别算完，怎样合起来？</summary>
+
+块 A、B 各保存 $(m_A,\ell_A,u_A)$ 和 $(m_B,\ell_B,u_B)$。先选共同的最大值 $m=\max(m_A,m_B)$，再把两边换到同一个尺度：
+
+$$
+\begin{aligned}
+\ell&=e^{m_A-m}\ell_A+e^{m_B-m}\ell_B,\\
+u&=e^{m_A-m}u_A+e^{m_B-m}u_B.
+\end{aligned}
+$$
+
+比如本例前两项的加权结果是 $50/3$，第三项单独算是 0。直接把两个输出平均会得到 $25/3$，这次恰好与正确答案相同，因为两块的未归一化权重和都是 3。**这个巧合不能当作算法。** 换成分数 $[\log1,\log1,\log8]$、values $[10,20,0]$，两块平均变成 7.5，正确结果却是 3。合并统计量才会保留两块不同的权重。
+
+实数运算中这些统计可以按不同顺序合并；浮点求和仍有舍入差异。整块都被 mask 时直接跳过，避免算 $e^{-\infty-(-\infty)}$；整行都被 mask 则没有可归一化的分布。
+
+</details>
+
+<details markdown="1">
+<summary>少一遍扫描，具体省在哪里？</summary>
+
+按原论文算法 2 / 3 的计数，safe softmax 分别扫描输入来找最大值、求分母、算输出：每个元素读三次、写一次。Online normalizer 合并前两遍，变成读两次、写一次。这里数的是算法中的内存访问，**不是 CPU 与 GPU 往返传输的次数**。
+
+两者时间复杂度仍是 $O(n)$。实际 kernel 能否把数据留在寄存器或共享内存、是否与后续算子融合，还会改变真正的 HBM 流量和耗时；不能拿扫描次数直接推算加速比。
+
+</details>
+
 ## 用几十行代码核对，而不是先写 GPU kernel
 
-下面是单行、标量 value 的教学实现。它验证数学，不模拟 GPU 性能。被 mask 的位置用负无穷表示；整行都无效时明确报错，而不是默默输出 NaN。
+下面是单行、标量 value 的教学实现。它验证数学，不模拟 GPU 性能。被 mask 的位置用负无穷表示，可以跳过；NaN、正无穷和可见位置的非有限 value 则报错。整行都无效时也明确报错，而不是默默输出 NaN。
 
 ```python
 import math
 
 def streaming_attention(scores, values, block_size):
-    if len(scores) != len(values) or block_size < 1:
+    if (len(scores) != len(values) or not isinstance(block_size, int)
+            or isinstance(block_size, bool) or block_size < 1):
         raise ValueError("Invalid shape or block size")
+    if any(score != -math.inf and not math.isfinite(score) for score in scores):
+        raise ValueError("Scores must be finite or -inf for masked positions")
+    if any(not math.isfinite(value) for score, value in zip(scores, values)
+           if score != -math.inf):
+        raise ValueError("Visible values must be finite")
     running_max = -math.inf
     normalizer = 0.0
     numerator = 0.0

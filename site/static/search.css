@@ -6,6 +6,14 @@
   box-shadow: 0 24px 100px #0006; font-family: var(--body);
 }
 .note-search::backdrop { background: #0008; backdrop-filter: blur(7px); }
+:root[data-theme="light"] .note-search {
+  background: var(--panel);
+  box-shadow: 0 16px 56px rgba(37, 42, 45, .14);
+}
+:root[data-theme="light"] .note-search::backdrop {
+  background: rgba(37, 42, 45, .20);
+  backdrop-filter: blur(4px);
+}
 .search-is-open { overflow: hidden; }
 .note-search-shell { display: flex; flex-direction: column; max-height: inherit; }
 .note-search-heading { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.4rem .35rem; }

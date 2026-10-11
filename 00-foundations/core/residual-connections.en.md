@@ -77,11 +77,11 @@ Whether to use dropout, where to put it, and which rate to use depend on the mod
 
 Three different problems, but their **relative placement** matters:
 
-$$\underbrace{\text{Norm}(x + \text{Dropout}(f(x)))}_{\text{post-norm, 2017}} \qquad\text{vs}\qquad \underbrace{x + \text{Dropout}(f(\text{Norm}(x)))}_{\text{pre-norm, now}}$$
+$$\underbrace{\text{Norm}(x + \text{Dropout}(f(x)))}_{\text{post-norm, 2017}} \qquad\text{vs}\qquad \underbrace{x + \text{Dropout}(f(\text{Norm}(x)))}_{\text{pre-norm, inside branch}}$$
 
 Post-norm multiplies the block Jacobian by the normalization Jacobian, so the skip is no longer a pure identity. [On Layer Normalization](https://arxiv.org/abs/2002.04745) analyzes the connection to gradients at initialization and warmup; it does not prove every configuration must—or need not—use warmup.
 
-pre-norm moves the norm into the branch and leaves the identity path intact, at the cost of output scale accumulating with depth — so a final norm is added at the end.
+Pre-norm moves normalization inside the branch and preserves the identity path. Layer updates still add to the residual stream, but whether its scale grows depends on their correlations and initialization. Implementations commonly add a final norm to control the scale entering the output head; that does not fix every intermediate-layer issue.
 
 ![post-norm versus pre-norm residual paths](../assets/transformer-block.en.svg)
 

@@ -14,6 +14,8 @@ The site opens in English on your first visit. **中文 / EN** at the top switch
 
 ## Start here
 
+**Not sure where to begin? [Choose a route for your goal](learn/choose-your-path.en.md)**—getting started, interviews, research, projects, a single topic, or applications. Each route suggests what to read first and what can wait.
+
 Pick what you need today. You don't have to read the whole site in order.
 
 - **[Foundations](learn/README.en.md)** — Understand model components, training, evaluation, and inference. New to language models? Start with the [study guide](00-foundations/study-guide.en.md).

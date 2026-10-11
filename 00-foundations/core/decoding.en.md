@@ -29,24 +29,26 @@ $$p_i = \frac{\exp(z_i / T)}{\sum_j \exp(z_j / T)}$$
 | $T$ | Effect |
 | --- | --- |
 | $T \to 0^+$ | probability concentrates on a unique maximum; tied maxima remain multiple candidates |
-| $T < 1$ | the distribution gets steeper, high-probability tokens dominate more, and the output is more conservative |
+| $0 < T < 1$ | the distribution gets steeper and high-probability tokens dominate more |
 | $T = 1$ | the model's original distribution |
 | $T > 1$ | the distribution gets flatter, long-tail tokens get a chance, and the output is more divergent |
 
-Temperature preserves the **ranking** but changes concentration. Lowering it does not add knowledge or guarantee a more correct answer.
+Positive temperature preserves the **ranking** but changes concentration. Lowering it does not add knowledge or guarantee a more correct answer.
 
-> In an implementation $T=0$ would divide by zero, so `temperature=0` in most APIs actually takes the greedy branch rather than really performing the division.
+> The formula is undefined at $T=0$. Some interfaces use it as shorthand for greedy decoding; others have a separate switch. In [Transformers 4.57.1](https://huggingface.co/docs/transformers/v4.57.1/en/main_classes/text_generation), for example, `do_sample=False, num_beams=1` explicitly selects greedy decoding.
 
 ## Top-k: keep only the k most probable {#top-k-keep-only-the-k-most-probable}
 
 Sort the distribution, keep the top $k$, set the rest to zero, renormalize, and then sample.
 
-The problem is that $k$ is fixed, while the shape of the distribution keeps changing:
+Keeping two tokens can retain very different amounts of probability mass. Consider two made-up distributions:
 
-- After “The United States of Ame” there is almost exactly one reasonable choice, and the distribution is extremely steep. Here $k=50$ also puts 49 nearly impossible words into the candidate pool.
-- After “He thought this movie” there are hundreds of reasonable continuations, and the distribution is very flat. Here $k=50$ cuts too hard and removes options that were perfectly reasonable.
+| Next-token probabilities | top-k, k=2 | top-p, p=0.9 |
+| --- | --- | --- |
+| `0.98, 0.01, 0.01` | Keep 2; original mass 0.99 | Keep 1; original mass 0.98 |
+| `0.34, 0.33, 0.33` | Keep 2; original mass 0.67 | Keep 3; original mass 1.00 |
 
-**No single $k$ can fit both cases at once.**
+**Top-k fixes the count, not the retained probability mass.** It can work well, but the same k truncates different positions differently. Top-p changes that selection criterion. Ties in this table are broken by token ID.
 
 ## Top-p (nucleus sampling): truncate by cumulative probability {#top-p-nucleus-sampling-truncate-by-cumulative-probability}
 
@@ -61,7 +63,7 @@ With the same $p = 0.9$:
 
 **The candidate count adapts to the distribution**, rather than being chosen in advance. But 0.9 means retained model probability mass, not a 90% chance of a correct answer. Whether top-p is preferable still depends on the task and observed outputs.
 
-The two can be stacked: top-k first to cap the upper bound, then top-p to tighten dynamically. Many implementations chain them this way by default.
+The two can be combined. For example, apply top-k, renormalize the survivors, then apply top-p. That top-p threshold now refers to the remaining distribution, not the original one. Check the configuration for which filters are enabled and in what order.
 
 ## The usual processing order {#the-usual-processing-order}
 
@@ -73,7 +75,7 @@ Temperature → TopK → TopP
 
 Temperature comes **first**. This is not an inconsequential detail, because it changes how large the nucleus cut out by top-p is.
 
-For top-k it makes no difference — temperature is a monotone transformation that does not change the ranking, and top-k looks only at rank. But **top-p looks at cumulative probability**, and once the temperature changes, the rate of accumulation changes with it.
+Positive temperature does not change the top-k candidate set: ranking is preserved, provided ties use the same rule. But **top-p looks at cumulative probability**, and temperature changes how quickly that mass accumulates.
 
 Use probabilities `0.40, 0.25, 0.15, 0.08, 0.05, 0.03, 0.025, 0.015`, convert them to logits, and set `top_p=0.9`:
 
@@ -93,9 +95,9 @@ Another family of methods uses generation history to **lower logits for tokens t
 
 $$z_i \leftarrow z_i - \alpha_{\text{presence}}\cdot\mathbb{1}[c_i > 0] - \alpha_{\text{frequency}}\cdot c_i$$
 
-where $c_i$ is the number of times token $i$ has appeared in the text generated so far. The difference between the two is right there in the formula:
+Here $c_i$ counts occurrences of token $i$ in the generated text. Assume nonnegative coefficients for this discussion; negative coefficients instead encourage previously used tokens. The difference is in the formula:
 
-- **Presence penalty**: subtract a **fixed amount** as soon as the token has appeared at all; 1 occurrence and 10 occurrences cost the same. Its effect is to push the model toward new topics.
+- **Presence penalty**: subtract a **fixed amount** once a token has appeared; 1 occurrence and 10 occurrences cost the same. Unused tokens gain a relative advantage.
 - **Frequency penalty**: subtract in proportion to the **accumulated count**; the more often a token has appeared, the harder it is pushed down. Its effect is to suppress repetition.
 
 These penalties track tokens, not topics. Suppressing previously used tokens does not guarantee new ideas; paraphrasing the same idea may evade the penalty.
@@ -104,7 +106,7 @@ These penalties track tokens, not topics. Suppressing previously used tokens doe
 
 Keep an unpenalized baseline and compare outputs on the same prompts. Check the framework's parameter ranges and whether counts include the prompt; there is no universal step size or useful maximum across models.
 
-## Beam search: why generative LLMs rarely use it {#beam-search-why-generative-llms-rarely-use-it}
+## Beam search: higher probability need not mean a better answer {#beam-search-why-generative-llms-rarely-use-it}
 
 Beam search expands candidates and retains $k$ by score at each step. The simplest score is **cumulative log-probability**; implementations may add length penalties. The final choice is the best surviving candidate, not necessarily the global optimum.
 
@@ -126,7 +128,7 @@ Math does not require greedy decoding either. [Self-consistency](https://arxiv.o
 
 A few easy traps:
 
-**Do not set both temperature and top-p very low at the same time.** Both are tightening; stacked together they often degenerate straight into greedy. Diversity disappears entirely, while you still think you are sampling.
+**Low temperature plus low top-p can leave just one candidate.** Inspect the actual support if you want diversity. This need not be a problem when deterministic output is the goal, but enabling sampling does not by itself ensure varied outputs.
 
 **Distinguish the target policy from the actual rollout distribution.** Temperature and truncation can change that distribution, so specify which probabilities are recorded and whether correction is applied. Truncation also removes support: adding an importance ratio cannot recover actions that were never sampleable.
 
@@ -159,8 +161,13 @@ def nucleus_distribution(logits, threshold=0.9, temperature=1.0):
         raise ValueError("Expected logits, 0 < threshold <= 1, and temperature > 0")
     if not math.isfinite(temperature) or not all(math.isfinite(value) for value in logits):
         raise ValueError("Expected finite inputs")
-    maximum = max(logits)
-    weights = [math.exp((value - maximum) / temperature) for value in logits]
+    if temperature >= 1:
+        scaled_logits = [value / temperature for value in logits]
+    else:
+        maximum = max(logits)
+        scaled_logits = [(value - maximum) / temperature for value in logits]
+    maximum = max(scaled_logits)
+    weights = [math.exp(value - maximum) for value in scaled_logits]
     total = sum(weights)
     probabilities = [weight / total for weight in weights]
     ordered_ids = sorted(range(len(logits)), key=lambda token_id: probabilities[token_id], reverse=True)
@@ -180,6 +187,8 @@ assert math.isclose(example[1], 2 / 3)
 
 Return original vocabulary IDs, not sorted positions. Also test `threshold=1` (no truncation), a single candidate, tied maxima, and large positive or negative logits. One convenient example is not enough.
 
+Scaling order has numerical boundaries too. Logits `[1e308, -1e308]` at `T=1e308` should give roughly `[0.881, 0.119]`. Subtracting the logits first overflows before temperature can reduce the difference. The code scales first at high temperatures; at low temperatures, it centers first to avoid overflowing a large common offset divided by a small temperature.
+
 ## Common interview questions {#common-interview-questions}
 
 <details class="interview" markdown="1">
@@ -192,7 +201,7 @@ Given the original softmax probabilities, $p_i^{1/T}/\sum_j p_j^{1/T}$ is **math
 </details>
 
 <details class="interview" markdown="1">
-<summary>What is the difference between top-k and top-p? Why is top-p more common?</summary>
+<summary>How do top-k and top-p differ in the number of candidates they retain?</summary>
 
 Top-k keeps a fixed $k$ candidates; top-p keeps the smallest set whose cumulative probability just reaches $p$.
 
@@ -201,7 +210,7 @@ The difference is **whether the candidate pool changes with the distribution**. 
 </details>
 
 <details class="interview" markdown="1">
-<summary>Why do large models not use beam search for open-ended generation?</summary>
+<summary>Why can beam search find a higher-scoring but worse answer?</summary>
 
 Model likelihood is not task quality; open-ended generation needs checks for repetition and diversity. Beam search is finite-width approximate search, not a global optimizer. Translation and summarization also admit multiple valid answers. Compare with sampling, reranking, or verification under the same budget.
 
@@ -212,7 +221,7 @@ Model likelihood is not task quality; open-ended generation needs checks for rep
 
 With a unique maximum logit, probability concentrates on that token as $T \to 0^+$. Tied maxima share the limiting probability, while greedy implementations typically use a fixed tie-breaking rule.
 
-In an implementation, though, $T=0$ divides by zero, so `temperature=0` in frameworks and APIs usually goes straight to the greedy branch. Note also that greedy is not necessarily fully deterministic either — the floating-point reduction order under batching and different kernel implementations can both make the same input produce different results.
+The formula cannot take $T=0$: it would divide by zero. Some APIs use zero as a shortcut for greedy decoding; others select greedy through a separate option. With fixed logits and a fixed tie-breaking rule, argmax is deterministic. Different kernels or batching can change the computed logits slightly, which can change the winning token when scores are close.
 
 </details>
 
@@ -221,7 +230,7 @@ In an implementation, though, $T=0$ divides by zero, so `temperature=0` in frame
 
 This article uses temperature → top-k → top-p. Check the framework; interchanging arbitrary steps does not preserve the configuration.
 
-**The order does not matter for top-k**: temperature is a monotone transformation that does not change the ranking, and top-k looks only at rank.
+**Positive temperature preserves the top-k candidate set**: it does not change ranking, provided ties use the same rule.
 
 **It does matter for top-p**: top-p looks at cumulative probability; temperature changes each token's relative share, so the number of tokens needed to accumulate to $p$ changes. Measured with the same `top_p=0.9`: at $T=0.7$, temperature first gives 4 candidates and temperature last gives 5; at $T=1.5$ it is 6 versus 5. At $T=1$ the two are equal — so testing only at the default temperature will not reveal it.
 
@@ -232,7 +241,7 @@ This article uses temperature → top-k → top-p. Check the framework; intercha
 
 Both act on the logits: $z_i \leftarrow z_i - \alpha_p\mathbb{1}[c_i>0] - \alpha_f c_i$.
 
-The **presence penalty** looks only at “has it appeared or not”: 1 occurrence and 10 occurrences cost the same, which pushes the model to change topic. The **frequency penalty** accumulates with the count: the more often a token appears, the harder it is pushed down, which specifically targets repetition.
+With positive coefficients, the **presence penalty** charges the same amount after 1 occurrence or 10. The **frequency penalty** charges in proportion to the count. These change relative token probabilities; neither guarantees a change of topic or less repetition of the same idea.
 
 Both also hit tokens that are supposed to repeat — punctuation, pronouns, code indentation and brackets, a person's name that recurs in the text. Turned up too high, the output becomes awkward, and code generation is especially easy to break.
 
@@ -273,7 +282,7 @@ In ordinary PPO, the denominator is the old policy that collected the batch, not
 
 **Interview answer**
 
-> Decoding does not change the model's parameters; it only turns the same logits into different selection policies. The usual order is to apply penalties first, then divide by the temperature, then do top-k or top-p filtering, renormalize, and sample. As temperature approaches 0 the behavior approaches argmax, but temperature in itself is not greedy decoding.
+> Decoding changes the selection policy, not the model parameters. State the order explicitly: for example, penalties → positive-temperature scaling → top-k / top-p → renormalization → sampling. As temperature approaches zero, probability concentrates on maximal logits; with ties, this still differs from greedy selection under a fixed tie-breaking rule.
 
 <details markdown="1">
 <summary><b>Deep dive</b>: why does top-p adapt to context better than a fixed top-k?</summary>

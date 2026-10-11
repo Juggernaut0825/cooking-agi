@@ -2,7 +2,7 @@
 
 [中文](dflash.md) · **English**
 
-> Checked: 2026-10-09 · Prerequisite: [generation and KV cache](kv-cache-and-inference.en.md) · Start with the flow and example; read sampling, caches, and the experiment table when implementing.
+> Checked: 2026-10-10 · Prerequisite: [generation and KV cache](kv-cache-and-inference.en.md) · Start with the flow and example; read sampling, caches, and the experiment table when implementing.
 
 Generating several tokens can all sound like “parallel prediction.” First ask: **who proposes, who decides, and what happens to the work behind a wrong guess?** MTP concerns training objectives and prediction modules; DFlash uses a small drafter to accelerate a target model. The names describe different levels of a system.
 
@@ -20,19 +20,43 @@ Generating several tokens can all sound like “parallel prediction.” First as
 
 The [original DFlash paper](https://arxiv.org/abs/2602.06036) freezes the autoregressive target and trains a lightweight block-diffusion drafter. Target context features enter each draft layer's K/V; a confirmed anchor token and masked positions produce parallel proposals in one forward pass. The target itself is not replaced by a diffusion LLM.
 
-```text
-confirmed prefix → target features + confirmed anchor token
-                                 ↓
-                      [anchor | MASK | MASK | MASK]
-                                 ↓  one draft pass
-                      [anchor | guess1 | guess2 | guess3]
-                                 ↓  causal target verification
-                      accepted prefix + target-supplied token
-                                 ↓
-                         repair caches; start next cycle
-```
+<figure class="worked-update worked-update--pairs" id="draft-cycle" lang="en">
+<figcaption>One drafting cycle, illustrated with 1 anchor and 3 proposed positions.</figcaption>
+<ol>
+<li><small>01 / PREPARE CONTEXT</small><strong>Features + a known anchor</strong><span>The target supplies confirmed-prefix features and selects the next token as the anchor.</span></li>
+<li><small>02 / DRAFT IN PARALLEL</small><strong>Propose 3 tokens at once</strong><span>The draft reads the anchor and 3 masks, then proposes 3 tokens in one forward pass. The anchor is already known.</span></li>
+<li><small>03 / VERIFY WITH THE TARGET</small><strong>Keep a continuous prefix</strong><span>Causal scoring checks the proposals. Stop at the first rejection and emit a correction; full acceptance yields a bonus token.</span></li>
+<li><small>04 / ALIGN CACHES</small><strong>Retain only valid state</strong><span>Trim the rejected position and suffix. The target-supplied token becomes the next anchor; its KV may not exist yet.</span></li>
+</ol>
+</figure>
 
 Training must respect the same information boundary: full answers may be available, but a predicted block must not read target features containing its future answers. The paper uses random anchors and specialized attention masking, with greater loss weight on early positions. The [project explanation](https://z-lab.ai/projects/dflash/) describes feature injection and shared embedding/LM-head components.
+
+<details id="feature-shapes" markdown="1">
+<summary>Two concatenations, two different axes</summary>
+
+Selected target layers are joined along the **feature axis**, then projected to draft width. Inside draft attention, context and block K/V are joined along the **sequence axis**. Only the block supplies Q; context positions do not get new outputs. Compare the [official attention implementation](https://github.com/z-lab/dflash/blob/07ebd93db9f472af339b644bb70221ad8428328a/dflash/model.py#L343-L370).
+
+For an original single-head example, take 2 context tokens, 3 target layers of width 4, and a block containing 1 anchor plus 3 masks. Omit the batch axis.
+
+<div class="worked-table" markdown="1">
+
+| Tensor | Shape |
+| --- | --- |
+| Three layers concatenated | `[2, 12]`, not `[6, 4]` |
+| Projected to draft width 4 | `[2, 4]` |
+| Block queries | `[4, 4]` |
+| Context plus block K / V | `[6, 4]` each |
+| Attention scores `Q @ K.T` | `[4, 6]` |
+| Attention output | `[4, 4]`: still only 4 block rows |
+
+</div>
+
+These are teaching dimensions; multi-head attention splits out heads. Draft projections create their own K/V, not copies of the target cache. Layer counts and block sizes are configurable; a size-16 block includes the known anchor, leaving 15 proposals.
+
+Reuse cached context and append newly confirmed features rather than recomputing the entire prefix. Verification determines which positions survive; the cache table below follows that step.
+
+</details>
 
 Why emphasize early positions? The following example needs no model run.
 
@@ -75,6 +99,26 @@ assert emitted == [10, 20, 30] and accepted == 2
 ```
 
 This also explains cache rollback. Verification may compute K/V for X and its suffix; those states cannot remain in the committed prefix. Retain only valid prefix state. If the replacement C has not gone through a forward pass, its K/V still needs to be computed later. Emitted-token count is not automatically the current cache length. Draft and target caches must each stay aligned.
+
+<details markdown="1">
+<summary>Why can C be emitted before its KV exists?</summary>
+
+Let prefix `P` have length 4, using zero-based positions. The target has predicted anchor A but has not processed A as input yet. This round proposes B, X; verification accepts B and replaces X with C. Ignore EOS and output limits for this example.
+
+<div class="worked-table" markdown="1">
+
+| Stage | Confirmed tokens / target KV |
+| --- | --- |
+| Start | Tokens `P A`<br>KV: only `P`, length 4 |
+| A, B, X processed; draft not yet accepted | Tokens `P A`<br>KV: temporary `P A B X`, length 7 |
+| Accept B, emit C, trim invalid state | Tokens `P A B C`<br>KV: keep `P A B`, length 6 |
+| Process C at position 6 next round | Tokens `P A B C`<br>KV: now includes C, length 7 |
+
+</div>
+
+C is selected from the logits at B. Choosing C's ID does not compute C's hidden state. The newly emitted tokens are B and C, not the already known A. The draft's temporary block state needs separate handling: this [pinned implementation](https://github.com/z-lab/dflash/blob/07ebd93db9f472af339b644bb70221ad8428328a/dflash/model.py#L214-L287) trims it to the round's starting position, then incorporates newly confirmed target features next round.
+
+</details>
 
 ## Sampling with temperature is not argmax matching
 
@@ -137,7 +181,7 @@ The [official DFlash 2 introduction](https://inco.ai/blog/dflash2/), dated 2026-
 
 An original miniature example: candidate columns contain `{New, Los}` and `{York, Angeles}`. Independent top-1 choices might produce `New Angeles`; adjacent-pair scoring can favor `New York`. This explains coherence, not access to the correct answer. The target still verifies the result.
 
-Another route is [D-Loop](https://arxiv.org/abs/2610.06011), submitted 2026-10-05: reuse the drafter for another pass, letting suffix prediction condition on a selected prefix. It spends an extra forward pass on proposal quality. Only its abstract and mechanism overview have been checked here; no reproduction establishes a hardware-independent speed ranking.
+Another route is [D-Loop](https://arxiv.org/abs/2610.06011), submitted 2026-10-05: reuse the drafter to predict a suffix conditioned on a selected prefix. It also changes training; running original DFlash weights twice does not reproduce the reported gains. In [§3.2](https://arxiv.org/html/2610.06011v1#S3.SS2), shared weights learn prefix prediction from an anchor-only input and suffix prediction from a revealed ground-truth prefix. Inference uses a proposed prefix instead. This mechanism has been checked, but experiments have not been reproduced or used to rank hardware.
 
 | Approach | Treatment of future positions | Main cost to examine |
 | --- | --- | --- |

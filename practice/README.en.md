@@ -4,9 +4,13 @@
 
 [中文](README.md) · **English**
 
+On your first visit, the [project route](../learn/choose-your-path.en.md#projects) can help you choose a starting point. For a design interview, skip straight to [system-design practice](#system-design); you don't have to build every project first.
+
 Once you can call a model, other questions tend to follow. Where does its data come from? Which computations can run ahead of time? When the result is wrong, did the model fail, or did something go wrong earlier?
 
-This section covers three tasks: recommendation, a RAG knowledge assistant, and post-training experiments. The recommender series draws on public code; the other two use small original projects. Follow the data through a system, then change one condition and see what breaks. Read the explanations first if you prefer; the code is there when you're ready.
+If you haven't built a complete small app, start with [this site and a reading list](web-lab/README.en.md). Follow a Markdown edit into a published page, then connect a browser, API, and database. No GPU or frontend framework is required.
+
+The other routes cover recommendation, a RAG knowledge assistant, and post-training experiments. The recommender series draws on public code; the other two use small original projects. Follow the data through a system, then change one condition and see what breaks. Read the explanations first if you prefer; the code is there when you're ready.
 
 **Engineering practice includes more than system design.** You can start from requirements and propose a design, or follow an existing project through data, components, training, serving, and evaluation. The first develops judgment; the second checks that judgment against an implementation.
 
@@ -16,6 +20,7 @@ This section covers three tasks: recommendation, a RAG knowledge assistant, and 
 
 | What went wrong? | Start here | What to look for |
 | --- | --- | --- |
+| You've written code but haven't connected a page, server, and automated checks | [Build something small](web-lab/README.en.md) | Static hosting, CI/CD, requests, persistence, and useful errors |
 | You have requirements but no starting design | [System-design exercises](../learn/system-design/README.en.md) | Goals and constraints, then components, cost, and failure handling |
 | Useful content wasn't recommended | [Inside recommender systems](recommender-systems/README.en.md) | Missing retrieval, filtering, or a low rank |
 | Documents were retrieved, but the answer is wrong | [A RAG knowledge assistant](rag/README.en.md) | Whether evidence was current, reached the model, and was used correctly |

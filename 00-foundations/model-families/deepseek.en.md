@@ -2,7 +2,7 @@
 
 [中文](deepseek.md) · **English**
 
-> Reading time: ~10 min · Type: model family deep dive · Last reviewed: 2026-10
+> Reading time: ~13 min · Type: model family deep dive · Last reviewed: 2026-10-10
 
 <div class="lesson-recipe advanced">
   <div><span>Core question</span><strong>How do you control attention, FFN, and reasoning cost in a high-capacity model?</strong></div>
@@ -17,23 +17,66 @@ The most useful lesson in DeepSeek is **co-design**. MLA compresses attention st
 
 ## Separate the two lines first
 
-```mermaid
-flowchart LR
-    A["DeepSeek-V3 architecture"] --> B["MLA<br/>per-token KV compression"]
-    A --> C["DeepSeekMoE<br/>sparse FFN capacity"]
-    A --> D["MTP + training system"]
-    H["DeepSeek-V3-Base"] --> E["V3 SFT + RL"]
-    H --> F["R1 multi-stage post-training"]
-    F -->|generate and filter training data| G["SFT for smaller Qwen / Llama models"]
-```
+<figure class="worked-update" id="deepseek-architecture" lang="en">
+  <figcaption>First, separate V3's architectural and training components</figcaption>
+  <ol>
+    <li><strong>MLA</strong><span>Compress the KV stored per token, rather than collapsing the entire history into one record.</span></li>
+    <li><strong>DeepSeekMoE</strong><span>Use a subset of experts for each token's FFN computation while retaining greater total capacity.</span></li>
+    <li><strong>MTP and training systems</strong><span>Add future-token targets; parallelism and communication determine how the computation runs.</span></li>
+  </ol>
+</figure>
+
+<figure class="worked-update worked-update--pairs" id="deepseek-training-routes" lang="en">
+  <figcaption>Then, distinguish two post-training routes from V3-Base</figcaption>
+  <ol>
+    <li><strong>V3 chat model</strong><span>Apply SFT and RL to V3-Base to improve response behavior.</span></li>
+    <li><strong>R1 and smaller students</strong><span>Apply multi-stage post-training to V3-Base. Separately, generate and filter R1 text for SFT of smaller Qwen or Llama models.</span></li>
+  </ol>
+</figure>
 
 V3 chat post-training and R1 follow different routes from V3-Base. R1 is not a module attached to the V3 chat model. This diagram covers V2 / V3 / R1; V4 introduces a different attention design.
+
+The branches distinguish weight initialization, not complete data independence: V3 used an internal R1 model to help produce reasoning SFT data. [V3 §5.1](https://arxiv.org/html/2412.19437v2#S5.SS1)
+
+**Version scope:** this note checks V2 report v5, V3 report v2, and the original R1 report v1, not every Lite, minor-version, or dated checkpoint. The official configurations below were read on 2026-10-10; their `main` URLs are mutable.
+
+| Configuration | Attention | Routed / selected per token / shared experts in an MoE layer | Distinction to preserve |
+| --- | --- | --- | --- |
+| [DeepSeek-V2](https://huggingface.co/deepseek-ai/DeepSeek-V2/blob/main/config.json) | MLA | 160 / 6 / 2 | Softmax affinity; the first FFN is dense |
+| [Original DeepSeek-V3](https://huggingface.co/deepseek-ai/DeepSeek-V3/blob/main/config.json) | MLA | 256 / 8 / 1 | Sigmoid affinity; the first three FFNs are dense |
+| [Original DeepSeek-R1](https://huggingface.co/deepseek-ai/DeepSeek-R1/blob/main/config.json) | V3-style MLA | 256 / 8 / 1 | This is the large model, not an R1-Distill architecture |
 
 ## Three ideas worth keeping
 
 1. **MLA stores less per token, not one vector for the entire history.** Each token adds a latent and a decoupled positional key. Going from 1,000 to 2,000 tokens still increases cache entries. Projection absorption can avoid expanding full K/V during inference. [V2 §2.1](https://arxiv.org/html/2405.04434v5#S2.SS1)
 2. **MoE separates total capacity from per-token computation.** Routed experts provide capacity; each token uses a subset. Shared experts aim to capture reusable patterns, without guaranteeing neatly separated domains. Routing, communication, and storage remain costs.
 3. **R1 investigates what post-training can change.** R1-Zero applies RL to a pretrained V3-Base, not random weights. It does not establish that pretraining is unimportant or that RL explains every capability beyond the reward.
+
+An invented width budget makes “fine-grained” concrete. Replace 8 experts of intermediate width 256, selecting 2, with 32 experts of width 64, selecting 8. For bias-free SwiGLU with unchanged input width, parameter counts and matrix multiply-adds scale with expert count times intermediate width. Total expert parameters and active-branch multiply-adds therefore match, but routing and communication costs need not. Adding another shared expert increases the budget; it is not a free branch.
+
+### MLA cache accounting: one latent, not two {#mla-cache-ledger}
+
+Let $B$ be batch size, $T$ cached tokens, $L$ layers, $d_c$ the KV latent width, $d_R$ the decoupled RoPE key width, and $s$ bytes per element for both components. The logical payload of a compact MLA cache is:
+
+$$
+\text{bytes}=BTL(d_c+d_R)s.
+$$
+
+There is no extra factor of two: K and V share a latent, and the positional key is shared across query heads. For content query $q$, cached latent $c$, and key up-projection $U_K$, scores satisfy $q^T U_Kc=(U_K^Tq)^Tc$, allowing a transformed query to address the latent directly. RoPE uses a separate branch; position-dependent rotations cannot simply be absorbed too. [V2 §2.1](https://arxiv.org/html/2405.04434v5#S2.SS1)
+
+```python
+def mla_cache_bytes(batch, tokens, layers, latent_width, rope_width, bytes_per_element):
+    dimensions = (batch, layers, latent_width, rope_width, bytes_per_element)
+    if any(type(value) is not int or value <= 0 for value in dimensions):
+        raise ValueError("Expected positive integer dimensions and element bytes")
+    if type(tokens) is not int or tokens < 0:
+        raise ValueError("Expected a nonnegative integer token count")
+    return batch * tokens * layers * (latent_width + rope_width) * bytes_per_element
+
+assert mla_cache_bytes(1, 8192, 61, 512, 64, 2) == 549 * 2**20
+```
+
+Using V3's configured `61` layers and `512 + 64` dimensions, with assumed BF16 cache storage (2 bytes/element), one 8,192-token request needs **549 MiB** (1 MiB = $2^{20}$ bytes). This is derived payload, not measured device memory. It excludes weights, MTP, paging slack, quantization metadata, workspaces, and parallel replicas; runtimes need not use the compact layout. MLA alone still attends over visible history: narrower cached vectors do not imply sparse token selection.
 
 ## V3 load balance: selection scores are not mixture weights
 
@@ -74,6 +117,26 @@ assert math.isclose(sum(weight * [2, 0, 10][index] for index, weight in routed),
 
 This illustrates only the routed branch, without shared experts, node constraints, full scaling, or communication. A bias updated from prior load statistics is not new evidence of relevance for the current token. Measure tokens received per device too: balanced mean expert loads do not guarantee balanced inter-node traffic.
 
+### MTP adds a target, not permission to skip verification {#mtp-causal-chain}
+
+V3 uses MTP depth 1. The backbone state $h_i$ predicts $t_{i+1}$; an extra module combines $h_i$ with the ground-truth embedding of $t_{i+1}$ to predict $t_{i+2}$. Modules preserve causal order and share the backbone's embedding and output head, rather than making independent predictions from separate heads. [V3 §2.2 and §4.2](https://arxiv.org/html/2412.19437v2#S2.SS2)
+
+For the invented sequence `A B C D`, the backbone at `A` predicts `B`, while MTP consumes `B` to predict `C`. Its input `B` is a condition, not its target; feeding `C` would leak the answer. This helper lists alignments for one unpadded sequence, not model computations or losses. Packed data additionally require masking targets that cross document boundaries:
+
+```python
+def mtp_training_rows(tokens):
+    return [
+        (tuple(tokens[:position + 1]), tokens[position + 1], tokens[position + 2])
+        for position in range(len(tokens) - 2)
+    ]
+
+assert mtp_training_rows(["A", "B", "C", "D"]) == [
+    (("A",), "B", "C"), (("A", "B"), "C", "D")
+]
+```
+
+Training adds the auxiliary objective to next-token loss. At inference, MTP can be removed for ordinary autoregressive generation or used for speculative decoding. Speculation requires backbone verification, not unconditional acceptance of every draft. Training quality, draft acceptance, and end-to-end latency are distinct: predicting two positions does not imply a twofold speedup.
+
 ## R1 has four stages; distillation is separate
 
 The [original R1 report, §2.3–2.4](https://arxiv.org/html/2501.12948v1#S2.SS3), distinguishes:
@@ -109,10 +172,10 @@ Keep mechanisms separate from measurements. Compression is not a losslessness gu
 
 | Choice | What it buys | What it costs |
 | --- | --- | --- |
-| MLA | Smaller KV cache and cheaper long-context decode | More complex implementation and a new compression bottleneck |
+| MLA | Smaller logical KV payload; compact implementations can reduce cache traffic | Implementation complexity; latency still depends on kernels and parallelism |
 | Fine-grained MoE | Large total capacity with fewer active parameters | All-to-all communication, routing, and load balance |
 | Multi-token prediction | Denser training signal and possible decoding gains | More complex objective and implementation |
-| Reasoning RL | Longer reasoning on verifiable tasks | Rollout cost, reward boundaries, and behaviour regressions |
+| Reasoning RL | Reward-guided task optimization; longer reasoning need not be correct | Rollout cost, reward boundaries, and behaviour regressions |
 
 ## How I would use the family
 
@@ -129,6 +192,6 @@ To work through the components, continue with [MLA and sparse attention](../deep
 
 ## Primary sources
 
-- [DeepSeek-V3 Technical Report](https://arxiv.org/abs/2412.19437)
-- [DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning](https://arxiv.org/abs/2501.12948)
-- [DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model](https://arxiv.org/abs/2405.04434)
+- [DeepSeek-V3 Technical Report, v2](https://arxiv.org/abs/2412.19437v2)
+- [DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning, v1](https://arxiv.org/abs/2501.12948v1)
+- [DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model, v5](https://arxiv.org/abs/2405.04434v5)

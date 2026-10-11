@@ -52,6 +52,7 @@ import torch
 import torch.nn.functional as functional
 
 def ce_from_logits(logits, targets):
+    logits = logits.to(torch.promote_types(logits.dtype, torch.float32))
     shifted = logits - logits.max(dim=-1, keepdim=True).values
     log_partition = shifted.exp().sum(dim=-1).log()
     selected = shifted.gather(-1, targets.unsqueeze(-1)).squeeze(-1)
@@ -70,6 +71,10 @@ torch.testing.assert_close(
 ```
 
 We never materialize probabilities and then take their logarithms. That route can round a tiny probability to zero before producing an infinite loss. Use established stable implementations for training; the handwritten version explains the calculation.
+
+Subtracting the maximum bounds each exponential, but **the reduction dtype still matters**. For 65,536 FP16 zero logits, every exponential is 1; storing their sum in FP16 overflows, although the correct loss is only $\log 65536\approx11.09035$. The code therefore promotes FP16/BF16 to FP32 before computing, while preserving existing FP64. This cast keeps the computation graph connected: gradients still reach the original logits and are stored in their original dtype, so low-precision gradient rounding or underflow remains possible.
+
+A direct library call does not automatically enable autocast. On the PyTorch 2.8 CPU build checked here, passing that FP16 input directly to `functional.cross_entropy` also returns `inf`; explicitly converting to FP32 or calling library CE inside CPU autocast gives a finite result. The [2.8 CPU autocast policy](https://docs.pytorch.org/docs/2.8/amp.html#cpu-ops-that-can-autocast-to-float32) runs library CE in FP32, but does not automatically promote every handwritten `exp → sum → log` composition. Policies differ by device; this CPU observation is not a claim about CUDA.
 
 ## Hard and soft targets {#soft-targets}
 
@@ -188,11 +193,14 @@ An entirely masked batch has no targets to average. Raise an error or handle the
 
 Use small tensors before training a large model. This chapter's blocks run sequentially on CPU. The fuller [teaching implementation](../code/loss_contracts.py) checks inputs, empty masks, soft targets, and a single causal shift. Its [tests](../../site/tests/test_loss_contracts.py) compare gradients and extreme values too.
 
+The teaching implementation keeps its existing input checks. After validation, soft targets and logits use a common CE working dtype of at least FP32, preserving FP64 if either input has that dtype. It does not renormalize or detach soft targets, or cast the loss back to low precision. Promotion cannot recover information already lost in the inputs; ignored positions, valid-token denominators, and the single-shift convention are unchanged.
+
 | Check | Expected result |
 | --- | --- |
 | Add a shared constant to all logits | CE stays unchanged |
 | Increase the correct-class probability for a fixed target | Single-example hard CE decreases |
 | Replace integer targets with one-hot, without weights | Same loss and gradient |
+| FP16/BF16 zero logits over 65,536 classes | Finite hard/soft CE; original-logit gradients match the FP32 reference rounded to the original dtype |
 | Add unsupervised padding | Valid-token mean stays unchanged |
 | Binary `z = −100, y = 1` | Finite loss and a corrective gradient |
 | Ignore every target | Explicit handling, not a silently discarded NaN |

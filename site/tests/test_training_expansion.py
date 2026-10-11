@@ -45,7 +45,12 @@ def namespace_for(chapter, function_name=None):
                     raise
                 raise unittest.SkipTest("PyTorch unavailable; MoE tensor examples not executed") from error
         with contextlib.redirect_stdout(io.StringIO()):
-            exec(compile(snippet, chapter, "exec"), namespace)
+            try:
+                exec(compile(snippet, chapter, "exec"), namespace)
+            except ModuleNotFoundError as error:
+                if error.name != "torch":
+                    raise
+                raise unittest.SkipTest("PyTorch unavailable; tensor example not executed") from error
     return namespace
 
 
@@ -98,7 +103,7 @@ class TrainingExpansionTests(unittest.TestCase):
                 self.assertAlmostEqual(actual, expected, places=10)
 
     def test_unscale_before_clipping_preserves_the_threshold(self):
-        clip = namespace_for("00-foundations/deep-dives/precision-and-memory")["clip_scalar"]
+        clip = namespace_for("00-foundations/deep-dives/precision-and-memory", "clip_scalar")["clip_scalar"]
         for gradient in (-2.0, -0.25, 0.0, 0.25, 2.0):
             for scale in (1, 8, 1024):
                 self.assertEqual(clip(gradient * scale / scale, 0.5), clip(gradient, 0.5))
@@ -106,7 +111,7 @@ class TrainingExpansionTests(unittest.TestCase):
         self.assertNotEqual(clip(0.25 * 8, 0.5) / 8, clip(0.25, 0.5))
 
     def test_activation_tensor_sizes_and_length_scaling(self):
-        tensor_mib = namespace_for("00-foundations/deep-dives/precision-and-memory")["tensor_mib"]
+        tensor_mib = namespace_for("00-foundations/deep-dives/precision-and-memory", "tensor_mib")["tensor_mib"]
         self.assertEqual(tensor_mib((2, 2048, 1024)), 8)
         self.assertEqual(tensor_mib((2, 4096, 1024)), 16)
         self.assertEqual(tensor_mib((2, 16, 2048, 2048)), 256)

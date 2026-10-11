@@ -84,9 +84,10 @@ def apply_rope(x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor) -> torch.T
     cos/sin:  (T, head_dim/2)
 
     Uses the split-half pairing (channel i pairs with i + d/2), i.e. the
-    GPT-NeoX/Llama convention rather than the interleaved one from the paper.
-    The two are related by a fixed permutation of the head channels, so they are
-    equivalent as long as q and k agree -- but weights are NOT interchangeable.
+    GPT-NeoX / converted Hugging Face Llama layout. Meta's original Llama
+    implementation instead pairs adjacent channels. Switching layouts requires
+    the matching permutation of Q/K projection rows within each head; changing
+    the rotation function alone does not preserve checkpoint behavior.
     """
     x1, x2 = x.float().chunk(2, dim=-1)
     cos = cos[None, None, :, :]

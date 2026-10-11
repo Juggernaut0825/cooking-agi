@@ -106,7 +106,9 @@ $$
 
 ## 长度、冻结与显存
 
-TRL v0.29.0 的 VLM 指南建议避免未经检查的序列截断，因为可能切掉图像 token；其中 `max_length=None` 是关闭这种截断，不是无限显存。仍要在数据侧限制图片尺寸、张数、文本长度，并检查高分位长度。`assistant_only_loss` 也依赖能返回相应 mask 的模板，不能只开一个参数就认为完成了验证。[固定版本的 TRL 文档](https://huggingface.co/docs/trl/v0.29.0/en/sft_trainer)
+TRL v0.29.0 的 VLM 指南建议避免未经检查的序列截断，因为可能切掉图像 token；其中 `max_length=None` 是关闭这种截断，不是无限显存。仍要在数据侧限制图片尺寸、张数、文本长度，并检查高分位长度。[固定版本的 TRL 文档](https://huggingface.co/docs/trl/v0.29.0/en/sft_trainer)
+
+**这个版本的 VLM 不支持 `assistant_only_loss=True`，即使模板能返回 assistant mask，trainer 也会报错。**单轮问答可以使用 `prompt` / `completion` 数据格式和 `completion_only_loss=True`，把答案放在 completion 中；它不等同于从任意多轮对话里自动挑出所有 assistant 回合。若需要后者，应使用经过检查的自定义 labels / collator，并保持不支持的开关关闭。仅把开关改成 `False` 让训练跑起来，不代表 loss 已经只覆盖答案。[v0.29.0 的限制与 collator 实现](https://github.com/huggingface/trl/blob/v0.29.0/trl/trainer/sft_trainer.py)
 
 | 更新范围 | 适合先验证什么 | 代价与限制 |
 | --- | --- | --- |

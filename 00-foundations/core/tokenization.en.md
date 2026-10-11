@@ -12,6 +12,8 @@ We say all the time that a model “reads” a sentence, but it has never actual
 
 ## Step 1: how text is split into tokens {#step-1-how-text-is-split-into-tokens}
 
+The segmentation and IDs below are illustrative, not output from a particular tokenizer:
+
 ```text
 "unbelievable!" → ["un", "believ", "able", "!"] → [431, 9821, 612, 5]
 ```
@@ -47,7 +49,7 @@ most frequent pair: (l, o)  →  lo
 next round:         (lo, w) →  low
 ```
 
-Training learns an **ordered list of merge rules**; encoding applies them in the same order. BPE is not looking up English word roots; it is compressing the string patterns that recur in the current corpus.
+Assume each word occurs once. In the first round, `(l, o)` and `(o, w)` both occur twice; this example breaks the tie in favor of `(l, o)`. Training learns an **ordered list of merge rules**; encoding applies them in the same order. BPE is not looking up English word roots; it is compressing recurring string patterns. [Original BPE paper, §3.2](https://aclanthology.org/P16-1162/)
 
 For two worked merges and the differences between BPE, WordPiece, Unigram, and byte fallback, continue to [tokenizer algorithms](../deep-dives/tokenizer-algorithms.en.md). This page first completes the input pipeline.
 
@@ -138,6 +140,8 @@ table turns integers into model-width vectors.
 A chat template does not alter the attention equation. It gives an ordinary token
 sequence a learnable grammatical structure.
 
+Avoid duplicating special tokens in actual code. In Transformers v4.57.1, if you render with `apply_chat_template(tokenize=False)` and tokenize separately, use `add_special_tokens=False`; `tokenize=True` combines the two steps. [Official guidance](https://huggingface.co/docs/transformers/v4.57.1/chat_templating)
+
 ## Connecting the output shapes to the neural network {#connecting-the-output-shapes-to-the-neural-network}
 
 Suppose a batch holds 4 texts, the padded length is 12, and the model dimension is 768:
@@ -154,12 +158,14 @@ The tokenizer ends at `(B, T)`; the neural network begins at `(B, T, d)`.
 
 Run [`../code/tokenizer_from_scratch.py`](../code/tokenizer_from_scratch.py). It trains a miniature BPE using only the Python standard library, with no extra dependencies. Change the training corpus and you can watch directly why the same sentence gets split into completely different tokens under another corpus.
 
+This teaching implementation collapses whitespace, maps unseen characters to `<unk>`, and has no byte fallback. Its `decode_tokens` method reconstructs token strings, not a lossless round trip through IDs. Try repeated spaces and a character absent from the training corpus to see the distinction.
+
 ## Self-check {#self-check}
 
 <div class="taste-check">
   <strong>Before closing the page, try answering without jargon:</strong>
   <ol>
-    <li>Why does a new name not simply break a subword tokenizer?</li>
+    <li>How can a new name be split into known pieces? What extra mechanism is needed if even its characters are unknown?</li>
     <li>Why can the same sentence cost a different amount of inference when the tokenizer changes?</li>
     <li>At which step does <code>(B, T)</code> become <code>(B, T, d)</code>?</li>
   </ol>

@@ -1,20 +1,22 @@
-# Model Experience: What Is the Model the User Actually Experiences?
+# Model experience: does the assistant get more useful over time?
 
 [中文](README.md) · **English**
 
-## User experience is a long-term trajectory
+<span id="model-experience-what-is-the-model-the-user-actually-experiences"></span>
 
-Model Experience is not how polished one particular answer is. It is what the user perceives across continued use: whether the model understands context, whether it deserves trust, whether it gives a sense of control, and whether it really becomes more and more helpful.
+## Look beyond a single answer {#user-experience-is-a-long-term-trajectory}
 
-## What the user experiences is a process of continued use
+Model experience is not just about how polished one answer is. It is about continued use: does the assistant remember relevant context, respond to corrections, leave key decisions under your control, and actually reduce your workload?
+
+## What changes across sessions? {#what-the-user-experiences-is-a-process-of-continued-use}
 
 Two assistants can both correctly answer “plan a week of workouts for me.”
 
 Assistant A asks about your goals, equipment, and injuries all over again every time.
 
-Assistant B remembers that you once injured your knee, but before using that information it confirms whether it still holds; when the plan does not fit, it absorbs the correction instead of making the same mistake next time.
+With your permission to retain that information, Assistant B remembers that you once injured your knee, but checks whether it still applies before using it. When the plan does not fit, it retains your correction within the scope you allow instead of repeating the mistake.
 
-On a single-turn benchmark the two may score about the same. The long-term experience is completely different.
+This is a hypothetical example, not a measured result. The two may score similarly on a single-turn benchmark while offering substantially different long-term experiences.
 
 ## The dimensions a user experiences
 
@@ -32,7 +34,7 @@ Heavy personalization may raise short-term relevance while reducing new content 
 
 ### Controllable: can the user correct and intervene
 
-The user should be able to view and edit memory, confirm high-risk actions, and know why the system did what it did.
+The user should be able to view, edit, or delete memory, confirm high-risk actions, and see which information and permissions the system used.
 
 ### Calibrated: does the model know what it does not know
 
@@ -40,7 +42,7 @@ When evidence is insufficient, asking a follow-up question or admitting uncertai
 
 ### Consistent: does it stay coherent across sessions
 
-The model should not learn something today and completely forget it tomorrow; nor should it make one incidental behavior permanent.
+Information should remain usable across sessions only while its retention is authorized, it remains valid, and it is relevant to the task. Consistency does not mean never forgetting, or turning one incidental behavior into a permanent preference.
 
 ## Why single-turn evaluation is not enough
 
@@ -52,7 +54,20 @@ Many important failures only appear in the interaction trajectory:
 - personalization grows narrower and narrower;
 - after a tool fails, the system pretends the task is complete.
 
-So we need session-level and longitudinal evaluation, not only single prompt–response pairs.
+So we need session-level evaluation of task completion across turns, and longitudinal evaluation of whether problems are resolved across repeated use—not only single prompt–response pairs.
+
+Start with a fictional travel timeline rather than simply asking, “Do you remember me?”
+
+| Stage | User input or change | What to check |
+| --- | --- | --- |
+| First use | “I usually prefer quiet accommodation; you may remember that” | Later relevant tasks retrieve the preference and its source |
+| Next trip | “For this trip only, prioritize staying near the station” | The current instruction wins without permanently replacing the usual preference |
+| After the trip | The temporary instruction no longer applies | Proximity to the station is not treated as a lasting preference |
+| After withdrawal | “Delete my accommodation preferences” | In a new session, neither retrieval nor answers use the deleted records or their derivatives |
+
+Start each test trajectory with independent state, advance in time, and expose only information known at that point; future corrections must not enter memory early. Hold the model, tools, and budget fixed when comparing versions with and without memory. Include tasks that need no history to detect interference from old preferences. See the [memory lifecycle](../02-memory/memory-lifecycle.en.md) for read and deletion mechanisms.
+
+These are proposed tests, not demonstrated improvements. Synthetic replay can expose mechanism failures, but cannot establish satisfaction weeks into real use. A real-use comparison can randomly assign users to groups, keep assignments stable for the observation period, and report dropouts and missing feedback, rather than only satisfied users who remain. [LongMemEval v2](https://arxiv.org/html/2410.10813v2#S3) offers tests of updates, temporal reasoning, and abstention; its QA scores do not replace this longitudinal experience evaluation.
 
 ## How offline metrics connect to experience
 
@@ -67,6 +82,8 @@ A more complete evaluation can combine:
 - the actual outcomes of tools and actions;
 - satisfaction and degree of reliance after many sessions.
 
+These are not simply metrics to maximize or minimize. Fewer corrections may mean the user gave up; more frequent use may mean repeated task failure. Read them alongside task outcomes, dropout, and whether users still trust incorrect answers. Aggregate repeated sessions by user, report memory-dependent, history-free, and correction/deletion cases separately, and track latency and cost so frequent users or easy tasks do not hide regressions.
+
 ## How it connects to other topics
 
 - [Personal AGI](../09-personal-agi/README.en.md) defines the goal of the long-term relationship.
@@ -77,6 +94,8 @@ A more complete evaluation can combine:
 
 ## Reference papers
 
-- [Lost in the Middle](https://arxiv.org/abs/2307.03172)
-- [InstructGPT](https://arxiv.org/abs/2203.02155)
-- [Direct Preference Optimization](https://arxiv.org/abs/2305.18290)
+These works study long-context use and preference training, not proof of improved longitudinal personalization.
+
+- [Lost in the Middle](https://arxiv.org/abs/2307.03172v1)
+- [InstructGPT](https://arxiv.org/abs/2203.02155v1)
+- [Direct Preference Optimization](https://arxiv.org/abs/2305.18290v1)

@@ -2598,15 +2598,15 @@
     roF.set(Math.round(p.frontier.q * 100) + '% · ×' + p.frontier.c.toFixed(1));
     roL.set('×' + p.cascade.lat.toFixed(1) + ' · ×' + p.router.lat.toFixed(1));
     TX.bi(note,
-      'Synthetic comparison: model success rates are assumed, and the cascade check is more accurate than the router by construction. Checking and routing overhead are omitted. The plot does not test a real model or include output recovery after routing.',
-      '这是按假设计算的对比：两类请求的成功率已给定，级联检查还被设得比路由分类更准。没有计入检查与路由开销，也没有模拟路由后的补救，不是真实模型测评。');
+      'Synthetic comparison: model success rates are assumed, and the cascade check is more accurate than the router by construction. Checking overhead is omitted; routing adds fixed toy overheads of 0.05 cost units and 0.1 latency units. The plot does not test a real model or include output recovery after routing.',
+      '这是按假设计算的对比：两类请求的成功率已给定，级联检查还被设得比路由分类更准。检查开销未计入；路由另加固定的示意开销：成本 0.05、延迟 0.1。没有模拟路由后的补救，不是真实模型测评。');
     svg.setAttribute('aria-label', t('Cost against quality for four ways to serve the same traffic.', '四种服务同一批流量的方式，在成本和质量上的位置。'));
   }
 
   var note = h('p', { class: 'fig-note' });
   var sHard = TX.slider({ en: 'Hard requests', zh: '难题占比', min: 0, max: 100, step: 5, value: P.hard, format: function (v) { return v + '%'; }, onInput: function (v) { P.hard = v; render(); } });
   var sSmall = TX.slider({ en: 'How good the small model is', zh: '小模型有多强', min: 0, max: 100, step: 5, value: P.small, format: function (v) { return v + '%'; }, onInput: function (v) { P.small = v; render(); } });
-  var sJudge = TX.slider({ en: 'How well difficulty is judged', zh: '难度判断的准头', min: 40, max: 98, step: 2, value: P.judge, format: function (v) { return v + '%'; }, onInput: function (v) { P.judge = v; render(); } });
+  var sJudge = TX.slider({ en: 'How well difficulty is judged', zh: '难度判断的准头', min: 40, max: 98, step: 1, value: P.judge, format: function (v) { return v + '%'; }, onInput: function (v) { P.judge = v; render(); } });
   var sCost = TX.slider({ en: 'Frontier price, ×small', zh: 'Frontier 的价格（小模型的几倍）', min: 2, max: 40, step: 1, value: P.cost, format: function (v) { return '×' + v; }, onInput: function (v) { P.cost = v; render(); } });
   var roQ = TX.readout('Cascade', '级联'), roC = TX.readout('Cascade cost', '级联成本');
   var roR = TX.readout('Router', '路由'), roF = TX.readout('All frontier', '全用 frontier');

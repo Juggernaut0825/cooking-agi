@@ -10,11 +10,13 @@ def selected_gates(logits, top_k, normalization="selected"):
         raise ValueError("Expected [tokens, experts] logits and a valid top_k")
     if normalization not in ("selected", "full"):
         raise ValueError("normalization must be selected or full")
-    values, indices = logits.topk(top_k, dim=-1)
+    router_dtype = torch.float64 if logits.dtype == torch.float64 else torch.float32
+    router_logits = logits.to(router_dtype)
+    values, indices = router_logits.topk(top_k, dim=-1)
     if normalization == "selected":
         weights = values.softmax(dim=-1)
     else:
-        weights = logits.softmax(dim=-1).gather(-1, indices)
+        weights = router_logits.softmax(dim=-1).gather(-1, indices)
     return indices, weights
 
 
@@ -22,16 +24,18 @@ def sparse_moe(hidden, logits, experts, top_k, normalization="selected"):
     if hidden.ndim != 2 or logits.shape != (hidden.shape[0], len(experts)):
         raise ValueError("Expected [tokens, width] inputs and one logit per expert")
     indices, weights = selected_gates(logits, top_k, normalization)
-    output = torch.zeros_like(hidden)
+    accumulation_dtype = torch.promote_types(hidden.dtype, weights.dtype)
+    output = torch.zeros_like(hidden, dtype=accumulation_dtype)
     for expert_id, expert in enumerate(experts):
         token_ids, slots = torch.where(indices == expert_id)
         if token_ids.numel() == 0:
             continue
         expert_inputs = hidden.index_select(0, token_ids)
         expert_outputs = expert(expert_inputs)
-        weighted = expert_outputs * weights[token_ids, slots, None]
+        weighted = (expert_outputs.to(accumulation_dtype)
+                    * weights[token_ids, slots, None].to(accumulation_dtype))
         output = output.index_add(0, token_ids, weighted)
-    return output
+    return output.to(hidden.dtype)
 
 
 def group_limited_topk(scores, group_count, groups_to_keep, top_k, group_top_k=1):
@@ -60,14 +64,15 @@ def balance_statistics(logits, valid, top_k, scope="sequence", scoring="softmax"
         raise ValueError("Unknown aggregation scope or scoring function")
     if logits.shape[0] == 0 or torch.any(valid.sum(dim=1) == 0):
         raise ValueError("Every sequence must contain at least one valid token")
-    clean_logits = logits.masked_fill(~valid[..., None], 0)
+    working_dtype = torch.promote_types(logits.dtype, torch.float32)
+    clean_logits = logits.to(working_dtype).masked_fill(~valid[..., None], 0)
     if scoring == "softmax":
         probabilities = clean_logits.softmax(dim=-1)
     else:
         probabilities = functional.logsigmoid(clean_logits).softmax(dim=-1)
     indices = clean_logits.topk(top_k, dim=-1).indices
     assignments = functional.one_hot(indices, logits.shape[-1]).sum(dim=-2)
-    mask = valid[..., None].to(logits.dtype)
+    mask = valid[..., None].to(working_dtype)
     axes = (1,) if scope == "sequence" else (0, 1)
     token_count = mask.sum(dim=axes)
     fractions = (assignments * mask).sum(dim=axes) / (top_k * token_count)

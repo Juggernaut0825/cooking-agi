@@ -102,6 +102,8 @@ Double DQN networks are not truly independent, so this explains motivation rathe
 
 Replay stores transitions, not permanent targets. Sample $(s,a,r,s')$, then construct labels using the specified target network. Shuffling reduces consecutive-sample correlation but does not ensure coverage of the new policy’s states.
 
+Freezing the target network does not freeze every label. For the same transition, vanilla DQN's label stays fixed between hard synchronizations, assuming deterministic network outputs. Double DQN still selects actions with the changing online network. With $r=1,\gamma=0.9$, keeping target Q at $[2,6]$ but changing online Q from $[5,4]$ to $[3,4]$ changes its label from 2.8 to 6.4 without synchronizing the target.
+
 Targets may be copied periodically or softly updated as $\bar\theta\leftarrow(1-\tau)\bar\theta+\tau\theta$. Specify whether synchronization counts environment or gradient steps: 1000 steps means different things with ten updates per interaction versus one.
 
 | Increase | Potential benefit | Additional risk |
@@ -116,4 +118,4 @@ Compare environment interactions and gradient updates, not just an hour of train
 
 First test that terminal targets equal reward. Then verify that targets have no gradients, replay actions align with their states, and target synchronization uses the intended step units. If loss falls while return does not improve, inspect these semantics before enlarging the network.
 
-Reference: [Double DQN](https://arxiv.org/abs/1509.06461). Next: [What if continuous actions make enumeration impossible?](continuous-control.en.md)
+Reference: [Double DQN (arXiv v3, 2015)](https://arxiv.org/abs/1509.06461v3). Next: [What if continuous actions make enumeration impossible?](continuous-control.en.md)

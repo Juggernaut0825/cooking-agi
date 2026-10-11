@@ -38,9 +38,9 @@ With continuous actions, the sum becomes an integral and normalization may be in
 
 ## Check automatic temperature with its update direction
 
-For an entropy floor $H_{\rm target}$, hold the policy fixed and consider minimizing $L_\alpha=\alpha(H-H_{\rm target})$ over $\alpha\ge0$. Below-target entropy gives a negative derivative, increasing $\alpha$ and the incentive for randomness. Above-target entropy does the opposite.
+For an average entropy floor $H_{\rm target}$, hold the policy fixed and consider minimizing $L_\alpha=\alpha(H-H_{\rm target})$ over $\alpha\ge0$. Below-target entropy gives a negative derivative, increasing $\alpha$ and the incentive for randomness. Above-target entropy does the opposite. This constrains the average, not every state's entropy to the same value.
 
-When estimating entropy with sampled $-\log\pi(a\mid s)$, stop policy gradients for this update. Implementations often optimize $\log\alpha$ to maintain positivity; some use a surrogate with the same direction but different scaling. State the actual loss when comparing code. Continuous differential-entropy targets may be negative; that alone is not a sign error.
+Let $\eta=\log\alpha$, estimate entropy with $\hat H=-\log\pi(a\mid s)$, and set $g=\operatorname{stopgrad}(\hat H-H_{\rm target})$. Direct substitution gives $L_\eta=e^\eta g$ with gradient $\alpha g$; the common surrogate $\tilde L_\eta=\eta g$ instead has gradient $g$. The directions agree, but these are different losses with different gradient scales. Continuous differential-entropy targets may be negative: $\hat H=-2,H_{\rm target}=-1$ still means insufficient entropy, so either descent update raises the temperature.
 
 ## The common twin-Q formulation
 
@@ -78,7 +78,7 @@ $$
 -\sum_j\log(1-\tanh^2u_j).
 $$
 
-Use a numerically stable equivalent rather than evaluating $\log0$ near tanh saturation. Scaling actions to environment bounds adds another log-determinant. It may be constant for a fixed Actor-gradient calculation, but entropy values and temperature targets must remain consistent.
+Use a numerically stable equivalent rather than evaluating $\log0$ near tanh saturation. A density in environment-action coordinates must also subtract the scaling log-determinant. Alternatively, define entropy consistently in normalized-action coordinates, including in the Critic target and temperature loss. For a scalar action, rescaling to $a_{\rm env}=2a$ gives $\log\pi_{\rm env}=\log\pi-\log2$ and $H_{\rm env}=H+\log2$; expressing the same entropy constraint requires adding $\log2$ to $H_{\rm target}$ too. This constant does not directly change the Actor gradient with Q and temperature fixed, but it changes the entropy reading.
 
 A stable scalar Jacobian term is:
 
@@ -100,9 +100,11 @@ The extra 0.126 comes from the soft-value definition, not additional task reward
 
 | Update | Quantities read | Where gradients must stop |
 | --- | --- | --- |
-| Two Q-functions | Replay $(s,a)$ and the soft target | Entire target branch, including target Q, sampled action, and log-probability |
-| Actor | Current states, reparameterized actions, current twin Q, log-probability | Do not update Critic parameters, but keep Q → action → Actor derivatives |
+| Two Q-functions | Replay $(s,a)$ and the soft target | Entire target branch, including target Q, sampled action, log-probability, and α |
+| Actor | Current states, reparameterized actions, current twin Q, log-probability | Hold α and Critic parameters fixed, but keep Q → action → Actor derivatives |
 | Temperature α, if enabled | Difference between policy entropy and target entropy | Treat policy log-probability as fixed for this step |
+
+Initialize the two target Q-networks from the current Q-networks, then typically Polyak-update them each Critic round. This variant has no target Actor and adds no separate TD3 smoothing noise. True termination gives $y=r$; an external time-limit truncation still uses a soft bootstrap from the final pre-reset state.
 
 The score-function update in the policy-gradient chapter treats sampled actions as fixed observations; this Actor differentiates through them. The distinction is the estimator, not simply discrete versus continuous actions: continuous policies can also use score-function gradients. The two paths need different detach positions.
 

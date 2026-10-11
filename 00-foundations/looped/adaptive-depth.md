@@ -2,7 +2,7 @@
 
 **中文** · [English](adaptive-depth.en.md)
 
-> 阅读时间：约 5 分钟 · 难度：进阶 · 最近审阅：2026-10-09
+> 阅读时间：约 5 分钟 · 难度：进阶 · 最近审阅：2026-10-10
 
 ## 哪些位置值得多算几圈 {#_1}
 
@@ -13,7 +13,7 @@
 ## ACT 和 PonderNet
 
 - [ACT / Universal Transformer](https://arxiv.org/abs/1807.03819)：累计 halting 值，达到阈值或上限后停止更新该位置；输出还涉及各步状态的加权组合和最后的 remainder，不只是挑最后一个状态。
-- [PonderNet](https://arxiv.org/abs/2107.05407)（2021）把停止写成一个概率分布。第 $n$ 步停下的概率是
+- [PonderNet](https://arxiv.org/abs/2107.05407)（2021）把停止写成一个概率分布。它是通用的计算分配方法，不专指逐 token 的语言模型；论文也讨论对整个输入一起分配步数。第 $n$ 步停下的概率是
 
 $$p_n = \lambda_n \prod_{j<n} (1 - \lambda_j)$$
 
@@ -49,15 +49,17 @@ assert abs(expected_steps - 2.2) < 1e-12
 
 ## Ouro 的退出 gate
 
-[Ouro](https://arxiv.org/abs/2510.25741) 在每一圈后面接一个退出 gate：$\lambda_t = \sigma(\mathrm{Linear}(h_t))$。训练分两个阶段：
+[Ouro（v5，§3.2–3.4）](https://arxiv.org/html/2510.25741v5) 在每一圈后面接一个退出 gate：$\lambda_t = \sigma(\mathrm{Linear}(h_t))$。训练分两个阶段：
 
 1. **第一阶段**：损失是 $\sum_t p(t \mid x)\, \mathcal L_t - \beta\, H(p)$。对固定最大步数，$\mathrm{KL}(p\|U)=-H(p)+\log T$，所以熵项等价于加权的均匀先验 KL，差一个常数；标准负 ELBO 还要匹配似然定义和权重，不能把任意 $\beta$ 都直接叫标准 ELBO；
-2. **第二阶段**：拿「多转一圈损失能降多少」当标签，单独训练这个 gate。
+2. **第二阶段**：冻结语言模型，用相邻两圈已经算出的损失下降量 $I_t=\max(0,\mathcal L_{t-1}-\mathcal L_t)$ 构造软标签，只训练 gate；损失需 detach。这是根据已观察到的收益学习是否继续，不是直接回归下一圈的未知损失。
+
+推理的 Q-exit 看累计退出概率 $\sum_{j\le t}p_j$ 是否达到阈值 $q$，不是拿单圈的 $\lambda_t$ 与 $q$ 比。沿用上面的玩具分布，累计值为 0.2、0.6、1：$q=0.5$ 选第 2 步，$q=0.9$ 选第 3 步；两者都不是期望步数 2.2。
 
 核对 [Ouro-1.4B 实现 `7ea635b`](https://huggingface.co/ByteDance/Ouro-1.4B/blob/7ea635ba1575ae9ab4ae1d83d83e16a6e47fe696/modeling_ouro.py) 可见，它先执行配置中的全部循环，再选择输出状态。默认 4 圈时，“选第 2 圈输出”不等于只计算 2 圈。这里说的是该代码快照，不代表所有 Ouro 推理引擎；要省算力，还需调度器真正跳过后续计算并处理 KV 依赖。
 
 ## Mixture-of-Recursions：让 router 分配深度
 
-[Mixture-of-Recursions](https://arxiv.org/abs/2507.10524)（2025）用 router 分配递归深度。其 recursion-wise cache 只为该圈参与的 token 存 KV；recursive sharing 是另一种方案，不要混成同一个缓存规则。Expert-choice 跨 token 选 top-k 有未来信息泄漏风险，论文用辅助预测来处理推理时的选择；token-choice 避开这类跨位置选择，却要面对负载不均。论文报告特定最大 batch 设置下最高 2.06× 吞吐，不能当作所有服务的预期加速。
+[Mixture-of-Recursions（2025，v1）](https://arxiv.org/html/2507.10524v1)用 router 分配递归深度。其 recursion-wise cache 只为该圈参与的 token 存 KV；recursive sharing 是另一种方案，不要混成同一个缓存规则。Expert-choice 跨 token 选 top-k 有未来信息泄漏风险，论文比较辅助 router 与直接施加在主 router 上的辅助损失，后者在其实验中更好；token-choice 避开这类跨位置选择，却要面对负载不均。论文在 360M 级模型、无输入前缀、平均生成长度 256 的最大 batch 设置下报告最高 2.06× 吞吐，不能当作所有服务的预期加速。
 
 实际比较时，把平均圈数、准确率、每 token 延迟和峰值 KV 一起记下来。平均圈数降了但算子仍照跑，账面省下的计算就还没变成真实收益。

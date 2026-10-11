@@ -3,8 +3,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../static/search.js'), 'utf8');
+const {entryDecision} = require('../static/language.js');
 
-function mount() {
+function mount(language = 'zh', prefix = '../') {
   let document;
   function element(tag = 'div', dataset = {}) {
     return { tag, dataset, children: [], listeners: {}, attributes: {}, hidden: false,
@@ -37,7 +38,7 @@ function mount() {
   document.documentElement = {classList: {add() {}, remove() {}}};
   const requests = [], timers = new Map();
   let timerId = 0;
-  vm.runInNewContext(source, {document, window: {SITE: {lang: 'zh', prefix: '../'}},
+  vm.runInNewContext(source, {document, window: {SITE: {lang: language, prefix}},
     fetch: () => new Promise((resolve, reject) => requests.push({resolve, reject})),
     setTimeout: callback => { timers.set(++timerId, callback); return timerId; },
     clearTimeout: identity => timers.delete(identity)});
@@ -107,5 +108,33 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   closed.requests[0].resolve({ok: true, json: async () => index});
   await tick();
   assert.equal(closed.results.children.length, 0);
+
+  const homes = [
+    {u: 'index.html', t: 'AGI Study Notes', s: 'Home', l: 'en', x: 'Study notes'},
+    {u: 'index.zh.html', t: 'AGI 学习笔记', s: '首页', l: 'zh', x: '学习笔记'}
+  ];
+  for (const language of ['zh', 'en']) {
+    for (const prefix of ['', '../', '../../']) {
+      const homeSearch = mount(language, prefix);
+      homeSearch.opener.click();
+      homeSearch.type('AGI');
+      homeSearch.requests[0].resolve({ok: true, json: async () => homes});
+      await tick();
+      const ownLink = homeSearch.results.querySelectorAll('a')[0].href;
+      assert.equal(ownLink, prefix + (language === 'en' ? 'index.html?lang=en' : 'index.zh.html'));
+      homeSearch.scopes[1].click();
+      await tick();
+      const links = homeSearch.results.querySelectorAll('a').map(link => link.href);
+      assert.equal(links.length, 2);
+      const base = 'https://example.org/cooking-agi/';
+      const current = new URL('chapter/'.repeat(prefix.split('../').length - 1) + 'note.html', base);
+      for (const href of links) {
+        const target = new URL(href, current).href;
+        assert.equal(entryDecision(target, base, 'zh').redirect, null, href);
+      }
+      assert.ok(links.includes(prefix + 'index.html?lang=en'));
+      assert.ok(links.includes(prefix + 'index.zh.html'));
+    }
+  }
   console.log('Search interactions passed');
 })().catch(error => { console.error(error); process.exitCode = 1; });

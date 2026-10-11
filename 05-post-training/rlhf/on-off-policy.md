@@ -2,7 +2,7 @@
 
 **中文** · [English](on-off-policy.en.md)
 
-> 阅读时间：约 12 分钟 · 难度：必修 · 最近审阅：2026-10-09
+> 阅读时间：约 14 分钟 · 难度：必修 · 最近审阅：2026-10-10
 
 生成一批长回答很贵。刚收集完就丢掉，当然心疼；但一直反复使用，又会遇到一个问题：**生成这批回答的模型，已经不是眼下正在更新的模型了。**
 
@@ -117,6 +117,21 @@ print(round(logged_mean, 2), round(estimate, 2), round(effective_size, 2))
 
 虽然有 50 条记录，权重的有效样本量指标（ESS）只有 18：少数 B 扛了很大一部分权重。这是**权重集中程度的诊断**，不是严格保证「相当于 18 个独立样本」，更不是置信区间。
 
+<details markdown="1">
+<summary>只采到一个动作，importance sampling 就不成立了吗？</summary>
+
+不是。沿用上面的概率，单次加权 reward 只有两种可能：采到 A，得到 $5/9$；采到 B，得到 $5\times3=15$。其中任何一个都离目标均值 2 很远，但这个随机估计量的期望仍然是：
+
+$$
+0.9\times\frac59+0.1\times15=2.
+$$
+
+**“无偏”说的是重复采样后的期望，不是手里这一条恰好算得准。**样本少会让估计很不稳，却不会仅仅因为样本数为 1，就让换测度恒等式失效。这里仍要求概率准确、支持集覆盖、reward 机制不变；没有做裁剪或自归一化。
+
+也别从这个单步例子反推“逐 token 加权就能完整修正旧回答”。接下来还差一个问题：模型是怎么走到这个前缀的？
+
+</details>
+
 ## 三个修不回来的地方
 
 ### 1. 从未采到的动作，不能靠除法补出来
@@ -136,6 +151,63 @@ print(round(logged_mean, 2), round(estimate, 2), round(effective_size, 2))
 上例若把权重截到 2，五个 B 的贡献被压小，估计变成 $(45\times5/9+5\times2\times3)/50=1.1$，不再是 2。这说明 bias–variance tradeoff 很具体，不是写一句「加 clipping 更稳定」就结束了。
 
 这只是普通重要性权重裁剪的例子，**不是 PPO 的完整 clipped objective**。PPO 还会根据 advantage 的正负取最小值，详见 [PPO clipping](ppo-clipping.md)。
+
+## 下一步没变，整段回答也可能变了 {#prefix-distribution}
+
+看一个只生成两个 token 的小模型。第一步选 A 或 B，第二步选 `✓` 或 `×`；以 `✓` 结尾就得 1 分，否则 0 分。它只用来说明概率，不对应真实任务。
+
+旧模型第一步有 80% 的概率选 A，新模型只有 20%。但在**同一个前缀下**，两个模型的第二步概率完全相同：A 后面有 25% 的概率生成 `✓`，B 后面有 75%。所以第二步所有 token 的 ratio 都是 1。
+
+<div class="worked-table" markdown="1">
+
+| 算哪种成功率 | 结果 |
+|---|---|
+| 旧模型 | $0.8\times0.25+0.2\times0.75=0.35$ |
+| 只加权第二步 | $0.35\times1=0.35$ |
+| 新模型 | $0.2\times0.25+0.8\times0.75=0.65$ |
+
+</div>
+
+差的不是第二步的条件概率，而是**走到 A、B 的频率**。新模型更常走到成功率高的 B；只看第二步 ratio，就漏掉了这个变化。语言模型的 state 包含已有前缀，因此 prefix distribution 也是 state distribution 的一部分。
+
+<details markdown="1">
+<summary>把四条路径列出来，检查完整权重</summary>
+
+在这个固定两步、确定 token 转移的例子中，完整路径权重是两步 ratio 的乘积。以 A 开头的权重为 $0.2/0.8=0.25$，以 B 开头的权重为 $0.8/0.2=4$；第二步都是 1。于是加权后的期望为 $0.8\times0.25\times0.25+0.2\times4\times0.75=0.65$。
+
+下面枚举全部路径，不用随机采样，所以能核对期望本身：
+
+```python
+from itertools import product
+import math
+
+old_prefix = {"A": 0.8, "B": 0.2}
+new_prefix = {"A": 0.2, "B": 0.8}
+success_given_prefix = {"A": 0.25, "B": 0.75}
+old_return = token_only_return = full_is_return = target_return = 0.0
+
+for prefix, success in product(old_prefix, (False, True)):
+    success_probability = success_given_prefix[prefix]
+    conditional = success_probability if success else 1 - success_probability
+    old_path = old_prefix[prefix] * conditional
+    new_path = new_prefix[prefix] * conditional
+    reward = float(success)
+    second_ratio = conditional / conditional
+    full_ratio = new_path / old_path
+    old_return += old_path * reward
+    token_only_return += old_path * second_ratio * reward
+    full_is_return += old_path * full_ratio * reward
+    target_return += new_path * reward
+
+assert math.isclose(old_return, 0.35)
+assert math.isclose(token_only_return, 0.35)
+assert math.isclose(full_is_return, 0.65)
+assert math.isclose(target_return, 0.65)
+```
+
+这是评估 terminal reward 的换测度算例，**不是建议把 PPO 的每项 loss 都乘上完整轨迹权重**。PPO 使用旧状态分布上的局部 surrogate，并限制每批数据的复用；估计哪个目标、用什么 advantage、控制多大方差，需要一起考虑。[PPO 的目标与训练循环](https://spinningup.openai.com/en/latest/algorithms/ppo.html)可以对照着看。
+
+</details>
 
 ## 放回 LLM：该保存哪些信息？
 

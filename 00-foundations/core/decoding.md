@@ -29,28 +29,30 @@ $$p_i = \frac{\exp(z_i / T)}{\sum_j \exp(z_j / T)}$$
 | $T$ | 效果 |
 | --- | --- |
 | $T \to 0^+$ | 若最大 logit 唯一，概率集中到该 token；并列最大时仍有多个候选 |
-| $T < 1$ | 分布变陡，高概率 token 更占优势，输出更保守 |
+| $0 < T < 1$ | 分布变陡，高概率 token 更占优势 |
 | $T = 1$ | 模型原本的分布 |
 | $T > 1$ | 分布变平，长尾 token 有机会，输出更发散 |
 
-$T$ 不改变 token 的**排序**，只改变概率有多集中。低温不会让模型掌握新知识，也不能保证答案更正确。
+正温度不改变 token 的**排序**，只改变概率有多集中。低温不会让模型掌握新知识，也不能保证答案更正确。
 
-> 实现上 $T=0$ 会除零，所以大多数 API 里的 `temperature=0` 其实是走 greedy 分支，不是真的做除法。
+> 公式不能直接代入 $T=0$。有些接口把它当作 greedy 的快捷设置，另一些用单独的开关。例如 [Transformers 4.57.1](https://huggingface.co/docs/transformers/v4.57.1/en/main_classes/text_generation) 中，`do_sample=False, num_beams=1` 才是明确的 greedy 配置。
 
 ## Top-k：只留概率最高的 k 个 {#top-k-k}
 
 把分布排序，保留前 $k$ 个，其余置零后重新归一化，再采样。
 
-问题在于 $k$ 是固定的，而分布的形状一直在变：
+同样留下两个 token，保住的概率质量可能差很多。看两个假设分布：
 
-- 「中华人民共和国万」后面几乎只有一个合理选择，分布极陡。此时 $k=50$ 会把 49 个几乎不可能的词也放进候选池。
-- 「他觉得这部电影」后面有几百个合理的接续，分布很平。此时 $k=50$ 又切得太狠，砍掉了本来合理的选项。
+| 下一 token 的概率 | top-k，k=2 | top-p，p=0.9 |
+| --- | --- | --- |
+| `0.98, 0.01, 0.01` | 留 2 个，原概率之和为 0.99 | 留 1 个，原概率之和为 0.98 |
+| `0.34, 0.33, 0.33` | 留 2 个，原概率之和为 0.67 | 留 3 个，原概率之和为 1.00 |
 
-**同一个 $k$ 不可能同时适配这两种情况。**
+**Top-k 固定数量，不固定留下的概率质量。** 它可以很好用，但同一个 k 在不同位置的截断力度不同。这也是下面 top-p 换一种标准的原因。表里并列的 token 按 ID 顺序打破平局。
 
 ## Top-p（核采样）：按累积概率截断 {#top-p}
 
-改成：按概率从高到低累加，取**刚好让累积概率 ≥ p 的最小集合**，其余丢弃后归一化。
+改成：按概率从高到低累加，取**刚好让累积概率 ≥ p 的最小集合**，其余丢弃，剩余概率再归一化。
 
 $$\text{保留最小的集合 } V^{(p)} \text{ 使得} \sum_{i \in V^{(p)}} p_i \ge p$$
 
@@ -61,7 +63,7 @@ $$\text{保留最小的集合 } V^{(p)} \text{ 使得} \sum_{i \in V^{(p)}} p_i 
 
 **候选池大小随分布变化**，不必事先指定留下几个 token。但 0.9 是模型分配的概率质量，不是“答案有九成把握正确”。Top-p 是否更合适，仍要看任务和实际输出。
 
-两者可以叠加：先 top-k 兜住上限，再 top-p 动态收紧。很多实现默认就是这么串的。
+两者也可以叠加。例如先 top-k，再对剩余候选重新归一化后做 top-p；这时 top-p 的门槛针对剩余分布，不是原分布。是否同时启用、谁先作用，要看具体配置。
 
 ## 常见的处理顺序 {#_2}
 
@@ -73,7 +75,7 @@ Temperature → TopK → TopP
 
 温度在**最前面**。这不是无关紧要的细节，因为它会改变 top-p 截出来的核有多大。
 
-对 top-k 无所谓——温度是单调变换，不改变排序，而 top-k 只看排名。但 **top-p 看的是累积概率**，温度一改，累积速度就变了。
+对 top-k 的候选集合没影响——正温度不改变排序，而 top-k 只看排名（并列时保持相同的规则）。但 **top-p 看的是累积概率**，温度一改，累积速度就变了。
 
 用概率 `0.40、0.25、0.15、0.08、0.05、0.03、0.025、0.015` 作例子，转成 logits，再设 `top_p=0.9`：
 
@@ -93,9 +95,9 @@ Temperature → TopK → TopP
 
 $$z_i \leftarrow z_i - \alpha_{\text{presence}}\cdot\mathbb{1}[c_i > 0] - \alpha_{\text{frequency}}\cdot c_i$$
 
-其中 $c_i$ 是 token $i$ 在已生成文本里出现的次数。两者的区别就在这个式子里：
+其中 $c_i$ 是 token $i$ 在已生成文本里出现的次数。这里先设两个系数都非负；负系数会反过来鼓励出现过的 token。两者的区别就在这个式子里：
 
-- **存在惩罚**（presence）：只要出现过就扣一个**固定值**，出现 1 次和 10 次扣得一样多。作用是推动模型换新话题。
+- **存在惩罚**（presence）：只要出现过就扣一个**固定值**，出现 1 次和 10 次扣得一样多，让没出现过的 token 相对更有优势。
 - **频率惩罚**（frequency）：按出现**次数累计**扣，出现越多压得越狠。作用是抑制重复。
 
 这两种惩罚只识别 token 是否出现，不理解“话题”。压低旧 token 不保证出现新观点；换个词反复表达同一件事，也可能绕过去。
@@ -104,7 +106,7 @@ $$z_i \leftarrow z_i - \alpha_{\text{presence}}\cdot\mathbb{1}[c_i > 0] - \alpha
 
 可以先保留不加惩罚的基线，再用相同 prompts 对照输出。参数范围和计数是否包含 prompt 要核对框架，不能给所有模型套一个固定步长或上限。
 
-## Beam Search：为什么生成式 LLM 很少使用它 {#beam-search-llm}
+## Beam Search：高概率不一定是好回答 {#beam-search-llm}
 
 Beam search 每一步扩展候选，再按分数保留 $k$ 条。最简单的分数是**累积对数概率**，实际还可能加入长度惩罚。最后选的是保留下来的候选里分数最高的那条，不保证全局最优。
 
@@ -126,7 +128,7 @@ Beam search 每一步扩展候选，再按分数保留 $k$ 条。最简单的分
 
 几条容易踩的：
 
-**不要同时把 temperature 和 top-p 都调很低。** 两个都在收紧，叠起来常常直接退化成 greedy，多样性完全消失，但你以为自己在采样。
+**低温和低 top-p 叠加，可能只剩一个候选。** 想要多样性时要检查实际候选数；如果本来就想要确定输出，这不一定是问题。但不要把“开启了采样”当作“结果一定多样”。
 
 **RL 训练要区分目标策略和实际采样分布。** 温度和截断会改变分布，需要明确 log-prob 对应哪个分布、是否校正。截断还会让部分动作概率归零，不能只补一个重要性比就声称恢复了完整策略的无偏估计。
 
@@ -159,8 +161,13 @@ def nucleus_distribution(logits, threshold=0.9, temperature=1.0):
         raise ValueError("Expected logits, 0 < threshold <= 1, and temperature > 0")
     if not math.isfinite(temperature) or not all(math.isfinite(value) for value in logits):
         raise ValueError("Expected finite inputs")
-    maximum = max(logits)
-    weights = [math.exp((value - maximum) / temperature) for value in logits]
+    if temperature >= 1:
+        scaled_logits = [value / temperature for value in logits]
+    else:
+        maximum = max(logits)
+        scaled_logits = [(value - maximum) / temperature for value in logits]
+    maximum = max(scaled_logits)
+    weights = [math.exp(value - maximum) for value in scaled_logits]
     total = sum(weights)
     probabilities = [weight / total for weight in weights]
     ordered_ids = sorted(range(len(logits)), key=lambda token_id: probabilities[token_id], reverse=True)
@@ -180,6 +187,8 @@ assert math.isclose(example[1], 2 / 3)
 
 注意返回的是原词表 ID，不是排序后的名次。还可以试试 `threshold=1`（不截断）、只有一个候选、两个最大值相同，以及极大的正负 logits。不要只测最顺的一个例子。
 
+缩放顺序也有数值边界：`[1e308, -1e308]` 配 `T=1e308`，正确分布约为 `[0.881, 0.119]`；若先做两个 logits 的减法，差值已经溢出，后面再除温度也救不回来。代码在高温时先缩放；低温时先减最大值，避免共同的大偏置除以小温度后溢出。
+
 ## 面试常见问题 {#_5}
 
 <details class="interview" markdown="1">
@@ -192,7 +201,7 @@ logits 上，在 softmax **之前**：$p_i = \text{softmax}(z_i/T)$。
 </details>
 
 <details class="interview" markdown="1">
-<summary>top-k 和 top-p 的区别？为什么 top-p 更常用？</summary>
+<summary>top-k 和 top-p 的区别？候选数怎样变化？</summary>
 
 top-k 固定保留 $k$ 个候选；top-p 保留累积概率刚好达到 $p$ 的最小集合。
 
@@ -201,7 +210,7 @@ top-k 固定保留 $k$ 个候选；top-p 保留累积概率刚好达到 $p$ 的�
 </details>
 
 <details class="interview" markdown="1">
-<summary>为什么大模型开放生成不用 beam search？</summary>
+<summary>为什么 beam search 的分数更高，回答却未必更好？</summary>
 
 模型似然不等于任务质量，开放生成中尤其要检查重复与多样性。Beam search 是有限宽度的近似搜索，不是全局最优算法；翻译和摘要也有多个合理答案。应与采样、重排或验证方案在同一预算下比较。
 
@@ -212,7 +221,7 @@ top-k 固定保留 $k$ 个候选；top-p 保留累积概率刚好达到 $p$ 的�
 
 最大 logit 唯一时，$T \to 0^+$ 的概率集中到该 token；并列最大时，极限仍会在它们之间分配概率，而 greedy 通常用固定规则打破平局。
 
-但实现上 $T=0$ 会除零，所以框架和 API 里的 `temperature=0` 通常是直接走 greedy 分支。另外注意 greedy 也未必完全确定——批处理时的浮点归约顺序、不同 kernel 实现，都可能让同一输入产生不同结果。
+具体配置要看接口：有的用 `temperature=0` 表示 greedy，有的要求关闭采样，不能在公式里直接除零。Greedy 对固定 logits 和固定平局规则是确定的；不同 kernel 或批处理方式若改变了 logits，接近的候选仍可能换序。
 
 </details>
 
@@ -221,7 +230,7 @@ top-k 固定保留 $k$ 个候选；top-p 保留累积概率刚好达到 $p$ 的�
 
 本文选择 temperature → top-k → top-p；具体框架的顺序需要核对。不能把任意两个步骤互换后仍当作同一配置。
 
-**顺序对 top-k 没影响**：温度是单调变换，不改变排序，top-k 只看排名。
+**正温度不改变 top-k 的候选集合**：它不改变排序；并列时仍需使用相同的取舍规则。
 
 **对 top-p 有影响**：top-p 看的是累积概率，温度改变了各 token 的相对占比，累积到 $p$ 所需的 token 数就变了。实测同样 `top_p=0.9`，$T=0.7$ 时温度在前得到 4 个候选、在后得到 5 个；$T=1.5$ 时是 6 对 5。$T=1$ 时两者相等——所以只在默认温度下测试是发现不了的。
 
@@ -232,7 +241,7 @@ top-k 固定保留 $k$ 个候选；top-p 保留累积概率刚好达到 $p$ 的�
 
 都作用在 logits 上：$z_i \leftarrow z_i - \alpha_p\mathbb{1}[c_i>0] - \alpha_f c_i$。
 
-**存在惩罚**只看「出现过没有」，出现 1 次和 10 次扣的一样多，推动模型换话题。**频率惩罚**按次数累计，出现越多压得越狠，专治重复。
+系数为正时，**存在惩罚**只看「出现过没有」，出现 1 次和 10 次扣得一样多；**频率惩罚**按次数累计，出现越多扣得越多。它们调整的是 token 的相对概率，不保证减少语义上的重复，也不保证换话题。
 
 两者都会误伤本该重复的 token——标点、代词、代码缩进和括号、正文里反复出现的人名。调大了输出会变别扭，代码生成尤其容易被搞坏。
 
@@ -273,7 +282,7 @@ top-k 固定保留 $k$ 个候选；top-p 保留累积概率刚好达到 $p$ 的�
 
 **面试回答**
 
-> Decoding 不改变模型参数，只把同一组 logits 转成不同的选择策略。通常先应用 penalties，再除以 temperature，随后做 top-k 或 top-p filtering，重新归一化后采样。Temperature 趋近 0 接近 argmax，但它本身不等于 greedy decoding。
+> Decoding 不改变模型参数，只把同一组 logits 转成不同的选择策略。先明确处理顺序，例如 penalties → 正温度缩放 → top-k / top-p → 归一化 → 采样。Temperature 趋近 0 时，概率集中在最大 logits 上；若有并列，仍不同于固定规则选一个的 greedy。
 
 <details markdown="1">
 <summary><b>深挖</b>：为什么 top-p 比固定 top-k 更能适应上下文？</summary>

@@ -2,7 +2,7 @@
 
 [中文](normalization.md) · **English**
 
-> Reading time: ~12 min · Level: core · Last reviewed: 2026-10-09
+> Reading time: ~16 min · Level: core · Last reviewed: 2026-10-10
 
 Take `[1, 3]`, temporarily ignoring epsilon and learned parameters. LayerNorm subtracts the mean, 2, and divides by the standard deviation, 1, giving `[-1, 1]`. RMSNorm instead divides by the root mean square, √5, without centering. Both change scale, but they are different operations. Next we place them inside a batch of sequences and identify the reduction axes.
 
@@ -13,6 +13,8 @@ Take `[1, 3]`, temporarily ignoring epsilon and learned parameters. LayerNorm su
 Start with the axes, then check running statistics and train / eval modes. Together they determine behavior with variable lengths, batch size 1, and autoregressive decoding. The axis alone is not the entire implementation contract.
 
 ![which axis each norm averages over](../assets/norm-axes.en.svg)
+
+Each row in the figure is one feature vector. For a sequence shaped `[B,T,d]`, token-wise normalization means `LayerNorm(d)` / `RMSNorm(d)`. Passing `(T,d)` includes time as well. **Check `normalized_shape`, not just the layer's name.** Both [LayerNorm](https://docs.pytorch.org/docs/2.8/generated/torch.nn.LayerNorm.html) and [RMSNorm](https://docs.pytorch.org/docs/2.8/generated/torch.nn.RMSNorm.html) allow normalization over multiple trailing dimensions.
 
 ## Three formulas {#three-formulas}
 
@@ -34,9 +36,62 @@ The learned $\gamma$, and $\beta$ where present, run **per feature**, with lengt
 
 Add 10 to the opening example: `[1, 3]` becomes `[11, 13]`. Ignoring epsilon, LayerNorm still returns `[-1, 1]`; the RMSNorm denominator changes from $\sqrt{5}$ to $\sqrt{145}$, so its output changes too. It does not remove the shift. **Pre-Norm versus Post-Norm is a separate choice** about placement, not the normalization formula. The [RMSNorm paper](https://arxiv.org/abs/1910.07467) investigates scale normalization without re-centering.
 
-## Four concepts: answer first, then go deeper {#four-concepts-answer-first-then-go-deeper}
+## Why can train and eval differ on the same batch? {#train-eval-statistics}
 
-The BatchNorm formula above uses a two-dimensional input. On `[N,C,L]`, `BatchNorm1d` reduces over `N,L` per channel. Training-forward variance uses `correction=0`, whereas the running-variance update uses a different estimator. Evaluation uses running statistics by default; with `track_running_stats=False`, it uses batch statistics too. Mean / variance are statistical state, not optimizer-trained parameters like gamma / beta. See the [PyTorch documentation](https://docs.pytorch.org/docs/main/generated/torch.nn.BatchNorm1d.html).
+The BatchNorm formula above uses a two-dimensional input. On `[N,C,L]`, `BatchNorm1d` reduces over `N,L` per channel. By default, training uses current-input statistics and eval uses accumulated running statistics. With `track_running_stats=False`, eval uses the current input too. These are statistical state, not optimizer-trained parameters such as gamma / beta. See [PyTorch 2.8](https://docs.pytorch.org/docs/2.8/generated/torch.nn.BatchNorm1d.html).
+
+A distribution shift is not the only possible explanation. **Even the same batch `[1,3]` can produce different outputs.** Set `eps=0`, disable affine parameters, and use `momentum=1` so the running statistics come directly from this batch:
+
+<figure class="worked-update worked-update--pairs" id="normalization-train-eval" lang="en">
+<figcaption>Same input [1, 3], different denominator</figcaption>
+<ol>
+<li><span>Training forward</span><strong>[-1, 1]</strong><p>The mean is 2. Squared deviations sum to 2; dividing by 2 samples gives variance 1.</p></li>
+<li><span>Then switch to eval</span><strong>About [-0.707, 0.707]</strong><p>The stored variance divides by the sample count minus one, giving 2. This forward divides by √2.</p></li>
+</ol>
+</figure>
+
+There are two denominators: training uses $v_b=\sum(x-\mu)^2/m$, while the running-variance update uses $v_u=\sum(x-\mu)^2/(m-1)$. Here $m$ counts the values reduced per channel. With `momentum=a`, the update is $v_{\rm run}\leftarrow(1-a)v_{\rm run}+av_u$; the mean uses the same weighting rule. This is not optimizer momentum. The [original BN paper, §3.1](https://proceedings.mlr.press/v37/ioffe15.pdf), distinguishes training statistics from inference estimates too.
+
+<details markdown="1">
+<summary>Reproduce the numbers (PyTorch 2.8 / CPU)</summary>
+
+```python
+import torch
+
+def batchnorm_train_eval_example():
+    inputs = torch.tensor([[1.0], [3.0]])
+    norm = torch.nn.BatchNorm1d(1, eps=0, momentum=1, affine=False)
+    training = norm(inputs)
+    stored_variance = norm.running_var.clone()
+    norm.eval()
+    evaluation = norm(inputs)
+    return training, evaluation, stored_variance
+
+training, evaluation, stored_variance = batchnorm_train_eval_example()
+print(training.flatten().tolist())
+print(evaluation.flatten().tolist(), stored_variance.item())
+```
+
+Default `momentum=0.1` would mix in previous statistics, changing these numbers. Setting it to 1 isolates the difference between the variance estimators.
+
+</details>
+
+### Gradient accumulation does not enlarge BN's batch {#batchnorm-accumulation}
+
+A forward over `[0,2,10,12]` has mean 6. Two forwards over `[0,2]` and `[10,12]` instead use means 1 and 11. You can accumulate gradients before updating weights, but **that does not combine two completed normalizations into one**. Running statistics also update on each forward, not at `optimizer.step()`.
+
+Starting with running mean 0 and variance 1, with `momentum=0.1`:
+
+| Input grouping | Final running mean | Final running variance |
+| --- | ---: | ---: |
+| All 4 values in one forward | 0.6 | 4.3667 |
+| Two forwards of 2 values each | 1.19 | 1.19 |
+
+The first row uses sample variance $104/3$. Each microbatch in the second row has sample variance 2, but updates the state twice. Normalized activations, subsequent losses, and gradients may differ too. Matching the effective batch size therefore does not establish equivalent training with BN.
+
+One more distinction: `torch.no_grad()` disables gradient recording; it does not switch BN modes. A training-mode module still updates running statistics. Validation commonly uses both `.eval()` and `no_grad()` because they control different behaviors. [Autograd documentation](https://docs.pytorch.org/docs/2.8/notes/autograd.html#evaluation-mode-nn-module-eval)
+
+## Four concepts: answer first, then go deeper {#four-concepts-answer-first-then-go-deeper}
 
 For input-feature min–max and Z-score scaling, see [preprocessing versus network normalization](../deep-dives/generalization.en.md).
 
@@ -86,16 +141,16 @@ Also note that Pre-LN does not keep the residual stream $x_\ell$ itself at unit 
 
 **Quick learning**
 
-1. **Variable length and padding**: sequence lengths differ within a batch, so padding can contaminate the statistics; even with masking, late positions have few valid samples.
-2. **Batch-composition dependence**: changing neighboring examples changes this token's output, and small batches produce noisy statistics.
+1. **Variable length and padding**: ordinary `BatchNorm1d` takes no padding mask, so padding enters the statistics. A custom valid-token pool for lengths `[3,1]` would contain 4 tokens. Only a separate estimate at each position has just one valid sample at the later positions.
+2. **Batch-composition dependence**: during training, changing neighboring examples changes this token's output, and small batches produce noisy statistics.
 3. **Train/inference mismatch**: training uses current-batch statistics, while inference normally uses running statistics. Autoregressive decoding often runs with tiny batches or batch size one, so it cannot rely on statistics computed from the batch at hand.
-4. **Possible causality violation**: if the reduction includes the time axis, future tokens affect the mean and variance used for past tokens, bypassing the causal attention mask.
+4. **Possible causality violation**: statistics computed across time from the current sequence let future tokens affect past outputs, bypassing the causal attention mask. Frozen running statistics do not create this path.
 
-LayerNorm reduces only over one token's hidden features. It is independent of the batch, other positions, and train versus inference mode.
+The usual Transformer configuration, `LayerNorm(d)`, reduces only over a token's hidden features, independently of the batch, other positions, and train/eval mode. `LayerNorm((T,d))` does not: changing the last token can change the first token's output.
 
 **Interview answer**
 
-> Transformers use LayerNorm because it normalizes every token independently over the hidden dimension. It is independent of batch size, sequence length, and other tokens, and it behaves identically in training and inference. BatchNorm introduces batch-composition, padding, and running-statistics problems; if its reduction also spans time, it leaks future tokens into past positions.
+> Transformers typically use LN over each token's hidden dimension, with the same normalization in training and inference. BN requires handling batch composition, padding, and running statistics; computing statistics across the current sequence also reads future positions. The axes and mode matter, not just the layer's name.
 
 <details markdown="1">
 <summary><b>Deep dive</b>: when does BatchNorm really leak the future?</summary>
@@ -103,12 +158,12 @@ LayerNorm reduces only over one token's hidden features. It is independent of th
 The answer depends on tensor layout and reduction axes; “BatchNorm always leaks” is too broad.
 
 - For $X\in\mathbb R^{B\times T\times d}$, a separate normalization at every position $t$ that reduces only over $B$ does not directly read future tokens from the same sequence. It still depends on other batch members, and each position may have a different valid sample count.
-- A common sequence use of <code>BatchNorm1d</code> reduces each channel over both $B$ and $T$. Then $\mu_j$ and $\sigma_j$ include tokens with $t'>t$. The normalized result at position $t$ then already carries future information; a causal mask only restricts attention and cannot block this side channel.
-- Flattening $B\times T$ before BatchNorm creates the same leak.
+- A common sequence training forward of <code>BatchNorm1d</code> computes current-input statistics over both $B$ and $T$ per channel. Then $\mu_j$ and $\sigma_j$ include tokens with $t'>t$. The normalized result at position $t$ already contains future information; causal attention masking cannot block this separate path.
+- Flattening $B\times T$ before computing current-input BN statistics has the same problem.
 
 The precise conclusion is:
 
-> **BatchNorm breaks autoregressive causality when its statistics include time. Even when time is excluded, batch dependence, padding, small batches, and train/eval mismatch still make it a poor default for language models.**
+> **Computing statistics across the current sequence makes earlier positions depend on future ones. Eval with fixed running statistics does not. BN still requires care with train/eval differences, batch composition, and padding.**
 
 Batch size one does not mean BatchNorm must fail at inference: eval mode can use running statistics. The deeper issue is that those statistics came from the training distribution rather than the current token, and training and inference execute different functions.
 
@@ -215,7 +270,9 @@ $$
 \sqrt{\frac{1}{d}\sum_jx_j^2+\epsilon}.
 $$
 
-They are close when feature means are near zero and differ when the mean shifts. Surrounding linear layers, bias-free designs, and training can adapt to that difference.
+“Small mean” must be relative to the vector's scale. Since $\mathbb E[x^2]=\operatorname{Var}(x)+\mu^2$, the denominators are close only when $\mu^2\ll\operatorname{Var}(x)+\epsilon$. The outputs also differ by the centering step.
+
+For example, `[0.000001,0.000003]` has a small absolute mean. Ignoring epsilon, LN still gives `[-1,1]`, whereas RMSNorm gives about `[0.447,1.342]`. Scaling the whole input down does not remove the difference. The formulas coincide at exactly zero mean with matching epsilon and affine settings. How a model adapts to a nonzero mean remains a training and architecture question; these equations alone do not establish model quality.
 
 RMSNorm's engineering gain is one fewer mean reduction and less associated synchronization and memory traffic. Implementations normally accumulate sums of squares in fp32 to avoid bf16 or fp16 numerical error.
 

@@ -12,6 +12,8 @@
 
 ## 第一步：文本怎样被分成 Token {#token}
 
+下面的切分和 ID 仅作示意，不对应某个真实 tokenizer：
+
 ```text
 "unbelievable!" → ["un", "believ", "able", "!"] → [431, 9821, 612, 5]
 ```
@@ -47,7 +49,7 @@ l o w e r </w>
 下一轮:      (lo, w) →  low
 ```
 
-训练阶段学到一份**有顺序的 merge rules**；编码阶段按同样顺序应用。它不是在查英语词根，而是在压缩当前语料里反复出现的字符串模式。
+这里假设两个词各出现一次；首轮 `(l, o)` 和 `(o, w)` 都出现两次，示例在并列时先选 `(l, o)`。训练阶段学到一份**有顺序的 merge rules**；编码阶段按同样顺序应用。它不是在查英语词根，而是在压缩当前语料里反复出现的字符串模式。[BPE 原论文 §3.2](https://aclanthology.org/P16-1162/)
 
 想自己算两轮合并，或分清 BPE、WordPiece、Unigram 和 byte fallback，可以接着读[分词算法详解](../deep-dives/tokenizer-algorithms.md)。这页先把输入流程走完。
 
@@ -199,6 +201,8 @@ table 才把整数变成模型维度里的向量。
 
 Chat template 没有改变 attention 公式，它只是给普通序列加了可学习的语法结构。
 
+实际调用时也要避免重复添加特殊 token：在 Transformers v4.57.1 中，若先用 `apply_chat_template(tokenize=False)` 得到文本，再单独 tokenize，应设置 `add_special_tokens=False`；直接用 `tokenize=True` 可以合并这两步。[官方说明](https://huggingface.co/docs/transformers/v4.57.1/chat_templating)
+
 </div>
 <div class="concept-face concept-en" data-concept-en markdown="1">
 
@@ -226,6 +230,8 @@ table turns integers into model-width vectors.
 A chat template does not alter the attention equation. It gives an ordinary token
 sequence a learnable grammatical structure.
 
+Avoid duplicating special tokens in actual code. In Transformers v4.57.1, if you render with `apply_chat_template(tokenize=False)` and tokenize separately, use `add_special_tokens=False`; `tokenize=True` combines the two steps. [Official guidance](https://huggingface.co/docs/transformers/v4.57.1/chat_templating)
+
 </div>
 </section>
 
@@ -245,12 +251,14 @@ Tokenizer 结束于 `(B, T)`；神经网络从 `(B, T, d)` 开始。
 
 运行 [`../code/tokenizer_from_scratch.py`](../code/tokenizer_from_scratch.py)。它只用 Python 标准库训练一个迷你 BPE，不需要额外依赖。可以修改训练语料，直接观察同一句话为什么会在另一份语料上被切成完全不同的 token。
 
+这个教学实现会合并空白，未收录的字符会编码为 `<unk>`，没有 byte fallback；`decode_tokens` 还原的是 token 字符串，不是对 ID 的无损往返。可以试试连续空格和一个训练语料里没有的字符，区分这些边界。
+
 ## 自检 {#_5}
 
 <div class="taste-check">
   <strong>合上页面前，试着不用术语回答：</strong>
   <ol>
-    <li>为什么一个新名字不会让 subword tokenizer 直接失效？</li>
+    <li>新名字能怎样拆成已知片段？若连其中的字符都未收录，还需要什么机制？</li>
     <li>为什么同一句话换一个 tokenizer，推理成本也可能变化？</li>
     <li><code>(B, T)</code> 是在哪一步变成 <code>(B, T, d)</code> 的？</li>
   </ol>

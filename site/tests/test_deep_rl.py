@@ -159,6 +159,23 @@ class DeepRLTests(unittest.TestCase):
         self.assertNotEqual(sum(probability * gradient * error
                                for probability, gradient, error in zip(probabilities, score_gradients, action_dependent)), 0)
 
+    def test_shared_reward_parameters_can_raise_both_preference_scores(self):
+        def loss(preferred, rejected):
+            return math.log1p(math.exp(rejected - preferred))
+
+        parameter = 1.0
+        probability = 1 / (1 + math.exp(-parameter))
+        gradient = 2 * (probability - 1) + (1 - probability)
+        difference = 1e-5
+        numerical = (loss(2 * (parameter + difference), parameter + difference)
+                     - loss(2 * (parameter - difference), parameter - difference)) / (2 * difference)
+        self.assertAlmostEqual(gradient, numerical)
+        updated = parameter - 0.1 * gradient
+        self.assertGreater(updated, parameter)
+        self.assertGreater(2 * updated, 2 * parameter)
+        self.assertLess(loss(2 * updated, updated), loss(2 * parameter, parameter))
+        self.assertEqual(loss(1, 0), loss(101, 100))
+
     def test_value_targets_use_raw_not_normalized_advantages(self):
         values = [10, 10]
         raw = REFERENCE.gae([11, 13], values, [0, 0], [True, True], [False, False])

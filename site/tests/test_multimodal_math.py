@@ -95,6 +95,52 @@ class MultimodalMathTests(unittest.TestCase):
         self.assertAlmostEqual(LAB.next_token_loss(logits.tolist(), tokens.tolist(), mask.tolist()), expected.item())
 
     @unittest.skipUnless(shutil.which("node"), "Node is needed for browser-math parity")
+    def test_duplicate_captions_keep_two_valid_cat_pairs(self):
+        script = """
+const lab = require(process.argv[1]);
+const pairedBefore = lab.scenarioScores('paired');
+const duplicate = lab.scenarioScores('duplicate');
+process.stdout.write(JSON.stringify({duplicate, pairedBefore, pairedAfter: lab.scenarioScores('paired'),
+  result: lab.calculate(duplicate, 0.05)}));
+"""
+        result = subprocess.check_output([shutil.which("node"), "-e", script, str(ROOT / "site/static/clip-lab.js")], text=True)
+        data = json.loads(result)
+        self.assertEqual(data["pairedBefore"], data["pairedAfter"])
+        for row in data["duplicate"]:
+            self.assertEqual(row[0], row[1])
+        for cat_index in (0, 1):
+            self.assertGreater(data["duplicate"][cat_index][cat_index], data["duplicate"][cat_index][2])
+            row = data["result"]["rows"][cat_index]
+            self.assertAlmostEqual(math.exp(row[0]), math.exp(row[1]))
+            self.assertLess(math.exp(row[cat_index]), .5)
+            self.assertGreater(-row[cat_index], math.log(2))
+        self.assertGreater(data["duplicate"][2][2], data["duplicate"][2][0])
+        self.assertEqual(data["result"]["columns"][0], data["result"]["columns"][1])
+        self.assertGreater(math.exp(data["result"]["columns"][0][0]), .5)
+
+    @unittest.skipUnless(importlib.util.find_spec("torch"), "Optional PyTorch padding check")
+    def test_padding_attention_mask_is_distinct_from_answer_only_loss(self):
+        import torch
+        query = torch.tensor([[1., 0.]], dtype=torch.float64)
+        visible = torch.tensor([[False, True]])
+        masked_outputs = []
+        unmasked_outputs = []
+        for padding in ([0., 4.], [8., -3.]):
+            inputs = torch.tensor([padding, [1., 0.]], dtype=torch.float64, requires_grad=True)
+            scores = query @ inputs.T / math.sqrt(2)
+            masked_output = torch.softmax(scores.masked_fill(~visible, -torch.inf), dim=-1) @ inputs
+            unmasked_output = torch.softmax(scores, dim=-1) @ inputs
+            masked_gradient = torch.autograd.grad(masked_output.sum(), inputs, retain_graph=True)[0]
+            unmasked_gradient = torch.autograd.grad(unmasked_output.sum(), inputs)[0]
+            torch.testing.assert_close(masked_output, query)
+            torch.testing.assert_close(masked_gradient[0], torch.zeros(2, dtype=torch.float64))
+            self.assertGreater(unmasked_gradient[0].abs().sum().item(), 0)
+            masked_outputs.append(masked_output.detach())
+            unmasked_outputs.append(unmasked_output.detach())
+        torch.testing.assert_close(*masked_outputs)
+        self.assertFalse(torch.allclose(*unmasked_outputs))
+
+    @unittest.skipUnless(shutil.which("node"), "Node is needed for browser-math parity")
     def test_browser_math_parity(self):
         script = """
 const lab = require(process.argv[1]);

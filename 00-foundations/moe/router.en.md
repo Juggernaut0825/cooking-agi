@@ -2,7 +2,7 @@
 
 [中文](router.md) · **English**
 
-> Reading time: ~10 min · Level: advanced · Last reviewed: 2026-10-09
+> Reading time: ~11 min · Level: advanced · Last reviewed: 2026-10-10
 
 A token entering an MoE layer does not run through every expert. The router selects a few, then combines their outputs with learned weights. Selecting the largest scores is only the beginning: a token can take several branches, their results must return to the right position, and gradients must follow those paths back.
 
@@ -89,19 +89,25 @@ def sparse_moe(hidden, logits, experts, top_k, normalization="selected"):
     if hidden.ndim != 2 or logits.shape != (hidden.shape[0], len(experts)):
         raise ValueError("Expected [tokens, width] inputs and one logit per expert")
     indices, weights = selected_gates(logits, top_k, normalization)
-    output = torch.zeros_like(hidden)
+    accumulation_dtype = torch.promote_types(hidden.dtype, weights.dtype)
+    output = torch.zeros_like(hidden, dtype=accumulation_dtype)
     for expert_id, expert in enumerate(experts):
         token_ids, slots = torch.where(indices == expert_id)
         if token_ids.numel() == 0:
             continue
         expert_inputs = hidden.index_select(0, token_ids)
         expert_outputs = expert(expert_inputs)
-        weighted = expert_outputs * weights[token_ids, slots, None]
+        weighted = (expert_outputs.to(accumulation_dtype)
+                    * weights[token_ids, slots, None].to(accumulation_dtype))
         output = output.index_add(0, token_ids, weighted)
-    return output
+    return output.to(hidden.dtype)
 ```
 
 Both `indices` and `weights` have shape `[tokens, top_k]`. `token_ids` identifies the original row; `slots` locates this expert among that token's choices. `index_select` gathers inputs and `index_add` accumulates outputs. In the [complete script](../code/moe_routing.py), `selected_gates` supports normalization over selected logits or retaining the selected entries of the full softmax.
+
+The dtype choices are deliberate: gates and weighted accumulation use at least FP32, preserve existing FP64 precision, and cast the result back to the input dtype. BF16 experts can therefore work with an FP32 router without a dtype error at combination or a BF16 rounding step after each expert. The higher-precision output buffer costs extra memory.
+
+This does not move the whole model to FP32 or reproduce Switch's complete precision scheme. If the router projection itself should run in FP32, arrange that before this function: **casting logits afterward cannot recover scores already rounded away**. These casts keep the autograd path; tests check outputs and gradients for inputs, router weights, and expert parameters.
 
 This is a **dropless, single-device teaching implementation** with no capacity cap. Python loops, per-expert indexing, and allocating new output tensors are not a high-throughput design. Production implementations may sort tokens, use grouped GEMM, and exchange them across devices with all-to-all, while preserving dispatch and combination semantics. CUDA accumulation can also be nondeterministic; see the [PyTorch `index_add_` documentation](https://docs.pytorch.org/docs/2.8/generated/torch.Tensor.index_add_.html). These examples are tested on CPU.
 

@@ -43,6 +43,21 @@ $d$ 是这里旋转的维度，$b$ 是基数。假设 $d=4,b=10000$，两对的�
 
 [RoFormer](https://arxiv.org/abs/2104.09864)给出了旋转式位置编码。实现时还要确认二维配对方式、是否只旋转部分维度、频率约定以及 cache 中的位置偏移。配对顺序与 checkpoint 不一致，shape 一样也会算错。
 
+### 相邻配对和前后半配对，差在哪？ {#rotary-layout}
+
+一个 head 只有 4 维时，区别很好看清：
+
+| 配对方式 | 第一对 / 第二对 |
+| --- | --- |
+| 相邻配对（interleaved） | `(x0,x1)` / `(x2,x3)` |
+| 前后半配对（split-half） | `(x0,x2)` / `(x1,x3)` |
+
+把相邻布局的 `[x0,x1,x2,x3]` 重排成 `[x0,x2,x1,x3]`，就能用 split-half 实现同样的旋转。**这个重排必须与 Q/K 投影权重一致**，不是只换一个 `rotate` 函数；每个 head 都要按自己的边界重排。
+
+例如 `q=[1,2,3,4]` 在位置 1，`k=[4,3,2,1]` 在位置 0，频率为 `[1,0.01]`。不重排就直接换配对，点积会从约 11.1452 变成 6.8878。两者各自仍满足相对位置恒等式，所以“同样距离得到同样点积”的测试发现不了这类权重错配。
+
+这里尤其不能只说“Llama 用哪一种”：固定版本的 [Meta Llama 3 实现](https://github.com/meta-llama/llama3/blob/a0940f9cf7065d45bb6675660f80d305c041a754/llama/model.py#L59)用相邻配对，而 [Transformers v4.44.2 转换脚本](https://github.com/huggingface/transformers/blob/v4.44.2/src/transformers/models/llama/convert_llama_weights_to_hf.py#L138)会重排 Q/K 权重，以匹配其 split-half 布局。本站的 [`apply_rope`](../code/model.py) 使用后者；它不是不经转换就能加载原始权重的承诺。
+
 ```python
 import math
 
@@ -130,9 +145,23 @@ YaRN 还调整 attention 的尺度。若两边 Q、K 都乘 $a$，点积就乘 $
 
 推导很短：$(aQ)(aK)^\top=a^2QK^\top$。如果只对部分 rotary 维度乘 $a$，就不能再把**整个点积**写成乘 $a^2$。例如 $Q=K=[2,3]$，原点积 13；两维都乘 2 得到 52，只把第二维乘 2 得到 40。迁移到 partial RoPE / MLA 时必须检查缩放放在哪里。
 
-[作者实现](https://github.com/jquesnelle/yarn/blob/master/scaled_rope/LlamaYaRNScaledRotaryEmbedding.py)把过渡区落实到维度索引和取整边界。论文的连续说明、教学函数和某个 checkpoint 的实现，不应不加核对地互换。
+[作者的固定版本实现](https://github.com/jquesnelle/yarn/blob/995db5b575e75230b3384d658f8b944c9662f775/scaled_rope/LlamaYaRNScaledRotaryEmbedding.py)把过渡区落实到维度索引和取整边界。论文的连续说明、教学函数和某个 checkpoint 的实现，不应不加核对地互换。
 
-另一个问题是动态 scale：如果历史 key 已经按旧频率旋转，新的 query 却按新频率旋转，它们不再使用同一套位置规则。要么保持一个请求内约定不变，要么保留能重新构造 / 旋转历史 key 的状态；不能只改 query。测试时跨过 scale 变化的长度边界，比较完整 prefill 与逐 token decode，而不只测边界之前的短输入。
+### 生成到一半改频率，旧 cache 还能用吗？ {#dynamic-rope-cache}
+
+历史 key 按旧频率旋转，新 query 按新频率旋转，两者的位置规则就不一致了。把历史 key 逆旋转再按新规则旋转，能修正这一层的相位，**却不等于把整段前缀按新频率重新算了一遍**。
+
+原因在下一层：改了第一层的 attention，旧 token 的 hidden state 也可能改变。第二层的 K 和 V 都从这些 hidden states 投影而来；只重转 K 的角度，不会更新它们的内容，更不会重算 V。
+
+用一个简化的加权和看这件事：第一层读两个 value `[0,10]`，权重 `[0.2,0.8]` 得到 8；新频率若让权重变成 `[0.5,0.5]`，结果就是 5。即使第二层的 value 投影只是恒等映射，缓存也应该从 8 变成 5。这个示意略去了残差、Norm 和 FFN，只说明为什么“V 没有旋转”不代表 V 与前面各层的 RoPE 无关。
+
+| 做法 | 能保证什么 | 代价或限制 |
+| --- | --- | --- |
+| 一个请求内固定频率规则 | K/Q 与逐层状态来自同一规则 | 需要在请求开始时确定规则 |
+| 更改后重新 prefill 整段前缀 | 所有层的 K/V 都重新计算 | 多花一次前缀计算 |
+| 只重新旋转旧 K | 修正 K 的旋转相位 | 深层 K/V 内容仍旧；一般只是近似 |
+
+用完整 prefill 作对照时，要让它从一开始就采用同一套新规则，再比较跨越 scale 变化边界的 decode。若实现采用近似，误差应该单独测，而不是因 shape 相同就认定缓存正确。还要固定权重、关闭 dropout，并允许相应 dtype 的舍入误差。
 
 ## DCA：跨过 chunk 边界，距离怎么算？
 

@@ -254,6 +254,15 @@ en = "Start here"
 home = "practice/README.md"
 
 [[group]]
+id = "web-practice"
+category = "practice"
+zh = "小项目入门"
+en = "Build something small"
+home = "practice/web-lab/README.md"
+summary_zh = "用本站理解构建与发布，再做阅读清单和能接入 CI 的评估报告。"
+summary_en = "Follow this site's build and release, then build a reading list and an evaluation report with a CI gate."
+
+[[group]]
 id = "system-design"
 category = "practice"
 zh = "系统设计"
@@ -314,7 +323,7 @@ dir = "learn"
 group = "study"
 zh = "学习导航"
 en = "Study map"
-order = ["README.md", "coverage.md"]
+order = ["README.md", "choose-your-path.md", "coverage.md"]
 
 [[section]]
 dir   = "00-foundations"
@@ -499,8 +508,8 @@ en = "02 · Preferences, rewards & objectives"
 home = "05-post-training/README.md"
 intro_zh = "理解示范学习之后，再分清偏好对、奖励模型和验证器分别提供了什么。"
 intro_en = "After demonstration learning, distinguish preference pairs, reward models, and verifiers."
-include = ["05-post-training/where-preferences-come-from.md", "05-post-training/after-ppo.md", "05-post-training/dapo.md", "05-post-training/policy-ratios.md", "05-post-training/async-policy-learning.md", "05-post-training/verifiable-rewards.md"]
-order = ["where-preferences-come-from.md", "after-ppo.md", "dapo.md", "policy-ratios.md", "async-policy-learning.md", "verifiable-rewards.md"]
+include = ["05-post-training/where-preferences-come-from.md", "05-post-training/after-ppo.md", "05-post-training/dapo.md", "05-post-training/clipping-variants.md", "05-post-training/policy-ratios.md", "05-post-training/async-policy-learning.md", "05-post-training/verifiable-rewards.md"]
+order = ["where-preferences-come-from.md", "after-ppo.md", "dapo.md", "clipping-variants.md", "policy-ratios.md", "async-policy-learning.md", "verifiable-rewards.md"]
 
 [[section]]
 dir = "05-post-training/experiments-and-tradeoffs"
@@ -654,6 +663,16 @@ order = ["README.md", "feed.md", "rag.md", "memory.md", "system-design.md"]
 include = ["interview/system-design.md"]
 
 [[section]]
+dir = "practice/web-lab"
+group = "web-practice"
+zh = "从网页到小应用"
+en = "From a page to a small app"
+home = "practice/web-lab/README.md"
+intro_zh = "会一点 Python 就能开始：看清浏览器、服务端、数据库与自动检查各做什么。"
+intro_en = "Start with basic Python and separate the browser, server, database, and automated checks."
+order = ["README.md", "static-and-ci.md", "reading-list.md", "eval-report.md", "next-projects.md"]
+
+[[section]]
 dir = "practice/recommender-systems"
 group = "recsys"
 zh = "Twitter / X 与现代推荐"
@@ -690,7 +709,7 @@ dir   = "career"
 group = "career"
 zh    = "MLE / RE 求职笔记"
 en    = "MLE / RE job-search notes"
-order = ["README.md", "not-binary.md", "metrics.md", "prepare.md", "journey.md", "new-grad-2026-2027.md", "one-interview.md"]
+order = ["README.md", "prepare.md", "journey.md", "new-grad-2026-2027.md", "one-interview.md", "not-binary.md", "metrics.md"]
 
 [[section]]
 dir = "papers"
@@ -819,6 +838,7 @@ en  = "Templates"
 "05-post-training/rlhf/evaluation-and-review.md" = ["评估与复习题", "Evaluation & review"]
 "05-post-training/after-ppo.md"                         = ["PPO 之后", "After PPO"]
 "05-post-training/dapo.md" = ["DAPO：采样与权重", "DAPO: sampling & weighting"]
+"05-post-training/clipping-variants.md" = ["Clipping 与梯度", "Clipping & gradients"]
 "05-post-training/policy-ratios.md" = ["GSPO 与 ASPO", "GSPO & ASPO"]
 "05-post-training/async-policy-learning.md" = ["SAO 与异步训练", "SAO & asynchronous training"]
 "05-post-training/verifiable-rewards.md"                = ["可验证奖励", "Verifiable rewards"]
@@ -900,7 +920,8 @@ en  = "Templates"
 "10-agents/model-choice.md"                                      = ["模型选择与路由", "Model selection & routing"]
 "10-agents/tools-and-skills.md" = ["工具、MCP 与 Skills", "Tools, MCP & skills"]
 "10-agents/review.md"                                            = ["复习题", "Review"]
-"learn/README.md" = ["从这里选一条路线", "Choose a learning route"]
+"learn/README.md" = ["基础目录与导读", "Foundations catalog & guide"]
+"learn/choose-your-path.md" = ["按目标找路线", "Find your route"]
 "learn/ml-exercises/README.md" = ["从代码开始", "Start with code"]
 "00-foundations/pytorch/README.md" = ["PyTorch 阅读路线", "PyTorch reading path"]
 "00-foundations/pytorch/tensors-and-storage.md" = ["张量与存储", "Tensors & storage"]
@@ -923,6 +944,11 @@ en  = "Templates"
 "practice/recommender-systems/07-component-choices.md" = ["07 · 组件怎么选", "07 · Component choices"]
 "practice/recommender-systems/08-serving-lifecycle.md" = ["08 · 工程落地", "08 · Serving lifecycle"]
 "practice/rag/README.md" = ["项目导读", "Project introduction"]
+"practice/web-lab/README.md" = ["从这里开始", "Start here"]
+"practice/web-lab/static-and-ci.md" = ["1 · 本站与 CI/CD", "1 · This site & CI/CD"]
+"practice/web-lab/reading-list.md" = ["2 · 阅读清单全栈练习", "2 · A full-stack reading list"]
+"practice/web-lab/eval-report.md" = ["3 · 评估报告与 CI", "3 · Evaluation reports & CI"]
+"practice/web-lab/next-projects.md" = ["4 · 接下来做什么", "4 · What to build next"]
 "practice/rag/data-and-retrieval.md" = ["文档与检索", "Documents & retrieval"]
 "practice/rag/evidence-and-evaluation.md" = ["证据与评估", "Evidence & evaluation"]
 "practice/post-training/README.md" = ["项目导读", "Project introduction"]

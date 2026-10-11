@@ -28,6 +28,7 @@
       task: "Use the encoder for", mlm: "Restore a token", classify: "Classify text", tag: "Label words",
       stepTitles: ["Hide tea, but keep it as the answer", "Add three embeddings at each position", "Bring in the surrounding words", "Choose what to predict"],
       inputText: "The original word is tea. We replace its input with [MASK], but keep tea as the training target. The words on both sides remain available. This example follows just one selected position.",
+      inputTaskTitle: "Start with the complete sentence",
       inputTaskText: "For this downstream task, the complete sentence is supplied. [CLS] and [SEP] are special tokens; their positions still receive vectors.",
       vectorText: "At position {position}, we add three vectors: which token is here, where it sits, and which segment it belongs to. Each has 768 values in BERT-Base, and their sum still has 768.",
       contextText: "The state at {token} can receive information from all six input positions. Click another token to trace that query. The paths show allowed connections, not measured attention weights.",
@@ -50,6 +51,7 @@
       task: "用这些表示做什么", mlm: "恢复原词", classify: "文本分类", tag: "逐词标注",
       stepTitles: ["把 tea 藏起来，答案留着", "把三种信息加到一个向量里", "结合周围的词，重新计算表示", "接下来，你想让它做什么？"],
       inputText: "原句里的 tea 被换成了 [MASK]，但训练答案还是 tea。左边的 the、右边的 is cold 都可以提供线索。先跟着这一个位置看，后面再讲怎么选预测位置。",
+      inputTaskTitle: "把完整句子交给模型",
       inputTaskText: "做这个下游任务时，输入是完整句子。[CLS] 和 [SEP] 是特殊 token；它们的位置也会得到各自的向量。",
       vectorText: "位置 {position} 要用到三个向量：这里是什么 token、排在第几个位置、属于哪段文本。把它们逐维相加。BERT-Base 中每个都是 768 维，加完也还是 768 维。",
       contextText: "计算 {token} 的表示时，左右两边的信息都能用到。点另一个 token，可以看它能从哪里读取信息。这里画的是允许读取的连线，不是真实模型的注意力权重。",
@@ -110,7 +112,7 @@
       root.querySelector("[data-head-name]").textContent = text[{mlm: "headMlm", classify: "headClassify", tag: "headTag"}[task]];
       root.querySelector("[data-head-output]").textContent = text[{mlm: "outputMlm", classify: "outputClassify", tag: "outputTag"}[task]];
       root.querySelector("[data-step-number]").textContent = `0${step + 1}`;
-      root.querySelector("[data-explanation-title]").textContent = text.stepTitles[step];
+      root.querySelector("[data-explanation-title]").textContent = step === 0 && task !== "mlm" ? text.inputTaskTitle : text.stepTitles[step];
       const explanation = [task === "mlm" ? text.inputText : text.inputTaskText, text.vectorText, text.contextText, text[`${task}Text`]][step];
       root.querySelector("[data-explanation]").textContent = explanation.replaceAll("{position}", String(query)).replaceAll("{token}", state.inputs[query]);
       const inspector = root.querySelector("[data-vector-inspector]");

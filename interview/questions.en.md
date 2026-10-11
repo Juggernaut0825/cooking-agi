@@ -6,7 +6,7 @@
 
 > **Read this first**: every question here comes from the notes on this site — each note's “interview questions” section and its closing self-check — not from any company's interviews, and nothing here describes any company's process. What interviews emphasise changes quickly, so this list is time-sensitive.
 
-This page covers the same material as [the knowledge blocks](../README.en.md), for a different job. There you **learn** it, with derivations and figures you can play with. Here you **run through it before an interview**: questions and answers only. The overlap is deliberate.
+This page covers the same material as [Foundations](../learn/README.en.md), but serves a different purpose. There you **learn** it, with derivations and interactive figures. Here you **review it before an interview** through questions and answers. The overlap is deliberate.
 
 This page is generated: when the site is built, the interview questions (with their answers) and the self-check questions are pulled out of every note and grouped by knowledge block. When a note changes, this page follows; there is no second question bank to maintain.
 

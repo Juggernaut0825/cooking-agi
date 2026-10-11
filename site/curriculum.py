@@ -114,7 +114,7 @@ def reference_coverage(page, catalog, source):
     chinese = page.lang == 'zh'
     states = {
         'article': '有正文' if chinese else 'Article available',
-        'overview': '部分讲解' if chinese else 'Partial explanation',
+        'overview': '汇总入口' if chinese else 'Topic index',
         'pending': '待补' if chinese else 'To add',
     }
     blocks = []
@@ -144,6 +144,7 @@ def appendix_coverage(page, catalog, source):
     chinese = page.lang == 'zh'
     statuses = {
         'article': ('已有专门讲解', 'Dedicated explanation'),
+        'overview': ('汇总入口', 'Topic index'),
         'related': ('有相关内容，需补充或对照', 'Related material; expansion or comparison needed'),
         'missing': ('缺少专题讲解', 'Dedicated coverage missing'),
     }
@@ -154,6 +155,8 @@ def appendix_coverage(page, catalog, source):
     identifiers = set()
     blocks = []
     counts = dict.fromkeys(statuses, 0)
+    question_count = 0
+    question_reads = 0
     for chapter in data['chapter']:
         entries = []
         for topic in chapter['topics']:
@@ -164,6 +167,9 @@ def appendix_coverage(page, catalog, source):
             if topic['state'] not in statuses or topic['read'] not in reading:
                 raise ValueError(f'Unknown appendix review state: {identifier}')
             counts[topic['state']] += 1
+            if topic['state'] != 'overview':
+                question_count += 1
+                question_reads += topic['read'] == 'body'
             title = html.escape(topic[page.lang])
             status = statuses[topic['state']][not chinese]
             read = reading[topic['read']][not chinese]
@@ -181,10 +187,18 @@ def appendix_coverage(page, catalog, source):
                       f'<ul class="appendix-topics">{"".join(entries)}</ul></details>')
     if chinese:
         summary = (f'本次登记 {len(identifiers)} 个入口：{counts["article"]} 项已有专门讲解，'
-                   f'{counts["related"]} 项需补充或对照，{counts["missing"]} 项缺少专题讲解。'
+                   f'{counts["overview"]} 项为汇总入口，{counts["related"]} 项需补充或对照，'
+                   f'{counts["missing"]} 项缺少专题讲解。'
                    '这是当前盘点，不是全库完成率；每项另列参考阅读状态。')
+        reading_summary = (f'{question_count} 个专题的参考正文已读 {question_reads} 篇；'
+                           '汇总入口另记阅读范围。正文已读不代表图片、外链和本站讲解都已验收。')
     else:
         summary = (f'This inventory tracks {len(identifiers)} entries: {counts["article"]} with dedicated explanations, '
-                   f'{counts["related"]} needing expansion or comparison, and {counts["missing"]} lacking dedicated coverage. '
+                   f'{counts["overview"]} topic indexes, {counts["related"]} needing expansion or comparison, '
+                   f'and {counts["missing"]} lacking dedicated coverage. '
                    'These are inventory counts, not a library completion rate; source-reading status is recorded separately.')
-    return '<div class="appendix-coverage"><p>' + summary + '</p>' + ''.join(blocks) + '</div>'
+        reading_summary = (f'Reference prose read for {question_reads} of {question_count} topics; '
+                           'index entries record their own reading scope. This does not certify images, '
+                           'external material, or our explanations as fully reviewed.')
+    return ('<div class="appendix-coverage"><p>' + summary + '</p><p class="appendix-reading">'
+            + reading_summary + '</p>' + ''.join(blocks) + '</div>')

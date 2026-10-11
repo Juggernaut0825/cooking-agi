@@ -23,6 +23,7 @@ def _hard_terms(logits, targets):
     _finite_float(selected_logits, "supervised logits")
     if ((selected_targets < 0) | (selected_targets >= logits.shape[-1])).any():
         raise ValueError("a supervised target is outside the class range")
+    selected_logits = selected_logits.to(torch.promote_types(selected_logits.dtype, torch.float32))
     shifted = selected_logits - selected_logits.max(dim=-1, keepdim=True).values
     log_partition = shifted.exp().sum(dim=-1).log()
     target_scores = shifted.gather(-1, selected_targets.unsqueeze(-1)).squeeze(-1)
@@ -45,6 +46,9 @@ def soft_cross_entropy(logits, target_probabilities):
     totals = target_probabilities.sum(dim=-1)
     if (target_probabilities < 0).any() or not torch.allclose(totals, torch.ones_like(totals)):
         raise ValueError("soft targets must be nonnegative and sum to one")
+    working_dtype = torch.promote_types(torch.promote_types(logits.dtype, target_probabilities.dtype), torch.float32)
+    logits = logits.to(working_dtype)
+    target_probabilities = target_probabilities.to(working_dtype)
     shifted = logits - logits.max(dim=-1, keepdim=True).values
     log_probabilities = shifted - shifted.exp().sum(dim=-1, keepdim=True).log()
     return -(target_probabilities * log_probabilities).sum(dim=-1).mean()

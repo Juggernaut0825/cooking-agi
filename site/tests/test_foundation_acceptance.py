@@ -313,7 +313,7 @@ class AttentionBoundaryTests(unittest.TestCase):
         for suffix in ('.md', '.en.md'):
             source = (ROOT / ('00-foundations/core/multi-head-attention' + suffix)).read_text()
             snippet = next(block for block in re.findall(r'```python\n(.*?)\n```', source, re.S)
-                           if 'import numpy' in block)
+                           if 'def softmax(' in block)
             namespace = {}
             exec(snippet, namespace)
             with self.assertRaisesRegex(ValueError, 'at least one allowed key'):

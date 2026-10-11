@@ -2,13 +2,13 @@
 
 [中文](recurrent-models.md) · **English**
 
-> Reading time: ~8 min · Level: core · Last reviewed: 2026-10-09
+> Reading time: ~10 min · Level: core · Last reviewed: 2026-10-10
 
 In “It is raining; remember your umbrella,” the final word depends on earlier information. An RNN updates a hidden state as it reads each position. An LSTM adds controls for keeping, writing, and reading its state. First we follow the information forward, then examine why learning long dependencies is difficult.
 
 ## How the hidden state carries information {#how-the-hidden-state-carries-information}
 
-Every time an RNN reads a token, it rewrites “what I know so far” onto a small note of fixed size: the hidden state. An LSTM does not replace that note. It adds a few gates beside it so that the model itself decides what to write, what to keep, and what can be forgotten.
+An RNN updates a fixed-size hidden state rather than storing every token it has read. An LSTM maintains two vectors: a cell state for memory and a hidden state used for the current output and the next step's gates. Keeping these states separate makes the gate equations easier to follow.
 
 ## The state update of a vanilla RNN {#the-state-update-of-a-vanilla-rnn}
 
@@ -47,7 +47,22 @@ $$o_t = \sigma(W_o[x_t;h_{t-1}] + b_o), \qquad h_t = o_t \odot \tanh(c_t)$$
 - input gate $i_t$: how much of the new candidate is written;
 - output gate $o_t$: how much of the current memory is exposed.
 
-The most important part is the additive path inside $c_t$. As long as $f_t$ stays close to 1, information and gradients can cross time more stably.
+The important part is the additive path inside $c_t$. A forget gate near 1 causes less attenuation along this direct path. New writes can still change the state, and other gradient paths remain, so this does not guarantee successful long-range learning.
+
+### Trace the three gates with one number {#gate-example}
+
+Take one component of the cell state, initially 0.8. These gate values are chosen for arithmetic, not measured in a trained model.
+
+<figure class="worked-update" id="gate-trace" lang="en">
+<figcaption>Keeping, writing, and reading are separate operations</figcaption>
+<ol>
+<li><b>Keep the old value</b><span>forget = 0.9 retains 0.9 × 0.8 = 0.72.</span></li>
+<li><b>Write the candidate</b><span>input = 0.2 and candidate = −0.5 add −0.1, giving cell = 0.62.</span></li>
+<li><b>Read the output</b><span>output = 0.5 gives hidden = 0.5 × tanh(0.62) ≈ 0.276.</span></li>
+</ol>
+</figure>
+
+A small output gate does not erase the cell state. A forget gate near 1 does not stop new writes. Substituting numbers helps distinguish what each gate actually controls.
 
 ## What limits does an LSTM still have? {#what-limits-does-an-lstm-still-have}
 
@@ -67,6 +82,15 @@ For streaming sensors, very small edge models, and tasks whose state space is sm
 ## Experiment: verify long-range dependencies {#experiment-verify-long-range-dependencies}
 
 [`../code/sequence_numpy.py`](../code/sequence_numpy.py) unrolls the RNN and LSTM forward computation in NumPy; [`../code/sequence_torch.py`](../code/sequence_torch.py) has both learn a delayed-copy task and compares their error under long dependencies.
+
+For input `[3, 8, 2, 5, 1]` and delay = 2, predictions from the third position onward target `[3, 8, 2]`: each target is two positions back, not the current input. From the repository root, run:
+
+```bash
+python 00-foundations/code/sequence_torch.py --task delay --model rnn --delay 8 --length 96
+python 00-foundations/code/sequence_torch.py --task delay --model lstm --delay 8 --length 96
+```
+
+Then change delay to 64 while keeping length = 96; require `0 < delay < length`. The script prints training-batch metrics, not validation results. Equal hidden widths also give these cells different parameter counts. Treat this as a way to inspect training behavior, not an architecture ranking from one run. A generalization comparison needs fixed evaluation data, parameter and training-budget accounting, and multiple seeds.
 
 ## Self-check {#self-check}
 

@@ -2,7 +2,7 @@
 
 **中文** · [English](muon.en.md)
 
-> 核对：2026-10-09 · 前置：[动量与 AdamW](optimizers.md) · 想先了解思路，读前 2 节和最后的比较表即可。
+> 核对：2026-10-10 · 前置：[动量与 AdamW](optimizers.md) · 想先了解思路，读前 2 节和最后的比较表即可。
 
 一个线性层的权重是矩阵，梯度也是。AdamW 按每个坐标的历史调整步长；Muon 则保留矩阵结构，调整整张更新矩阵的方向和尺度。**它改的是参数怎么更新，不是 loss，也不是 attention 的计算。**
 
@@ -14,7 +14,7 @@ $$M=\begin{bmatrix}6&0\\0&2\end{bmatrix}.$$
 
 两个方向都在更新，但第一个方向的幅度是第二个的 3 倍。把整张矩阵除以它的范数，只会一起缩小，比例仍然是 3:1。
 
-Muon 的理想化操作不同。把 $M$ 做奇异值分解（SVD），写成 $U\Sigma V^\top$，再把非零奇异值的大小去掉，留下 $UV^\top$。对这个满秩例子，结果就是单位矩阵，两个方向变成 1:1。它保留左右奇异向量，而不是把每个元素都改成 1。[原作者的说明](https://kellerjordan.github.io/posts/muon/)用这个角度解释正交化（orthogonalization）。
+Muon 的理想化操作不同。把 $M$ 做奇异值分解（SVD），写成 $U\Sigma V^\top$，再把非零奇异值的大小变成 1。只取这些方向对应的奇异向量 $U_r,V_r$，结果是 $U_rV_r^\top$。对这个满秩例子，它就是单位矩阵，两个方向变成 1:1。保留的是左右奇异向量，不是把每个元素都改成 1。[原作者的说明](https://kellerjordan.github.io/posts/muon/)用这个角度解释正交化（orthogonalization）。
 
 | 对更新做什么 | 本例结果 | 两个方向的比例 |
 | --- | --- | --- |
@@ -23,6 +23,8 @@ Muon 的理想化操作不同。把 $M$ 做奇异值分解（SVD），写成 $U\
 | 理想化正交化 | $\operatorname{diag}(1,1)$ | 1:1 |
 
 这能解释操作，却不能证明训练一定更好。小奇异值可能对应有用的方向，也可能主要是噪声；把幅度拉近不是免费得到更准确的梯度。
+
+如果改成 $\operatorname{diag}(2,0)$，本文的参照结果是 $\operatorname{diag}(1,0)$，不是单位阵：零方向仍然为零。不能直接把数值库返回的全部 $U,V$ 相乘，否则可能把零奇异值对应的补全方向也加进来。后面的代码会用阈值决定哪些奇异值保留。
 
 ## 一次更新经过什么
 
@@ -51,11 +53,33 @@ X_{k+1}=aX_k+(bA_k+cA_k^2)X_k.$$
 
 这不是把权重矩阵 $W$ 变成正交矩阵；被处理的是**更新矩阵**。矩形矩阵也不能两边都满足单位阵：满列秩时可以有 $O^\top O=I$，满行秩时可以有 $OO^\top=I$。
 
-还有一个容易讲错的细节：[原实现](https://github.com/KellerJordan/Muon/blob/master/muon.py)常见的五次多项式系数是 `(3.4445, -4.775, 2.0315)`，它优先考虑少量迭代下的实用效果，**不保证反复迭代就精确得到 $UV^\top$**。代入奇异值 1 就能看见：
+还有一个容易讲错的细节：[固定版本的原实现](https://github.com/KellerJordan/Muon/blob/f90a42b28e00b8d9d2d05865fe90d9f39abcbcbd/muon.py)使用五次多项式系数 `(3.4445, -4.775, 2.0315)`，优先考虑少量迭代下的实用效果，**不保证反复迭代就精确得到理想的 polar factor**。代入奇异值 1 就能看见：
 
 $$3.4445-4.775+2.0315=0.701.$$
 
 连 1 都不是这个多项式的不动点，怎么能直接说“多跑几次必然精确收敛到 1”呢？“近似正交化”不等于任意迭代次数下的严格正交化。
+
+<details markdown="1">
+<summary>前面的 6 和 2，做五步后变成多少？</summary>
+
+对角矩阵可以逐项检查这个多项式。下面用 Python 浮点数复算，只看变换，不模拟生产实现的 BF16 舍入：
+
+```python
+import math
+
+diagonal = [6.0, 2.0]
+scale = math.sqrt(sum(value * value for value in diagonal)) + 1e-7
+transformed = [value / scale for value in diagonal]
+for step in range(5):
+    transformed = [3.4445 * value - 4.775 * value**3 + 2.0315 * value**5
+                   for value in transformed]
+assert math.isclose(transformed[0], 0.7530, abs_tol=1e-4)
+assert math.isclose(transformed[1], 1.1337, abs_tol=1e-4)
+```
+
+比例不再是 3:1，但也没变成精确的 1:1。SVD 参照帮助理解几何方向；有限步迭代是另一个具体算法，不能拿前者的所有性质直接保证后者。
+
+</details>
 
 ### 用 SVD 检查几何含义
 
@@ -66,6 +90,12 @@ import torch
 
 
 def polar_reference(matrix):
+    try:
+        inferred = torch.as_tensor(matrix)
+    except RuntimeError:
+        inferred = torch.as_tensor(matrix, dtype=torch.float64)
+    if torch.is_complex(inferred):
+        raise ValueError("expected a real matrix, not complex values")
     matrix = torch.as_tensor(matrix, dtype=torch.float64)
     if matrix.ndim != 2 or matrix.numel() == 0:
         raise ValueError("expected a nonempty real matrix")
@@ -96,9 +126,54 @@ $$\operatorname{RMS}(O)=\sqrt{\frac{\min(m,n)}{mn}}
 
 同样的 learning rate，矩阵越大，逐元素 RMS 反而越小。[Muon 的扩展训练论文](https://arxiv.org/abs/2502.16982)采用 $0.2\sqrt{\max(m,n)}$ 的更新缩放来匹配 AdamW 的经验尺度。这个常数不是数学定理；原始形状缩放和 RMS 匹配也不是同一套配置。
 
+例如按 [PyTorch v2.9.0 的尺度选项](https://github.com/pytorch/pytorch/blob/v2.9.0/torch/optim/_muon.py#L69)，`original` 使用 $\sqrt{\max(1,m/n)}$。下面用理想满秩参照算 RMS，暂不乘学习率，也不把有限步 NS 当作精确正交化：
+
+| 矩阵形状 | 不加尺度系数 | `original` 后 | RMS 匹配后 |
+| --- | ---: | ---: | ---: |
+| $8\times2$ | $1/\sqrt8\approx0.3536$ | 0.7071 | 0.2 |
+| $2\times8$ | $1/\sqrt8\approx0.3536$ | 0.3536 | 0.2 |
+
+同一实现的 weight decay 使用基础学习率，而不是形状调整后的学习率。若 $\eta=0.1,\lambda=0.2$，衰减项是 $0.98W$；更新方向乘 2，不会把衰减也改成 $0.96W$。
+
 **其次是参数分组。** 经典混合用法让隐藏层矩阵用 Muon，embedding、输出层、bias 和 norm 参数继续用 AdamW。Embedding 明明也是二维矩阵，所以不能只用 `ndim == 2` 判断归属。共享 embedding / output 权重要按对象去重，不能被两个优化器更新两遍。[原仓库的用法说明](https://github.com/KellerJordan/Muon)明确区分了这些参数。
 
 **最后是多卡。** 对矩阵的不同切片分别正交化，通常不等于对完整矩阵正交化再切分。若框架把参数展平或分片，先确认逻辑矩阵怎样还原、需要哪些通信；不能把 AdamW 的逐元素分片逻辑原封不动搬过来。
+
+<details id="distributed-step" markdown="1">
+<summary>两张卡各算一行，为什么会不一样？</summary>
+
+用一个自拟的更新矩阵来看：
+
+$$M=\begin{bmatrix}1&1\\0&1\end{bmatrix}.$$
+
+假设两张卡各持有一行。如果分别做理想化正交化，每行都只会除以自己的长度；把结果拼起来，两行并不正交。整张矩阵一起算，结果则不同：
+
+| 算法 | 拼好的更新矩阵 | 两行的内积 |
+| --- | --- | --- |
+| 每行分别处理 | $\begin{bmatrix}1/\sqrt2&1/\sqrt2\\0&1\end{bmatrix}$ | $1/\sqrt2$ |
+| 整张矩阵一起处理 | $\frac1{\sqrt5}\begin{bmatrix}2&1\\-1&2\end{bmatrix}$ | $0$ |
+
+这里没有网络传输，也没有低精度舍入；即使用精确 SVD，两种算法也已经不同。用前面的 `polar_reference` 可以直接检查：
+
+```python
+momentum = torch.tensor([[1.0, 1.0], [0.0, 1.0]], dtype=torch.float64)
+whole_update = polar_reference(momentum)
+row_updates = torch.cat([polar_reference(row) for row in momentum.split(1, dim=0)])
+expected_whole = torch.tensor([[2.0, 1.0], [-1.0, 2.0]], dtype=torch.float64) / math.sqrt(5)
+torch.testing.assert_close(whole_update, expected_whole)
+assert math.isclose(torch.dot(row_updates[0], row_updates[1]).item(), 1 / math.sqrt(2))
+assert not torch.allclose(row_updates, whole_update)
+```
+
+[Moonlight 报告 v1 §2.3、算法 1](https://arxiv.org/html/2502.16982v1#S2.SS3)给出一种保留完整矩阵计算的实现顺序：
+
+1. 对梯度做 DP reduce-scatter，再用本地动量更新本地分片。
+2. Gather 所需的动量更新分片，恢复完整矩阵，做 Newton–Schulz。
+3. 只取本卡负责的更新切片，更新本地参数，再 all-gather 更新后的参数。
+
+**正交化是计算，不是额外一次通信。** TP 启用后还要处理 TP 切分。报告里的通信量比例和“没有明显延迟”来自其配置与集群，不能直接预测你的训练速度；矩阵还原、临时缓冲和通信重叠都要实际测。这里没有运行多卡 benchmark。
+
+</details>
 
 ## 跟 AdamW 怎么比才有意义？
 

@@ -121,6 +121,24 @@ assert.equal(linked.local.get(keys.choice), 'en');
 const modifiedClick = simulate();
 modifiedClick.handlers.click({target: {closest: () => chineseLink}, button: 0, ctrlKey: true});
 assert.equal(modifiedClick.local.get(keys.choice), undefined);
+const englishHomeLink = {
+  href: base + 'index.html?lang=en', dataset: {languageSwitch: 'en'},
+  hasAttribute: name => name === 'data-language-switch'
+};
+for (const gesture of [{button: 0, ctrlKey: true}, {button: 0, metaKey: true},
+                       {button: 0, shiftKey: true}, {button: 1}, null]) {
+  const sourceTab = simulate({href: base + 'index.zh.html', local: new Map([[keys.choice, 'zh']])});
+  if (gesture) sourceTab.handlers.click({target: {closest: () => englishHomeLink}, ...gesture});
+  assert.equal(sourceTab.local.get(keys.choice), 'zh');
+  const newTab = simulate({href: englishHomeLink.href, local: sourceTab.local});
+  assert.equal(newTab.redirected, null);
+  assert.equal(newTab.local.get(keys.choice), 'en');
+}
+const questionBank = simulate({href: base + 'interview/questions.html', prefix: '../',
+  local: new Map([[keys.choice, 'zh']])});
+questionBank.handlers.click({target: {closest: () => ({href: base + 'learn/index.html',
+  dataset: {}, hasAttribute: () => false})}, button: 0});
+assert.equal(questionBank.local.get(keys.choice), 'zh');
 assert.equal(simulate({noSwitcher: true}).guide.hidden, true);
 const fallback = simulate({blockLocal: true});
 assert.equal(fallback.guide.hidden, false);

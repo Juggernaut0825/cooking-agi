@@ -101,8 +101,8 @@ Back to our documents: the new IDFs are $0.3567$ for `cache` and $0.6931$ for `e
 
 $$
 \begin{aligned}
-\frac{2\times2.2}{2+1.2\times1.0682}&\approx1.3408,\\
-0.3567\times1.3408&\approx0.4782.
+\frac{2\times2.2}{2+1.2\times1.0682}&\approx1.3407,\\
+0.3567\times1.3407&\approx0.4782.
 \end{aligned}
 $$
 
@@ -167,7 +167,7 @@ BM25: [1.1465, 1.1817, 0.3008, 0.0]
 
 Inputs are **sequences of already-tokenized strings**. The implementation does not tokenize or lowercase. The example's `.split()` only reproduces this English word list; it is not a Chinese search analyzer. Query terms are deduplicated. Empty documents score zero but count toward document count and average length. An empty collection returns an empty list; an all-empty collection does not divide by zero. Production engines may treat missing and empty fields differently, so check their statistics contract.
 
-Building statistics scans all $T$ tokens in expected $O(T)$ time. A query checks $Q$ distinct query terms against each of $N$ documents in expected $O(NQ)$ time, assuming expected constant-time hash operations. Frequency storage scales with the total number of distinct document–term pairs. This is a transparent reference implementation, **not a large-scale search engine**.
+Building statistics visits $N$ documents containing $T$ tokens in expected $O(N+T)$ time. If a query has $M$ tokens before deduplication and $Q$ distinct terms afterward, its expected time is $O(M+N(1+Q))$, including query deduplication and producing one score per document even when the query is empty. This assumes expected constant-time hash operations. If $U$ is the total number of distinct document–term pairs, statistics storage is $O(N+U)$; the $N$ term includes empty documents. This is a transparent reference implementation, **not a large-scale search engine**.
 
 A production query generally reads candidates from an inverted index: `cache → A:2, B:1, C:1`, `error → A:1, B:1`. D need not be scanned for these matches. Frequent terms can still have long postings lists. Top-K selection, filtering, pruning, and updates all have costs; inverted indexing does not make every query $O(1)$.
 

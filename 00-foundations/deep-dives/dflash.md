@@ -2,7 +2,7 @@
 
 **中文** · [English](dflash.en.md)
 
-> 核对：2026-10-09 · 前置：[生成与 KV cache](kv-cache-and-inference.md) · 第一遍读流程和算例；准备实现时再看采样、缓存与实验表。
+> 核对：2026-10-10 · 前置：[生成与 KV cache](kv-cache-and-inference.md) · 第一遍读流程和算例；准备实现时再看采样、缓存与实验表。
 
 一次生成多个 token，听起来都像“并行预测”。但你得先问：**谁在猜，谁说了算，猜错的计算怎么办？** MTP 主要讨论训练时的预测目标和模块；DFlash 讨论怎样用一个小 drafter 帮目标模型（target model）更快生成。两个名字并不在同一个分类层级。
 
@@ -20,19 +20,43 @@
 
 [DFlash 原论文](https://arxiv.org/abs/2602.06036)保持目标自回归模型冻结，训练轻量 block-diffusion drafter：目标模型的上下文特征注入 draft 各层的 K/V；一个已确认的 token 作锚点，其余位置是 mask，一次前向并行提出候选。不是把目标模型整体换成 diffusion LLM。
 
-```text
-已确认的前缀 → target 特征 + 已确认的锚点 token
-                          ↓
-              [锚点 | MASK | MASK | MASK]
-                          ↓  一次 draft 前向
-              [锚点 | 候选1 | 候选2 | 候选3]
-                          ↓  target 因果验证
-              接受的连续前缀 + target 补出的 token
-                          ↓
-                修正缓存，进入下一轮
-```
+<figure class="worked-update worked-update--pairs" id="draft-cycle" lang="zh-CN">
+<figcaption>一轮草拟与验证：这里用 1 个锚点、3 个待猜位置作示意。</figcaption>
+<ol>
+<li><small>01 / 准备上下文</small><strong>前缀特征 + 已知锚点</strong><span>Target 提供已确认前缀的特征，并选出下一个 token，作为 anchor。</span></li>
+<li><small>02 / 并行草拟</small><strong>一次猜 3 个位置</strong><span>Draft 读取 anchor 和 3 个 mask，一次前向提出 3 个候选。Anchor 不需要再猜。</span></li>
+<li><small>03 / Target 验证</small><strong>只接受连续前缀</strong><span>因果前向为候选评分；遇到首次拒绝就停下，由 target 补出 token。全接受时再补一个。</span></li>
+<li><small>04 / 对齐缓存</small><strong>留下有效状态</strong><span>裁掉拒绝位置及其后缀的状态。补出的 token 成为下一轮 anchor；它的 KV 可能还没算。</span></li>
+</ol>
+</figure>
 
 训练也要遵守这个信息边界：训练样本可以有完整答案，但 drafter 预测某块时，不能读取该块未来答案对应的 target 特征。原文用随机锚点和专门的 attention mask 对齐训练与推理，并提高靠前位置的 loss 权重。[项目说明](https://z-lab.ai/projects/dflash/)补充了特征注入与共享 embedding / LM head 的结构。
+
+<details id="feature-shapes" markdown="1">
+<summary>两次“拼接”，拼的不是同一个维度</summary>
+
+先从 target 取出几层表示，拼在**特征维**上，再投影到 draft 的宽度。进入 draft attention 后，上下文与当前块的 K/V 则沿**序列维**接起来。Q 只来自当前块，不给旧上下文再算一遍输出。[官方实现的 attention](https://github.com/z-lab/dflash/blob/07ebd93db9f472af339b644bb70221ad8428328a/dflash/model.py#L343-L370)可以对照这两个轴。
+
+用一个自拟的单头例子：2 个上下文 token，从 3 层各取宽度 4 的表示；当前块有 1 个 anchor 和 3 个 mask。暂不写 batch 维。
+
+<div class="worked-table" markdown="1">
+
+| 张量 | Shape |
+| --- | --- |
+| 拼起三层特征 | `[2, 12]`，不是 `[6, 4]` |
+| 投影到 draft 宽度 4 | `[2, 4]` |
+| 当前块的 Q | `[4, 4]` |
+| 上下文与当前块合并后的 K / V | 各为 `[6, 4]` |
+| Attention 分数 `Q @ K.T` | `[4, 6]` |
+| Attention 输出 | `[4, 4]`，仍只有当前块的 4 行 |
+
+</div>
+
+这些维度只是讲解用的；实际多头还要拆 head 维。Draft 的 K/V 由它自己的投影生成，不是直接搬用 target 的 KV cache。层数和 block size 看具体配置；block size 为 16 时，包含一个已知 anchor，待猜的是 15 个位置。
+
+旧上下文的 draft K/V 可以复用；下一轮接入新确认位置的特征，不必从头重算所有前缀。哪些位置可以留下，要等 target 验证后再决定，下面的缓存表会接着讲。
+
+</details>
 
 为什么重视靠前的位置？下面这个例子不用跑大模型就能看出来。
 
@@ -75,6 +99,26 @@ assert emitted == [10, 20, 30] and accepted == 2
 ```
 
 这也是缓存回滚的原因。验证时可能给错误的 X 和后缀计算了 K/V，这些状态不能留在正式前缀里。只保留有效前缀对应的状态；新补出的 C 若还没做前向，需要在后续步骤计算它的 K/V。不能把“已输出 token 数”直接当成“当前缓存长度”。Draft 与 target 的缓存还要各自对齐。
+
+<details markdown="1">
+<summary>具体到位置：C 已经输出，为什么还没有它的 KV？</summary>
+
+设前缀 `P` 长 4，位置从 0 开始。Target 已从前缀预测出锚点 A，但还没把 A 作为输入跑前向。本轮草稿是 B、X；接受 B 后，target 用 C 替换 X。先不考虑 EOS 和长度上限。
+
+<div class="worked-table" markdown="1">
+
+| 时刻 | 已确认序列 / Target KV |
+| --- | --- |
+| 开始 | 序列 `P A`<br>KV 只有 `P`，长度 4 |
+| 验证 A、B、X 后，尚未接受草稿 | 序列 `P A`<br>KV 临时含 `P A B X`，长度 7 |
+| 接受 B、补出 C，裁掉无效状态 | 序列 `P A B C`<br>KV 保留 `P A B`，长度 6 |
+| 下一轮把 C 放在位置 6 跑前向 | 序列 `P A B C`<br>KV 才包含 C，长度 7 |
+
+</div>
+
+C 来自 B 位置的 logits；算出 C 的 ID，不等于计算过以 C 为输入的隐藏状态。本轮新增输出是 B、C，不要再把已知的 A 算一次。Draft 的临时块状态也不能照搬：这个[固定版本的实现](https://github.com/z-lab/dflash/blob/07ebd93db9f472af339b644bb70221ad8428328a/dflash/model.py#L214-L287)先把 draft cache 裁回本轮起点，再在下轮吸收新确认的 target 特征。
+
+</details>
 
 ## 有温度的采样，不能只比较 argmax
 
@@ -137,7 +181,7 @@ Block 更长不一定更好：后段可能更容易被拒绝，验证与缓存�
 
 可以用一个自编的小例子理解动机：两列候选分别是 `{New, Los}` 和 `{York, Angeles}`。各列独立 top-1 可能拼成 `New Angeles`；给相邻词的搭配打分，就有机会选到 `New York`。这只解释“选得更连贯”，不代表 selector 知道正确答案；最终仍由 target 验证。
 
-另一条路线是 2026-10-05 的 [D-Loop](https://arxiv.org/abs/2610.06011)：复用同一 drafter 再跑一遍，让后缀读取选定的前缀。它花额外前向换草稿质量。本页只核对其摘要与机制概述，尚未复现实验，不能据此给各种硬件排速度名次。
+另一条路线是 2026-10-05 的 [D-Loop](https://arxiv.org/abs/2610.06011)：复用 drafter，再根据选定前缀预测后缀。它还配套改了训练目标，并非拿原 DFlash 权重多跑一次就能复现论文收益。[§3.2](https://arxiv.org/html/2610.06011v1#S3.SS2)用两种输入训练同一套参数：只给 anchor 时学前缀，给出真实前缀时学后缀；推理才换成模型提出的前缀。本页核对了这部分机制，未复现实验，不按论文数字给硬件排速度名次。
 
 | 方案 | 怎样处理多个未来位置 | 主要要付什么代价 |
 | --- | --- | --- |

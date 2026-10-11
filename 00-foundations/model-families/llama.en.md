@@ -26,21 +26,16 @@ Version sources: [LLaMA 1](https://arxiv.org/abs/2302.13971), [Llama 2](https://
 
 ## Follow a token through the block
 
-This is a text decoder's computation, not its training pipeline. RoPE acts on attention's Q/K; it is not an addition to the input token embedding.
+This diagram uses a Llama 3 / 3.1 text decoder, not a training pipeline. Earlier versions do not necessarily use GQA; check their head configuration separately. RoPE acts on attention's Q/K; it is not an addition to the input token embedding.
 
-```mermaid
-flowchart TD
-    X["Input hidden state"] --> N["RMSNorm"]
-    N --> Q["Project Q / K / V"]
-    Q --> R["Rotate Q and K by position; not V"]
-    R --> A["Causal GQA → output projection"]
-    X --> S["Residual addition"]
-    A --> S
-    S --> F["RMSNorm → SwiGLU FFN"]
-    S --> T["Residual addition"]
-    F --> T
-    T --> U["Next layer; final norm and logits after the last layer"]
-```
+<figure class="worked-update" id="llama-block-flow" lang="en">
+<figcaption>One decoder block: two updates, each with a residual connection</figcaption>
+<ol>
+<li><strong>1 · Prepare Q, K, and V</strong><span>Apply RMSNorm to the hidden state, then project Q, K, and V. RoPE rotates Q and K, not V. Keep the original hidden state for the residual connection.</span></li>
+<li><strong>2 · Attention update</strong><span>Causal GQA reads only allowed positions. Project its output back to the hidden width, then add the original hidden state to obtain h′.</span></li>
+<li><strong>3 · FFN update</strong><span>Apply RMSNorm and the SwiGLU FFN to h′, then add h′ back. Pass the result to the next layer. Final normalization and the logits projection come after all blocks.</span></li>
+</ol>
+</figure>
 
 In shorthand:
 
@@ -124,16 +119,15 @@ Increasing a maximum-length setting does not itself create long-context competen
 
 The Llama 3 report describes iterative use of a reward model, rejection sampling, SFT, and DPO. This is a **data-generation, selection, and parameter-update workflow**, not four models that every inference request must traverse. [Report, §4](https://arxiv.org/html/2407.21783v3#S4)
 
-```mermaid
-flowchart TD
-    P["Prompt"] --> C["Current policy generates candidates"]
-    C --> R["Reward model and other selection signals"]
-    R --> D["Selected responses + other demonstrations"]
-    D --> S["SFT"]
-    H["Preference pairs"] --> O["DPO"]
-    S --> O
-    O -. next sampling round .-> C
-```
+<figure class="worked-update" id="llama-training-loop" lang="en">
+<figcaption>A post-training round: prepare the data, then update the model</figcaption>
+<ol>
+<li><strong>1 · Generate and select</strong><span>The current policy generates candidates for each prompt. A reward model and other signals help select responses.</span></li>
+<li><strong>2 · SFT</strong><span>Train on the selected responses alongside other demonstrations. These retained answers become the supervision.</span></li>
+<li><strong>3 · DPO</strong><span>Update the model using preference pairs. The updated policy can generate candidates for another round of selection and training.</span></li>
+</ol>
+<p>This loop runs during training. It is not a chain of models that handles every user request.</p>
+</figure>
 
 Consider an invented task: “List only the action items confirmed in these meeting notes.”
 

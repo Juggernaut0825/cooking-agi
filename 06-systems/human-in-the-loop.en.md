@@ -65,6 +65,28 @@ A useful human intervention should, as far as possible, preserve:
 
 Have the user approve before the action happens. This suits high-risk or irreversible operations.
 
+Confirmation must identify a specific action, not grant a pass for the whole conversation.
+Show the target, material arguments, and impact; bind approval to that action version and an
+expiry. The execution layer verifies the approver's authority and checks authorization and
+current state before acting. Changes to recipients, attachments, or amounts invalidate the
+old confirmation. Rejection or an unanswered confirmation that expires is not approval. See
+[OWASP's transaction-authorization principles](https://cheatsheetseries.owasp.org/cheatsheets/Transaction_Authorization_Cheat_Sheet.html).
+
+For example, in a quote-email workflow requiring confirmation for each send:
+
+```text
+Preview: send to the purchasing contact, attachment quote-v3.pdf
+User approves this version → proceed to pre-send validation
+Attachment changes to quote-v4.pdf → invalidate approval, preview and confirm again
+User rejects or confirmation times out → do not send; record why
+```
+
+These are state constraints, not a sending implementation. Resuming a paused workflow does
+not necessarily mean “run the next line exactly once”: for example,
+[LangGraph interrupts](https://docs.langchain.com/oss/python/langgraph/interrupts#side-effects-called-before-interrupt-must-be-idempotent)
+resume by rerunning the node from its beginning. Put the external write awaiting approval
+after valid approval, and still follow the tool's idempotency contract on retries.
+
 ### After-the-fact spot checks {#after-the-fact-spot-checks}
 
 Sample from completed trajectories to find systematic failures, judge bias, and new types of problems.
