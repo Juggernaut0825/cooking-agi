@@ -10,6 +10,8 @@ First review [vectors, cosine, and softmax](../00-foundations/core/embeddings-an
 
 ## Encode separately, then compare
 
+We first establish the softmax matching objective. The next note, [SigLIP](siglip.en.md), uses a small score table to compare pairwise sigmoid loss and introduces SigLIP 2 extensions.
+
 [CLIP](https://arxiv.org/abs/2103.00020) processes images and text with separate encoders, projects to a shared dimension, normalizes, and scores pairs. The paper studied both ResNet and ViT vision branches; CLIP is not synonymous with one vision architecture.
 
 ```mermaid

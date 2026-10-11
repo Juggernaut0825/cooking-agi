@@ -10,6 +10,8 @@
 
 ## 图片和文字先分别编码，再比较
 
+本篇先把 softmax 配对目标讲清楚；下一篇 [SigLIP](siglip.md)再用同样大小的分数表，比较逐对 sigmoid loss，并介绍 SigLIP 2 的扩展。
+
 [CLIP](https://arxiv.org/abs/2103.00020) 分别用图像编码器和文本编码器处理输入，再把两边的表示投影到相同维度、归一化，计算匹配程度。原论文尝试了 ResNet 和 ViT 作为视觉分支，所以 CLIP 并不等于某一种图像模型。
 
 ```mermaid

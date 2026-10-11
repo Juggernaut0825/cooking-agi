@@ -20,6 +20,7 @@ The other routes cover recommendation, a RAG knowledge assistant, and post-train
 
 | What went wrong? | Start here | What to look for |
 | --- | --- | --- |
+| You know models but not the surrounding product | [An ML system end to end](ml-system/README.en.md) | Three timelines, data and service contracts, acceptance, and ownership |
 | You've written code but haven't connected a page, server, and automated checks | [Build something small](web-lab/README.en.md) | Static hosting, CI/CD, requests, persistence, and useful errors |
 | You have requirements but no starting design | [System-design exercises](../learn/system-design/README.en.md) | Goals and constraints, then components, cost, and failure handling |
 | Useful content wasn't recommended | [Inside recommender systems](recommender-systems/README.en.md) | Missing retrieval, filtering, or a low rank |
@@ -29,6 +30,8 @@ The other routes cover recommendation, a RAG knowledge assistant, and post-train
 All three involve data, cost, and evaluation, but the checks differ. No click doesn't necessarily mean dislike in recommendation; missing evidence prevents a knowledge assistant from confidently supporting an answer. Keep those differences in mind as you read.
 
 ## System design: make the choices yourself {#system-design}
+
+For the overall map, start with [data to users](ml-system/README.en.md): content updates, model training, and live requests are separate paths. Follow [data to model](ml-system/data-to-model.en.md) through examples, frameworks, checkpoints, and indexes, then [serving and feedback](ml-system/serving-and-feedback.en.md). You need not implement every layer, but should understand what each hands over.
 
 Choose a [feed](../learn/system-design/feed.en.md), [RAG assistant](../learn/system-design/rag.en.md), or [long-term memory system](../learn/system-design/memory.en.md). Write down requirements, data scale, and latency budgets. Sketch a minimal design, then change a condition: more frequent updates, a permission change, or a service timeout. What needs to change in your design?
 

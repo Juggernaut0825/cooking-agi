@@ -36,6 +36,8 @@
 
 ## 本章目录
 
+已经分清数据并行与模型并行，再读[DDP、FSDP2 与训练框架](../../06-systems/training-frameworks.md)：跟一次参数聚合和梯度更新，看看状态分片省了什么、又为什么可能更慢。它也把 Trainer、Accelerate、NeMo RL 和生成引擎放回各自的层次。
+
 <!-- widget:study-atlas -->
 
 ## 怎样用起来

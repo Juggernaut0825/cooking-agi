@@ -27,9 +27,10 @@ CLIP 把匹配图文拉近，不是一个回答任意问题的聊天模型。视
 | 1 · 向量基础 | [向量与相似度](../00-foundations/core/embeddings-and-similarity.md) | 余弦为什么不是概率，温度改变了什么 |
 | 2 · 图片输入 | [ViT](vit.md) | Patch、投影、位置和 CLS 各做什么；分辨率怎样影响计算 |
 | 3 · 图文配对 | [CLIP](clip.md) | 两路向量怎样学会匹配；batch 里的其他配对为什么可能是假负例 |
-| 4 · 生成回答 | [图片怎样进入 LLM](vision-to-language.md) | 视觉特征怎样接入生成过程，输出为什么仍可能只靠文字猜 |
-| 5 · 连接模块 | [BLIP 与 Q-Former](blip-and-q-former.md) | 压缩视觉信息、训练目标和指令感知分别在做什么 |
-| 6 · 动手训练 | [VLM 微调](vlm-finetuning.md) | Processor、答案 mask、冻结范围与独立生成测试 |
+| 4 · 换一种配对目标 | [SigLIP 与 SigLIP 2](siglip.md) | Sigmoid 与 softmax 怎么不同；多语言、局部特征与 NaFlex |
+| 5 · 生成回答 | [图片怎样进入 LLM](vision-to-language.md) | 视觉特征怎样接入生成过程，输出为什么仍可能只靠文字猜 |
+| 6 · 连接模块 | [BLIP 与 Q-Former](blip-and-q-former.md) | 压缩视觉信息、训练目标和指令感知分别在做什么 |
+| 7 · 动手训练 | [VLM 微调](vlm-finetuning.md) | Processor、答案 mask、冻结范围与独立生成测试 |
 
 遇到训练代码不熟的地方，可以先看[一次参数更新](../00-foundations/deep-dives/training-step.md)；张量和梯度还不顺手，就配合 [PyTorch 小实验](../00-foundations/pytorch/README.md)。
 

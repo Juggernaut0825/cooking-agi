@@ -40,6 +40,7 @@
 /00-foundations/pytorch/ @tianyi-zhang-02 @2pir2
 /learn/ml-exercises/ @tianyi-zhang-02 @2pir2
 /learn/system-design/ @tianyi-zhang-02 @2pir2
+/practice/ml-system/ @tianyi-zhang-02 @2pir2
 /practice/web-lab/ @tianyi-zhang-02 @2pir2
 /practice/recommender-systems/ @tianyi-zhang-02 @2pir2
 /practice/rag/ @tianyi-zhang-02 @2pir2
@@ -84,12 +85,16 @@
 /06-systems/distributed-training.en.md @tianyi-zhang-02 @2pir2
 /06-systems/tensor-parallel.md @tianyi-zhang-02 @2pir2
 /06-systems/tensor-parallel.en.md @tianyi-zhang-02 @2pir2
+/06-systems/training-frameworks.md @tianyi-zhang-02 @2pir2
+/06-systems/training-frameworks.en.md @tianyi-zhang-02 @2pir2
 /00-foundations/core/decoding.md @tianyi-zhang-02 @2pir2
 /00-foundations/core/decoding.en.md @tianyi-zhang-02 @2pir2
 /00-foundations/deep-dives/kv-cache-and-inference.md @tianyi-zhang-02 @2pir2
 /00-foundations/deep-dives/kv-cache-and-inference.en.md @tianyi-zhang-02 @2pir2
 /06-systems/llm-serving.md @tianyi-zhang-02 @2pir2
 /06-systems/llm-serving.en.md @tianyi-zhang-02 @2pir2
+/06-systems/inference-frameworks.md @tianyi-zhang-02 @2pir2
+/06-systems/inference-frameworks.en.md @tianyi-zhang-02 @2pir2
 /00-foundations/deep-dives/dflash.md @tianyi-zhang-02 @2pir2
 /00-foundations/deep-dives/dflash.en.md @tianyi-zhang-02 @2pir2
 /00-foundations/deep-dives/position-and-context.md @tianyi-zhang-02 @2pir2

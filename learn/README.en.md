@@ -37,6 +37,8 @@ You do not need to finish an entire subject to resolve one doubt. Start with the
 
 | What you want to understand | Reading route | What to inspect |
 | --- | --- | --- |
+| FSDP, vLLM, and SGLang are familiar names, but their roles are unclear | [Training stacks](../06-systems/training-frameworks.en.md) → [Inference engines](../06-systems/inference-frameworks.en.md) | Who handles training state, request scheduling, and kernels |
+| How does a model become a complete product? | [ML system map](../practice/ml-system/README.en.md) → [Data to model](../practice/ml-system/data-to-model.en.md) → [Serving and feedback](../practice/ml-system/serving-and-feedback.en.md) | Inputs, outputs, versions, failures, and team handoffs |
 | The equations make sense, but training code does not | [Tensors and storage](../00-foundations/pytorch/tensors-and-storage.en.md) → [Autograd](../00-foundations/pytorch/autograd.en.md) → [Training loop](../00-foundations/pytorch/training-loop.en.md) | Whether parameters update and validation loss uses the right denominator |
 | What to prepare before fine-tuning | [Pretraining data pipeline](../00-foundations/deep-dives/pretraining-pipeline.en.md) → [SFT](../05-post-training/sft-and-its-ceiling.en.md) → [LoRA / QLoRA](../05-post-training/lora-and-qlora.en.md) | Labels, loss masks, data splits, and memory use |
 | New architecture names are hard to tell apart | [Component reading map](../00-foundations/deep-dives/README.en.md) → [Model reports](../00-foundations/model-families/README.en.md) | Changes to sequences, caches, experts, or network depth |
