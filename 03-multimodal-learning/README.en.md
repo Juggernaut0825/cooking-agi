@@ -31,9 +31,10 @@ CLIP aligns matching images and text; it is not a chat model that answers arbitr
 | 1 · Vectors | [Vectors and similarity](../00-foundations/core/embeddings-and-similarity.en.md) | Why cosine is not a probability and what temperature changes |
 | 2 · Image inputs | [ViT](vit.en.md) | Patches, projections, positions, and CLS; how resolution affects computation |
 | 3 · Matching | [CLIP](clip.en.md) | How two sets of vectors learn to match and why other pairs in a batch may be false negatives |
-| 4 · Answers | [Images entering an LLM](vision-to-language.en.md) | How visual features enter generation and why answers may still rely on text alone |
-| 5 · Connectors | [BLIP and Q-Former](blip-and-q-former.en.md) | Separate visual compression, training objectives, and instruction-aware features |
-| 6 · Training | [VLM fine-tuning](vlm-finetuning.en.md) | Processors, answer masks, frozen parameters, and independent generation tests |
+| 4 · Another matching objective | [SigLIP and SigLIP 2](siglip.en.md) | Sigmoid versus softmax; multilingual data, local features, and NaFlex |
+| 5 · Answers | [Images entering an LLM](vision-to-language.en.md) | How visual features enter generation and why answers may still rely on text alone |
+| 6 · Connectors | [BLIP and Q-Former](blip-and-q-former.en.md) | Separate visual compression, training objectives, and instruction-aware features |
+| 7 · Training | [VLM fine-tuning](vlm-finetuning.en.md) | Processors, answer masks, frozen parameters, and independent generation tests |
 
 For unfamiliar training mechanics, revisit [one parameter update](../00-foundations/deep-dives/training-step.en.md). For tensors and gradients, use the [small PyTorch experiments](../00-foundations/pytorch/README.en.md).
 

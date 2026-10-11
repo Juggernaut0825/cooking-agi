@@ -31,6 +31,8 @@
 
 | 你现在想弄明白什么 | 阅读顺序 | 最后动手看什么 |
 | --- | --- | --- |
+| FSDP、vLLM、SGLang 都听过，却分不清关系 | [训练框架](../06-systems/training-frameworks.md) → [推理引擎](../06-systems/inference-frameworks.md) | 训练状态、请求调度与算子分别由谁负责 |
+| 想知道模型怎么成为一个完整产品 | [ML 系统全貌](../practice/ml-system/README.md) → [数据到模型](../practice/ml-system/data-to-model.md) → [上线与反馈](../practice/ml-system/serving-and-feedback.md) | 输入输出、版本、失败处理与团队交接 |
 | 公式懂了，训练代码还是写不对 | [张量与存储](../00-foundations/pytorch/tensors-and-storage.md) → [自动求导](../00-foundations/pytorch/autograd.md) → [训练循环](../00-foundations/pytorch/training-loop.md) | 参数有没有更新，验证 loss 的分母对不对 |
 | 想微调，先准备什么 | [预训练数据流程](../00-foundations/deep-dives/pretraining-pipeline.md) → [SFT](../05-post-training/sft-and-its-ceiling.md) → [LoRA / QLoRA](../05-post-training/lora-and-qlora.md) | 标签、loss mask、数据切分与显存 |
 | 新架构名字很多，分不清差别 | [组件阅读地图](../00-foundations/deep-dives/README.md) → [模型报告精读](../00-foundations/model-families/README.md) | 改的是序列、缓存、专家，还是网络深度 |

@@ -36,6 +36,8 @@ On a first pass, the overview's distinction between DDP, FSDP, TP, and PP is eno
 
 ## Chapter contents
 
+Once data and model parallelism are clear, read [DDP, FSDP2, and training stacks](../../06-systems/training-frameworks.en.md). Follow parameter gathering and gradient updates to see what sharding saves and why it can cost time. The note also separates Trainer, Accelerate, NeMo RL, and generation engines by responsibility.
+
 <!-- widget:study-atlas -->
 
 ## Put it to use

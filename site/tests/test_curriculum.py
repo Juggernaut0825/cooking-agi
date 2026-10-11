@@ -82,7 +82,10 @@ class CurriculumTests(unittest.TestCase):
         self.assertEqual(self.catalog['05-post-training/rlhf/ppo-clipping.md']['zh'].next.src.name, 'after-rlhf.md')
         self.assertEqual(self.catalog['00-foundations/deep-dives/muon.md']['zh'].previous.src.name, 'optimizers.md')
         self.assertEqual(self.catalog['06-systems/llm-serving.md']['zh'].previous.src.name, 'kv-cache-and-inference.md')
-        self.assertEqual(self.catalog['00-foundations/deep-dives/dflash.md']['zh'].previous.src.name, 'llm-serving.md')
+        self.assertEqual(self.catalog['06-systems/inference-frameworks.md']['zh'].previous.src.name, 'llm-serving.md')
+        self.assertEqual(self.catalog['00-foundations/deep-dives/dflash.md']['zh'].previous.src.name, 'inference-frameworks.md')
+        self.assertEqual(self.catalog['03-multimodal-learning/siglip.md']['zh'].previous.src.name, 'clip.md')
+        self.assertEqual(self.catalog['03-multimodal-learning/vision-to-language.md']['zh'].previous.src.name, 'siglip.md')
 
     def test_atlas_groups_concepts_into_three_reading_areas(self):
         for language in ('zh', 'en'):

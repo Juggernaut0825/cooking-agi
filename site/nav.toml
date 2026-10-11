@@ -254,6 +254,15 @@ en = "Start here"
 home = "practice/README.md"
 
 [[group]]
+id = "ml-systems"
+category = "practice"
+zh = "完整 ML 系统"
+en = "An ML system end to end"
+home = "practice/ml-system/README.md"
+summary_zh = "沿数据、训练和在线请求三条线，拆开模块、接口、取舍与团队交接。"
+summary_en = "Follow data, training, and live requests through modules, contracts, tradeoffs, and team handoffs."
+
+[[group]]
 id = "web-practice"
 category = "practice"
 zh = "小项目入门"
@@ -403,8 +412,8 @@ en = "02 · Precision, memory & parallelism"
 home = "learn/pretraining/README.md"
 intro_zh = "需要先懂一次训练。这里区分数值格式、保存的状态、重算和多卡切分，不把它们混作一种优化。"
 intro_en = "After one training step, separate numeric formats, stored state, recomputation, and multi-device partitioning."
-include = ["00-foundations/deep-dives/precision-and-memory.md", "06-systems/distributed-training.md", "06-systems/tensor-parallel.md"]
-order = ["precision-and-memory.md", "distributed-training.md", "tensor-parallel.md"]
+include = ["00-foundations/deep-dives/precision-and-memory.md", "06-systems/distributed-training.md", "06-systems/tensor-parallel.md", "06-systems/training-frameworks.md"]
+order = ["precision-and-memory.md", "distributed-training.md", "tensor-parallel.md", "training-frameworks.md"]
 
 [[section]]
 dir = "learn/inference"
@@ -414,8 +423,8 @@ en = "01 · Generation & caching"
 home = "learn/inference/README.md"
 intro_zh = "知道 decoder 怎样预测 token 后，再分开看采样策略和 prefill / decode 的计算。"
 intro_en = "Once decoder prediction is clear, separate sampling choices from prefill and decode computation."
-include = ["00-foundations/core/decoding.md", "00-foundations/deep-dives/kv-cache-and-inference.md", "06-systems/llm-serving.md", "00-foundations/deep-dives/dflash.md"]
-order = ["README.md", "decoding.md", "kv-cache-and-inference.md", "llm-serving.md", "dflash.md"]
+include = ["00-foundations/core/decoding.md", "00-foundations/deep-dives/kv-cache-and-inference.md", "06-systems/llm-serving.md", "06-systems/inference-frameworks.md", "00-foundations/deep-dives/dflash.md"]
+order = ["README.md", "decoding.md", "kv-cache-and-inference.md", "llm-serving.md", "inference-frameworks.md", "dflash.md"]
 
 [[section]]
 dir = "learn/attention-systems"
@@ -477,7 +486,7 @@ en  = "Representation & memory"
 
 [[section]]
 dir = "03-multimodal-learning"
-order = ["README.md", "vit.md", "clip.md", "vision-to-language.md", "blip-and-q-former.md", "vlm-designs.md", "qwen-vl.md", "omni-streaming.md", "ocr-compression.md", "image-generation.md", "vlm-finetuning.md"]
+order = ["README.md", "vit.md", "clip.md", "siglip.md", "vision-to-language.md", "blip-and-q-former.md", "vlm-designs.md", "qwen-vl.md", "omni-streaming.md", "ocr-compression.md", "image-generation.md", "vlm-finetuning.md"]
 group = "multimodal"
 zh  = "多模态学习"
 en  = "Multimodal learning"
@@ -663,6 +672,16 @@ order = ["README.md", "feed.md", "rag.md", "memory.md", "system-design.md"]
 include = ["interview/system-design.md"]
 
 [[section]]
+dir = "practice/ml-system"
+group = "ml-systems"
+zh = "从数据到用户"
+en = "From data to users"
+home = "practice/ml-system/README.md"
+intro_zh = "先看三条时间线，再分别拆数据、训练、索引、请求与反馈。每一步说明输入输出和谁来接手。"
+intro_en = "Start with three timelines, then examine data, training, indexes, requests, and feedback, including inputs, outputs, and ownership."
+order = ["README.md", "data-to-model.md", "serving-and-feedback.md"]
+
+[[section]]
 dir = "practice/web-lab"
 group = "web-practice"
 zh = "从网页到小应用"
@@ -750,6 +769,8 @@ en  = "Templates"
 "06-systems/distributed-training.md" = ["多卡训练怎么分", "Distributed training"]
 "06-systems/tensor-parallel.md" = ["张量并行：跟着算一层", "Tensor parallelism, worked through"]
 "06-systems/llm-serving.md" = ["一次请求怎样跑完", "A request through the service"]
+"06-systems/training-frameworks.md" = ["DDP、FSDP2 与训练框架", "DDP, FSDP2 & training stacks"]
+"06-systems/inference-frameworks.md" = ["vLLM 与 SGLang", "vLLM & SGLang"]
 "00-foundations/core/embeddings-and-similarity.md" = ["向量与相似度", "Embeddings & similarity"]
 "00-foundations/deep-dives/training-step.md" = ["一次训练怎么走", "One training step"]
 "00-foundations/deep-dives/generalization.md" = ["泛化与训练诊断", "Generalization & diagnosis"]
@@ -760,6 +781,7 @@ en  = "Templates"
 "05-post-training/lora-and-qlora.md" = ["LoRA 与 QLoRA", "LoRA & QLoRA"]
 "05-post-training/distillation.md" = ["蒸馏：答案与分布", "Distillation: answers & distributions"]
 "03-multimodal-learning/clip.md" = ["CLIP 图文对齐", "CLIP alignment"]
+"03-multimodal-learning/siglip.md" = ["SigLIP 与 SigLIP 2", "SigLIP & SigLIP 2"]
 "03-multimodal-learning/vit.md" = ["ViT：图片变成 token", "ViT: images to tokens"]
 "03-multimodal-learning/blip-and-q-former.md" = ["BLIP 与 Q-Former", "BLIP & Q-Former"]
 "03-multimodal-learning/vision-to-language.md" = ["图片怎样进入 LLM", "Vision to language"]
@@ -952,6 +974,9 @@ en  = "Templates"
 "practice/rag/data-and-retrieval.md" = ["文档与检索", "Documents & retrieval"]
 "practice/rag/evidence-and-evaluation.md" = ["证据与评估", "Evidence & evaluation"]
 "practice/post-training/README.md" = ["项目导读", "Project introduction"]
+"practice/ml-system/README.md" = ["1 · 全貌与团队分工", "1 · System map & ownership"]
+"practice/ml-system/data-to-model.md" = ["2 · 数据、训练与产物", "2 · Data, training & artifacts"]
+"practice/ml-system/serving-and-feedback.md" = ["3 · 上线、排错与反馈", "3 · Serving, diagnosis & feedback"]
 "practice/post-training/training-plan.md" = ["1 · SFT 与框架选择", "1 · SFT & frameworks"]
 "practice/post-training/data-pipeline.md" = ["2 · 数据到 batch", "2 · Data to batches"]
 "practice/post-training/data-and-objectives.md" = ["3 · 数据与目标", "3 · Data & objectives"]
