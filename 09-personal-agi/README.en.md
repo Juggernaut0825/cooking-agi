@@ -10,7 +10,7 @@ Here, Personal AGI names an aspiration for a personal assistant, not a claim tha
 
 You tell the model: “Help me plan next month's trip.”
 
-An ordinary assistant may handle only that one sentence. Personal AGI should also know:
+An ordinary assistant may handle only that one sentence. Personal AGI should also retrieve within its permissions, or ask you to confirm:
 
 - whether you prefer natural scenery or ticking off city landmarks;
 - that last time you ended up exhausted because the itinerary was too packed;
@@ -40,11 +40,13 @@ This is one way to organize the design, not a sufficient recipe for AGI or a req
 
 ### 1. User state
 
-Store goals, preferences, knowledge, constraints, and the current situation, but attach time, evidence, and confidence.
+Retain only the goals, preferences, knowledge, constraints, and context needed for the task and permitted for storage. Track source, scope, when information was learned, and when it applies. Separate explicit statements from model inferences; a model-written “high confidence” label is not a calibrated probability of correctness.
 
 ### 2. Long-term memory
 
 Know what is worth keeping, when to retrieve it, how to update it, and when it should be forgotten.
+
+For example, “I'm traveling with my parents this time; keep the itinerary relaxed” should affect this trip, not permanently label the user as disliking busy itineraries. Check scope, validity, and current authorization on reads. Corrections and deletions must also reach relevant summaries, indexes, and caches so old records do not reappear. This is the [external memory lifecycle](../02-memory/memory-lifecycle.en.md), not a claim that deleting a database record erases information from model parameters.
 
 ### 3. Search and tools
 
@@ -56,11 +58,13 @@ Combine the user state, the current task, and external evidence to decide whethe
 
 ### 5. Feedback and learning
 
-Learn from corrections, preferences, and real outcomes, without treating every observed behavior as true intent.
+Learn from corrections, preferences, and real outcomes, without treating every observed behavior as true intent. Updating user state is not the same as updating model weights; the latter is a separate process requiring authorization, independent evaluation, and a rollback plan.
 
 ### 6. User control
 
-Let the user know what the system has remembered and why it judged the way it did, and let them correct or retract it.
+Let users inspect what was remembered and the evidence behind it, then correct or retract it. Access to a personal file does not authorize retaining all of it or sending it to an external tool; memory also grants no authority to act on the user's behalf.
+
+Define purposes, access, and retention periods; offer a mode that does not write long-term memory, and enforce user isolation and minimum necessary disclosure at storage and tool boundaries. Explain which copies deletion covers, when it completes, and how logs or backups are handled. Disappearing from the interface does not mean every copy has been erased. These are design checks, informed by [NIST Privacy Framework 1.0, CT.PO-P and CT.DM-P](https://nvlpubs.nist.gov/nistpubs/CSWP/NIST.CSWP.01162020.pdf#page=27), not an achieved privacy guarantee.
 
 ## The hardest problems
 
@@ -70,7 +74,9 @@ A person can hold several interests and roles at once, and they change over time
 
 ### Behavior is not the goal
 
-What the user clicked is shaped by exposure, interface, and timing. The system needs to distinguish “the user chose it” from “the user was only given this choice.”
+What the user clicked is shaped by exposure, interface, and timing. The system needs to distinguish preference from a choice restricted by what was shown.
+
+Suppose the assistant only recommends seaside destinations and the user selects one. Treating that as evidence that they only like the seaside creates a loop: recommendations determine exposure, exposure produces feedback, and feedback narrows recommendations. Log what was shown and what was explicitly corrected; offer different options within the user's constraints rather than treating unseen options as rejected. [Chaney et al., v1](https://arxiv.org/abs/1710.11214v1) study this confounding risk in simulations, not as an inevitable outcome of all personalization.
 
 ### More personalized is not necessarily better
 
@@ -78,7 +84,7 @@ If the model always caters to known preferences, the experience may grow narrowe
 
 ### A long-term relationship needs a different evaluation
 
-One answer can hardly prove that the model really understands the user. What matters more is whether it reduces repeated communication, whether it can absorb corrections, and whether it is still helpful weeks later.
+One answer can hardly prove that the model really understands the user. What matters more is whether it reduces repeated communication, applies corrections, and remains helpful weeks later. Use the [model-experience timeline](../08-model-experience/README.en.md) to test current intent, temporary exceptions, withdrawal, and a no-memory control. More clicks or greater reliance alone do not establish greater usefulness.
 
 ## Continue reading
 
@@ -90,5 +96,7 @@ One answer can hardly prove that the model really understands the user. What mat
 
 ## Reference papers
 
-- [Generative Agents](https://arxiv.org/abs/2304.03442)
-- [MemGPT](https://arxiv.org/abs/2310.08560)
+Generative Agents studies simulated characters; MemGPT studies context and external-memory management. They offer mechanisms to study, not proof of Personal AGI or long-term privacy, safety, and user benefit.
+
+- [Generative Agents](https://arxiv.org/abs/2304.03442v1)
+- [MemGPT](https://arxiv.org/abs/2310.08560v1)

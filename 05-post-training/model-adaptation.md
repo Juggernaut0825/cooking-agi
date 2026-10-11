@@ -2,7 +2,7 @@
 
 **中文** · [English](model-adaptation.en.md)
 
-> 阅读时间：约 16 分钟 · 难度：必修 · 最近审阅：2026-09
+> 阅读时间：约 16 分钟 · 难度：必修 · 最近审阅：2026-10
 
 要让一个模型稳定输出客服需要的 JSON，可以修改全部参数，也可以只训练 LoRA；训练信号则可以来自示范，也可以来自偏好比较。“改哪些参数”和“按什么目标训练”是两件事，LoRA 与 SFT 完全可以同时使用。把这两个问题分开，后面的选择就容易多了。
 
@@ -169,8 +169,44 @@ $$
 
 ### 方法二：Constrained Decoding {#constrained-decoding}
 
-在生成时把合法标签之外的 token logits mask 成 $-\infty$，只在允许集合上做 softmax。
-这样可以保证输出属于枚举集合，但不能保证分类一定正确。
+约束的是**完整标签序列**，不是把标签里出现过的 token 合成一张固定白名单。
+例如合法标签是两个 token 组成的 `a b` 和 `a c`，仅允许 `a/b/c` 仍会生成非法的
+`b a`。即使标签都是单 token 的 `A/B/C`，连续生成两步也可能得到非法的 `AA`。
+
+多 token 标签可以组织成前缀树：每一步根据**已经生成的标签前缀**，只保留仍能到达某个
+合法标签的下一 token；只有当前前缀已经是完整标签，才允许结束。若一个标签也是另一个
+标签的前缀，可以结束，也可以沿合法分支继续。对其余 logits 置 $-\infty$。
+
+下面用字母代指已经确定的 token ID，用保留符号 `<EOS>` 表示结束；它不属于任何标签。
+`prefix` 只包含新生成的标签部分，不包含输入问题。这只是下一步允许集合的示例，不是完整解码器：
+
+```python
+def legal_next_tokens(prefix, labels):
+    allowed = set()
+    for label in labels:
+        if label[:len(prefix)] != prefix:
+            continue
+        allowed.add("<EOS>" if len(prefix) == len(label) else label[len(prefix)])
+    return allowed
+
+
+labels = (("a", "b"), ("a", "c"))
+print(sorted(legal_next_tokens((), labels)))
+print(sorted(legal_next_tokens(("a",), labels)))
+print(sorted(legal_next_tokens(("a", "b"), labels)))
+print(sorted(legal_next_tokens(("b",), labels)))
+```
+
+四行输出依次是 `['a']`、`['b', 'c']`、`['<EOS>']`、`[]`。最后一个空集合表示路径已非法，
+应报告失败，不能退回“不加约束”。实际服务还要处理 tokenization、logits mask 和停止条件；
+被长度或时间上限截断的**未完成标签不能作为合法结果返回**。
+
+若已验证业务标签在当前 tokenizer 和生成上下文中分别对应一个 token，则可以只允许这些
+token，**恰好生成一步就停止**，再映射回业务枚举。前缀约束或这个单步特例保证的是成功完成
+时的格式，不是分类准确率；它们也不保证每次请求都能成功完成。
+
+实现接口可参考 [Transformers 4.57.1 的前缀约束文档](https://huggingface.co/docs/transformers/v4.57.1/internal/generation_utils#transformers.PrefixConstrainedLogitsProcessor)
+（核对日期：2026-10-10）；这里没有调用该库，也没有假设其他版本的行为。
 
 ### 方法三：Classification Head {#classification-head}
 

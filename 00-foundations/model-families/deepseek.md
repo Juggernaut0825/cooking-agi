@@ -2,7 +2,7 @@
 
 **中文** · [English](deepseek.en.md)
 
-> 阅读时间：约 10 分钟 · 类型：模型家族精读 · 最近审阅：2026-10
+> 阅读时间：约 13 分钟 · 类型：模型家族精读 · 最近审阅：2026-10-10
 
 <div class="lesson-recipe advanced">
   <div><span>核心问题</span><strong>怎样在大容量模型里控制 attention、FFN 与 reasoning 的成本？</strong></div>
@@ -17,23 +17,66 @@
 
 ## 先把两条线分开
 
-```mermaid
-flowchart LR
-    A["DeepSeek-V3 架构"] --> B["MLA<br/>逐 token 压缩 KV"]
-    A --> C["DeepSeekMoE<br/>稀疏 FFN 容量"]
-    A --> D["MTP + training system"]
-    H["DeepSeek-V3-Base"] --> E["V3 的 SFT + RL"]
-    H --> F["R1 的多阶段后训练"]
-    F -->|生成并筛选训练数据| G["Qwen / Llama 小模型的 SFT"]
-```
+<figure class="worked-update" id="deepseek-architecture" lang="zh-CN">
+  <figcaption>先看 V3 怎么计算和训练</figcaption>
+  <ol>
+    <li><strong>MLA</strong><span>缩小每个 token 的 KV 缓存；不是把整段历史合成一条记录。</span></li>
+    <li><strong>DeepSeekMoE</strong><span>用较少的激活专家提供 FFN 计算，同时保留更大的总容量。</span></li>
+    <li><strong>MTP 与训练系统</strong><span>增加后续位置的预测目标；并行与通信实现决定这些计算怎样运行。</span></li>
+  </ol>
+</figure>
+
+<figure class="worked-update worked-update--pairs" id="deepseek-training-routes" lang="zh-CN">
+  <figcaption>再看从 V3-Base 出发的两条后训练路线</figcaption>
+  <ol>
+    <li><strong>V3 对话模型</strong><span>从 V3-Base 做 SFT 和 RL，改善回答行为。</span></li>
+    <li><strong>R1 与小模型蒸馏</strong><span>从 V3-Base 做多阶段后训练。另用 R1 生成、筛选文本，给 Qwen / Llama 小模型做 SFT。</span></li>
+  </ol>
+</figure>
 
 V3 的对话后训练与 R1 是从 V3-Base 出发的不同路线，不是“先训出 V3 对话模型，再接一个 R1 模块”。下面先讲 V2 / V3 / R1；V4 的新注意力结构不能直接套进这张图。
+
+这张图区分的是权重起点，不代表两条路线没有数据联系：V3 报告明确说，部分推理 SFT 数据借助了内部 R1 模型。[V3 §5.1](https://arxiv.org/html/2412.19437v2#S5.SS1)
+
+**版本范围：**本文按 V2 报告 v5、V3 报告 v2 和原始 R1 报告 v1 核对；不把结论自动推广到 Lite、后续小版本或带日期的 checkpoint。以下官方 `config.json` 读取于 2026-10-10，`main` 不是不可变版本。
+
+| 配置 | Attention | MoE 层中的 routed / 每 token 选中 / shared | 不能混用的细节 |
+| --- | --- | --- | --- |
+| [DeepSeek-V2](https://huggingface.co/deepseek-ai/DeepSeek-V2/blob/main/config.json) | MLA | 160 / 6 / 2 | softmax affinity；首层是 dense FFN |
+| [原始 DeepSeek-V3](https://huggingface.co/deepseek-ai/DeepSeek-V3/blob/main/config.json) | MLA | 256 / 8 / 1 | sigmoid affinity；前三层是 dense FFN |
+| [原始 DeepSeek-R1](https://huggingface.co/deepseek-ai/DeepSeek-R1/blob/main/config.json) | V3 型 MLA | 256 / 8 / 1 | 这是大模型配置，不是 R1-Distill 的架构 |
 
 ## 真正值得抓住的三件事
 
 1. **MLA 少存的是每个 token 的 KV，不是把整段历史合成一个向量。** 每来一个 token，仍要追加低维 latent 和解耦的位置 key。历史从 1,000 个 token 变成 2,000 个，缓存条目也随之增长。部分投影可在推理时吸收，不一定先展开完整 K/V。[V2 §2.1](https://arxiv.org/html/2405.04434v5#S2.SS1)
 2. **MoE 分开了总容量与每 token 的计算。** 多个 routed experts 提供容量，token 只调用少数；shared expert 的设计目的是承接可复用的模式，不保证自然学出清晰的领域分工。还要付路由、通信和存储成本。
 3. **R1 研究的是后训练能改变什么。** R1-Zero 从已经预训练的 V3-Base 开始做 RL，不是从随机权重出发。它不能证明预训练不重要，也不能把奖励之外的所有能力一并归功于 RL。
+
+“细粒度”可以用宽度预算理解：自拟 8 个中间宽度为 256 的 experts，每次选 2 个；改成 32 个宽度为 64 的 experts，每次选 8 个。对输入宽度相同的无 bias SwiGLU，参数量与矩阵乘加量都正比于 expert 数 × 中间宽度，因此两者的总 expert 参数和激活分支的乘加量相同；路由、通信开销并不相同。再额外加 shared expert 会增加预算，不能把它当免费分支。
+
+### MLA 的缓存账：一份 latent，不是两份 {#mla-cache-ledger}
+
+设 batch 为 $B$、缓存 token 数为 $T$、层数为 $L$、KV latent 宽度为 $d_c$、解耦 RoPE key 宽度为 $d_R$，两部分都用每元素 $s$ 字节。紧凑 MLA 缓存的逻辑载荷是：
+
+$$
+\text{bytes}=BTL(d_c+d_R)s.
+$$
+
+这里没有额外乘 2：K、V 共用同一份 latent；位置 key 也跨 query heads 共享。令 $q$ 为内容 query、$c$ 为缓存 latent、$U_K$ 为内容 key 的上投影，则 $q^T U_Kc=(U_K^Tq)^Tc$，所以可以变换 query 后直接读 latent。RoPE 走解耦分支，不能随意把带位置旋转的矩阵也吸收进去。[V2 §2.1](https://arxiv.org/html/2405.04434v5#S2.SS1)
+
+```python
+def mla_cache_bytes(batch, tokens, layers, latent_width, rope_width, bytes_per_element):
+    dimensions = (batch, layers, latent_width, rope_width, bytes_per_element)
+    if any(type(value) is not int or value <= 0 for value in dimensions):
+        raise ValueError("Expected positive integer dimensions and element bytes")
+    if type(tokens) is not int or tokens < 0:
+        raise ValueError("Expected a nonnegative integer token count")
+    return batch * tokens * layers * (latent_width + rope_width) * bytes_per_element
+
+assert mla_cache_bytes(1, 8192, 61, 512, 64, 2) == 549 * 2**20
+```
+
+用 V3 配置的 `61` 层、`512 + 64` 维，假设缓存用 BF16（2 bytes/element），单请求 8,192 token 得到 **549 MiB**（1 MiB = $2^{20}$ bytes）。这是推导的载荷，不是实测显存；不含权重、MTP、分页空位、量化元数据、临时张量或并行副本，也不代表所有运行时都采用紧凑存法。MLA 本身仍会关注可见历史，并没有因缓存变窄就变成稀疏选 token。
 
 ## V3 的负载均衡：选谁和给多少权重，不是同一个分数
 
@@ -74,6 +117,26 @@ assert math.isclose(sum(weight * [2, 0, 10][index] for index, weight in routed),
 
 代码只演示 routed 分支，不含 shared expert、节点限制、完整缩放和通信。选择偏置在上一步负载统计之后调整，不是给当前 token 添加一个“更相关”的证据。看性能时还要检查每卡接收多少 token：平均 expert 负载接近，并不保证跨节点通信均匀。
 
+### MTP：多一个目标，不是跳过验证 {#mtp-causal-chain}
+
+V3 的 MTP 深度为 1：主干状态 $h_i$ 预测 $t_{i+1}$；额外模块把 $h_i$ 与真实的 $t_{i+1}$ 的 embedding 结合，再预测 $t_{i+2}$。模块按因果顺序连接，embedding 和输出 head 与主干共享，不是几个互不相干的预测头。[V3 §2.2、§4.2](https://arxiv.org/html/2412.19437v2#S2.SS2)
+
+对自拟序列 `A B C D`，主干在 `A` 处预测 `B`；MTP 接收 `B` 后预测 `C`。`B` 是它的条件，不是它的答案；把目标 `C` 也喂进去才是泄漏。下面只列单条、无 padding 序列的标签对齐，不实现模型或 loss；packed 数据还必须屏蔽跨文档目标：
+
+```python
+def mtp_training_rows(tokens):
+    return [
+        (tuple(tokens[:position + 1]), tokens[position + 1], tokens[position + 2])
+        for position in range(len(tokens) - 2)
+    ]
+
+assert mtp_training_rows(["A", "B", "C", "D"]) == [
+    (("A",), "B", "C"), (("A", "B"), "C", "D")
+]
+```
+
+训练时额外目标加入主干 next-token loss；推理时可以丢弃 MTP，仍按普通自回归方式运行，也可将它用于 speculative decoding。后者必须由主模型验证草稿，不能直接把多个预测都当作已接受输出。训练目标、草稿接受率和端到端延迟是三件事，不存在“预测两步就必然快两倍”的推论。
+
 ## R1 的四个阶段，不要把蒸馏算进去
 
 按 [R1 原始报告 §2.3–2.4](https://arxiv.org/html/2501.12948v1#S2.SS3)读，会清楚很多：
@@ -109,10 +172,10 @@ R1-Zero 的规则奖励检查答案准确性和格式；R1 后续不同阶段还
 
 | 选择 | 得到什么 | 付出什么 |
 | --- | --- | --- |
-| MLA | 更小的 KV cache，长上下文 decode 更省 | 实现更复杂，压缩维度成为新瓶颈 |
+| MLA | 更小的逻辑 KV 载荷；紧凑实现可减少缓存读写 | 实现更复杂，实际延迟还取决于 kernel 与并行方式 |
 | Fine-grained MoE | 总容量大、每 token 激活较少 | all-to-all、路由和负载均衡困难 |
 | Multi-token prediction | 更密的训练信号与潜在 decode 收益 | 训练目标和实现更复杂 |
-| Reasoning RL | 可验证任务上的长链推理 | rollout 成本、reward 边界与行为退化风险 |
+| Reasoning RL | 用奖励优化任务表现；长链不等于正确 | rollout 成本、reward 边界与行为退化风险 |
 
 ## 我会怎样使用这个家族
 
@@ -129,6 +192,6 @@ R1-Zero 的规则奖励检查答案准确性和格式；R1 后续不同阶段还
 
 ## 原始资料
 
-- [DeepSeek-V3 Technical Report](https://arxiv.org/abs/2412.19437)
-- [DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning](https://arxiv.org/abs/2501.12948)
-- [DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model](https://arxiv.org/abs/2405.04434)
+- [DeepSeek-V3 Technical Report，v2](https://arxiv.org/abs/2412.19437v2)
+- [DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning，v1](https://arxiv.org/abs/2501.12948v1)
+- [DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model，v5](https://arxiv.org/abs/2405.04434v5)

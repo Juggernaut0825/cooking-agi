@@ -10,7 +10,7 @@ Having a replay buffer does not make a method offline RL. Online off-policy lear
 
 Suppose logs at state A contain only a conservative action, never an aggressive one. A Q-network can assign the aggressive action a high value, and the Bellman maximum can propagate that value backward. This is not evidence of a better policy; the estimate is untested.
 
-More data from the same distribution can reduce estimation variance within covered regions. But repeating the same behavior a million times does not reveal the outcome of an action that behavior never takes. This is a support problem: the target policy needs states or actions absent from the data. Also ask whether observations omit variables affecting both action choice and outcomes.
+More data from the same distribution can reduce estimation variance within covered regions. But repeating the same behavior a million times does not reveal the outcome of an action that behavior never takes. This is a support problem: the target policy needs states or actions outside the behavior distribution's support. An action missing from finite logs need not have zero probability under the behavior policy, but low probabilities and sparse samples can still make estimates unreliable. Also ask whether observations omit variables affecting both action choice and outcomes.
 
 ## OPE evaluates without deploying
 
@@ -29,7 +29,7 @@ $$
 
 This is generally biased at finite sample size but may reduce variance. Clipping weights similarly trades bias for stability.
 
-A useful weight diagnostic is:
+For finite, nonnegative weights with at least one positive weight, a useful diagnostic is:
 
 $$
 {\rm ESS}=\frac{(\sum_iw_i)^2}{\sum_iw_i^2}.
@@ -37,7 +37,7 @@ $$
 
 With 3 trajectory weights $[1,1,8]$, ESS is approximately 1.52, not 3. It warns that a few trajectories may dominate. It does not establish unbiasedness or absence of hidden confounding.
 
-Multiplying every weight by the same positive constant leaves ESS unchanged. Divide by the maximum before sums and squares to avoid overflow or squared-weight underflow. Starting from log-weights, subtract their maximum before exponentiation; rescaling cannot recover weights already rounded to infinity. This fixes numerical evaluation, not missing behavioral coverage.
+Multiplying every weight by the same positive constant leaves ESS unchanged. Divide by the maximum before sums and squares to avoid overflow or squared-weight underflow. Starting from log-weights, subtract their largest finite value before exponentiation; rescaling cannot recover weights that have already overflowed to infinity or all underflowed to zero. If all weights are genuinely zero, ESS and SNIS are undefined, not valid zero-score estimates. This fixes numerical evaluation, not missing behavioral coverage.
 
 ## Calculate weights in a two-action bandit first
 
@@ -50,7 +50,7 @@ Left and right have fixed rewards 1 and 3. The logging policy chooses them with 
 
 The raw mean is 1.2. IS gives $(50+150)/100=2$, the target policy’s true expectation. Right’s reward did not change; ten observations now represent its greater target-policy frequency. These are convenient expected counts; actual finite logs fluctuate.
 
-If the logging policy never goes right, there is no right-action feedback. Adding a small denominator cannot invent those observations. In multistep settings the ratios multiply, and one rare trajectory may dominate the estimate. Inspect support and weight distributions first.
+If the logging policy never goes right, there is no right-action feedback. Adding a small constant to the denominator cannot invent those observations. In multistep settings the ratios multiply, and one rare trajectory may dominate the estimate. Inspect support and weight distributions first.
 
 ## What CQL and IQL try to avoid
 
@@ -86,6 +86,8 @@ $$
 y=r+\gamma(1-d)\mathbb E_{a'\sim\pi(\cdot\mid s')}Q_{\rm old}(s',a').
 $$
 
+Here $d=1$ means true task termination, giving $y=r$. A data-collection time limit is not termination if the original task continues: bootstrap from the final successor $s'$ before the reset, not the new initial state after it.
+
 Unlike FQI, it averages under a fixed policy rather than maximizing over actions. Estimate performance by averaging the fitted Q over initial states and policy actions. This avoids explicit trajectory weights but introduces approximation and extrapolation risks. Missing support does not disappear. Agreement between estimators sharing the same blind spot is not independent validation.
 
 ## A useful evaluation order
@@ -96,4 +98,4 @@ Do not repeatedly select policies on the same logs and report the winning OPE sc
 
 ## Scope of this introduction
 
-This chapter develops support, importance weighting, conservative learning, and in-dataset learning. It does not derive complete OPE confidence bounds or offline-RL convergence theorems. Read further: [CQL](https://arxiv.org/abs/2006.04779) · [IQL](https://arxiv.org/abs/2110.06169). For basic importance weighting, revisit [policy gradients](policy-gradients.en.md).
+This chapter develops support, importance weighting, conservative learning, and in-dataset learning. It does not derive complete OPE confidence bounds or offline-RL convergence theorems. Read further: [CQL, §3.2, Eq. (4)](https://arxiv.org/abs/2006.04779) · [IQL, §§4.1–4.3](https://arxiv.org/abs/2110.06169) · [OPE and weight normalization, §§2–5](https://proceedings.mlr.press/v48/thomasa16.html) · [FQE, §3.2, Algorithm 3](https://proceedings.mlr.press/v97/le19a.html). For basic importance weighting, revisit [policy gradients](policy-gradients.en.md).

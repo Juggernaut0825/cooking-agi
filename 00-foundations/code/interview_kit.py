@@ -12,12 +12,27 @@ import numpy as np
 # 1. softmax
 # --------------------------------------------------------------------------- #
 def softmax(x, axis=-1):
-    # 坑：不减 max 会溢出。logits 到 1000 时 exp(1000) = inf，结果全是 nan。
-    # 为什么减了还对：softmax 对输入平移不变，softmax(x + c) == softmax(x)，
-    # 分子分母同乘 e^c 约掉。所以减 max 是免费的——不改变结果，只改变数值范围。
-    x = x - np.max(x, axis=axis, keepdims=True)
-    e = np.exp(x)
-    return e / np.sum(e, axis=axis, keepdims=True)
+    """Normalize real logits with optional -inf masks in at least float32.
+
+    Preserve float64 inputs. Reject NaN, +inf and entirely masked rows.
+    Max subtraction prevents exponential overflow; tiny probabilities can
+    still underflow, so compute log-probabilities directly when needed.
+    """
+    values = np.asarray(x)
+    if values.dtype.kind not in "biuf":
+        raise ValueError("Expected real logits")
+    converted = values.astype(np.result_type(values.dtype, np.float32), copy=False)
+    if values.dtype.kind in "iu" and any(
+            int(original) != int(floating) for original, floating in zip(values.flat, converted.flat)):
+        raise ValueError("Integer logits must be exactly representable in the computation dtype")
+    values = converted
+    if np.any(np.isnan(values) | np.isposinf(values)):
+        raise ValueError("Logits must be finite or -inf for masked positions")
+    if np.any(np.all(np.isneginf(values), axis=axis)):
+        raise ValueError("Each query must have at least one allowed key")
+    shifted = values - np.max(values, axis=axis, keepdims=True)
+    weights = np.exp(shifted)
+    return weights / np.sum(weights, axis=axis, keepdims=True)
 
 
 # --------------------------------------------------------------------------- #
@@ -96,23 +111,45 @@ def decode_with_kv_cache(steps, d, seed=0):
 # 6. top-k / top-p 采样
 # --------------------------------------------------------------------------- #
 def filter_logits(logits, top_k=None, top_p=None, temperature=1.0):
-    """返回过滤后的 logits（被剔除的位置为 -inf）。logits: (V,)"""
-    logits = logits / temperature
+    """Filter a real, nonempty (V,) vector; ties use ascending token ID.
+
+    Apply positive temperature, exact-count top-k, then top-p on the
+    surviving distribution. Preserve existing -inf masks and return at
+    least float32. top_p=1 disables nucleus truncation.
+    """
+    values = np.asarray(logits)
+    if values.ndim != 1 or not values.size or values.dtype.kind not in "biuf":
+        raise ValueError("Expected a nonempty real logit vector")
+    if not np.isfinite(temperature) or temperature <= 0:
+        raise ValueError("Expected finite positive temperature")
+    if top_k is not None and (
+            isinstance(top_k, (bool, np.bool_)) or not isinstance(top_k, (int, np.integer))
+            or not 1 <= top_k <= values.size):
+        raise ValueError("Expected integer top_k between 1 and vocabulary size")
+    if top_p is not None and not 0 < top_p <= 1:
+        raise ValueError("Expected 0 < top_p <= 1")
+    computation_dtype = np.result_type(values.dtype, np.float32)
+    limits = np.finfo(computation_dtype)
+    if temperature < float(limits.tiny) or temperature > float(limits.max):
+        computation_dtype = np.result_type(computation_dtype, np.float64)
+    converted = values.astype(computation_dtype, copy=True)
+    if values.dtype.kind in "iu" and any(
+            int(original) != int(floating) for original, floating in zip(values.flat, converted.flat)):
+        raise ValueError("Integer logits must be exactly representable in the computation dtype")
+    if np.any(np.isnan(converted) | np.isposinf(converted)) or not np.isfinite(converted).any():
+        raise ValueError("Expected finite logits with optional -inf masks")
+    with np.errstate(over="ignore", under="ignore"):
+        scaled = (converted / temperature if temperature >= 1
+                  else (converted - converted.max()) / temperature)
     if top_k is not None:
-        kth = np.partition(logits, -top_k)[-top_k]
-        logits = np.where(logits < kth, -np.inf, logits)
-    if top_p is not None:
-        order = np.argsort(-logits)                  # 降序
-        probs = softmax(logits)[order]
-        cum = np.cumsum(probs)
-        # 坑：保留**跨过阈值的那一个**，且至少保留 1 个。
-        # 写成 cum <= p 会在最大概率就 > p 时把所有 token 全删光。
-        keep = cum - probs < top_p
-        keep[0] = True
-        drop = order[~keep]
-        logits = logits.copy()
-        logits[drop] = -np.inf
-    return logits
+        ordered_ids = np.argsort(-scaled, kind="stable")
+        scaled[ordered_ids[top_k:]] = -np.inf
+    if top_p is not None and top_p < 1:
+        ordered_ids = np.argsort(-scaled, kind="stable")
+        cumulative = np.cumsum(softmax(scaled)[ordered_ids], dtype=np.float64)
+        cutoff = np.searchsorted(cumulative, top_p, side="left") + 1
+        scaled[ordered_ids[cutoff:]] = -np.inf
+    return scaled
 
 
 # --------------------------------------------------------------------------- #

@@ -37,7 +37,7 @@ class PolicyGradientDocumentationTests(unittest.TestCase):
         sections = {
             CHAPTERS[0]: ("zero-loss-gradient", "zero-loss-assumptions"),
             CHAPTERS[1]: ("clipped-token-gradients", "other-gradient-paths"),
-            CHAPTERS[2]: ("grpo-data-lifecycle", "stale-rollout-checks"),
+            CHAPTERS[2]: ("grpo-data-lifecycle", "stale-rollout-checks", "prefix-distribution"),
         }
         for chapter, anchors in sections.items():
             for suffix in (".md", ".en.md"):
@@ -46,6 +46,54 @@ class PolicyGradientDocumentationTests(unittest.TestCase):
                     self.assertIn("{#" + anchor + "}", source)
                 self.assertEqual(source.count("<details"), source.count("</details>"))
                 self.assertNotRegex(source, r"<details(?:\s[^>]*)?(?<!\")>")
+
+    def test_single_draw_importance_estimate_is_unbiased_but_variable(self):
+        from fractions import Fraction
+        behavior = (Fraction(9, 10), Fraction(1, 10))
+        target = (Fraction(1, 2), Fraction(1, 2))
+        rewards = (1, 3)
+        estimates = [probability / old * reward for probability, old, reward in zip(target, behavior, rewards)]
+        expected = sum(old * estimate for old, estimate in zip(behavior, estimates))
+        self.assertEqual(expected, 2)
+        self.assertTrue(all(estimate != expected for estimate in estimates))
+        self.assertEqual(sum(old * (estimate - expected) ** 2 for old, estimate in zip(behavior, estimates)), Fraction(169, 9))
+
+    def test_prefix_shift_example_executes_without_torch(self):
+        for suffix in (".md", ".en.md"):
+            namespace = {}
+            source = (ROOT / (CHAPTERS[2] + suffix)).read_text()
+            for snippet in re.findall(r"```python\n(.*?)```", source, re.S):
+                exec(compile(snippet, CHAPTERS[2], "exec"), namespace)
+            for name, expected in (("old_return", .35), ("token_only_return", .35),
+                                   ("full_is_return", .65), ("target_return", .65)):
+                self.assertAlmostEqual(namespace[name], expected)
+
+    def test_prefix_weighting_with_changing_conditionals(self):
+        from fractions import Fraction
+        from itertools import product
+        old_prefix = (Fraction(4, 5), Fraction(1, 5))
+        old_success = (Fraction(1, 4), Fraction(3, 4))
+        for target_first in (Fraction(1, 5), Fraction(1, 2), Fraction(4, 5)):
+            target_prefix = (target_first, 1 - target_first)
+            for target_success in product((Fraction(1, 4), Fraction(1, 2), Fraction(3, 4)), repeat=2):
+                full_estimate = conditional_estimate = target_mean = 0
+                total_old = total_new = total_weight = 0
+                for prefix, success in product(range(2), (False, True)):
+                    old_conditional = old_success[prefix] if success else 1 - old_success[prefix]
+                    new_conditional = target_success[prefix] if success else 1 - target_success[prefix]
+                    old_path = old_prefix[prefix] * old_conditional
+                    new_path = target_prefix[prefix] * new_conditional
+                    first_ratio = target_prefix[prefix] / old_prefix[prefix]
+                    second_ratio = new_conditional / old_conditional
+                    full_estimate += old_path * first_ratio * second_ratio * success
+                    conditional_estimate += old_path * second_ratio * success
+                    target_mean += new_path * success
+                    total_old += old_path
+                    total_new += new_path
+                    total_weight += old_path * first_ratio * second_ratio
+                self.assertEqual((total_old, total_new, total_weight), (1, 1, 1))
+                self.assertEqual(full_estimate, target_mean)
+                self.assertEqual(conditional_estimate, sum(old * success for old, success in zip(old_prefix, target_success)))
 
 
 @unittest.skipUnless(torch is not None, "PyTorch is unavailable; tensor examples are not executed")

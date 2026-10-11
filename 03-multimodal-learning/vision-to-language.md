@@ -41,7 +41,9 @@ flowchart TD
 
 ## 训练时，loss 算在哪里
 
-在这个回答生成的教学设置中，输入含图片、问题和真实答案前缀；目标是预测答案中的下一个 token。视觉位置、问题和 padding 不直接计入 answer-only loss，但仍可能影响答案，梯度也可能经过它们流向可训练模块。
+在这个回答生成的教学设置中，输入含图片、问题和真实答案前缀；目标是预测答案中的下一个 token。视觉位置和问题不直接计入 answer-only loss，但它们是有效上下文，仍会影响答案，梯度也可能经过它们流向可训练模块。
+
+Padding 要另看：它只是为了把样本补齐，应同时排除它的 loss，并阻止有效答案位置通过 attention 读到它。**Loss mask 决定哪些预测算分，attention mask 决定可以看哪些输入；二者不能互相替代。**正确屏蔽后，padding 输入位置不应成为答案的信息或梯度路径。这里说的是这个输入位置，不是说共享的 embedding / output 参数永远不会从其他位置收到梯度。[PyTorch 的 padding mask 说明](https://docs.pytorch.org/docs/2.8/generated/torch.nn.MultiheadAttention.html)
 
 $$L=-\frac{1}{M}\sum_{t\in\mathcal A}\log p_\theta(a_t\mid I,q,a_{<t}),\qquad M=|\mathcal A|.$$
 

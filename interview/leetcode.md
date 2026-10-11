@@ -68,7 +68,7 @@
 
 ## 4. 代码可以直接跑
 
-核心模板都在 [patterns.py](code/patterns.py)，使用 Python 3.10+，不依赖第三方库。在仓库根目录运行：
+核心模板在 [patterns.py](code/patterns.py) 和 [deeper_patterns.py](code/deeper_patterns.py)，用 Python 3.10+ 就能运行，不依赖第三方库。要连同下面的测试一起跑，请用 **Python 3.11+**：测试会读取 TOML 配置，用到 3.11 才加入标准库的 [tomllib](https://docs.python.org/3.11/library/tomllib.html)。在仓库根目录运行：
 
 ```bash
 python interview/code/patterns.py

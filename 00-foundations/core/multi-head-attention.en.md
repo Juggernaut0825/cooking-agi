@@ -185,6 +185,39 @@ This concerns **the gradient path through attention**, not every gradient in the
 
 Use the **head dimension $d_k$**, not the full model width $d_\text{model}$. If a model also uses QK normalization or a learned temperature, follow its actual formula. Scaling addresses one source of trouble; it does not guarantee stable training.
 
+### Writing backward: the other position matters too {#softmax-backward}
+
+Take two equal attention weights, $\alpha=(0.5,0.5)$, and let the loss be the first weight. Raising the first score increases the loss. Raising the second steals weight from the first and lowers the loss. The score gradients are therefore $(0.25,-0.25)$, not $(0.25,0)$.
+
+<details markdown="1">
+<summary>Turn this into a backward rule for any row</summary>
+
+Let $g_i=\partial\ell/\partial\alpha_i$ be the gradient arriving from downstream computation. Multiplying it by the preceding Jacobian gives:
+
+$$
+\frac{\partial\ell}{\partial z_j}
+=\alpha_j\left(g_j-\sum_i\alpha_i g_i\right).
+$$
+
+`g * alpha * (1 - alpha)` retains only the diagonal terms and misses interactions between positions. [FlashAttention Appendix B.2](https://arxiv.org/html/2205.14135v2#A2.SS2) also uses the full softmax backward in its attention derivation. This NumPy example handles a row without dropout; it is not a FlashAttention kernel.
+
+```python
+import numpy as np
+
+def softmax_backward(probabilities, upstream):
+    weighted_mean = np.sum(probabilities * upstream, axis=-1, keepdims=True)
+    return probabilities * (upstream - weighted_mean)
+
+probabilities = np.array([0.5, 0.5])
+assert np.allclose(softmax_backward(probabilities, np.array([1.0, 0.0])),
+                   [0.25, -0.25])
+assert np.allclose(softmax_backward(probabilities, np.ones(2)), [0.0, 0.0])
+```
+
+The second check is easy to remember: if the loss sums all weights, it is always one, so its gradient is zero. Keeping only diagonal terms would incorrectly return $(0.25,0.25)$. Inputs must be normalized along the same axis and match the upstream gradient's shape. An all-masked row is still outside this example's domain.
+
+</details>
+
 ## Why use multiple heads: the goal is not more dimensions {#why-use-multiple-heads-the-goal-is-not-more-dimensions}
 
 $$
@@ -300,22 +333,33 @@ Check these six details before trying to diagnose a mistake from the final loss:
 
 **Check the mask with two scores.** Softmax of `[0, 0]` is `[0.5, 0.5]`. Allowing only the first position gives `[1, 0]` when masked before softmax. Zeroing the second weight afterwards gives `[0.5, 0]`, shrinking the output. Dividing again by the remaining weight sum is mathematically equivalent to `[1, 0]`, but that sum can underflow in finite precision. Masking before softmax avoids this issue. The teaching code rejects entirely masked rows instead of silently producing NaNs.
 
-## Experiment: verify three equivalent implementations {#experiment-verify-three-equivalent-implementations}
+## Experiment: check the handwritten version against the library {#experiment-verify-three-equivalent-implementations}
 
 <details class="code-drop" markdown="1">
 <summary><b>From scratch</b> · pure NumPy, no framework</summary>
 
-This is the version you should be able to write from memory on a whiteboard.
+Start with Q/K/V, masking, and splitting and merging heads. As in the full script, softmax computes and returns probabilities in at least FP32, avoiding FP16 summation overflow on long rows. Negative infinity marks blocked positions; NaN, positive infinity, and entirely blocked rows are rejected.
 
 ```python
 import numpy as np
 
-def softmax(x, axis=-1):
-    if np.any(np.all(np.isneginf(x), axis=axis)):
+def softmax(logits, axis=-1):
+    values = np.asarray(logits)
+    if values.dtype.kind not in "biuf":
+        raise ValueError("Expected real logits")
+    converted = values.astype(np.result_type(values.dtype, np.float32), copy=False)
+    if values.dtype.kind in "iu" and any(
+            int(original) != int(floating) for original, floating in zip(values.flat, converted.flat)):
+        raise ValueError("Integer logits must be exactly representable in the computation dtype")
+    values = converted
+    if np.any(np.isnan(values) | np.isposinf(values)):
+        raise ValueError("Logits must be finite or -inf for masked positions")
+    if np.any(np.all(np.isneginf(values), axis=axis)):
         raise ValueError("Each query must have at least one allowed key")
-    x = x - np.max(x, axis=axis, keepdims=True)   # numerical stability: subtract the max first
-    e = np.exp(x)
-    return e / np.sum(e, axis=axis, keepdims=True)
+    shifted = values - np.max(values, axis=axis, keepdims=True)
+    weights = np.exp(shifted)
+    return weights / np.sum(weights, axis=axis, keepdims=True)
+
 
 def attention(q, k, v, mask=None):
     """q,k,v: (B, H, T, d_head)   mask: True = blocked"""
@@ -416,6 +460,75 @@ It returns per-head outputs, not attention weights; head merging and output proj
 ```
 
 Getting the from-scratch version to match `nn.MultiheadAttention` matters more than merely "it runs". When they disagree, locating the difference is itself an effective debugging exercise. `nn.MultiheadAttention` stores $W_Q, W_K, W_V$ as one concatenated `in_proj_weight`, while `nn.Linear` stores $(out, in)$, so moving weights to NumPy needs a transpose.
+
+One matching output is a useful start, not a complete migration test. Check these next:
+
+| Check | Easy mistake to miss |
+| --- | --- |
+| Parameters | With `bias=True`, copy the Q/K/V and output biases too. Weights alone do not define the same model. |
+| Numerical setup | Match the module's device and dtype. CPU float64 helps isolate mistakes before checking errors at the intended precision. |
+| Allowed positions | This example and `nn.MultiheadAttention` use boolean `True` to block a key; SDPA uses the opposite meaning. |
+| Gradients | Compare input gradients under the same scalar loss. For the handwritten and SDPA paths, also compare gradients of their shared parameters. |
+
+The script's `library_version` creates a separate module and copies the parameters for comparison. Its parameter gradients do not flow back to the original `mha`. Tests cover bias, float32 / float64, per-head masks, and gradients across the three PyTorch paths; the NumPy comparison remains a small bias-free fixture. Dropout is off throughout. These are correctness checks, not speed or memory benchmarks. See the [PyTorch 2.8 MultiheadAttention API](https://docs.pytorch.org/docs/2.8/generated/torch.nn.MultiheadAttention.html) for its conventions.
+
+## Where does the causal mask start with a KV cache? {#cached-causal-mask}
+
+The earlier mask was square: five queries against five keys. Now suppose positions 0, 1, and 2 are cached, and we append positions 3 and 4 together. Only two queries are new, but they need access to five keys.
+
+The rule is still “do not read the future.” The difference is that **query row 0 now represents position 3**, not position 0 in the full sequence.
+
+| New query position | key 0 | key 1 | key 2 | key 3 | key 4 |
+| --- | --- | --- | --- | --- | --- |
+| 3 | Allow | Allow | Allow | Allow | Block |
+| 4 | Allow | Allow | Allow | Allow | Allow |
+
+To make the error visible, set all Q/K scores to zero and use values `[10, 20, 30, 40, 50]`. Attention becomes a plain average of the allowed values.
+
+<figure class="worked-update worked-update--pairs" lang="en" id="cached-mask-output">
+  <figcaption>With a cached prefix, query row number is not sequence position.</figcaption>
+  <ol>
+    <li><small>Aligned to actual positions</small><strong>25, then 30</strong><span>Position 3 reads the first four values; position 4 reads all five.</span></li>
+    <li><small>Wrong upper-left triangle</small><strong>10, then 15</strong><span>The two rows read only one and two values, losing valid history.</span></li>
+  </ol>
+</figure>
+
+In PyTorch 2.8, `F.scaled_dot_product_attention(..., is_causal=True)` uses **upper-left alignment** for a non-square mask. It does not infer that the queries belong at the end of the KV sequence. Here, construct `attn_mask` from actual positions and leave `is_causal` off. This is an API-specific convention, not a claim that every attention kernel uses the same alignment. [SDPA documentation](https://docs.pytorch.org/docs/2.8/generated/torch.nn.functional.scaled_dot_product_attention.html)
+
+<details class="code-drop" markdown="1">
+<summary>Check the four numbers in PyTorch</summary>
+
+```python
+import torch
+import torch.nn.functional as F
+
+def cached_attention_example():
+    query = torch.zeros(1, 1, 2, 2, dtype=torch.float64)
+    key = torch.zeros(1, 1, 5, 2, dtype=torch.float64)
+    value = torch.tensor([10., 20., 30., 40., 50.], dtype=torch.float64)
+    value = value.view(1, 1, 5, 1)
+    query_positions = torch.tensor([3, 4])
+    key_positions = torch.arange(5)
+    allowed = key_positions[None, :] <= query_positions[:, None]
+    aligned = F.scaled_dot_product_attention(
+        query, key, value, attn_mask=allowed, dropout_p=0.0,
+    )
+    upper_left = F.scaled_dot_product_attention(
+        query, key, value, is_causal=True, dropout_p=0.0,
+    )
+    return aligned, upper_left, allowed
+
+aligned, upper_left, allowed = cached_attention_example()
+torch.testing.assert_close(aligned.flatten(), torch.tensor([25., 30.], dtype=torch.float64))
+torch.testing.assert_close(upper_left.flatten(), torch.tensor([10., 15.], dtype=torch.float64))
+print(aligned.flatten().tolist(), upper_left.flatten().tolist())
+```
+
+</details>
+
+If only position 4 is new and all five supplied keys are valid, there is no future key to block, so no causal mask is needed. **Padding, sliding windows, or different sequence lengths in a batch can invalidate that shortcut.** Also, functional SDPA takes dropout from `dropout_p`; calling `eval()` on an enclosing module does not automatically change that argument to zero.
+
+This example isolates the mask, not an entire decoder. A full model also needs correct RoPE positions, cache identity, and matching logits with and without caching. Continue in [KV cache](../deep-dives/kv-cache-and-inference.en.md).
 
 ## Common interview questions {#common-interview-questions}
 

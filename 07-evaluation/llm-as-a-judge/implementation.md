@@ -80,7 +80,9 @@ Demo 的 coverage 分母是**所有输入 case**，其余错误也显示出来�
 <details markdown="1">
 <summary>练习：把一个不存在的 evidence ID 加进示例输出，会怎样？</summary>
 
-它应进入 invalid，而不是因为原始 verdict 写着 pass 就放行。再试把 verdict 改成 unknown：这次是合法弃权，不是 schema 错误。这两个路径要能在报告里区分出来。
+它应进入 `invalid`，不能因为 verdict 写着 `pass` 就放行。接着只把 verdict 改成 `unknown`：结果仍是 `invalid`，因为不存在的引用还在。
+
+最后把 `evidence_ids` 清空为 `[]`，保留 `unknown` 和非空的 reason，其余字段保持有效。这才是合法弃权。报告要分清「证据不足，暂不判断」和「输出不符合要求」；写上 unknown 并不能跳过格式和引用检查。
 
 </details>
 

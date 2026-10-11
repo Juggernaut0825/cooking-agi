@@ -65,6 +65,45 @@ Why can this work? Under ignorable selection, conditional on recorded context an
 
 “Used IPW” does not mean “removed bias.” When its conditions are unavailable, explaining the data gap is often more useful than forcing an estimator onto it.
 
+### Unbiased does not mean accurate on every log {#weight-variance}
+
+Take one opportunity whose potential outcome is fixed at $Y=1$: it would receive a click if exposed. Exposure is a coin flip with probability $e$. Its contribution to the weighted total, $Z=EY/e$, has just two possible values:
+
+| Exposure probability | Contribution when unobserved | Contribution when observed | Mean | Variance |
+| --- | --- | --- | --- | --- |
+| $e=0.5$ | 0 with probability 0.5 | 2 with probability 0.5 | 1 | 1 |
+| $e=0.1$ | 0 with probability 0.9 | 10 with probability 0.1 | 1 | 9 |
+
+Both rows are unbiased. The second is much more likely to alternate between seeing nothing and receiving a contribution of 10. **Unbiasedness concerns the average over repeated samples, not the accuracy of every log.** An IPW estimate of a proportion can even exceed 1 in a finite sample; it is not a per-example predicted probability.
+
+<details markdown="1">
+<summary>Calculate the mean and variance</summary>
+
+With $Y=1$ fixed, $\mathbb E[Z]=e(1/e)=1$ and $\mathbb E[Z^2]=e(1/e^2)=1/e$. Thus $\operatorname{Var}(Z)=1/e-1$. Enumerating both outcomes gives an exact check, without relying on a random simulation:
+
+```python
+from fractions import Fraction
+
+def contribution_moments(propensity, floor=Fraction(0)):
+    if not 0 < propensity <= 1 or not 0 <= floor <= 1:
+        raise ValueError("propensity must be positive; probabilities cannot exceed one")
+    weighted_value = 1 / max(propensity, floor)
+    outcomes = [(1 - propensity, 0), (propensity, weighted_value)]
+    mean = sum(probability * value for probability, value in outcomes)
+    variance = sum(probability * (value - mean) ** 2 for probability, value in outcomes)
+    return mean, variance
+
+assert contribution_moments(Fraction(1, 2)) == (1, 1)
+assert contribution_moments(Fraction(1, 10)) == (1, 9)
+assert contribution_moments(Fraction(1, 10), Fraction(1, 4)) == (
+    Fraction(2, 5), Fraction(36, 25)
+)
+```
+
+The last assertion caps the weight at 4 instead of 10. Variance falls to 1.44, but the mean falls from 1 to 0.4. Averaging $N$ independent, identically distributed opportunities divides the single-opportunity variance by $N$; repeated behavior from the same user may be correlated. This calculation illustrates the cost of weighting, not evidence that a real log satisfies random exposure.
+
+</details>
+
 ## Make labels a checkable contract
 
 Suppose the goal is learning which technical articles people want to finish. Specify at least:
@@ -95,7 +134,7 @@ $$
 
 This is a design to test, not a conclusion. Sparse tasks may learn poorly, and objectives can conflict. Inspect coverage, loss scales, and gradient effects; weights need validation rather than arbitrary values in an architecture diagram.
 
-A sampled contrastive negative is also a training construction. It asks the model to distinguish positives within a candidate set, not proves that every unlabeled candidate is irrelevant. A hard negative is difficult for the current model; it isn't necessarily a verified negative.
+A sampled contrastive negative is also a training construction. It asks the model to distinguish positives within a candidate set; it does not establish that every unlabeled candidate is irrelevant. A hard negative is difficult for the current model; it isn't necessarily a verified negative.
 
 ## What happens to missing labels in multi-task training?
 

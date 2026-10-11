@@ -4,6 +4,8 @@
 
 This page distinguishes types of memory. [Writing, updating, and forgetting](memory-lifecycle.en.md) follows a timeline through expiration, conflicts, and deletion.
 
+For a concrete example, start with [scheduling preferences during a trip](memory-lifecycle.en.md#two-clocks). For experiments, see [memory evaluation and public benchmarks](memory-lifecycle.en.md#memory-evaluation).
+
 ## Storing more is not always remembering better
 
 Storing a conversation is easy. The harder part is finding **applicable information with clear provenance**, and updating it when a user changes their mind rather than treating old statements as permanent facts.

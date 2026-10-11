@@ -96,6 +96,8 @@ Final-outcome checks are straightforward to integrate, but do not locate which s
 
 The two can be combined: tests check the final result while process signals guide search. Evaluate whether the extra signal improves equal-budget success, rather than merely increasing process scores.
 
+Check where a paper's improvement occurs. [Let's Verify Step by Step, §2.1](https://arxiv.org/html/2305.20050v1#S2.SS1) keeps the generator fixed and compares reward models at selecting answers from multiple candidates; it does not update the generator with RL. Better selection with process scores is therefore not, by itself, evidence that training a policy with process rewards would improve it. That requires a separate training and evaluation comparison.
+
 ## Verifiability is a spectrum, not a binary {#verifiability-is-a-spectrum-not-a-binary}
 
 It is more useful to ask exactly what each check establishes:

@@ -123,7 +123,9 @@ The auxiliary and language-model losses update the same router scores, but do no
 
 1. each expert has a bias $b_i$ that is added to its score **only when choosing the top k**;
 2. gate weights use the original affinity scores after selection; the bias neither enters that formula directly nor updates by backpropagation, but changing the selected set can change outputs and task gradients;
-3. after every step an overloaded expert's $b_i$ goes down by $\gamma$ and an idle one's goes up by $\gamma$, with $\gamma = 0.001$ for the first 14.3T tokens and 0 for the last 500B.
+3. after every step, an expert above the target average load has its $b_i$ reduced by $\gamma$; one below the target has it increased by $\gamma$. The report uses $\gamma = 0.001$ for the first 14.3T tokens and 0 for the last 500B.
+
+Underloaded does not mean idle. If two experts receive `[6, 2]` tokens, their target is 4 each. The second expert is working but still gets a higher bias to encourage future selection. This adjusts subsequent routing; it does not guarantee an even split at every step. See [DeepSeek-V3 §2.1.2](https://arxiv.org/html/2412.19437v1#S2.SS1.SSS2).
 
 It is not entirely free of balance losses: DeepSeek-V3 keeps a very small sequence-wise balance loss ($\alpha = 0.0001$) to prevent extreme imbalance inside a single sequence.
 

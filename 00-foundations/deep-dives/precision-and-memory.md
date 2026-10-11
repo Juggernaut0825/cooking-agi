@@ -33,11 +33,79 @@ assert bfloat_near_one == 1.0
 
 矩阵乘法的输入、乘法、中间累加和输出存储也可能采用不同精度。不能看见某个张量是 BF16，就断定整个训练“都在 BF16 算”。
 
+### 梯度有数值，为什么权重没动？ {#rounded-away-update}
+
+假设一个权重从 1 开始，每步减去 0.001。这次更新量在 BF16 中并不是 0，但 `1 - 0.001` 写回 BF16 时会舍入成 1。在 1 的下方，最近的 BF16 数是 0.99609375；0.999 离 1 更近。
+
+如果每一步都这样写回，同样的小更新不会自动攒起来。下面固定减去 0.001，重复 100 次；不引入学习率调度、动量或真实训练数据，只看存储舍入：
+
+<figure class="worked-update worked-update--pairs" lang="zh-CN" id="precision-update-paths">
+  <figcaption>同样减 100 次，保留更新的精度不同，结果就不同。</figcaption>
+  <ol>
+    <li><small>每步写回 BF16</small><strong>仍然是 1</strong><span>每次的小变化都被舍入掉，下一步又从 1 开始。</span></li>
+    <li><small>在 FP32 中持续更新</small><strong>约为 0.9</strong><span>小变化留下来了；最后转成 BF16，读到 0.8984375。</span></li>
+  </ol>
+</figure>
+
+<details class="code-drop" markdown="1">
+<summary>用 CPU 上的 PyTorch 验证</summary>
+
+```python
+import torch
+
+def rounded_update_example():
+    low_precision = torch.tensor(1.0, dtype=torch.bfloat16)
+    full_precision = torch.tensor(1.0, dtype=torch.float32)
+    for step in range(100):
+        low_precision.sub_(0.001)
+        full_precision.sub_(0.001)
+    return low_precision.item(), full_precision.item(), full_precision.to(torch.bfloat16).item()
+
+low_result, full_result, rounded_result = rounded_update_example()
+assert torch.tensor(0.001, dtype=torch.bfloat16).item() != 0.0
+assert low_result == 1.0
+assert abs(full_result - 0.9) < 2e-6
+assert rounded_result == 0.8984375
+```
+
+</details>
+
+这和“梯度太小，存下来就变成 0”是两种问题。Loss scaling 在更新前要 unscale，不能靠它永久放大步长来绕过权重舍入。保留 FP32 参数或 master weights，是为了让小更新有地方累积；不是说所有低精度训练都必须保留同一套副本。[Mixed Precision Training §3.1–3.2](https://arxiv.org/html/1710.03740v3#S3.SS1)分别讨论了权重更新精度与梯度缩放；上面是本站的 BF16 算例，不是复现该论文的 FP16 实验。
+
 ## Autocast 不是把模型全部转成 FP16
 
 `model.half()` 改的是模型浮点参数与 buffer 的存储 dtype；`autocast` 则按算子选择计算精度。一次 forward 中，矩阵乘法与某些归约可能采用不同精度。Backward 也不是统一切回 FP32，而是跟随相应前向操作选用的类型。
 
-所以排查问题时，要分别看参数、激活、梯度与累加的 dtype。`state_dict()` 保存的是模型状态，不会因为开过 AMP 就自动把权重转换成 FP32。[PyTorch AMP 示例](https://docs.pytorch.org/docs/stable/notes/amp_examples.html)把 autocast 与 gradient scaling 分开使用：前者选精度，后者处理梯度的数值范围。
+所以排查问题时，要分别看参数、激活、梯度与累加的 dtype。`state_dict()` 保存的是模型状态，不会因为开过 AMP 就自动把权重转换成 FP32。[PyTorch 2.8 AMP 示例](https://docs.pytorch.org/docs/2.8/notes/amp_examples.html)把 autocast 与 gradient scaling 分开使用：前者选精度，后者处理梯度的数值范围。
+
+例如保留 FP32 的线性层，在 CPU BF16 autocast 里计算 `[3, 4] @ [1, 2] = 11`，再对目标 10 算平方损失。这次运行中，参数是 FP32、线性层输出是 BF16；把输出显式转回 FP32 算 loss，反向后参数的 `.grad` 也是 FP32。**梯度存成 FP32，不代表前面的低精度运算没发生过舍入。**
+
+<details class="code-drop" markdown="1">
+<summary>把各处 dtype 打印出来</summary>
+
+```python
+import torch
+
+def autocast_dtype_example():
+    layer = torch.nn.Linear(2, 1, bias=False, dtype=torch.float32)
+    with torch.no_grad():
+        layer.weight.copy_(torch.tensor([[1.0, 2.0]], dtype=torch.float32))
+    with torch.autocast("cpu", dtype=torch.bfloat16):
+        prediction = layer(torch.tensor([[3.0, 4.0]], dtype=torch.float32))
+        loss = (prediction.float() - 10.0).square().mean()
+    loss.backward()
+    dtypes = (layer.weight.dtype, prediction.dtype, loss.dtype, layer.weight.grad.dtype)
+    return dtypes, layer.weight.grad
+
+dtypes, gradient = autocast_dtype_example()
+assert dtypes == (torch.float32, torch.bfloat16, torch.float32, torch.float32)
+torch.testing.assert_close(gradient, torch.tensor([[6.0, 8.0]], dtype=torch.float32))
+print(dtypes)
+```
+
+</details>
+
+这是 PyTorch 2.8.0 / CPU 的接口检查，不是 GPU 速度实验。这里 FP32 参数本身就保存更新，不需要再算一份相同用途的 FP32 master copy；如果换成低精度参数加独立 master weights 的实现，后面的显存账也要跟着改。更多算子的选择规则见 [AMP 文档](https://docs.pytorch.org/docs/2.8/amp.html)，不要把这一个线性层的结果推广成所有算子的 dtype 规则。
 
 ## Loss scaling 在救什么？
 
@@ -52,7 +120,7 @@ forward → 缩放 loss → backward（完成所有累积）
         → unscale → gradient clipping → optimizer step → 更新 scale
 ```
 
-不能先裁剪放大后的梯度，再按原来的阈值解释它。一个累积窗口中也不能随意改变 scale，否则累积的梯度不在同一尺度。[PyTorch AMP 示例](https://docs.pytorch.org/docs/stable/notes/amp_examples.html)说明了这些操作的顺序。
+不能先裁剪放大后的梯度，再按原来的阈值解释它。一个累积窗口中也不能随意改变 scale，否则累积的梯度不在同一尺度。[PyTorch 2.8 AMP 示例](https://docs.pytorch.org/docs/2.8/notes/amp_examples.html)说明了这些操作的顺序。
 
 拿一个标量梯度算一次：真实梯度为 0.25，scale 为 8，反向得到 2；裁剪阈值为 0.5。正确顺序得到 0.25，不需要裁剪。若先把 2 裁成 0.5，再除以 8，就只剩 0.0625，无意间把更新缩小了 4 倍。
 
@@ -148,6 +216,16 @@ assert sum(adapter_state.values()) == 2_160_000_000
 
 这个例子想说明：**只看模型刚加载后的占用，会漏掉还没创建的状态。** 检查 GPU 显存时，至少要经过一次完整更新，也要试代表性的长序列。`element_size()` 能帮你核对 dtype，但 view、共享权重和扁平 buffer 会让简单相加重复计数。
 
+如果把 AdamW 换成 SGD，账也会变。仍用上面的 100 个 FP32 参数，第一次更新之后：
+
+| Optimizer 配置 | 额外的 optimizer tensor 存储 |
+| --- | ---: |
+| SGD，`momentum=0` | 0 B |
+| SGD，`momentum=0.9` | 400 B，保存一份 momentum buffer |
+| AdamW，默认非 AMSGrad | 804 B，两份 moments 和 step |
+
+这只是在同一个 CPU 实现里数状态，不包含权重和梯度，也不能当 GPU 峰值。**SGD 不一定有动量；Adam 的 moments 也不是梯度的来源。** 先由 backward 得到梯度，再用梯度更新 moments，最后决定参数怎么走。可对照 [SGD](https://docs.pytorch.org/docs/2.8/generated/torch.optim.SGD.html) 和 [Adam](https://docs.pytorch.org/docs/2.8/generated/torch.optim.Adam.html) 的更新顺序。换 dtype、启用 AMSGrad 或换成分片 optimizer，都要重新记账，不能固定说“训练等于推理显存的几倍”。
+
 ### 把状态分片后，每卡要存多少？ {#sharded-state}
 
 普通数据并行每卡保留模型副本，不能把总数直接除以设备数。沿用上面 16 GB 的假设，以 8 个 rank 为例，只计算均匀分片后、每卡持有的状态：
@@ -183,7 +261,56 @@ assert sum(adapter_state.values()) == 2_160_000_000
 
 ## Checkpointing：不保存的中间量，反向时重算
 
-这里说的是 **activation checkpointing**，不是往磁盘保存训练进度。
+这里说的是 **activation checkpointing**（也常叫 gradient checkpointing），不是往磁盘[保存训练进度](../../practice/post-training/checkpoint-and-resume.md)。Q、K、V 等是中间张量；只有选定保存与重算策略后，才谈得上哪些是检查点边界，并不是每个中间量都叫 checkpoint。
+
+### 不留中间结果，梯度从哪里来？ {#recompute-example}
+
+只看两次运算：$h=wx$，$\ell=h^2$。令 $x=2$、$w=3$，前向得到 $h=6$、$\ell=36$。反向求权重梯度时，要用到刚才的 $h$：
+
+$$
+\frac{\partial\ell}{\partial w}=2hx=24.
+$$
+
+<figure class="worked-update worked-update--pairs" lang="zh-CN">
+<ol>
+<li><small>保留</small><strong>把 h = 6 留到反向</strong><span>需要时直接读取，不再做这次乘法。</span></li>
+<li><small>重算</small><strong>用原来的 x 和 w 再算 h</strong><span>2 × 3 仍然得到 6，所以梯度还是 24。</span></li>
+</ol>
+<figcaption>改变的是拿到中间结果的方式，不是把这条梯度丢掉。一个标量没有省显存的实际意义，只用于说明机制。</figcaption>
+</figure>
+
+“原来的”很重要：若反向前擅自把权重改成 4，重算会得到 $h=8$，已经不是那次前向了。真实代码也不能在重算区域里随意修改全局变量、更新统计量或发送外部请求。默认的 determinism check 不会逐元素证明结果相同；仍要比较数值与梯度。[PyTorch 2.8 的说明](https://docs.pytorch.org/docs/2.8/checkpoint.html)列出了重算的限制。
+
+<details markdown="1">
+<summary>在 CPU 上对照普通前向与重算</summary>
+
+```python
+import torch
+from torch.utils.checkpoint import checkpoint
+
+def squared_product(features, weight):
+    hidden = features * weight
+    return hidden.square().sum()
+
+def checkpoint_example(use_checkpoint):
+    features = torch.tensor([2.0], dtype=torch.float64, requires_grad=True)
+    weight = torch.tensor([3.0], dtype=torch.float64, requires_grad=True)
+    if use_checkpoint:
+        loss = checkpoint(squared_product, features, weight, use_reentrant=False)
+    else:
+        loss = squared_product(features, weight)
+    loss.backward()
+    return loss.item(), features.grad.item(), weight.grad.item()
+
+assert checkpoint_example(False) == (36.0, 36.0, 24.0)
+assert checkpoint_example(True) == checkpoint_example(False)
+```
+
+使用 PyTorch 2.8 / CPU，只验证函数值与梯度，不报告 GPU 内存或加速。带 Dropout 的对照还需要对齐 RNG；项目测试另外检查了这一点。不要把这里的精确相等推广到所有算子和硬件。
+
+</details>
+
+### 哪些中间量值得省？ {#recompute-budget}
 
 为什么序列一长就需要它？先只算两个张量，不猜整个模型。设 batch 为 2、hidden size 为 1024、attention heads 为 16，每个元素 2 bytes：
 
@@ -205,6 +332,8 @@ assert tensor_mib((2, 16, 2048, 2048)) == 256
 
 序列翻倍，前者翻倍，后者变成 4 倍。这不是每层总显存：还要看哪些中间量被保存、什么时候释放、是否融合算子。[FlashAttention](attention-kernels.md)避免把完整分数矩阵写入显存，checkpointing 则减少反向前一直保留的激活。两者能配合，但不能把各自节省的数字直接相加。
 
+FlashAttention 也不是“反向不需要保存任何东西”。[原论文 §3.1 / Appendix B](https://arxiv.org/html/2205.14135v2#S3.SS1)用 Q/K/V、输出和行归一化统计量重建局部注意力；带 Dropout 时还要处理 RNG。省掉的是完整的二次大小中间矩阵，不是所有训练状态。中间激活与它的 `.grad` 又是两件事：保存前向值供 backward 使用，不等于给每个非叶子张量保留梯度，详见 [autograd](../pytorch/autograd.md)。
+
 ```text
 普通：x → block 1 → block 2 → block 3 → loss
            保存内部激活，反向时读取
@@ -213,7 +342,17 @@ assert tensor_mib((2, 16, 2048, 2048)) == 256
 
 模型参数没有变少，optimizer states 也还在。节省的是某些激活，代价是额外计算；非重入实现可能只重算需要的部分。若分段中有随机数、状态更新或副作用，要保证重算与原 forward 的语义一致。
 
-[PyTorch checkpoint 文档](https://docs.pytorch.org/docs/stable/checkpoint.html)推荐显式选择非重入实现；具体 API 按所用版本核对。测试应比较 loss 和参数梯度，不只看程序能否跑完。dropout 的 RNG 状态是否恢复也会影响结果。
+[PyTorch 2.8 checkpoint 文档](https://docs.pytorch.org/docs/2.8/checkpoint.html)推荐显式设置 `use_reentrant=False`。这条路径可以在需要的中间量已得到时提前结束重算，不保证函数里的日志或计数器恰好执行两次。默认会处理所支持设备的 RNG 状态，但不是自动复制整个程序的可变状态。
+
+也不一定整块都重算。**Selective activation checkpointing** 可以保留某些昂贵算子的结果，让便宜的算子重新执行。假设 A 的结果占 4 MiB、重算耗时 6 ms，B 占 32 MiB、重算耗时 1 ms，且本例中两者都一直留到反向、能独立重算：
+
+| 本例选择 | 留下的内部结果 | 额外重算 |
+| --- | ---: | ---: |
+| 都保存 | 36 MiB | 0 ms |
+| 保存 A，重算 B | 4 MiB | 1 ms |
+| 都重算 | 0 MiB | 7 ms |
+
+这里还没算边界输入、输出和重算时的临时量，**0 MiB 不是训练峰值为零**。这些是假设值，不是测试结果。真实依赖、融合 kernel 和共享存储会改变选择；PyTorch 的[选择性重算介绍](https://pytorch.org/blog/activation-checkpointing-techniques/#selective-activation-checkpoint-new)给出了按算子制定策略的方式。先找出峰值时仍存活的张量，再测省下的内存是否值得额外计算。
 
 ## 怎样判断一个“省显存方案”值得用？
 

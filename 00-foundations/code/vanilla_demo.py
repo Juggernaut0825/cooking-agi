@@ -51,7 +51,7 @@ def shape_trace(model, src, tgt_in):
     enc = model.encoder.layers[0]
     q = enc.self_attn.w_q(x).view(b, s, h, -1).transpose(1, 2)
     print(f"  Q/K/V after split into heads           {tuple(q.shape)}   d_k = d/h = {d // h}")
-    print(f"  attention weights QK^T/sqrt(d_k)       {(b, h, s, s)}  <- rows sum to 1")
+    print(f"  softmax(QK^T/sqrt(d_k) + mask)         {(b, h, s, s)}  <- rows sum to 1")
 
     memory = model.encode(src, src_m)
     print(f"  encoder output ('memory')              {tuple(memory.shape)}")
@@ -109,7 +109,7 @@ def main():
     out = model.greedy_decode(src, MAX_LEN + 1, BOS)
     ok = sum(out[b, 1:l + 1].tolist() == src[b, :l].flip(0).tolist()
              for b, l in enumerate(lens.tolist()))
-    print(f"\ngreedy decode: {ok}/64 sequences reversed exactly")
+    print(f"\ngreedy decode: {ok}/64 token sequences reversed exactly (EOS not scored)")
     l = lens[0].item()
     print(f"  src     {src[0, :l].tolist()}")
     print(f"  decoded {out[0, 1:l + 1].tolist()}")
@@ -127,7 +127,7 @@ def main():
         col_lbl=[str(i) for i in range(1, 9)],
         title="cross-attention, last decoder layer (heads averaged)",
     )
-    print("\n  decoder step k should be reading source position 9-k -> anti-diagonal")
+    print("\n  An anti-diagonal would match reversal positions; mixed encoder states need not yield this pattern.")
 
 
 if __name__ == "__main__":

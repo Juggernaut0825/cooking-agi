@@ -77,7 +77,7 @@ This describes attention without order constraints, not a causal decoder with no
 ## From token IDs to the next token: the complete path {#from-token-ids-to-the-next-token-the-complete-path}
 
 Use a tiny English-to-German example to connect the entire forward path of the 2017
-Transformer. Look only at shapes first, then at each module's job.
+Transformer. The 512-dimensional states, 8 heads, and 2048-dimensional FFN below refer to the paper's **base configuration**, not every original configuration. Look only at shapes first, then at each module's job.
 
 ### 1. How the source enters the encoder {#1-how-the-source-enters-the-encoder}
 
@@ -309,7 +309,7 @@ all tokens; only softmax turns them into a conditional probability:
 
 $$p(y_t\mid y_{<t},x)=\operatorname{softmax}(Z_t).$$
 
-Training takes the cross-entropy between this distribution and the target token.
+Training uses cross-entropy; the original paper also applies label smoothing with $\epsilon_{ls}=0.1$ rather than a purely one-hot target.
 Inference uses greedy decoding, beam search, or sampling to pick one token, then
 feeds it back into the decoder and continues generating. Softmax itself only provides
 probabilities; it does not require choosing the argmax.
@@ -331,7 +331,7 @@ $$
 | Position | sinusoidal | mostly RoPE |
 | Attention | MHA | commonly GQA / MQA |
 | FFN | ReLU | commonly SwiGLU |
-| Objective | conditional sequence generation | next-token prediction |
+| Prediction context | source + target prefix → next target token | prefix of one token stream → next token |
 
 The original is the best place to learn what each of the three attention sites is
 responsible for. The modern version is the best reference for understanding how

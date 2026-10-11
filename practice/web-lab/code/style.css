@@ -1,0 +1,30 @@
+:root { color-scheme: dark; font-family: system-ui, -apple-system, "PingFang SC", sans-serif; background: #111310; color: #e8ece2; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: clamp(18px, 5vw, 64px); }
+main { max-width: 720px; margin: auto; }
+header, .section-heading, .entry, #notes li { display: flex; align-items: center; gap: 12px; justify-content: space-between; }
+header p { color: #b4c9a0; font-size: .75rem; letter-spacing: .08em; }
+html:lang(zh) header p { letter-spacing: normal; }
+h1 { font-size: clamp(2rem, 6vw, 3.6rem); line-height: 1.15; font-weight: 650; margin: 38px 0 18px; }
+h2 { font-size: 1.25rem; }
+p, footer { line-height: 1.75; }
+.intro, .muted, footer { color: #a6b09e; }
+.flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; list-style: none; padding: 0; margin: 28px 0; }
+.flow li { padding: 12px 8px; text-align: center; border: 1px solid #3f4b35; border-radius: 8px; font-size: .9rem; }
+form { border-top: 1px solid #30382b; padding-top: 26px; }
+label { display: block; margin-bottom: 10px; }
+input, button, select { font: inherit; border: 1px solid #59684b; border-radius: 7px; padding: 10px 14px; background: #1d2419; color: inherit; min-height: 44px; }
+input { flex: 1; min-width: 0; width: 100%; }
+button { cursor: pointer; }
+#save { background: #c0d4aa; color: #182014; font-weight: 600; }
+:focus-visible { outline: 2px solid #e5d4a4; outline-offset: 4px; }
+:disabled { opacity: .6; cursor: wait; }
+#message { min-height: 1.75em; color: #d3dca7; }
+#notes { list-style: none; padding: 0; }
+#notes li { border-bottom: 1px solid #30382b; padding: 16px 0; }
+#notes span { overflow-wrap: anywhere; min-width: 0; }
+#notes select { flex-shrink: 0; max-width: 45%; }
+details { margin-top: 32px; border: 1px solid #30382b; padding: 16px; border-radius: 8px; }
+summary { cursor: pointer; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; font-size: .9rem; }
+footer { font-size: .85rem; border-top: 1px solid #30382b; margin-top: 40px; padding-top: 20px; }

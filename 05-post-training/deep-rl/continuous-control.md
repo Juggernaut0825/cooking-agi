@@ -22,16 +22,18 @@ $$
 
 ## DDPG 的一轮更新
 
-先从 replay 采样，用 target Actor 生成下一动作，再由 target Critic 得到 bootstrap target。更新当前 Critic 后，以 $-Q_\phi(s,\mu_\theta(s))$ 更新 Actor，并慢慢同步 target 参数。
+先从 replay 采样，构造 $y=r+\gamma(1-d)Q_{\bar\phi}(s',\mu_{\bar\theta}(s'))$，其中 $d$ 只表示真实终止。更新当前 Critic 后，以 $-Q_\phi(s,\mu_\theta(s))$ 更新 Actor，并慢慢同步 target 参数。
 
 ```text
-replay (s, a, r, s')
-    → target actor(s') → target critic(s', a') → detached target
+replay (s, a, r, s', d)
+    → target actor(s') → target critic(s', a') → r + γ(1-d)Q' → detached target
     → critic(s, a) → regression update
     → actor(s) → critic(s, actor(s)) → actor update
 ```
 
 行为采样时往确定性动作上加噪声。这种 action noise 是探索机制；不是 SAC 的随机策略熵，也不是下面的 target smoothing。
+
+Replay 保存实际执行的动作，包括探索噪声和边界裁剪的结果。若只是外部时间上限截断而非任务终止，仍从截断前最后的 $s'$ bootstrap，不能换成 reset 后的新状态；DDPG 和 TD3 都遵守这个边界。
 
 ## TD3 的 3 个修正为什么配套
 
@@ -87,7 +89,7 @@ $$
 | 改当前动作 | 当前 Actor + 第一个当前 Critic | 穿过 Q 对动作的导数到 Actor | 每 2 次更新 |
 | 慢同步 | 当前参数 → Target 参数 | 不是 optimizer 反传 | 通常跟随延迟 Actor 更新 |
 
-慢同步常写成 $\bar\phi\leftarrow(1-\tau)\bar\phi+\tau\phi$。有些代码用 $\rho$ 表示旧参数的权重，恰好是 $1-\tau$；看到接近 1 的系数，不要先判定同步很快。
+Target 网络先复制对应当前网络的初始参数。慢同步常写成 $\bar\phi\leftarrow(1-\tau)\bar\phi+\tau\phi$，Target Actor 也同样同步。有些代码用 $\rho$ 表示旧参数的权重，恰好是 $1-\tau$；看到接近 1 的系数，不要先判定同步很快。
 
 再算一个 target：$r=1,\gamma=0.9$，同一个平滑后的下一动作在两套 Target Critic 中分别得 4 和 6。非终止时 $y=1+0.9\times4=4.6$，终止时 $y=1$。若当前两个 Q 为 3 和 5，对固定 target 的平方误差分别为 2.56 和 0.16；这还没轮到 Actor 更新。
 
@@ -97,7 +99,7 @@ $$
 | Target smoothing 噪声 | 训练时下一动作的 target 分支 | 不让局部尖峰支配 bootstrap |
 | Q 估计误差 | 学到的价值函数里 | 这是要处理的误差，不是主动探索机制 |
 
-连续控制、交互很贵、可以重用历史 transition 时，这条路线有吸引力。代价是 replay、多个 target、更新频率和动作尺度都需要对齐。每交互 1 步训练多少次，叫 update-to-data ratio；提高它可以省交互，也可能把旧数据拟合过头。
+连续控制、交互很贵、可以重用历史 transition 时，这条路线有吸引力。代价是 replay、多个 target、更新频率和动作尺度都需要对齐。这里把 update-to-data ratio 定义为每新增一条环境 transition，做多少轮 Critic minibatch 更新；同一批次更新两个 Q 算一轮，不把 Actor 的 optimizer step 另加进去，batch size 也要单独报告。提高这个比率可以省交互，也可能把旧数据拟合过头。
 
 <details markdown="1">
 <summary>把整个 Critic 调用包在 no_grad 里，再更新 Actor，行吗？</summary>

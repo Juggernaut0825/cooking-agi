@@ -7,6 +7,7 @@ import tomllib
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from urllib.parse import urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import next_stop
@@ -32,6 +33,15 @@ class NextStopTests(unittest.TestCase):
 
     def test_repository_data_is_valid(self):
         next_stop.load()
+
+    def test_generated_home_links_keep_the_selected_language(self):
+        for language, expected in (("zh", "../index.zh.html"),
+                                   ("en", "../index.html?lang=en")):
+            with self.subTest(language=language):
+                links = re.findall(r'href="([^"]+)"', self.render(language))
+                homes = [href for href in links
+                         if urlsplit(href).path in ("../index.html", "../index.zh.html")]
+                self.assertEqual(homes, [expected, expected])
 
     def test_empty_state_does_not_invent_outcomes(self):
         for language in ("zh", "en"):

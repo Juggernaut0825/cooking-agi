@@ -2,7 +2,7 @@
 
 [中文](README.md) · **English**
 
-> Reading time: ~3 min · Level: advanced · Last reviewed: 2026-10-09
+> Reading time: ~3 min · Level: advanced · Last reviewed: 2026-10-10
 
 Run a four-layer block three times: that is twelve layer evaluations with only four layers of stored weights. Each pass receives the state produced by the previous one, so the result usually changes. A looped model reuses parameters to spend more computation; it does not acquire new facts merely by looping.
 
@@ -18,7 +18,7 @@ $$h^{(t+1)} = f_\theta\big(h^{(t)},\, e\big), \qquad t = 0, 1, \ldots, L-1$$
 
 $\theta$ is shared across loops; $e$ is an input representation that some designs re-inject at each step. The recurrent block stores $k$ layers of weights and performs $kL$ layer evaluations. Embeddings, output heads, and extra adapters count separately. This is not equivalent to having $kL$ independently parameterized layers.
 
-Shared parameters need not produce identical outputs. Starting at 0, repeatedly applying $h\leftarrow 0.5h+1$ gives 1, 1.5, and 1.75: the input state changes. In contrast, $h\leftarrow 2h$ can grow without bound. Reuse alone guarantees neither convergence nor improving answers.
+Shared parameters need not produce identical outputs. Starting at 0, repeatedly applying $h\leftarrow 0.5h+1$ gives 1, 1.5, and 1.75: the input state changes. In contrast, $h\leftarrow 2h$ starting at 1 gives 2, 4, 8 and grows without bound; starting at 0, it stays at 0. Reuse alone guarantees neither convergence nor improving answers.
 
 <!-- widget:tx-loop-unroll -->
 

@@ -43,6 +43,21 @@ Here $d$ is the rotated dimension and $b$ the base. With $d=4,b=10000$, the two 
 
 [RoFormer](https://arxiv.org/abs/2104.09864) develops rotary position embeddings. Implementations must also match pair layout, partial versus full rotation, frequency conventions, and cache position offsets. A layout mismatch can preserve shapes while breaking checkpoint semantics.
 
+### Adjacent pairs or split halves? {#rotary-layout}
+
+The difference is easy to see in a four-dimensional head:
+
+| Layout | First pair / second pair |
+| --- | --- |
+| Interleaved | `(x0,x1)` / `(x2,x3)` |
+| Split-half | `(x0,x2)` / `(x1,x3)` |
+
+Reordering an interleaved vector `[x0,x1,x2,x3]` to `[x0,x2,x1,x3]` lets a split-half implementation express the same rotation. **The Q/K projection weights must match that permutation.** Replacing only the rotation function is insufficient, and the permutation must stay within each head.
+
+Take `q=[1,2,3,4]` at position 1 and `k=[4,3,2,1]` at position 0, with frequencies `[1,0.01]`. Switching layouts without reordering changes the dot product from about 11.1452 to 6.8878. Both layouts still satisfy the relative-position identity, so a test that only checks equal relative distances will miss this checkpoint mismatch.
+
+“The Llama convention” is not specific enough: the pinned [Meta Llama 3 implementation](https://github.com/meta-llama/llama3/blob/a0940f9cf7065d45bb6675660f80d305c041a754/llama/model.py#L59) pairs adjacent channels. The [Transformers v4.44.2 converter](https://github.com/huggingface/transformers/blob/v4.44.2/src/transformers/models/llama/convert_llama_weights_to_hf.py#L138) permutes Q/K weights for its split-half layout. This site's [`apply_rope`](../code/model.py) uses the latter; that does not make raw checkpoints interchangeable without conversion.
+
 ```python
 import math
 
@@ -130,9 +145,23 @@ Check frequency rules, attention scaling, training length, and cache behavior to
 
 The derivation is $(aQ)(aK)^\top=a^2QK^\top$. Scaling only rotary dimensions does not scale the **entire dot product** by $a^2$. For $Q=K=[2,3]$, the original dot product is 13; doubling both dimensions gives 52, while doubling only the second gives 40. Check placement when adapting partial RoPE or MLA.
 
-The [authors' implementation](https://github.com/jquesnelle/yarn/blob/master/scaled_rope/LlamaYaRNScaledRotaryEmbedding.py) uses dimension-index transition boundaries and rounding. The continuous explanation, teaching function, and a checkpoint's implementation are not interchangeable without checking.
+The [authors' pinned implementation](https://github.com/jquesnelle/yarn/blob/995db5b575e75230b3384d658f8b944c9662f775/scaled_rope/LlamaYaRNScaledRotaryEmbedding.py) uses dimension-index transition boundaries and rounding. The continuous explanation, teaching function, and a checkpoint's implementation are not interchangeable without checking.
 
-Dynamic scale raises another issue: historical keys rotated with old frequencies and a new query rotated with new ones no longer share the intended position rule. Keep the request's convention fixed or retain state that can reconstruct / rerotate historical keys; changing only the query is insufficient. Compare full prefill with token-by-token decoding across the scale-change boundary, not only on short inputs before it.
+### Can you change frequencies halfway through generation? {#dynamic-rope-cache}
+
+Historical keys rotated with old frequencies and a new query rotated with new frequencies no longer follow one position rule. Inverting the old rotation and applying the new one repairs the keys' phases at that layer. **It does not generally reproduce a fresh prefill of the whole prefix.**
+
+The next layer explains why. Changing first-layer attention can change the historical tokens' hidden states. The second layer projects both K and V from those states. Rerotating K does not recompute their content, and it does not update V at all.
+
+Consider a simplified weighted sum: first-layer values `[0,10]` with weights `[0.2,0.8]` give 8. If new frequencies change those weights to `[0.5,0.5]`, the result is 5. Even an identity value projection in the next layer would need a cached value of 5, not 8. This illustration omits residuals, Norm, and FFN; its point is that an unrotated V can still depend on RoPE in earlier layers.
+
+| Approach | What it preserves | Cost or limitation |
+| --- | --- | --- |
+| Fix frequencies for the request | K/Q and layer states use one rule | Choose the rule when the request starts |
+| Prefill the entire prefix again after a change | Recomputes K/V at every layer | Pays for another prefix computation |
+| Rerotate historical K only | Repairs K's rotational phase | Deeper K/V content remains stale; generally approximate |
+
+For a full-prefill comparison, use the same new rule from the beginning of the reference run, then compare decoding across the scale-change boundary. Measure an approximation's error rather than accepting matching shapes as proof of correctness. Keep weights fixed, disable dropout, and allow the appropriate dtype's rounding error.
 
 ## DCA: what happens across a chunk boundary?
 

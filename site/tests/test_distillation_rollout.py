@@ -48,9 +48,10 @@ class DistillationRolloutTests(unittest.TestCase):
             for suffix in (".md", ".en.md"):
                 source = (ROOT / (chapter + suffix)).read_text()
                 figures = re.findall(r'<figure class="worked-update.*?</figure>', source, re.S)
-                self.assertEqual(len(figures), 1)
-                self.assertEqual(figures[0].count("<li>"), 2)
-                self.assertEqual(bool(re.search(r"[\u4e00-\u9fff]", figures[0])), suffix == ".md")
+                expected_sizes = [2, 3] if chapter == DISTILLATION else [2]
+                self.assertEqual(sorted(figure.count("<li>") for figure in figures), expected_sizes)
+                for figure in figures:
+                    self.assertEqual(bool(re.search(r"[\u4e00-\u9fff]", figure)), suffix == ".md")
 
     def test_alignment_keeps_every_common_boundary(self):
         align = namespace_for(DISTILLATION, "def aligned_spans")["aligned_spans"]

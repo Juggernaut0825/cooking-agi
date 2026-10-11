@@ -23,21 +23,16 @@
 
 ## 跟着一个 token 走过 block
 
-下面是文本 decoder 的计算顺序，不是训练流程。RoPE 作用在 attention 的 Q/K 上，不能直接画成“先给 token embedding 加 RoPE”。
+下面以 Llama 3 / 3.1 的文本 decoder 为例，画出计算顺序，不是训练流程。早期版本不一定采用 GQA，头数仍要查对应配置。RoPE 作用在 attention 的 Q/K 上，不能直接画成“先给 token embedding 加 RoPE”。
 
-```mermaid
-flowchart TD
-    X["输入 hidden state"] --> N["RMSNorm"]
-    N --> Q["投影成 Q / K / V"]
-    Q --> R["Q、K 按位置旋转；V 不旋转"]
-    R --> A["因果 GQA → 输出投影"]
-    X --> S["残差相加"]
-    A --> S
-    S --> F["RMSNorm → SwiGLU FFN"]
-    S --> T["残差相加"]
-    F --> T
-    T --> U["下一层；最后一层之后是 norm 和 logits"]
-```
+<figure class="worked-update" id="llama-block-flow" lang="zh-CN">
+<figcaption>一个 decoder block：两次更新，两次残差相加</figcaption>
+<ol>
+<li><strong>1 · 先准备 Q、K、V</strong><span>hidden state 经 RMSNorm 后投影成 Q、K、V。RoPE 旋转 Q 和 K，不旋转 V；原始 hidden state 留作残差。</span></li>
+<li><strong>2 · Attention 更新</strong><span>因果 GQA 只读取允许的位置。结果经输出投影回到 hidden width，再与原始 hidden state 相加，得到 h′。</span></li>
+<li><strong>3 · FFN 更新</strong><span>h′ 经 RMSNorm、SwiGLU FFN，再加回 h′。输出进入下一层；所有 block 结束后，才做最终归一化和 logits 投影。</span></li>
+</ol>
+</figure>
 
 用简写表示一个 block：
 
@@ -119,16 +114,15 @@ Llama 3 报告把数据质量、多样性和训练规模放在核心位置，并
 
 Llama 3 报告描述了 reward model、rejection sampling、SFT 和 DPO 的迭代使用。这是一条**生成数据、筛选数据、更新参数**的流程，不是每次推理都依次经过四个模型。[报告 §4](https://arxiv.org/html/2407.21783v3#S4)
 
-```mermaid
-flowchart TD
-    P["Prompt"] --> C["当前 policy 生成多个候选"]
-    C --> R["Reward model 等筛选信号"]
-    R --> D["筛选后的回答 + 其他示范数据"]
-    D --> S["SFT"]
-    H["偏好对"] --> O["DPO"]
-    S --> O
-    O -. 用于下一轮采样 .-> C
-```
+<figure class="worked-update" id="llama-training-loop" lang="zh-CN">
+<figcaption>一轮后训练：先整理数据，再更新模型</figcaption>
+<ol>
+<li><strong>1 · 生成与筛选</strong><span>当前 policy 对 prompt 生成多个候选，用 reward model 等信号筛选回答。</span></li>
+<li><strong>2 · SFT</strong><span>把选中的回答与其他示范数据一起用于监督微调。模型学习的是留下来的回答。</span></li>
+<li><strong>3 · DPO</strong><span>再用偏好对更新模型。下一轮可以让更新后的 policy 重新生成候选，继续筛选和训练。</span></li>
+</ol>
+<p>这是训练时反复执行的流程，不是用户每次提问都会经过的模型链。</p>
+</figure>
 
 用一个自己编的任务看这条链：问题是“只根据这份会议记录列出已经确定的行动项”。
 

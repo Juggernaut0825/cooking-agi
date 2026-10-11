@@ -6,7 +6,9 @@ import unittest
 
 try:
     import torch
-except ImportError:
+except ModuleNotFoundError as error:
+    if error.name != "torch":
+        raise
     torch = None
 
 
@@ -68,6 +70,32 @@ class LatentPathsTests(unittest.TestCase):
         self.assertEqual(narrow["mac_per_token"], base["mac_per_token"] // 2 + 16384)
         self.assertAlmostEqual(more["parameters"] / base["parameters"] - 1, 1 / 48)
         self.assertAlmostEqual(more["mac_per_token"] / base["mac_per_token"] - 1, 1 / 12)
+
+    def test_equal_latents_can_take_different_full_width_routes(self):
+        route = function_from(LATENT, "routed_example")
+        first = route((1, 0))
+        second = route((1, 2))
+        self.assertEqual(first[0], second[0])
+        self.assertNotEqual(first[1], second[1])
+        self.assertEqual(first[2], (2, 2))
+        self.assertEqual(second[2], (-1, -1))
+
+    def test_up_projection_subspace_does_not_bound_full_residual(self):
+        route = function_from(LATENT, "routed_example")
+        for vector in ((1, 0), (1, 2), (-2, 3)):
+            with self.subTest(vector=vector):
+                routed = route(vector)[2]
+                self.assertEqual(routed[0], routed[1])
+                residual = tuple(original + update for original, update in zip(vector, routed))
+                self.assertNotEqual(residual[0], residual[1])
+
+    def test_linear_expert_toy_matches_explicit_route_enumeration(self):
+        route = function_from(LATENT, "routed_example")
+        for first in range(-3, 4):
+            for second in range(-3, 4):
+                selected = max(range(2), key=(first, second).__getitem__)
+                update = (2 * first, -first)[selected]
+                self.assertEqual(route((first, second)), (first, selected, (update, update)))
 
     def test_slot_bytes_are_not_only_the_latent_width(self):
         budget = function_from(LATENT, "latent_budget")

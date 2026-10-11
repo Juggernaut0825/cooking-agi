@@ -2,7 +2,7 @@
 
 **中文** · [English](router.en.md)
 
-> 阅读时间：约 10 分钟 · 难度：进阶 · 最近审阅：2026-10-09
+> 阅读时间：约 11 分钟 · 难度：进阶 · 最近审阅：2026-10-10
 
 一个 token 来到 MoE 层，不会把所有专家都跑一遍。Router 先选出几个，再把它们的输出按权重加起来。难点不只是“取最大的几个数”：同一个 token 会走多条分支，结果要加回原来的位置，梯度也要沿这些分支传回去。
 
@@ -87,19 +87,25 @@ def sparse_moe(hidden, logits, experts, top_k, normalization="selected"):
     if hidden.ndim != 2 or logits.shape != (hidden.shape[0], len(experts)):
         raise ValueError("Expected [tokens, width] inputs and one logit per expert")
     indices, weights = selected_gates(logits, top_k, normalization)
-    output = torch.zeros_like(hidden)
+    accumulation_dtype = torch.promote_types(hidden.dtype, weights.dtype)
+    output = torch.zeros_like(hidden, dtype=accumulation_dtype)
     for expert_id, expert in enumerate(experts):
         token_ids, slots = torch.where(indices == expert_id)
         if token_ids.numel() == 0:
             continue
         expert_inputs = hidden.index_select(0, token_ids)
         expert_outputs = expert(expert_inputs)
-        weighted = expert_outputs * weights[token_ids, slots, None]
+        weighted = (expert_outputs.to(accumulation_dtype)
+                    * weights[token_ids, slots, None].to(accumulation_dtype))
         output = output.index_add(0, token_ids, weighted)
-    return output
+    return output.to(hidden.dtype)
 ```
 
 `indices` 和 `weights` 都是 `[tokens, top_k]`。`token_ids` 找到原始位置，`slots` 找到这个专家是该 token 的第几个选择。`index_select` 取输入，`index_add` 把输出累加回去。`selected_gates` 在[完整代码](../code/moe_routing.py)里：可选择只对入选 logits 做 softmax，或保留全体 softmax 中的门值。
+
+还要把精度说清楚：这里门值至少用 FP32 算，专家的加权输出也至少用 FP32 累加，最后转回输入 dtype；原本是 FP64 的计算不降为 FP32。这样 BF16 expert 配 FP32 router 时，合并处不会因 dtype 不同而报错，也不用每加一个专家就舍入一次到 BF16。代价是多一份较高精度的输出缓冲。
+
+这不代表把整个模型转成 FP32，也不等于完整复刻 Switch 的混合精度方案。若想让 router 的线性投影也用 FP32，需要在调用前保证这一点；**投影算完再转 FP32，补不回已经舍入的分数**。这里的转换保留 autograd 路径，测试会检查输出、输入和两类参数的梯度。
 
 这是方便检查的 **dropless 单机教学实现**：不丢分配，不做 capacity 限制。Python 循环、逐专家索引和新的输出张量都不是高吞吐方案。实际实现可能排序 token、做 grouped GEMM，再通过 all-to-all 跨卡收发；这些优化仍要保持相同的分发与合并语义。CUDA 上累加还可能有数值非确定性，见 [PyTorch `index_add_` 说明](https://docs.pytorch.org/docs/2.8/generated/torch.Tensor.index_add_.html)。这里的测试在 CPU 上运行。
 

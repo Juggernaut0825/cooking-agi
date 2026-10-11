@@ -2,7 +2,7 @@
 
 [中文](on-off-policy.md) · **English**
 
-> Reading time: ~12 min · Level: core · Last reviewed: 2026-10-09
+> Reading time: ~14 min · Level: core · Last reviewed: 2026-10-10
 
 Generating long answers is expensive. Throwing them away immediately feels wasteful, but reusing them indefinitely creates another problem: **the model that generated them is no longer the model being updated.**
 
@@ -117,6 +117,21 @@ print(round(logged_mean, 2), round(estimate, 2), round(effective_size, 2))
 
 There are 50 records, but the weight-based effective sample size (ESS) is only 18: the few B observations carry a large share of the weight. This is a **weight-concentration diagnostic**, not a guarantee of equivalence to 18 independent observations or a confidence interval.
 
+<details markdown="1">
+<summary>Does importance sampling stop working with just one draw?</summary>
+
+No. Using the same probabilities, a single weighted reward has two possible values: $5/9$ when we draw A, or $5\times3=15$ when we draw B. Neither is close to the target mean of 2, but the estimator's expectation is still:
+
+$$
+0.9\times\frac59+0.1\times15=2.
+$$
+
+**Unbiased describes the expectation over repeated sampling, not the accuracy of the one draw in front of us.** A small sample can give a very unstable estimate; a sample size of one does not invalidate the change-of-measure identity. Accurate probabilities, coverage, and an unchanged reward mechanism still matter. We have not clipped or self-normalized the weights.
+
+This single-step result does not mean that token-level weighting fully corrects an old response. There is another question: how did the model reach this prefix?
+
+</details>
+
 ## Three problems the ratio cannot fix
 
 ### 1. Division cannot recover an action never observed
@@ -136,6 +151,63 @@ Adding log-probabilities helps numerics, not statistical variance. Nor should PP
 If we cap weights at 2 in the example, the five B observations contribute less. The estimate becomes $(45\times5/9+5\times2\times3)/50=1.1$, rather than 2. The bias–variance tradeoff is concrete; “clipping makes it stable” is not a complete explanation.
 
 This is ordinary importance-weight clipping, **not the complete PPO clipped objective**. PPO also takes a minimum depending on the advantage sign; see [PPO clipping](ppo-clipping.en.md).
+
+## The next step can stay the same while the response changes {#prefix-distribution}
+
+Consider a tiny model that generates exactly two tokens: A or B, then `✓` or `×`. It earns 1 for ending in `✓`, otherwise 0. This is a probability example, not a real task.
+
+The old model chooses A 80% of the time; the new model chooses it only 20%. Yet **given the same prefix**, both models have identical second-step probabilities: 25% for `✓` after A and 75% after B. Every second-step token ratio is therefore 1.
+
+<div class="worked-table" markdown="1">
+
+| Success rate | Value |
+|---|---|
+| Old model | $0.8\times0.25+0.2\times0.75=0.35$ |
+| Weight step 2 only | $0.35\times1=0.35$ |
+| New model | $0.2\times0.25+0.8\times0.75=0.65$ |
+
+</div>
+
+The missing change is **how often each prefix occurs**, not the next-token probability at a given prefix. The new model reaches the more successful branch B more often. A ratio at step 2 alone misses that shift. For a language model, the state includes the existing prefix, so the prefix distribution is part of the state distribution.
+
+<details markdown="1">
+<summary>Enumerate the four paths and check the full weights</summary>
+
+In this fixed two-step example with deterministic token transitions, the complete path weight is the product of both ratios. A-prefix paths have weight $0.2/0.8=0.25$; B-prefix paths have weight $0.8/0.2=4$. Step 2 contributes a ratio of 1. The weighted expectation is therefore $0.8\times0.25\times0.25+0.2\times4\times0.75=0.65$.
+
+Enumerating every path checks the expectation itself, without sampling error:
+
+```python
+from itertools import product
+import math
+
+old_prefix = {"A": 0.8, "B": 0.2}
+new_prefix = {"A": 0.2, "B": 0.8}
+success_given_prefix = {"A": 0.25, "B": 0.75}
+old_return = token_only_return = full_is_return = target_return = 0.0
+
+for prefix, success in product(old_prefix, (False, True)):
+    success_probability = success_given_prefix[prefix]
+    conditional = success_probability if success else 1 - success_probability
+    old_path = old_prefix[prefix] * conditional
+    new_path = new_prefix[prefix] * conditional
+    reward = float(success)
+    second_ratio = conditional / conditional
+    full_ratio = new_path / old_path
+    old_return += old_path * reward
+    token_only_return += old_path * second_ratio * reward
+    full_is_return += old_path * full_ratio * reward
+    target_return += new_path * reward
+
+assert math.isclose(old_return, 0.35)
+assert math.isclose(token_only_return, 0.35)
+assert math.isclose(full_is_return, 0.65)
+assert math.isclose(target_return, 0.65)
+```
+
+This is a change-of-measure example for evaluating terminal reward, **not advice to multiply every PPO loss term by a full-trajectory weight**. PPO uses a local surrogate over old states and limits batch reuse. The target objective, advantage estimate, and variance all matter. Compare this with the [PPO objective and training loop](https://spinningup.openai.com/en/latest/algorithms/ppo.html).
+
+</details>
 
 ## Back to LLMs: what should the logs retain?
 

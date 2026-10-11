@@ -58,6 +58,44 @@ print(round(cross_entropy, 4), round(forward_kl, 4))
 
 With a softmax output, soft CE has student-logit gradient $q-p=[-0.20,0.05,0.15]$. Using only the teacher's argmax as a one-hot label gives `[-0.60, 0.40, 0.20]`. The second pushes “shipping” down more strongly; the first retains the teacher's judgment that it remains plausible.
 
+### What do entropy and cross-entropy measure? {#entropy-and-surprise}
+
+Temporarily reduce the task to two labels. A teacher assigns `[0.99, 0.01]`. Most outcomes are easy to predict, although seeing the second label would be surprising. **A rare outcome can be surprising even when the distribution is highly predictable.**
+
+The surprise of one outcome is its self-information, or surprisal: $-\log p(x)$. For the second label, this is $-\log0.01\approx4.6052$. Entropy averages over all outcomes: $H(p)=-\sum_xp(x)\log p(x)\approx0.0560$, well below the $0.6931$ of two equally likely labels. We use natural logarithms, so the unit is the nat. See [Deep Learning §3.13](https://www.deeplearningbook.org/contents/prob.html) for the definitions.
+
+Returning to the three-label example, we can separate the cross-entropy into two parts:
+
+<figure class="worked-update" lang="en" id="entropy-loss-parts">
+  <figcaption>One fixed teacher distribution · cross-entropy includes more than the student's mismatch.</figcaption>
+  <ol>
+    <li><small>Teacher entropy H(p)</small><strong>0.8237</strong><span>This remains even if the student matches the teacher exactly.</span></li>
+    <li><small>Mismatch KL(p ∥ q)</small><strong>+ 0.1272</strong><span>The extra loss from using a different distribution.</span></li>
+    <li><small>Cross-entropy H(p, q)</small><strong>= 0.9509</strong><span>With the teacher fixed, lowering CE lowers forward KL.</span></li>
+  </ol>
+</figure>
+
+A lower CE after changing the teacher or temperature does not, by itself, mean a closer match. Two students that perfectly match `[0.99, 0.01]` and `[0.5, 0.5]` both have zero KL, yet their cross-entropies are 0.0560 and 0.6931. Keep the target distribution fixed when comparing. Low teacher entropy also means confidence, not necessarily correctness.
+
+<details markdown="1">
+<summary>Why does H(p, q) = H(p) + KL(p ∥ q)?</summary>
+
+For a finite label space, assume $q(x)>0$ wherever $p(x)>0$. Subtract the two definitions:
+
+$$
+\begin{aligned}
+H(p,q)-H(p)
+&=\sum_{x:p(x)>0}p(x)\big[\log p(x)-\log q(x)\big]\\
+&=D_{KL}(p\|q).
+\end{aligned}
+$$
+
+Terms with $p(x)=0$ contribute zero by the limiting convention. If the teacher gives a label positive probability but the student gives it zero, CE and KL are both infinite. A finite reported loss must not hide this support mismatch.
+
+Here the average is under the **teacher p**. The later [RL KL-estimator note](rlhf/kl-estimators.en.md) samples from the **current policy q** and discusses $D_{KL}(q\|p)$. Reusing the letters does not preserve the direction.
+
+</details>
+
 ## How temperature changes the target {#temperature-changes-the-distribution-not-the-teachers-intelligence}
 
 Divide logits by temperature $T$ before softmax:
@@ -70,7 +108,9 @@ q_T&=\operatorname{softmax}(z^{student}/T),\\
 \end{aligned}
 $$
 
-Increasing positive temperature softens a fixed set of logits and gives non-maximal entries more weight. The classic $T^2$ factor compensates for temperature-related gradient scaling; it does not make training at different temperatures exactly equivalent or remove the need to check loss weights.
+Increasing positive temperature brings probability ratios closer to one, softening the distribution for a fixed set of logits. It does not increase every non-maximal probability: for logits `[2.0, 1.9, 0.0]`, raising $T$ from 1 to 2 lowers the second probability from about 0.4435 to 0.4102 while increasing the distribution's entropy.
+
+The classic $T^2$ factor compensates for temperature-related gradient scaling; it does not make training at different temperatures exactly equivalent or remove the need to check loss weights.
 
 If the teacher misunderstood the task, increasing temperature does not turn its mistake into truth. It redistributes supervision rather than adding knowledge.
 
@@ -114,7 +154,9 @@ Splitting the teacher's −1.2 into −0.6 and −0.6 preserves the sum; it does
 
 Check whitespace cleanup, Unicode, special tokens, and templates before accepting a text match. Render each model's valid template from structured messages and inspect response boundaries rather than copying another model's role markers. If unaligned positions are masked, report which examples lose supervision. More coverage need not mean more reliable targets.
 
-As of 2026-10-09, [cross-family OPD](https://arxiv.org/abs/2606.09456) studies transferring signals across tokenizers. A [2026-10 follow-up analysis](https://arxiv.org/abs/2610.08448) finds that extending supervision into mismatched spans can reduce accuracy for its tested model combinations. This is a result under specific conditions, not a rejection of every span method. This page reproduces neither training study and does not present an experimental branch's configuration as a universal verl API. Check the implementation version, objective, and gradients first.
+As of 2026-10-10, cross-tokenizer methods already make different choices about supervision. [Cross-family OPD (June 2026)](https://arxiv.org/html/2606.09456v1#S4.SS2) allocates a span score to individual student steps; the example below works through that rule. [A separate October 2026 study](https://arxiv.org/html/2610.08448v1#S3.SS2) adds mismatched-span log-probability MSE to a strictly aligned KL objective, reducing accuracy across its three tested model pairs. These are different objectives, so the latter result does not directly disprove every span method.
+
+This page reproduces neither training study. Compare model pairs, objectives, and budgets—not just alignment coverage—and check implementation versions rather than treating an experimental branch's configuration as a universal verl API.
 
 <details markdown="1">
 <summary>Work it out: allocating one span score to two student steps</summary>

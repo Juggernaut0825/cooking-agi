@@ -83,11 +83,11 @@ Dropout 放到 $x$ 上时，直接通路的 Jacobian 从 $I$ 变成随机对角�
 
 三样东西解决的是不同问题，但它们的**相对位置**很要命：
 
-$$\underbrace{\text{Norm}(x + \text{Dropout}(f(x)))}_{\text{post-norm，2017 原版}} \qquad\text{vs}\qquad \underbrace{x + \text{Dropout}(f(\text{Norm}(x)))}_{\text{pre-norm，现在}}$$
+$$\underbrace{\text{Norm}(x + \text{Dropout}(f(x)))}_{\text{post-norm，2017 原版}} \qquad\text{vs}\qquad \underbrace{x + \text{Dropout}(f(\text{Norm}(x)))}_{\text{pre-norm，分支内归一化}}$$
 
 Post-norm 的 Jacobian 要再乘上 Norm 的 Jacobian，不再是纯恒等 skip。[On Layer Normalization](https://arxiv.org/abs/2002.04745)分析了这类结构与初始化时梯度、warmup 的关系；它不是所有配置都“必须 / 不必 warmup”的定理。
 
-pre-norm 把 norm 挪进分支里，恒等通路完整保留，代价是输出尺度随深度累积，所以最后要补一个 final norm。
+pre-norm 把 norm 挪进分支里，保留恒等通路。各层更新仍会不断加到残差上，但尺度是否增大，还取决于更新之间的相关性和初始化。常见实现会在末尾加一个 final norm，控制送入输出头的尺度；它不负责解决所有中间层的问题。
 
 ![post-norm 与 pre-norm 的残差通路](../assets/transformer-block.svg)
 

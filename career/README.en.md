@@ -12,6 +12,8 @@ If you're preparing for an ML internship or a new-grad role, take whatever is us
 
 ## Where to start
 
+Getting ready to apply? Start with [what to prepare](prepare.en.md). Use [the goal-based routes](../learn/choose-your-path.en.md#applications) to connect that to technical practice; reading every personal account is optional.
+
 ### My experience
 
 - [25-26 internship search](journey.en.md): why I started by applying to everything, then narrowed my focus to MLE / Research Engineer.

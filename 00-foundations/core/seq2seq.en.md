@@ -2,7 +2,7 @@
 
 [中文](seq2seq.md) · **English**
 
-> Reading time: ~8 min · Level: core · Last reviewed: 2026-08
+> Reading time: ~10 min · Level: core · Last reviewed: 2026-10-10
 
 Translating “明天见” into “See you tomorrow” does not require equal input and output lengths or a word-by-word match. Seq2Seq uses an encoder to read the input and a decoder to produce the output. When writing `tomorrow`, how can the decoder find the relevant time information? This gives us a reason to introduce attention.
 
@@ -16,25 +16,29 @@ $$h_1,\ldots,h_S = \text{Encoder}(x_1,\ldots,x_S), \qquad c = h_S$$
 
 $$s_t = \text{Decoder}(y_{t-1}, s_{t-1}, c), \qquad p(y_t)=\text{softmax}(W s_t)$$
 
-The input length is $S$ and the output length is $T$; the two need not be equal. The problem is that the whole input must end up squeezed into one fixed vector $c$. A short sentence gets by; a long one is like writing a whole book on a sticky note.
+The input length is $S$ and the output length is $T$; they need not match. Each decoder step produces a distribution over the vocabulary. The shorthand $p(y_t)$ above leaves conditioning on the source and previous outputs implicit.
+
+With one fixed vector, the decoder cannot revisit a particular input position after generation starts. This can make retaining details harder, but it does not mean every long sentence must fail. [Sutskever et al. (2014), §2](https://arxiv.org/html/1409.3215v3) describe the classic LSTM encoder–decoder; its effectiveness still depends on training and the task.
 
 ## Attention reads the encoder states on demand {#attention-reads-the-encoder-states-on-demand}
 
-If one sticky note cannot hold everything, stop giving the decoder only one. Every time it writes a token, let it go back over the encoder states again and pick the positions that actually matter at this moment:
+Instead of passing only the final state, keep the encoder state at each input position. At every output step, compute a new set of reading weights:
 
 $$e_{tj}=\text{score}(s_{t-1},h_j), \qquad \alpha_{tj}=\text{softmax}_j(e_{tj})$$
 
 $$c_t = \sum_j \alpha_{tj}h_j$$
 
-$c_t$ is no longer a fixed bottleneck. It answers “when generating token $t$, which input positions should information come from?” This is the ancestor of cross-attention.
+$c_t$ can change at every step, rather than making one unchanged vector serve the entire output sequence. [Bahdanau et al., §3.1](https://arxiv.org/html/1409.0473v7) describe this form of recurrent attention. It mixes states by weight; it need not select a single word.
+
+For states $h_1=(1,0),h_2=(0,1),h_3=(1,1)$, weights $(0.1,0.7,0.2)$ give $c_t=(0.3,0.9)$. At the next step, weights $(0.6,0.1,0.3)$ instead give $(0.9,0.4)$. These hand-chosen vectors do not imply that words have two literal semantic coordinates. Attention weights normalize over **input positions**, not output words. They are also not sufficient evidence of causal reliance on a source position.
 
 ```mermaid
-flowchart LR
+flowchart TB
     X["source tokens"] --> E["Encoder states<br/>h₁ … hₛ"]
     E --> A["Attention<br/>query by decoder state"]
     A --> D["Decoder"]
     D --> Y["next token"]
-    Y -. "feed back" .-> D
+    Y -. "during generation" .-> D
 ```
 
 ## Training technique: teacher forcing {#training-technique-teacher-forcing}
@@ -46,6 +50,17 @@ The training loss is
 $$\mathcal{L} = -\sum_{t=1}^{T}\log p_\theta(y_t \mid y_{<t}, x)$$
 
 Training has access to the complete correct prefix; at inference, an error enters the later context and keeps propagating. This train–inference mismatch is commonly called exposure bias.
+
+For a target `9, 4, 7, EOS`, shifting by one gives these input–target pairs:
+
+| Step | Teacher-forcing input | Token to predict |
+| --- | --- | --- |
+| 1 | BOS | 9 |
+| 2 | 9 | 4 |
+| 3 | 4 | 7 |
+| 4 | 7 | EOS |
+
+If generation produces `5` at step 2, step 3 consumes `5`, not the table's `4`. Low teacher-forced loss does not guarantee correct continuation from the model's own output. Evaluate free-running generation separately, checking both token accuracy and whether the entire sequence is correct.
 
 ## Training and generation see different input distributions {#training-and-generation-see-different-input-distributions}
 
@@ -61,13 +76,17 @@ Beam search only changes how candidate sequences are kept at inference time; it 
 
 - the RNNs inside the encoder and decoder cannot be parallelized over time;
 - the information path between two arbitrary positions can still be very long;
-- attention has already solved dynamic reading, but recurrent state still limits throughput.
+- attention provides dynamic reading, but recurrent state still limits parallel computation across time.
 
 The Transformer's key move was not “inventing attention.” It was removing recurrence entirely and keeping only attention and position-wise computation.
 
 ## Experiment: learn sequence reversal {#experiment-learn-sequence-reversal}
 
-Run [`../code/sequence_torch.py`](../code/sequence_torch.py) with `--task reverse` and watch the encoder–decoder learn the alignment on a sequence-reversal task. Then compare with the existing [`../code/vanilla_demo.py`](../code/vanilla_demo.py) to see how the same task is handled by Transformer cross-attention.
+Run [`../code/sequence_torch.py`](../code/sequence_torch.py) with `--task reverse` for a baseline **without attention**. The encoder's final state initializes the decoder; generation never reads the per-position encoder states again.
+
+This minimal script fixes both input and output length at 7 tokens, stops after that known length, and does not train EOS. Its `same_batch_greedy_accuracy` is token accuracy on the batch just used for training, not an independent validation metric. It illustrates teacher forcing versus autoregressive generation, not variable-length generalization or attention alignment.
+
+[`../code/vanilla_demo.py`](../code/vanilla_demo.py) demonstrates a Transformer with cross-attention, variable-length inputs, padding, and EOS. The scripts differ in task details and training budget, so their printed scores are not a fair comparison. To compare architectures, first match data, budget, and evaluation protocol, then check free-running generation. An attention plot is an additional observation, not proof that the outputs are correct.
 
 ## Self-check {#self-check}
 

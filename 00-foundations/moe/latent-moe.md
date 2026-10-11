@@ -32,6 +32,35 @@ $$
 
 $S$ 表示共享专家的总输出；这里没写外层 residual。主干宽度 $d$、潜在宽度 $\ell$ 和专家内部的 FFN 宽度 $f$ 是三个不同的尺寸：$E_i$ 做的是 $\ell\rightarrow f\rightarrow\ell$，不是把所有维度都除以 2。
 
+### 压缩后相同，结果就一定相同吗？ {#same-latent}
+
+不一定，因为 router 还看着原始输入。做一个两维变一维的小例子：下投影只保留第一维，router 用原始两维作分数、选最高的一项，选中专家的权重归一化为 1。专家 A 把输入乘 2，专家 B 把输入取负；最后把一维结果复制到两个坐标。暂时不加共享路径和 residual。
+
+| 原始输入 | 压缩结果 | 选中专家 | Routed path 输出 |
+| --- | --- | --- | --- |
+| `[1, 0]` | `1` | A | `[2, 2]` |
+| `[1, 2]` | `1` | B | `[-1, -1]` |
+
+两个输入送给专家的数都是 1，但路由选择不同，输出也不同。如果误把 router 接到压缩后的输入，这个区别就丢了。
+
+<details markdown="1">
+<summary>用几行代码走一遍</summary>
+
+```python
+def routed_example(vector):
+    latent = vector[0]
+    selected = 0 if vector[0] >= vector[1] else 1
+    combined = (2 * latent, -latent)[selected]
+    return latent, selected, (combined, combined)
+
+assert routed_example((1, 0)) == (1, 0, (2, 2))
+assert routed_example((1, 2)) == (1, 1, (-1, -1))
+```
+
+这个函数只演示两维输入、top-1 和线性专家，不是 SwiGLU 或完整 MoE。输出始终落在两个坐标相等的直线上，这是此处上投影带来的限制。实际模型还会加共享专家和 residual，不能据此说整个模型只剩一维信息。
+
+</details>
+
 ## 别把三种“变小”混在一起 {#three-widths}
 
 | 改动 | 缩小什么 | 其他条件固定时，直接改变什么 |

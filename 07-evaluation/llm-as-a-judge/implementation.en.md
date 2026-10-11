@@ -80,7 +80,9 @@ This teaching implementation is not a production framework. It lacks an API adap
 <details markdown="1">
 <summary>Exercise: add a nonexistent evidence ID to a sample response</summary>
 
-The result should become invalid even if the raw verdict says pass. Then try verdict unknown: that is valid abstention, not a schema error. The report needs to distinguish those paths.
+The result should be `invalid` even if the verdict says `pass`. Change only the verdict to `unknown`: it is still `invalid`, because the nonexistent citation is still there.
+
+Now clear `evidence_ids` to `[]`, keeping `unknown`, a nonempty reason, and the other valid fields. That is a valid abstention. The report should distinguish insufficient evidence from a malformed response; choosing unknown does not bypass format or citation checks.
 
 </details>
 

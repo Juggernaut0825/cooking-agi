@@ -2,124 +2,150 @@
 
 [中文](same-base-different-posttraining.md) · **English**
 
-> Reading time: ~6 min · Type: case study · Last reviewed: 2026-08
+> Reading time: ~8 min · Type: case study · Last reviewed: 2026-10
 
 ## What this comparison can actually tell us {#what-this-comparison-can-actually-tell-us}
 
-Post-training is hard to price on its own, because it almost always ships alongside a bigger base and more pretraining data, and you can't tell which side the gains came from. GLM-5.3 offers a rare control: **the base weights are identical to 5.2; only post-training changed.** That gives "what is post-training worth" a readable number for once — and a more interesting conclusion: **most of the gain came from infrastructure, not from the algorithm.**
+[The vendor describes GLM-5.3 and 5.2 as sharing a base](https://z.ai/blog/glm-5.3). If that holds, it removes one possible difference in starting conditions, but does not identify which post-training change contributed most.
 
-## Why this is a natural experiment {#why-this-is-a-natural-experiment}
+Three questions help make sense of the results: **what changed, which budget produced the scores, and whether training and sampling agree on token probabilities**. Keeping these questions separate makes it easier to see which conclusions the evidence supports.
 
-The vendor's stated position: parameter count, pretraining corpus, context length, and base weights are all unchanged from the previous version. No new architecture, no new pretraining run.
+## Why this is a limited natural comparison {#why-this-is-a-natural-experiment}
 
-That is exactly the control group we normally don't get. **Usually you see "the new model is better" while base, corpus, and post-training all changed at once**, so any attribution is guesswork. Here two of the three are pinned.
+Sharing a base does not mean that every post-training stage starts from the same checkpoint, or that training data, objectives, compute, sampling systems, and evaluation conditions are fixed. List what is reportedly unchanged, what changed, and what was not disclosed. Do not silently treat the last category as controlled.
 
-⚠️ One qualifier up front: the numbers below are the vendor's own, not independently reproduced. Read them with that in mind.
+For example, if both training tasks and rollout scheduling change, the final success rate cannot allocate credit between them. To estimate the scheduler's contribution, hold tasks and objectives fixed and compare under a specified training budget. If the factors interact, test their combinations.
+
+⚠️ All numbers below are **vendor-reported and not reproduced here**. A same-base comparison narrows the attribution question; it does not automatically become a single-factor causal experiment.
 
 ## The numbers {#the-numbers}
+
+Two public benchmarks and a separate budget comparison are retained from the [GLM-5.3 release](https://z.ai/blog/glm-5.3).
 
 | Benchmark | 5.2 | 5.3 |
 | --- | --- | --- |
 | Terminal-Bench 3.0 | 4.6% | 28.3% |
 | DeepSWE v1.1 | 46.2% | 66.9% |
-| ExploitBench | 24.4% | 54.4% |
-| CyberGym | 77.2% | 84.5% |
 
-Meanwhile token consumption on comparable tasks fell from roughly 96k to roughly 50k — **accuracy went up while output got shorter**. That line carries more information than the accuracy itself: it says the change isn't "thinking longer so getting it right more often," it's a cleaner path.
+Reported protocols: Terminal-Bench uses Claude Code 2.1.207 and avg@3; DeepSWE uses mini-swe-agent. **These rows do not share one scoring protocol.** For example, results `[0, 0, 1]` have mean $1/3$, whereas "at least one success" is $1$. Do not substitute the latter when reading avg@3. Reproduction also requires the release's time, context, sampling, and tool limits, plus confirmation that both versions were rerun under matching conditions.
+
+The next table concerns **private Z.ai Code Bench**, not token usage on the two benchmarks above:
+
+| Model | Effort | Reported score | Output tokens/task (approx.) |
+| --- | --- | --- | --- |
+| GLM-5.2 | Max | 23.4% | 96k |
+| GLM-5.3 | Max | 34.5% | 75k |
+| GLM-5.3 | High | 31.4% | 50k |
+
+These percentages retain the release's wording rather than adding a more specific metric name: the extracted text does not identify their axis in the figure. The detailed scoring and aggregation rules still need to be checked against the figure and protocol.
+
+- **Same effort label:** Max versus Max gives a token reduction of $(96-75)/96=21.875\%$. Sharing the name Max still does not imply equal inference compute.
+- **Cross-effort:** Old Max versus new High gives $(96-50)/96\approx47.92\%$. This is a quality–output-length comparison across settings, not an experiment that changes only the model.
+- **Do not overinterpret length:** Fewer output tokens do not imply proportional reductions in latency, price, or training cost. Average output length alone does not establish a better reasoning path; inspect per-task outcomes, failed trajectories, and actual resource use.
 
 ## But read that first row carefully {#but-read-that-first-row-carefully}
 
-4.6% → 28.3% is a fivefold relative gain. It's the most striking number here and **the least informative one**.
+Separate relative increases from percentage-point changes, then examine difficulty and scoring. **A low baseline does not diagnose missing training coverage, and a mid-range baseline on another benchmark is not stronger causal evidence by itself.** The [GLM-5.2 release](https://z.ai/blog/glm-5.2) already describes long-horizon coding training; a low score on a new benchmark cannot establish its absence.
 
-A baseline of 4.6% on a benchmark usually means the model was **essentially never trained on that kind of task** — terminal operation and long-horizon agent work don't show up naturally in general conversational data. Going from "almost none of this capability" to "some of it" is far easier than going from 46% to 67%.
+A synthetic counterexample: suppose a task has 25 independent steps, each with the same success probability, and all must succeed. Raising per-step success from about 88.41% to 95.08% can raise overall success from 4.6% to 28.3%:
 
-So the correct reading is: **a huge relative gain on a near-zero baseline tells you about a coverage gap, not about method strength.** What actually measures the method is the mid-baseline move — 46.2 → 66.9, twenty points. That one is solid.
+$$
+0.046^{1/25}\approx0.884118,\qquad
+0.283^{1/25}\approx0.950761.
+$$
 
-Generalized: **look at the absolute baseline before you look at the relative gain.** The closer the baseline is to zero, the less the relative number means.
+This is a teaching model with an independence assumption, **not a fit to GLM trajectories**. It shows that accumulated errors can produce a low total score without implying "essentially no training." Real diagnoses also need coverage checks, tool failures, budget truncation, and verifier rules.
 
 ## What they actually changed is the interesting part {#what-they-actually-changed-is-the-interesting-part}
 
-Of the three published changes, only one is arguably a "training method." The other two are infrastructure:
+The release distinguishes inherited slime / SAO with compaction from scaling environments, tasks, and training compute, alongside further algorithmic and system work. [Source](https://z.ai/blog/glm-5.3).
 
-**One: asynchronous RL rollout.** Parallelize and decouple sampling from agent environments. This doesn't touch the objective; it changes **how much experience you can collect per unit time**. For long-horizon tasks, sampling is the bottleneck — a terminal task runs for minutes, and under synchronous waiting the GPUs idle through most of it.
+Analyze three questions rather than labeling every component "new in this version":
 
-**Two: context compaction for long sessions.** Multi-hour coding sessions overflow the context. Compaction exists so long-horizon tasks **can finish at all**, not so they finish better.
+1. **Inherited mechanisms:** Did the earlier version already have them? Were their configurations unchanged?
+2. **Increased investment:** Did task diversity, trajectory count, and compute change together? Is the comparison about efficiency at fixed compute or quality after greater investment?
+3. **Added or modified mechanisms:** Is there an independent ablation? Does throughput improve quality at a fixed budget, or merely shorten the same training job?
 
-**Three: training-inference alignment.** This one deserves its own section, below.
+Counting components does not allocate credit. Two system changes and one algorithm change cannot establish that systems caused most quality gains. Compaction can affect feasibility, available information, and learning trajectories together; it is not merely a switch that lets a task finish.
 
-**Not one of them is a new loss function.** For the instinct that post-training means "pick a better algorithm," this is a counterexample.
+## Training-inference alignment: check ratios and error statistics {#training-inference-alignment-probably-the-important-one}
 
-## Training-inference alignment: probably the important one {#training-inference-alignment-probably-the-important-one}
+Let $q(a\mid s)$ be the actual rollout sampling probability and $p_\theta(a\mid s)$ the target probability evaluated on the training side. For actions with $q(a\mid s)>0$:
 
-The stated change is driving the log-probability divergence between the training and inference sides down to the $10^{-7}$ range. It reads like engineering fastidiousness. It isn't — it touches the foundation of the RL loop.
+$$
+r_\theta(a\mid s)
+=\frac{p_\theta(a\mid s)}{q(a\mid s)}
+=\exp\!\left(\log p_\theta(a\mid s)-\log q(a\mid s)\right).
+$$
 
-Rollout usually runs on an inference engine; training runs in a training framework. The two differ in kernel implementations, precision, and fusion, so **the same text through the same model can produce different logprobs on each side**.
+This illustrates conditional probabilities at one state, not a complete PPO implementation. With temperature, truncation, or masking, raw model logprobs need not represent the actual $q$. Importance weighting also needs the relevant support condition: samples cannot recover actions to which the target assigns positive probability but the sampler assigns none.
 
-That matters because the importance ratio is:
+**A deliberately exaggerated example:** the weights have not changed, but two implementations produce:
 
-$$r_t(\theta) = \frac{\pi_\theta(a_t \mid s_t)}{\pi_{\theta_{\text{old}}}(a_t \mid s_t)}$$
+$$
+q(\cdot\mid s)=(0.5,0.5),\qquad
+p_{\theta_0}(\cdot\mid s)=(0.6,0.4).
+$$
 
-The denominator is **reported by the inference engine**; the numerator is **computed by the training framework**. When the two carry a systematic numerical offset, the ratio absorbs a factor that has nothing to do with the policy changing — it comes from the two implementations disagreeing.
+The two token ratios are $(1.2,0.8)$, not one shared constant multiplier. In general, the discrepancy can depend on state and token. These numbers do not describe any real model's error; they show why identical weights need not imply identical probability distributions.
 
-The consequence: you believe you are on-policy, while a gap you never modeled sits between the sampling policy and the optimized one. Clipping still runs, but it clips a contaminated ratio. **And nothing errors** — loss descends normally, metrics move normally, and every update carries a small systematic tilt.
+Such a ratio is not necessarily calculated incorrectly. If $q$ is genuinely the behavior distribution, it may express a real off-policy difference. Assessing the update also requires checking rollout weight versions, sampling probabilities, the objective, and clipping. A ratio different from 1 does not by itself prove a biased gradient.
 
-The [dual-encoder walkthrough](../04-search/dual-encoder.en.md) shows why candidate-pool definitions matter too: a calculation can be numerically correct while measuring something different from the intended task.
+[The release reports an **average logprob difference** around $10^{-7}$](https://z.ai/blog/glm-5.3), not a maximum-error guarantee over every state and token. Even for absolute error, one error of 1 among $10^7$ otherwise zero-error positions has mean $10^{-7}$. A signed mean can additionally hide cancellation.
 
-Closing that gap to $10^{-7}$ doesn't show up in any formula. It shows up as **every previous update finally meaning what it claimed to mean.**
+First establish the mean's definition and measurement sample, then inspect quantiles, maxima, and slices by length, precision, and sampling configuration. A small mean is useful evidence, not proof that every trajectory is aligned or every update is correct.
 
-## What this experiment shows {#what-this-experiment-shows}
+## What this comparison can tell us {#what-this-experiment-shows}
 
-**One: post-training's ceiling is higher than most people assume.** Same base, multiples on a specific task family. The base sets the upper bound on capability, but most models sit well below their own bound.
+**One: fixing the starting point narrows the question, not every variable.** It directs attention toward post-training and evaluation settings, but separating contributions still requires controlled comparisons.
 
-**Two: capability gets *exposed*, not *injected*.** Their account is putting the model into ten times more long-horizon task environments. Much of the capability already existed in the base; post-training made it reliably callable. That's also why the lowest-baseline task moved most — the capability had rarely been elicited before.
+**Two: eliciting existing capability is an explanation, not an established mechanism.** Improvement may involve new learning, more reliable existing behavior, or both. Shared initial weights neither distinguish these explanations nor measure an immutable capability ceiling.
 
-**Three: the bottleneck is often sampling and numerics, not the loss.** Two of three changes are infrastructure. **This is the most underrated fact in post-training: public discussion concentrates on the algorithm taxonomy, while real gains often come from "how much experience per hour" and "are both sides computing the same number."**
+**Three: discuss systems and algorithms under a common budget.** Report task quality, training resources, and inference resources together instead of declaring one category inherently more important.
 
-## What it does not show {#what-it-does-not-show}
+## What it does not tell us {#what-it-does-not-show}
 
-Drawing the boundary honestly:
-
-- **One vendor, one base, one task family.** Gains concentrate in coding and agent work and don't extrapolate to other capabilities.
-- **Self-reported, not independently reproduced.** Releases don't volunteer regressions — **"no regressions mentioned" is not "no regressions"**, especially for general dialogue, diversity, and safety, none of which were the launch's focus.
-- **No comparable cost accounting.** Ten times the environments means the post-training run itself got much more expensive. "Only post-training changed" is not "cheap."
-- **You can't invert it into "pretraining doesn't matter."** This went far precisely because the base was already strong. What the same post-training does on a weak base is a question this experiment cannot answer.
+- **Transfer across tasks and bases.** One coding comparison does not replace evaluation of other capabilities or starting models.
+- **Whether anything regressed.** Test unreported dimensions separately; silence is not evidence of no regressions.
+- **Complete cost.** Environment count cannot be converted directly into training compute or a cost multiplier. Actual training time, rollout, verification, and serving resources are needed.
+- **Which change contributed most.** Without controls and ablations, retain competing explanations rather than presenting engineering intuition as an experimental conclusion.
 
 ## Down to a checklist {#down-to-a-checklist}
 
-1. For the gain I'm looking at, what was the baseline? Near zero means the story is coverage, not method.
-2. Did output get longer or shorter alongside the gain? Longer means ruling out "thought longer, guessed better" first.
-3. In my RL loop, do sampling and training share numerics? Have I measured the logprob divergence between them?
-4. Is my bottleneck "the algorithm isn't good enough" or "I can't collect enough experience per hour"? Those have completely different fixes.
-5. The dimensions the release didn't mention — did I measure them myself?
+1. Are task versions, aggregation, harnesses, retries, and budgets aligned?
+2. Is this a comparison at the same effort label, at equal actual compute, or across different quality–cost settings?
+3. Which components were inherited, which investments were scaled, and which changes received independent ablations?
+4. Over which samples and statistic is logprob disagreement measured? Does the denominator describe actual sampling?
+5. What else explains the low baseline? Were costs, failures, and unreported capabilities measured separately?
 
 ## Where to read next {#where-to-read-next}
 
-- [After PPO: every algorithm deletes one of its parts](after-ppo.en.md): the algorithm half
-- [The three stages of RLHF](rlhf/three-stages.en.md): what each model does
-- [Dual-encoder retrieval](../04-search/dual-encoder.en.md): checking the training and candidate-pool definitions
+- [After PPO: every algorithm deletes one of its parts](after-ppo.en.md): objectives and constraints
+- [The three stages of RLHF](rlhf/three-stages.en.md): training roles and data sources
+- [Dual-encoder retrieval](../04-search/dual-encoder.en.md): checking training and candidate-pool definitions
 
 ## Quick learning: what can a same-base comparison prove? {#quick-learning-what-can-a-same-base-comparison-prove}
 
 <details class="interview" markdown="1">
 <summary>Natural experiments, confounders, and train–serve alignment</summary>
 
-**Quick memory**: holding the base model fixed shifts attention to data, objectives, and systems, but a post-training recipe usually changes several variables and is not a strict single-factor causal experiment.
+**Quick memory**: the same starting point is not the same process; the same effort name is not equal compute; mean error is not maximum error.
 
 **Interview answer**
 
-> A same-base comparison controls some pretraining capability differences and exposes the effects of SFT data, preference optimization, verifiers, and inference infrastructure. Interpretation still requires checking tokenizer, context length, tool protocol, sampling, and the evaluation harness.
+> Separate the vendor's observations from your explanation. Align tasks, scoring, and budgets before distinguishing inherited components, scale changes, and independent ablations. For probabilities, identify actual sampling and the training target; for errors, inspect means, tails, and measurement scope. Without a controlled experiment, do not allocate gains by the names of the changes.
 
 <details markdown="1">
-<summary><b>Deep dive</b>: why can train–serve alignment matter more than the algorithm name?</summary>
+<summary><b>Deep dive</b>: how would you design a more informative comparison?</summary>
 
-If templates, stop tokens, tool schemas, sampling, or logprob implementations differ between training and serving, learned behavior is invoked under different conditions. Protocol skew can erase an algorithmic gain, while fixing consistency can look like an algorithm change.
+Choose a factor, such as a scheduling strategy. Fix initial weights, training data, objectives, and evaluation protocol. Specify whether the budget fixes training time or sample count, record changes in the other, repeat runs, and report uncertainty. If task distribution must also change, treat it as a second factor rather than hiding it under "everything else equal."
 
 </details>
 </details>
 
 ## Sources {#sources}
 
-Numbers and technical claims come from the vendor's release and reporting on it; not independently reproduced:
+- [GLM-5.3 vendor release, 2026-08-14](https://z.ai/blog/glm-5.3): tables, budgets, and release scope.
+- [GLM-5.2 vendor release, 2026-06-16](https://z.ai/blog/glm-5.2): earlier training and inherited mechanisms.
 
-- [GLM-5.3 didn't change the base model — where did its coding gains come from?](https://thenewstack.io/glm-5-3-post-training-coding/) — The New Stack
-- [GLM-5.3 vs GLM-5.2: Complete Benchmark Comparison & Post-Training Analysis](https://codingfleet.com/blog/glm-5-3-vs-glm-5-2-complete-benchmark-comparison/) — CodingFleet
+Checked 2026-10-10 using indexed text from official pages, not secondary reporting. No model, private evaluation, or training system was reproduced; these tables are not a complete evaluation protocol. The probability and arithmetic counterexamples are independently constructed, not vendor experiments.

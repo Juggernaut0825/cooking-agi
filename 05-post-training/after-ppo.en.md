@@ -2,7 +2,7 @@
 
 [中文](after-ppo.md) · **English**
 
-> Reading time: ~18 min · Type: chapter · Last reviewed: 2026-10-09
+> Reading time: ~18 min · Type: chapter · Last reviewed: 2026-10-10
 
 ## Start with how feedback enters training {#start-with-what-each-algorithm-removes}
 
@@ -16,7 +16,7 @@ PPO, GRPO, and DPO answer the same question: once an SFT model exists, how can r
 
 ### Build intuition with one problem {#build-intuition-with-one-problem}
 
-Use the same prompt, “calculate $17\times24$,” in all three cases:
+Use “calculate $17\times24$” in all three cases. For this first comparison, treat a whole response as one action with a terminal reward and omit KL. That makes the PPO advantage simply $R-V$; tokenwise PPO also needs returns, GAE, and values for individual prefixes.
 
 | Method | What it observes | Where the update direction comes from |
 | --- | --- | --- |
@@ -43,19 +43,21 @@ The Critic needs training too: forward and backward passes, plus optimizer state
 
 The Critic estimates state value, providing a variance-reducing baseline and participating in TD / GAE bootstrapping. For suitable whole-response outcome tasks, sampling statistics can construct a relative signal instead. Multi-step, delayed-reward tasks require another look at credit assignment.
 
-| Algorithm | Where the baseline comes from | Cost |
+| Algorithm | How it constructs the comparison | Cost and checks |
 | --- | --- | --- |
-| **GRPO** | sample a group of responses per prompt; use the group mean (divided by its std) | multiple samples per prompt, so sampling cost goes up |
-| **RLOO** | leave-one-out: one sample's baseline is the mean reward of the others | same sampling cost; and it treats the whole response as **one action**, giving up token-level credit assignment |
-| **REINFORCE++** | batch-level statistics for advantage normalization | a coarser baseline, but it keeps PPO's clipping and KL stabilization |
+| **GRPO** | sample a group per prompt; subtract the mean reward and divide by its standard deviation | multiple samples per prompt, so sampling cost goes up |
+| **RLOO** | leave-one-out: one sample's baseline is the mean reward of the others | multiple samples; a common form uses a whole-response advantage rather than learned prefix values |
+| **REINFORCE++** | construct advantages from KL-shaped returns, then normalize across the batch | no trained value model; inspect returns, KL, and the normalization scope |
 
-These methods avoid an independently trained value model, not estimation error. Compare saved training state against extra sampling, signal variance, and task structure.
+These methods avoid an independently trained value model, not estimation error. Compare saved training state against extra sampling, signal variance, and task structure. The REINFORCE++ row refers to [v1 §3](https://arxiv.org/html/2501.03262v1#S3). Batch normalization of advantages is not another learned baseline, nor a guarantee of unbiased gradients or stable training.
 
 RLOO's baseline, with $k$ samples per prompt:
 
 $$\hat A_i = r_i - \frac{1}{k-1}\sum_{j \neq i} r_j$$
 
-Its argument is that RLHF starts from a trained SFT model rather than a randomly initialized network, so PPO's machinery for stabilizing unstable training (GAE, per-token value estimation) may not be necessary.
+[RLOO §2.2–2.3](https://arxiv.org/html/2402.14740v1#S2.SS2) treats a completion as one action, but its tokens still receive gradients. Sequence log-probability is the sum of conditional token log-probabilities, all weighted by the same advantage. It does not separately estimate which step beat expectations. The leave-one-out baseline's unbiasedness also needs conditions such as independent samples for the same prompt; arbitrary correlated samples do not qualify.
+
+The paper tests these simplifications on particular pretrained models and preference tasks. It does not establish that every task can dispense with a Critic or GAE.
 
 ### GRPO's group-relative advantage {#grpos-group-relative-advantage}
 
@@ -223,7 +225,21 @@ only says “A is worth imitating.” DPO observes A and B together and learns �
 
 $\beta$ participates both in the theoretical Reference constraint and in the preference-logit scale. Mechanically memorizing “larger means more conservative” is unsafe: derivation conventions, loss implementation, and data scale all affect observed training behavior. In an interview, write the exact formula or library convention first, then reason about increasing or decreasing it.
 
-Standard DPO typically pays for its simplicity with **fixed offline preference pairs**. The policy changes while the data came from an older policy, so distribution mismatch grows and training cannot actively discover the current policy's new failures. Online DPO and iterative data refresh can reduce this problem; “DPO is always offline” is not an absolute boundary for the whole family. The deeper question is whether data follows the current policy and closes the feedback loop.
+Standard offline DPO uses **fixed preference pairs**. The policy changes, but the dataset does not automatically follow, potentially missing new failures. Measure whether distribution mismatch grows; it need not increase monotonically. Online DPO and iterative data refresh collect more feedback, so “DPO is always offline” is not a boundary for the entire family.
+
+### A better relative score need not mean a higher probability {#relative-not-absolute}
+
+Consider three categories of output:
+
+| Output | Reference probability | Current probability |
+| --- | --- | --- |
+| chosen | 0.4 | 0.3 |
+| rejected | 0.3 | 0.1 |
+| all other outputs | 0.3 | 0.6 |
+
+Chosen becomes less likely, but rejected falls further. The ratio of their odds relative to Reference is $(0.3/0.1)/(0.4/0.3)=2.25$. With illustrative $\beta=1$, this pair's DPO loss falls from $\log 2\approx0.6931$ to $\log(1+1/2.25)\approx0.3677$.
+
+These are two valid distributions, not a claimed gradient-step trajectory. They show that **a lower preference loss does not ensure higher absolute chosen probability**, unlike an objective that only imitates chosen. See the objective in [DPO §4](https://arxiv.org/html/2305.18290v2#S4).
 
 Two follow-ups:
 
@@ -232,19 +248,19 @@ Two follow-ups:
 
 ## RLVR: let a program check the answer {#and-one-more-replace-the-reward-model-with-a-program}
 
-Math has answers to check. Code has tests to run. For these, the reward **doesn't need to be learned** — write a checker.
+Math answers can be checked, and code can be tested. When a reliable checker is available, its result can supply that part of the reward without a separately trained Reward Model. [DeepSeek-R1-Zero's reward setup](https://arxiv.org/html/2501.12948v1#S2.SS2.SSS2) is one example. This specifies a feedback source, not a choice between PPO and GRPO.
 
-What this deletes is the Reward Model. A deterministic checker removes one major attack surface—the approximation error of a learned reward—but the checker can still encode the wrong specification or leave loopholes. Verifiable reward narrows reward hacking; it does not make the objective automatically correct.
+For example, a function can pass five public tests by hard-coding those five outputs. A deterministic result does not mean the checker captures the whole requirement. It avoids the corresponding learned reward's fitting error, but does not guarantee less reward hacking. Test coverage, execution isolation, and independent evaluation still matter.
 
-The limitation is obvious: it only applies where you can write the checker.
+RLVR suits the parts with verifiable outcomes. A broader task can combine program checks, human judgments, and learned rewards rather than force every requirement into one checker.
 
 ## The table {#the-table}
 
 | | Typical training data | Explicit reward | Critic | Training-time rollout | Central trade-off |
 | --- | --- | --- | --- | --- | --- |
-| PPO | prompts + responses from the current/recent policy | RM, rule, or environment | yes | yes | flexible feedback and online exploration; most complex system |
+| PPO | prompts + responses from the current/recent policy | RM, rule, or environment | usually | yes | collects online feedback; typical setups coordinate sampling, scoring, and Actor–Critic updates |
 | GRPO | prompts + a group of responses per prompt | RM, verifier, or environment | no | yes, multiple times per prompt | removes the Critic; needs within-group variation and spends more generation compute |
-| DPO | fixed chosen/rejected pairs | no explicit call; reward difference is implicit in the loss | no | not in standard offline training | simple and stable; limited by preference coverage and distribution mismatch |
+| DPO | fixed chosen/rejected pairs | no explicit call; reward difference is implicit in the loss | no | not in standard offline training | removes online sampling from training; labels, coverage, and optimization settings still matter |
 
 The extensions change different parts of training: RLOO changes baseline estimation, REINFORCE++ uses batch statistics, RLVR changes the reward source, and DAPO adjusts sampling, clipping, token weighting, and overlong-response handling. These are not all competing choices at the same level, nor are they necessarily mutually exclusive.
 
@@ -306,14 +322,14 @@ First determine whether the loss uses a per-sequence mean or batch-wide per-toke
 <details class="interview" markdown="1">
 <summary>5. Which policy produced the DPO preference data, and why does it matter?</summary>
 
-Record the generation checkpoint, sampling temperature, decoding constraints, and annotation date. As the current policy moves away from the producer policy, fixed pairs cover fewer of its present failures. Test coverage on held-out prompts and resample, relabel, or switch to an iterative / online preference loop after meaningful drift.
+Record the generation checkpoint, sampling temperature, decoding constraints, and annotation date. Old pairs may miss errors that the updated model now makes, but policy distance alone does not tell you how well the data covers those errors. Look for actual gaps on held-out prompts before deciding to resample, relabel, or move to an iterative / online preference loop.
 
 </details>
 
 <details class="interview" markdown="1">
 <summary>6. Can DPO fully replace PPO / GRPO?</summary>
 
-Not in general. Standard DPO is cheap and stable when high-quality offline pairs already cover the desired behavior. PPO / GRPO can roll out the current policy and receive new rewards, which fits exploration, environment interaction, and verifiable multi-step tasks more naturally—but training is more expensive and less stable. The feedback loop matters more than the loss name.
+Not in general. With suitable pairs already available, offline DPO avoids online generation during training; collecting and labeling those pairs still costs something. PPO / GRPO can keep sampling and receiving feedback, but require generation budgets and more system coordination. Compare total cost and stability on matched tasks and budgets, not algorithm names.
 
 </details>
 
@@ -322,7 +338,7 @@ Not in general. Standard DPO is cheap and stable when high-quality offline pairs
 <details class="interview" markdown="1">
 <summary>Write the three central equations for PPO, GRPO, and DPO.</summary>
 
-PPO's direction starts with $\hat A_t\approx G_t-V_\phi(s_t)$ and uses a clipped probability-ratio surrogate to bound one update. GRPO replaces the learned value baseline with $\hat A_i=(R_i-\mu_R)/(\sigma_R+\varepsilon)$. DPO uses $-\log\sigma\!\left(\beta[\Delta_w-\Delta_l]\right)$, where each $\Delta$ is the current policy's log-probability change relative to the Reference.
+With Monte Carlo returns, PPO can use $\hat A_t=G_t-V_\phi(s_t)$; GAE additionally involves bootstrapping. The clipped surrogate flattens selected gains; **it does not hard-bound the resulting ratio or KL after an update**. GRPO commonly uses $\hat A_i=(R_i-\mu_R)/(\sigma_R+\varepsilon)$. DPO uses $-\log\sigma\!\left(\beta[\Delta_w-\Delta_l]\right)$, where each $\Delta$ is the current policy's log-probability change relative to Reference.
 
 </details>
 
@@ -343,7 +359,7 @@ The KL-constrained optimum satisfies $r(x,y)=\beta\log[\pi^*(y\mid x)/\pi_{\math
 <details class="interview" markdown="1">
 <summary>Two-minute conclusion: can DPO fully replace PPO?</summary>
 
-No. DPO is simple and stable when fixed, high-quality preference pairs cover the target behavior, but it does not automatically explore a current policy's new failures. PPO / GRPO can keep sampling the current policy and receive feedback from an environment, Reward Model, or verifier, which better fits exploration and multi-step outcomes but costs more rollout compute and is harder to stabilize. Online DPO shows that the real boundary is whether data updates with the policy, not the algorithm's name.
+No. Ask where data comes from and when feedback is refreshed. Offline DPO does not collect new failures by itself; PPO / GRPO usually generate and score responses during training. Online DPO can refresh preference data too, so online versus offline and preference loss versus policy gradient are separate choices. Compare actual cost, coverage, and evaluation rather than ranking the names.
 
 </details>
 
@@ -352,6 +368,7 @@ No. DPO is simple and stable when fixed, high-quality preference pairs cover the
 - [The three stages of RLHF, and what came after](rlhf/README.en.md): what each model does, and the DPO derivation
 - [Data and feedback](../01-data-and-feedback/): the quality of preference labels themselves
 - [Evaluation](../07-evaluation/): telling whether alignment actually helped
+- [Clipping and gradients](clipping-variants.en.md): compare Dual-clip, CISPO, and SAPO on identical inputs; optional on a first pass
 
 ## Starting papers {#starting-papers}
 
@@ -363,16 +380,16 @@ No. DPO is simple and stable when fixed, high-quality preference pairs cover the
 - [REINFORCE++](https://arxiv.org/abs/2501.03262) — drop the Critic, keep PPO's stabilizers
 - [DPO](https://arxiv.org/abs/2305.18290) · [IPO](https://arxiv.org/abs/2310.12036) · [KTO](https://arxiv.org/abs/2402.01306)
 
-## Quick learning: what do PPO, GRPO, and DPO remove? {#quick-learning-what-do-ppo-grpo-and-dpo-remove}
+## Back to the choice: what feedback do you have? {#quick-learning-what-do-ppo-grpo-and-dpo-remove}
 
 <details class="interview" markdown="1">
 <summary>Choose from data availability and reward verifiability, not algorithm fashion</summary>
 
-**Quick memory**: PPO uses Actor, Critic, RM, and Reference. GRPO removes the Critic with within-prompt relative baselines. DPO uses static chosen/rejected pairs and removes both an explicit RM and the rollout loop.
+**Keep three distinctions in mind:** classic PPO-RLHF estimates a baseline with a Critic, while reward and Reference serve different roles. GRPO estimates relative advantages from responses to the same prompt. Standard offline DPO reads preference pairs without an online rollout loop. Whether roles share a model, or a program supplies the reward, is a separate configuration question.
 
 **Interview answer**
 
-> DPO is cheap and stable but mainly learns from offline preference pairs and does not automatically explore current-policy failures. GRPO still requires online rollouts; it replaces the Critic with group-relative reward. Online RL is more natural for verifiable multi-step exploration, while DPO fits settings with only static preference data.
+> With high-quality preference pairs, offline DPO offers a simpler training loop, but does not collect new failures from the current policy by itself. If you can keep sampling and obtaining reliable rewards, compare online methods such as PPO and GRPO. The need for a Critic and the cost of group sampling depend on the task and budget; changing the loss does not guarantee stability.
 
 <details markdown="1">
 <summary><b>Deep dive</b>: why does an all-correct or all-wrong GRPO group carry no signal?</summary>
@@ -384,4 +401,4 @@ Group-normalized advantage uses $(r_i-\bar r)/s_r$. If every reward is equal, ce
 
 ## Further reading (Chinese) {#further-reading-chinese}
 
-- [Reinforcement learning in large models](https://zhuanlan.zhihu.com/p/693582342) — a Zhihu article, in Chinese. This chapter is organized along a single axis, "what got deleted," and covers only the trunk. That piece is the encyclopedic view — MDP elements, the Bellman equation, MC/TD/GAE, then each algorithm in detail. Start there if you want the fuller map.
+- [Reinforcement learning in large models](https://zhuanlan.zhihu.com/p/693582342) — supplementary reading in Chinese. This chapter compares feedback, baselines, and update objectives; check specific formulas and implementations against original papers and pinned code versions.

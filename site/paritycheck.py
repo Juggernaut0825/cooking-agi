@@ -14,7 +14,6 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SKIP = {"templates"}                       # 模板不是给读者看的页面
 
 COUNTERS = {
     "h2": r"(?m)^## ", "h3": r"(?m)^### ", "code": r"(?m)^```", "math": r"(?s)(?<!\\)\$\$.*?(?<!\\)\$\$",
@@ -61,41 +60,47 @@ def source_issues(text: str) -> list[str]:
     return issues
 
 
+def published_sources(nav, root):
+    claimed = {source for section in nav["section"] for source in section.get("include", [])}
+    seen = set()
+    for section in nav["section"]:
+        directory = root / section["dir"]
+        files = [path for path in directory.glob("*.md")
+                 if not path.name.endswith(".en.md")
+                 and path.relative_to(root).as_posix() not in claimed]
+        files += [root / source for source in section.get("include", []) if (root / source).exists()]
+        if section["dir"] == ".":
+            files = [path for path in files if path.name in section.get("order", [])]
+        for source in sorted(files):
+            if source not in seen:
+                seen.add(source)
+                yield source
+
+
 def main() -> int:
     nav = tomllib.loads((ROOT / "site" / "nav.toml").read_text(encoding="utf-8"))
-    dirs = [s["dir"] for s in nav["section"]]
-    dirs += [str(Path(source).parent) for section in nav["section"] for source in section.get("include", [])]
+    sources = list(published_sources(nav, ROOT))
     missing, drift, invalid = [], [], []
-    seen = set()
-    for d in dirs:
-        base = ROOT if d == "." else ROOT / d
-        if not base.exists() or d.split("/")[0] in SKIP:
+    for source in sources:
+        if source == ROOT / "README.md":
+            zh, en = ROOT / "README.zh.md", ROOT / "README.md"
+        else:
+            zh, en = source, source.with_name(source.stem + ".en.md")
+        rel = zh.relative_to(ROOT).as_posix()
+        if not en.exists():
+            missing.append(rel)
             continue
-        for zh in sorted(base.glob("*.md")):
-            if zh.name.endswith(".en.md") or zh in seen:
-                continue
-            if d == "." and zh.name not in {"README.md", "EDITORIAL.md"}:
-                continue
-            seen.add(zh)
-            if zh == ROOT / "README.md":
-                zh, en = ROOT / "README.zh.md", ROOT / "README.md"
-            else:
-                en = zh.with_name(zh.stem + ".en.md")
-            rel = zh.relative_to(ROOT).as_posix()
-            if not en.exists():
-                missing.append(rel)
-                continue
-            chinese = zh.read_text(encoding="utf-8")
-            english = en.read_text(encoding="utf-8")
-            for path, text in ((zh, chinese), (en, english)):
-                for issue in source_issues(text):
-                    invalid.append((path.relative_to(ROOT).as_posix(), issue))
-            a, b = shape(chinese), shape(english)
-            diff = {k: (a[k], b[k]) for k in a if a[k] != b[k]}
-            if diff:
-                drift.append((rel, diff))
+        chinese = zh.read_text(encoding="utf-8")
+        english = en.read_text(encoding="utf-8")
+        for path, text in ((zh, chinese), (en, english)):
+            for issue in source_issues(text):
+                invalid.append((path.relative_to(ROOT).as_posix(), issue))
+        a, b = shape(chinese), shape(english)
+        diff = {k: (a[k], b[k]) for k in a if a[k] != b[k]}
+        if diff:
+            drift.append((rel, diff))
 
-    print(f"检查了 {len(seen)} 篇笔记\n")
+    print(f"检查了 {len(sources)} 篇笔记\n")
     print(f"缺英文版：{len(missing)} 篇")
     for rel in missing:
         print(f"  - {rel}")

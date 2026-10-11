@@ -51,11 +51,16 @@ If “finish within 20 steps” defines the task itself, reaching the limit may 
 
 ```python
 def td_target(reward, next_value, gamma, terminated):
-    return reward + gamma * (not terminated) * next_value
+    if terminated or gamma == 0:
+        return reward
+    return reward + gamma * next_value
 
 assert td_target(1.0, 5.0, 0.9, True) == 1.0
 assert td_target(1.0, 5.0, 0.9, False) == 5.5
+assert td_target(1.0, float("nan"), 0.9, True) == 1.0
 ```
+
+Return the reward directly rather than multiplying an invalid successor estimate by zero: `0 * NaN` is still NaN. A zero discount also needs no successor estimate; callers should skip those unnecessary value evaluations.
 
 ## SARSA versus Q-learning: whose next action?
 
@@ -69,6 +74,8 @@ $$
 These expressions assume a nonterminal transition. At true termination, both continuation terms are zero.
 
 Let $Q(s',\cdot)=[2,5]$ and exploration select the first action. For $r=1,\gamma=0.9$, SARSA targets 2.8 and Q-learning targets 5.5. The distinction is not whether exploration exists; it is which continuation the target evaluates.
+
+This is off-policy control: behavior may explore while the target uses a greedy continuation. One-step Q-learning conditions on $(s,a)$ and uses its actual transition in the same MDP, so it needs no importance ratio for the current action. Adequate state–action coverage still matters. This does not justify uncorrected multi-step off-policy returns.
 
 ## Compare three targets on the same trajectory
 
@@ -96,7 +103,7 @@ MC targets do not depend on current parameters and resemble ordinary supervised 
 
 ## Even tabular convergence has assumptions
 
-Tabular TD(0) for a fixed policy converges under suitable visitation and learning-rate conditions. Standard stochastic-approximation conditions require each state’s step sizes to satisfy $\sum_t\eta_t=\infty$ and $\sum_t\eta_t^2<\infty$: keep enough opportunity to correct errors while gradually reducing sampling noise.
+For a finite-state MDP with bounded rewards and $0\le\gamma<1$, on-policy tabular TD(0) for a fixed policy converges under suitable sampling and learning-rate conditions, including infinitely many visits to each state being estimated. Standard stochastic-approximation conditions require each state’s step sizes to satisfy $\sum_t\eta_t=\infty$ and $\sum_t\eta_t^2<\infty$: keep enough opportunity to correct errors while gradually reducing sampling noise.
 
 A constant step size may help track change, but it does not inherit an exact-convergence conclusion. Nonlinear approximation, off-policy data, and poor coverage require further care. Verify updates in a tiny tabular environment before adding the network.
 
@@ -109,4 +116,4 @@ Not necessarily. A vector environment may already have reset, so you must retain
 
 </details>
 
-Reference: [Gymnasium on termination and truncation](https://farama.org/Gymnasium-Terminated-Truncated-Step-API). Next, see [how to update a policy directly](policy-gradients.en.md).
+References: [Gymnasium v1.1.0 on termination and truncation](https://gymnasium.farama.org/v1.1.0/tutorials/gymnasium_basics/handling_time_limits/), [Watkins and Dayan (1992), §2–3: Q-learning sampling and convergence](https://www.gatsby.ucl.ac.uk/~dayan/papers/cjch.pdf). Next, see [how to update a policy directly](policy-gradients.en.md).

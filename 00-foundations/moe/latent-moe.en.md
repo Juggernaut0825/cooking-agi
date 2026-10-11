@@ -32,6 +32,35 @@ $$
 
 $S$ combines the shared experts; the outer residual is omitted. Backbone width $d$, latent width $\ell$, and expert intermediate width $f$ are different dimensions. An expert maps $\ell\rightarrow f\rightarrow\ell$. Not every dimension has been halved.
 
+### Does the same latent vector imply the same output? {#same-latent}
+
+Not necessarily: the router still sees the original input. In a two-dimensional toy example, keep only the first coordinate as the latent. Use the original coordinates as routing scores, select the larger score, and normalize the selected expert's weight to 1. Expert A doubles its input; expert B negates it. The up-projection copies the scalar output into both coordinates. Leave out shared experts and the residual for now.
+
+| Original input | Latent | Selected expert | Routed-path output |
+| --- | --- | --- | --- |
+| `[1, 0]` | `1` | A | `[2, 2]` |
+| `[1, 2]` | `1` | B | `[-1, -1]` |
+
+Both experts receive the scalar 1, but different routing decisions produce different outputs. Feeding the compressed representation to the router instead would erase this distinction.
+
+<details markdown="1">
+<summary>Follow the calculation in a few lines</summary>
+
+```python
+def routed_example(vector):
+    latent = vector[0]
+    selected = 0 if vector[0] >= vector[1] else 1
+    combined = (2 * latent, -latent)[selected]
+    return latent, selected, (combined, combined)
+
+assert routed_example((1, 0)) == (1, 0, (2, 2))
+assert routed_example((1, 2)) == (1, 1, (-1, -1))
+```
+
+This is a two-dimensional, top-1 example with linear experts, not SwiGLU or a complete MoE. Its outputs lie on the line where both coordinates are equal, a restriction imposed by this up-projection. A real model adds shared experts and a residual; the restriction on this branch does not make the whole model one-dimensional.
+
+</details>
+
 ## Three different ways to make something smaller {#three-widths}
 
 | Change | What shrinks? | Direct effect, holding other choices fixed |

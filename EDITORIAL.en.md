@@ -1,8 +1,8 @@
 # Writing clear notes that are easy to revisit
 
-[中文](EDITORIAL.md) · **English** · [Back to home](README.en.md)
+[中文](EDITORIAL.md) · **English** · [Back to home](README.md)
 
-> Reading time: ~5 minutes · Last reviewed: 2026-08
+> Reading time: ~5 minutes · Last reviewed: 2026-10
 
 ## Core principle
 
@@ -107,7 +107,15 @@ Fast-moving pages carry `Last reviewed: YYYY-MM`. A current fact that cannot be 
 
 Name the version and verification date; changing the year on an old report is not an update. Explain new releases when they change architecture, interfaces, or evaluation. An announcement supports only what it discloses. State missing architecture and training details directly rather than inferring them from a family name.
 
-Reference notes identify gaps; each topic still needs primary-source, example, and scope checks. Track reading, drafting, integration, tests, and release acceptance separately. Site-wide revisions follow `CONTENT_RELEASE_CHECKLIST.md` and are not pushed before acceptance.
+Reference notes identify gaps; each topic still needs primary-source, example, and scope checks. Track reading, drafting, integration, tests, and release acceptance separately. Site-wide revisions follow `CONTENT_RELEASE_CHECKLIST.md`. With explicit agreement, an interim PR can collect finished work for review without claiming the whole site is complete. Opening a PR, passing review, and publishing are separate steps.
+
+## Using reference notes
+
+First identify the question an article answers and the assumptions it makes. Its emphasis on one method does not make alternatives irrelevant, and mentioning a concept does not explain it. Use the contents list to spot gaps, not as a syllabus we must reproduce.
+
+Check uncertain claims against original papers, documentation, or implementations. Separate what the authors tested from what they inferred, and ask whether the result survives a change in data, budget, or version. Explain conflicting conditions rather than accepting a claim because it reads well or was published recently. Primary sources can contain mistakes too; work through the calculations independently. Understand an older method in its original setting before describing what has changed since.
+
+Build our explanation and examples from that understanding, rather than paraphrasing the reference paragraph by paragraph. Start with a concrete problem, then develop the reasoning, alternatives, and implementation as needed. Add missing prerequisites, counterexamples, and limitations without padding the article. Cite sources beside the claims they support; check permissions and give attribution when reusing figures, code, or quotations.
 
 ## Source order
 

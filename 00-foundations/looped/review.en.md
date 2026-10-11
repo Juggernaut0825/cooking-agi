@@ -2,7 +2,7 @@
 
 [中文](review.md) · **English**
 
-> Reading time: ~3 min · Level: advanced · Last reviewed: 2026-10-09
+> Reading time: ~3 min · Level: advanced · Last reviewed: 2026-10-10
 
 ## Interview questions
 
@@ -16,7 +16,7 @@ Both share parameters. ALBERT also factorizes embeddings, so its total reduction
 <details class="interview" markdown="1">
 <summary>What does looping add, and what does it not add?</summary>
 
-It adds depth of computation over shared weights, not external facts or independent weights per loop. Whether that computation helps is empirical. Roughly 2 bits per parameter is a synthetic-task measurement, not a capacity theorem; more loops need not improve accuracy.
+It adds depth of computation over shared weights, not external facts or independent weights per loop. Whether that computation helps is empirical. Roughly 2 bits per parameter is a small-model synthetic-task measurement, not a measurement of the released Ouro checkpoints or a capacity theorem; more loops need not improve accuracy.
 
 </details>
 
@@ -55,8 +55,8 @@ CoT adds generated positions; looping adds hidden-state updates. They can coexis
   <ol>
     <li>why an ordinary Transformer's depth and parameters are tied, and how looping unties them;</li>
     <li>which budgets differ between shared and independent weights when both execute twelve layer evaluations;</li>
-    <li>how ACT, PonderNet, and Ouro's exit gate each decide when a token stops;</li>
-    <li>why a model looped 4 times keeps, by default, 4 times the KV cache of an unlooped one;</li>
+    <li>how ACT's accumulation, PonderNet's stepwise sampling, and Ouro's cumulative-probability threshold differ, and whether all require per-token decisions;</li>
+    <li>when full KV storage scales directly with loop count, and why Huginn's 2+4+2 layout needs only 2.5 times the KV at four loops versus one;</li>
     <li>which tasks suit a looped model and which do not.</li>
   </ol>
 </div>
@@ -73,5 +73,5 @@ CoT adds generated positions; looping adds hidden-state updates. They can coexis
 - [Relaxed Recursive Transformers](https://arxiv.org/abs/2410.20672)
 - [Mixture-of-Recursions](https://arxiv.org/abs/2507.10524)
 - [Scaling Latent Reasoning via Looped Language Models](https://arxiv.org/abs/2510.25741): Ouro
-- [Continuous Depth Batching](https://arxiv.org/abs/2608.09444): reproducing per-loop KV sharing
-- [MELT](https://arxiv.org/abs/2605.07721): evaluating training-free KV sharing
+- [Continuous Depth Batching](https://arxiv.org/html/2608.09444v2): KV-sharing evaluation in v2, Appendix E.1
+- [MELT](https://arxiv.org/html/2605.07721v3): training-free KV-sharing evaluation in v3, Appendix B

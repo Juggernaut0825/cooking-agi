@@ -33,11 +33,79 @@ assert bfloat_near_one == 1.0
 
 Matrix inputs, products, accumulation, and stored outputs may use different precisions. A BF16 tensor does not establish that the entire computation runs in BF16.
 
+### A nonzero gradient can still leave a weight unchanged {#rounded-away-update}
+
+Start with a weight of 1 and subtract 0.001 per step. That update is nonzero in BF16, but storing `1 - 0.001` in BF16 rounds back to 1. The nearest BF16 value below 1 is 0.99609375; 0.999 is closer to 1.
+
+Repeating the update does not automatically accumulate the lost changes. Subtract 0.001 one hundred times, with no schedule, momentum, or training data involved—just storage rounding:
+
+<figure class="worked-update worked-update--pairs" lang="en" id="precision-update-paths">
+  <figcaption>The same 100 subtractions, with different precision for retained updates.</figcaption>
+  <ol>
+    <li><small>Write back to BF16 each step</small><strong>Still 1</strong><span>Each small change rounds away. The next step starts from 1 again.</span></li>
+    <li><small>Keep updating in FP32</small><strong>About 0.9</strong><span>The changes accumulate. Casting the final value to BF16 gives 0.8984375.</span></li>
+  </ol>
+</figure>
+
+<details class="code-drop" markdown="1">
+<summary>Check it with PyTorch on CPU</summary>
+
+```python
+import torch
+
+def rounded_update_example():
+    low_precision = torch.tensor(1.0, dtype=torch.bfloat16)
+    full_precision = torch.tensor(1.0, dtype=torch.float32)
+    for step in range(100):
+        low_precision.sub_(0.001)
+        full_precision.sub_(0.001)
+    return low_precision.item(), full_precision.item(), full_precision.to(torch.bfloat16).item()
+
+low_result, full_result, rounded_result = rounded_update_example()
+assert torch.tensor(0.001, dtype=torch.bfloat16).item() != 0.0
+assert low_result == 1.0
+assert abs(full_result - 0.9) < 2e-6
+assert rounded_result == 0.8984375
+```
+
+</details>
+
+This differs from a gradient becoming zero when stored. Loss scaling must be undone before the update; it is not a way to permanently enlarge steps to bypass weight rounding. FP32 parameters or master weights give small updates somewhere to accumulate, but not every low-precision training method needs the same copies. [Mixed Precision Training §3.1–3.2](https://arxiv.org/html/1710.03740v3#S3.SS1) separates update precision from gradient scaling. The BF16 example here is our own illustration, not a reproduction of that paper's FP16 experiments.
+
 ## Autocast does not convert the whole model to FP16
 
 `model.half()` changes floating-point parameter and buffer storage. `autocast` chooses execution precision by operation: matrix products and some reductions can use different types within one forward pass. Backward does not universally switch to FP32; its operations follow the types selected for their corresponding forward operations.
 
-Inspect parameter, activation, gradient, and accumulation types separately. Saving a `state_dict()` does not automatically convert AMP-trained weights to FP32. [PyTorch's AMP examples](https://docs.pytorch.org/docs/stable/notes/amp_examples.html) separate autocast from gradient scaling: one selects precision, the other addresses gradient range.
+Inspect parameter, activation, gradient, and accumulation types separately. Saving a `state_dict()` does not automatically convert AMP-trained weights to FP32. [PyTorch 2.8 AMP examples](https://docs.pytorch.org/docs/2.8/notes/amp_examples.html) separate autocast from gradient scaling: one selects precision, the other addresses gradient range.
+
+Keep a linear layer's parameters in FP32 and compute `[3, 4] @ [1, 2] = 11` under CPU BF16 autocast, then take squared error against 10. In this run the parameters stay FP32, while the layer output is BF16. Explicitly convert the output to FP32 for the loss; after backward, the parameter `.grad` is FP32 too. **FP32 gradient storage does not undo rounding in earlier low-precision operations.**
+
+<details class="code-drop" markdown="1">
+<summary>Inspect the dtypes along the computation</summary>
+
+```python
+import torch
+
+def autocast_dtype_example():
+    layer = torch.nn.Linear(2, 1, bias=False, dtype=torch.float32)
+    with torch.no_grad():
+        layer.weight.copy_(torch.tensor([[1.0, 2.0]], dtype=torch.float32))
+    with torch.autocast("cpu", dtype=torch.bfloat16):
+        prediction = layer(torch.tensor([[3.0, 4.0]], dtype=torch.float32))
+        loss = (prediction.float() - 10.0).square().mean()
+    loss.backward()
+    dtypes = (layer.weight.dtype, prediction.dtype, loss.dtype, layer.weight.grad.dtype)
+    return dtypes, layer.weight.grad
+
+dtypes, gradient = autocast_dtype_example()
+assert dtypes == (torch.float32, torch.bfloat16, torch.float32, torch.float32)
+torch.testing.assert_close(gradient, torch.tensor([[6.0, 8.0]], dtype=torch.float32))
+print(dtypes)
+```
+
+</details>
+
+This checks the PyTorch 2.8.0 CPU interface, not GPU speed. The FP32 parameters already retain updates here; do not count a second FP32 master copy serving the same purpose. A scheme with low-precision parameters and separate master weights needs different memory accounting. Consult the [AMP documentation](https://docs.pytorch.org/docs/2.8/amp.html) for operator-specific policies rather than generalizing this layer's dtypes to every operation.
 
 ## What does loss scaling protect?
 
@@ -52,7 +120,7 @@ forward → scale loss → backward through the full accumulation window
         → unscale → gradient clipping → optimizer step → update scale
 ```
 
-Clipping scaled gradients changes the meaning of the threshold. Changing scale partway through accumulation also mixes incompatible gradient scales. [PyTorch's AMP examples](https://docs.pytorch.org/docs/stable/notes/amp_examples.html) explain the required ordering.
+Clipping scaled gradients changes the meaning of the threshold. Changing scale partway through accumulation also mixes incompatible gradient scales. [PyTorch 2.8 AMP examples](https://docs.pytorch.org/docs/2.8/notes/amp_examples.html) explain the required ordering.
 
 A scalar makes the order visible. A true gradient of 0.25 scaled by 8 becomes 2. With clipping threshold 0.5, the correct order returns 0.25 without clipping. Clipping 2 to 0.5 first, then dividing by 8, returns 0.0625: an unintended fourfold reduction.
 
@@ -148,6 +216,16 @@ The 804 B consists of two 400 B moments and a 4 B step tensor in this implementa
 
 The useful lesson is that **measurement immediately after loading misses state that does not yet exist**. Inspect at least one complete GPU update and representative long sequences. `element_size()` helps check dtypes, but naively summing views, tied weights, or flat-buffer slices can double-count storage.
 
+Changing the optimizer changes the ledger too. For the same 100 FP32 parameters after the first update:
+
+| Optimizer configuration | Additional optimizer tensor storage |
+| --- | ---: |
+| SGD, `momentum=0` | 0 B |
+| SGD, `momentum=0.9` | 400 B for one momentum buffer |
+| AdamW, default non-AMSGrad | 804 B for two moments and the step |
+
+These are CPU state counts, excluding weights and gradients, not GPU peaks. **SGD need not use momentum, and Adam's moments do not produce the gradient.** Backward computes the gradient; the optimizer uses it to update the moments and then the parameters. Compare the update order in [SGD](https://docs.pytorch.org/docs/2.8/generated/torch.optim.SGD.html) and [Adam](https://docs.pytorch.org/docs/2.8/generated/torch.optim.Adam.html). Different dtypes, AMSGrad, or a sharded optimizer require a new ledger, not a fixed training-to-inference memory multiplier.
+
 ### Do eight GPUs divide the estimate by eight? {#sharded-state}
 
 Ordinary data parallelism keeps model replicas, so no. Under the same 16 GB assumptions, an ideal evenly sharded state estimate is:
@@ -183,7 +261,56 @@ Unequal valid-token counts require token-weighted normalization, not blindly div
 
 ## Checkpointing recomputes what it did not retain
 
-**Activation checkpointing** is different from saving training progress to disk.
+**Activation checkpointing**, also called gradient checkpointing, is different from [saving training progress to disk](../../practice/post-training/checkpoint-and-resume.en.md). Q, K, and V are intermediate tensors. They do not automatically become checkpoint boundaries: that depends on which results a recomputation strategy retains.
+
+### Where does the gradient come from without saved intermediates? {#recompute-example}
+
+Take two operations: $h=wx$ and $\ell=h^2$. With $x=2$ and $w=3$, forward produces $h=6$ and $\ell=36$. The weight gradient needs that intermediate value:
+
+$$
+\frac{\partial\ell}{\partial w}=2hx=24.
+$$
+
+<figure class="worked-update worked-update--pairs" lang="en">
+<ol>
+<li><small>RETAIN</small><strong>Keep h = 6 for backward</strong><span>Read it when needed without repeating the multiplication.</span></li>
+<li><small>RECOMPUTE</small><strong>Recover h from the original x and w</strong><span>2 × 3 still gives 6, so the gradient remains 24.</span></li>
+</ol>
+<figcaption>The gradient path stays intact; how we obtain the intermediate changes. A single scalar illustrates the mechanism, not a useful memory saving.</figcaption>
+</figure>
+
+The word “original” matters. Changing the weight to 4 before backward would recompute $h=8$, no longer the original forward. Mutable globals, updated statistics, and external requests can also make rerunning a region unsafe. The default determinism check does not compare every tensor value; compare outputs and gradients yourself. [PyTorch 2.8 documents these constraints](https://docs.pytorch.org/docs/2.8/checkpoint.html).
+
+<details markdown="1">
+<summary>Compare ordinary and checkpointed execution on CPU</summary>
+
+```python
+import torch
+from torch.utils.checkpoint import checkpoint
+
+def squared_product(features, weight):
+    hidden = features * weight
+    return hidden.square().sum()
+
+def checkpoint_example(use_checkpoint):
+    features = torch.tensor([2.0], dtype=torch.float64, requires_grad=True)
+    weight = torch.tensor([3.0], dtype=torch.float64, requires_grad=True)
+    if use_checkpoint:
+        loss = checkpoint(squared_product, features, weight, use_reentrant=False)
+    else:
+        loss = squared_product(features, weight)
+    loss.backward()
+    return loss.item(), features.grad.item(), weight.grad.item()
+
+assert checkpoint_example(False) == (36.0, 36.0, 24.0)
+assert checkpoint_example(True) == checkpoint_example(False)
+```
+
+This uses PyTorch 2.8 / CPU to check values and gradients, not GPU memory or speed. A Dropout comparison also needs matching RNG state; a separate project test covers it. Exact equality here is not a promise for every operator and device.
+
+</details>
+
+### Which intermediates are worth recomputing? {#recompute-budget}
 
 Why does sequence length make it useful? Count two tensors before estimating the whole model. Use batch size 2, hidden size 1024, 16 attention heads, and 2 bytes per element:
 
@@ -205,6 +332,8 @@ assert tensor_mib((2, 16, 2048, 2048)) == 256
 
 Doubling length doubles the first tensor and quadruples the second. Neither is total per-layer memory: retention, lifetimes, and fused kernels matter. [FlashAttention](attention-kernels.en.md) avoids materializing the full score matrix in device memory; checkpointing reduces activations retained for backward. They can work together, but their savings cannot simply be added.
 
+FlashAttention does not eliminate all saved state. [The paper, §3.1 and Appendix B](https://arxiv.org/html/2205.14135v2#S3.SS1), uses Q/K/V, outputs, and row-normalization statistics to reconstruct local attention, with RNG handling for dropout. It avoids full quadratic intermediates, not all training state. A saved activation is also distinct from its `.grad`: keeping a forward value for backward does not mean retaining gradients on every non-leaf tensor. See [autograd](../pytorch/autograd.en.md).
+
 ```text
 Ordinary: x → block 1 → block 2 → block 3 → loss
               retain internal activations for backward
@@ -213,7 +342,17 @@ Recompute: retain boundaries → rerun the needed segment → compute gradients
 
 Parameters and optimizer states remain. The saving is in selected activations, paid for with extra computation; non-reentrant implementations may stop recomputation once the required intermediates are available. Randomness, mutable state, and side effects must preserve forward semantics.
 
-[PyTorch's checkpoint documentation](https://docs.pytorch.org/docs/stable/checkpoint.html) recommends explicitly selecting the non-reentrant implementation; verify the API for your version. Compare loss and parameter gradients, not only successful execution. Restoring dropout RNG state matters.
+[PyTorch 2.8 recommends](https://docs.pytorch.org/docs/2.8/checkpoint.html) setting `use_reentrant=False` explicitly. This path can stop recomputation once the needed tensors are available, so logs or counters need not execute exactly twice. Default RNG handling covers supported devices, not arbitrary mutable program state.
+
+You need not recompute every operation. **Selective activation checkpointing** can retain expensive results while rerunning cheaper work. Suppose A produces 4 MiB and takes 6 ms to recompute; B produces 32 MiB and takes 1 ms. Assume both results would otherwise stay alive until backward and can be recomputed independently:
+
+| Choice in this example | Retained internal results | Extra recomputation |
+| --- | ---: | ---: |
+| Save both | 36 MiB | 0 ms |
+| Save A, recompute B | 4 MiB | 1 ms |
+| Recompute both | 0 MiB | 7 ms |
+
+Boundary inputs, outputs, and temporary recomputation storage are excluded: **0 MiB is not zero peak training memory**. These are hypothetical numbers, not measurements. Dependencies, fused kernels, and shared storage affect the real choice. PyTorch's [selective checkpointing article](https://pytorch.org/blog/activation-checkpointing-techniques/#selective-activation-checkpoint-new) explains per-operator policies. Find what is still live at the peak, then measure whether the saving is worth the additional work.
 
 ## When is a memory optimization worth using?
 

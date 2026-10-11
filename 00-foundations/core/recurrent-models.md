@@ -2,13 +2,13 @@
 
 **中文** · [English](recurrent-models.en.md)
 
-> 阅读时间：约 8 分钟 · 难度：必修 · 最近审阅：2026-10-09
+> 阅读时间：约 10 分钟 · 难度：必修 · 最近审阅：2026-10-10
 
 读“今天下雨，出门记得带伞”时，读到“带伞”需要用到前面的“下雨”。RNN 每读一个位置，就把新输入和旧状态合起来更新；LSTM 再给这份状态增加保留、写入和读出的控制。先看信息怎么往后传，再看为什么传得太远会难学。
 
 ## 隐藏状态怎样传递信息 {#_1}
 
-RNN 每读一个 token，就把“我到目前为止知道什么”重新写进一张固定大小的小纸条，也就是隐藏状态。LSTM 没换掉这张纸，只是在旁边加了几道门，让模型自己决定什么该写、什么该留、什么可以忘。
+RNN 不会把读过的 token 全部存下来，而是不断更新一个固定长度的隐藏状态。LSTM 则维护两个向量：cell state 保存记忆，hidden state 参与当前输出和下一步的门控。先分清这两个状态，再看门值怎样影响它们。
 
 ## 普通 RNN 的状态更新 {#rnn}
 
@@ -47,7 +47,22 @@ $$o_t = \sigma(W_o[x_t;h_{t-1}] + b_o), \qquad h_t = o_t \odot \tanh(c_t)$$
 - input gate $i_t$：新候选写入多少；
 - output gate $o_t$：当前记忆暴露多少。
 
-最关键的是 $c_t$ 里有一条加法路径。只要 $f_t$ 接近 1，信息和梯度就能更稳定地跨越时间。
+最关键的是 $c_t$ 里有一条加法路径。$f_t$ 接近 1 时，旧状态在这条直接通路上衰减较少；但新写入仍会改变状态，其他梯度路径也仍然存在，不能据此保证长距离学习成功。
+
+### 用一个数看三扇门 {#gate-example}
+
+先只看 cell state 的一个分量，假设旧值是 0.8。下面的门值是为了手算而设定的，不是训练结果。
+
+<figure class="worked-update" id="gate-trace" lang="zh-CN">
+<figcaption>保留、写入、读出是三件事</figcaption>
+<ol>
+<li><b>保留旧值</b><span>forget = 0.9，留下 0.9 × 0.8 = 0.72。</span></li>
+<li><b>写入新值</b><span>input = 0.2，candidate = −0.5；加上 −0.1 后，cell = 0.62。</span></li>
+<li><b>决定输出</b><span>output = 0.5，hidden = 0.5 × tanh(0.62) ≈ 0.276。</span></li>
+</ol>
+</figure>
+
+把 output gate 关小，不等于把 cell state 清空；把 forget gate 开到接近 1，也不等于不再写入。三扇门分别控制哪一步，代入数字后就比较好分清了。
 
 ## LSTM 仍然有哪些限制 {#lstm_1}
 
@@ -67,6 +82,15 @@ LSTM 缓解遗忘，但没有消除递归带来的串行计算和固定状态瓶
 ## 实验：验证长距离依赖 {#_3}
 
 [`../code/sequence_numpy.py`](../code/sequence_numpy.py) 用 NumPy 展开 RNN 和 LSTM 前向计算；[`../code/sequence_torch.py`](../code/sequence_torch.py) 让两者学习一个延迟复制任务，并比较长依赖下的误差。
+
+例如输入 `[3, 8, 2, 5, 1]`，delay = 2 时，从第 3 个位置开始预测两步前的 token，监督目标是 `[3, 8, 2]`，不是直接复制当前输入。可以在仓库根目录运行：
+
+```bash
+python 00-foundations/code/sequence_torch.py --task delay --model rnn --delay 8 --length 96
+python 00-foundations/code/sequence_torch.py --task delay --model lstm --delay 8 --length 96
+```
+
+再把 delay 改成 64，保持 length = 96；必须满足 `0 < delay < length`。脚本打印的是训练批次指标，不是验证集结果；同一 hidden width 下，两种 cell 的参数量也不相同。这是观察训练行为的起点，不是一轮运行就能得出的架构排名。若要比较泛化，还要固定评估数据、记录参数量与训练预算，并换几个随机种子。
 
 ## 自检 {#_4}
 

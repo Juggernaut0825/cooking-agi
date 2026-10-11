@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+from urllib.parse import urljoin, urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import build
@@ -50,7 +51,7 @@ class LanguageEntryTests(unittest.TestCase):
         self.assertEqual(len([page for page in self.pages if page.kind == 'home']), 2)
 
     def test_plain_html_has_full_english_home_and_chinese_link(self):
-        for language, target in [('en', 'index.zh.html'), ('zh', 'index.html')]:
+        for language, target in [('en', 'index.zh.html'), ('zh', 'index.html?lang=en')]:
             page = self.home[language]
             build.build_page(page, [], self.nav['site']['repo'], self.known)
             output = build.assemble(page, self.sections, [], self.nav, 'test',
@@ -67,7 +68,7 @@ class LanguageEntryTests(unittest.TestCase):
     def test_home_navigation_stays_in_its_language(self):
         for language in ['en', 'zh']:
             page = build.BY_SRC['learn/README.md'][language]
-            home = 'index.html' if language == 'en' else 'index.zh.html'
+            home = 'index.html?lang=en' if language == 'en' else 'index.zh.html'
             self.assertIn(f'href="../{home}"', build.tabs_html(page))
             self.assertEqual(build.page_category(self.home[language]), 'home')
 
@@ -76,13 +77,38 @@ class LanguageEntryTests(unittest.TestCase):
             self.assertEqual(build.BY_SRC['career/journey.md'][language].url, f'career/journey{suffix}.html')
             self.assertEqual(build.BY_SRC['learn/README.md'][language].url, f'learn/index{suffix}.html')
 
+    def test_question_bank_links_to_foundations_in_its_language(self):
+        for language, suffix, label in [('zh', '', '基础与原理'), ('en', '.en', 'Foundations')]:
+            with self.subTest(language=language):
+                page = build.BY_SRC['interview/questions.md'][language]
+                build.build_page(page, [], self.nav['site']['repo'], self.known)
+                self.assertIn(f'<a href="../learn/index{suffix}.html">{label}</a>', page.body)
+
     def test_home_readmes_resolve_to_pages_not_github_sources(self):
         page = build.BY_SRC['learn/README.md']['en']
-        for source, target in [('README.md', 'index.html'), ('README.en.md', 'index.html'),
+        for source, target in [('README.md', 'index.html?lang=en'), ('README.en.md', 'index.html?lang=en'),
                                ('README.zh.md', 'index.zh.html')]:
             markup = f'<a href="../{source}">Home</a>'
             self.assertEqual(build.rewrite_links(markup, page, self.nav['site']['repo'], self.known),
                              f'<a href="../{target}">Home</a>')
+
+    def test_english_home_links_are_explicit_but_canonical_is_clean(self):
+        for source in ['README.md', 'README.en.md']:
+            page = self.home['zh']
+            markup = f'<a href="{source}#start-here">English</a>'
+            self.assertEqual(build.rewrite_links(markup, page, self.nav['site']['repo'], self.known),
+                             '<a href="index.html?lang=en#start-here">English</a>')
+        for page in [self.home['en'], self.home['zh'], build.BY_SRC['learn/README.md']['en']]:
+            build.build_page(page, [], self.nav['site']['repo'], self.known)
+            output = build.assemble(page, self.sections, [], self.nav, 'test',
+                                    (build.SITE / 'template.html').read_text())
+            for tag, attrs in Elements(output).elements:
+                href = attrs.get('href', '')
+                if tag == 'link' and attrs.get('rel') == 'canonical':
+                    self.assertNotIn('?', href)
+                target = urlsplit(urljoin('https://example.org/' + page.url, href))
+                if tag == 'a' and not href.startswith('#') and target.netloc == 'example.org' and target.path == '/index.html':
+                    self.assertIn('lang=en', target.query, href)
 
     def test_github_source_fallback_keeps_section_and_line_anchors(self):
         page = build.BY_SRC['learn/README.md']['en']

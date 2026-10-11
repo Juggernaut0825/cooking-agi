@@ -12,12 +12,16 @@ An MDP (Markov decision process) includes states, actions, transition probabilit
 
 A single image may not reveal whether an object is approaching or receding. Several frames, memory, or a belief state—a distribution over hidden states—can provide the missing information. An observation is not automatically a full state. In a finite-horizon task, the same location may have different values with 10 steps left and with 1. Below, remaining time is included in the state; otherwise write $V_t^\pi(s)$ explicitly.
 
+Assume time-homogeneous dynamics and a stationary policy $\pi(a\mid s)$. If time or policy memory affects future decisions, include it in the state too.
+
 Define the discounted return from the current step:
 
 $$
 G_t=\sum_{k=0}^{T-t-1}\gamma^k r_{t+k},\qquad
 V^\pi(s)=\mathbb E_\pi[G_t\mid s_t=s].
 $$
+
+Here $T$ is the task's true endpoint, not an external collection cutoff. Set $G_T=V^\pi(s_T)=0$; any terminal reward is included in the last transition. For continuing tasks, take $T=\infty$: bounded rewards and $\gamma<1$ ensure absolute convergence. $\gamma=1$ is valid for finite horizons, not arbitrary continuing tasks.
 
 $Q^\pi(s,a)$ fixes the first action and follows $\pi$ afterward. $V^\pi$ also averages over that first action, so $V^\pi(s)=\mathbb E_{a\sim\pi}[Q^\pi(s,a)]$.
 
@@ -120,4 +124,4 @@ At $\gamma=0.9$, charging is worth $0.9(0.5\times4+0.5\times0)=1.8$, so take 2 n
 
 </details>
 
-Reference: [RL foundations and value definitions](https://spinningup.openai.com/en/latest/spinningup/rl_intro.html). Next: [Learning value from samples when transitions are unknown](returns-and-td.en.md).
+References: [RL foundations and value definitions](https://spinningup.openai.com/en/latest/spinningup/rl_intro.html), [Ernst et al. (2005), §2: finite and infinite horizons](https://jmlr.org/papers/volume6/ernst05a/ernst05a.pdf). Next: [Learning value from samples when transitions are unknown](returns-and-td.en.md).

@@ -2,7 +2,7 @@
 
 **中文** · [English](complexity-and-tools.en.md) · [方法地图](../leetcode.md)
 
-> 阅读时间：约 6 分钟 · 最近审阅：2026-09
+> 阅读时间：约 9 分钟 · 最近审阅：2026-10
 
 选对容器通常比把一行代码写短更有用。先问：我要查找、计数、按顺序处理，还是不断取出最小值？
 
@@ -25,13 +25,58 @@
 - **Average / expected**：`dict` 查找通常 O(1)，依赖哈希分布等条件；极端碰撞可到 O(n)。
 - **Amortized**：`list.append` 偶尔扩容很贵，但一长串追加摊下来，每次 O(1)。不是说每次追加都只花固定时间。
 
+拿一个简化的动态数组来看：空间不够时，容量从 1 翻到 2，再翻到 4、8。每写入一个新元素算 1 次操作，扩容时每搬一个旧元素也算 1 次。
+
+<div class="worked-table" markdown="1">
+
+| 第几次追加 | 追加后的容量 | 搬了几个旧元素 | 本次成本 |
+| --- | --- | --- | --- |
+| 1 | 1 | 0 | 1 |
+| 2 | 2 | 1 | 2 |
+| 3 | 4 | 2 | 3 |
+| 4 | 4 | 0 | 1 |
+| 5 | 8 | 4 | 5 |
+| 6–8 | 8 | 0 | 每次 1 |
+
+</div>
+
+第 5 次明显更贵，但 8 次追加一共只做了 15 次操作。继续追加，搬运次数是 $1+2+4+\cdots$，加上新元素的写入，总成本仍是 O(n)。**摊还分析不要求输入随机，也不是取多次测速的平均值。** 这里的容量翻倍是教学模型，不是 CPython 的实际扩容序列。
+
+<details markdown="1">
+<summary>用几行代码核对这笔账</summary>
+
+`count` 是非负整数；这段只数操作，不测 Python 的运行时间。
+
+```python
+def doubling_append_costs(count):
+    capacity = 0
+    costs = []
+    for size in range(count):
+        cost = 1
+        if size == capacity:
+            cost += size
+            capacity = max(1, capacity * 2)
+        costs.append(cost)
+    return costs
+
+
+assert doubling_append_costs(8) == [1, 2, 3, 1, 5, 1, 1, 1]
+assert sum(doubling_append_costs(8)) == 15
+```
+
+对任意 n > 0，已经搬过的元素总数小于 2n，加上 n 次写入，总成本小于 3n。某一次追加仍可能搬 O(n) 个元素。
+
+</details>
+
+哈希表的“通常 O(1)”依赖的则是哈希分布等条件：如果大量 key 碰撞，查找就可能慢下来。表扩容也有摊还成本，但那是另一层分析，不能用来保证每次查找都快。
+
 输入通常不计入辅助空间；新建的字典、递归栈要算；返回全部答案的空间单独说，不要藏起来。
 
 ## 3. 容器速查
 
 | 工具 | 操作 | 成本与限制 |
 | --- | --- | --- |
-| `list` | `append` / `pop()` / `[-1]` | 末尾追加摊还 O(1)，末尾删除与索引 O(1) |
+| `list` | `append` / `pop()` / `[-1]` | 末尾追加、删除摊还 O(1)；索引 O(1) |
 | `list` | `pop(0)` / `insert(0, x)` / `x in values` | O(n)；不要拿它当 BFS 队列 |
 | `dict` / `set` | 查找、插入、删除 | 通常平均 O(1)；set 不保留频次 |
 | `deque` | `append` / `popleft` | 两端操作 O(1)，中间索引不是 O(1) |
@@ -40,6 +85,17 @@
 | `bisect` | `bisect_left` / `bisect_right` | 查位置 O(log n)；插进 list 仍需 O(n) |
 
 成本针对常见 Python 实现和上面的基本操作假设。接口见官方 [dict / set](https://docs.python.org/3/library/stdtypes.html#mapping-types-dict)、[deque / Counter](https://docs.python.org/3/library/collections.html)、[heapq](https://docs.python.org/3/library/heapq.html)、[bisect](https://docs.python.org/3/library/bisect.html)。
+
+末尾 `pop()` 不用把后面的元素往前搬，但偶尔仍要收缩底层数组，所以这里也写“摊还”。可以对照 [CPython 3.12 的 `list_pop_impl` 与 `list_resize`](https://github.com/python/cpython/blob/v3.12.0/Objects/listobject.c)：常见的一步很便宜，不等于每一步都有固定耗时。
+
+<details markdown="1">
+<summary>heapify 为什么是 O(n)，不是 O(n log n)？</summary>
+
+自底向上建堆时，大多数节点都在底部，根本走不了 log n 层。一棵 15 个节点的满二叉树里，8 个叶子不用下沉；4 个节点最多下沉 1 层，2 个最多 2 层，根最多 3 层。总共最多 $4\times1+2\times2+1\times3=11$ 次层级移动，每层做常数次比较。
+
+推广后，总工作量受 $n\sum_{h\geq1}h/2^{h+1}$ 约束，是 O(n)。逐个 `heappush` 则是另一个过程：每次新元素都从底部往上走，最坏总共 O(n log n)。能先拿到全部元素，就用 `heapify`；数据一个个到来，再逐个 push。
+
+</details>
 
 ## 4. 几个经常用的 function
 
@@ -64,7 +120,7 @@ smallest = heapq.heappop(heap)
 
 结果：`counts['a'] == 3`；`first == 'start'`；`left == 1`、`right == 3`，所以 2 出现了 `right-left == 2` 次；`smallest == 1`。
 
-`enumerate(values)` 给下标和值；`zip(first, second)` 默认在短的那边结束；`sorted(values, key=...)` 返回新列表；`values.sort()` 原地改、返回 `None`。最大堆的负数法兼容较老 Python；Python 3.14 起也有公开的 `_max` 接口，先确认运行版本。
+`enumerate(values)` 给下标和值；`zip(first, second)` 默认在短的那边结束；`sorted(values, key=...)` 返回新列表；`values.sort()` 原地改、返回 `None`。最大堆的负数法兼容较老 Python；Python 3.14 起也有公开的 [`heapify_max`、`heappush_max`、`heappop_max`](https://docs.python.org/3.14/library/heapq.html#heapq.heapify_max)，先确认运行版本。
 
 ## 5. 递归、切片和输出都要算空间
 

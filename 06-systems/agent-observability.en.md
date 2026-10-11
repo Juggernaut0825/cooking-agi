@@ -38,6 +38,8 @@ The tool succeeded, but it received the wrong date. Because the old memory match
 
 Agents especially need traces, because one result is usually produced jointly by many model, retrieval, and tool calls.
 
+Retained traces do not necessarily represent all traffic. [Selecting traces by error or latency](https://opentelemetry.io/docs/concepts/sampling/#tail-sampling) helps debugging but changes the sample. If 100 requests include 10 failures, keeping every failure and only 9 successes gives a recorded failure rate of `10 / 19`, not the actual `10 / 100`. Use reliable population counts or explain sampling corrections for overall metrics. Operations requiring a complete audit trail cannot rely solely on sampled traces.
+
 ## What one run should record {#what-one-run-should-record}
 
 ### Versions {#versions}
@@ -51,6 +53,18 @@ Which instructions, memory, retrieved results, and tool outputs the model saw; w
 Also record token, latency, and cost budgets, so “nothing found” can be distinguished from “stopped because the budget ran out.”
 
 Recording evidence does not mean copying all raw content. Prefer versioned IDs and controlled references where these suffice. When raw content is necessary, restrict access, retention, and purpose, and exclude credentials and unrelated personal data. Hashing a predictable user ID is not necessarily anonymization; see [OpenTelemetry's sensitive-data guidance](https://opentelemetry.io/docs/security/handling-sensitive-data/).
+
+Avoid collecting sensitive content at the source, then check allowed fields and redact before export, rather than only hiding values in a dashboard. Inspect automatic instrumentation, exception text, URL query parameters, and tool results too. Filtering a few top-level fields does not make free text secret-free.
+
+For example, this synthetic record keeps the correlation needed to investigate a retry without copying the refund request body or credentials:
+
+```text
+trace_id=demo-17  tool=refund  attempt=1
+operation_ref=demo-refund-8  transport_status=timeout
+business_outcome=unknown
+```
+
+A timeout does not mean the refund failed. Check the actual result through the controlled `operation_ref`; access to that reference must also be restricted. This is a minimal illustration, not a universally safe logging format.
 
 ### Decision process {#decision-process}
 

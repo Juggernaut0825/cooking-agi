@@ -12,6 +12,8 @@
 
 ## 从哪篇看起
 
+正在准备投递，可以先看[准备什么](prepare.md)。想顺便安排技术复习，用[按目标找路线](../learn/choose-your-path.md#applications)，不必把经历帖全读一遍。
+
 ### 想看我怎么走过来的
 
 - [25-26 intern 求职](journey.md)：一开始什么都投，后来为什么收窄到 MLE / Research Engineer。

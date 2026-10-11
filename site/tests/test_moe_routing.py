@@ -119,6 +119,74 @@ class MoeRoutingTests(unittest.TestCase):
         self.assertTrue(torch.autograd.gradcheck(lambda inputs, scores: MOE.sparse_moe(inputs, scores, experts, 2),
                                                 (hidden, logits)))
 
+    def test_mixed_precision_dispatch_and_backward(self):
+        for dtype in (torch.bfloat16, torch.float16, torch.float32, torch.float64):
+            for normalization in ("selected", "full"):
+                with self.subTest(dtype=dtype, normalization=normalization):
+                    hidden = torch.tensor([[0.2, 0.8], [-0.3, 0.7], [1.1, -0.4]],
+                                          dtype=dtype, requires_grad=True)
+                    router_weight = torch.tensor([[2., -1., 0.4], [0.3, 1.3, -0.8]],
+                                                 dtype=torch.float32, requires_grad=True)
+                    logits = hidden.float() @ router_weight
+                    experts = self.make_experts().to(dtype)
+                    actual = MOE.sparse_moe(hidden, logits, experts, 2, normalization)
+                    indices = logits.topk(2, dim=-1).indices
+                    selected = logits.softmax(-1).gather(1, indices)
+                    if normalization == "selected":
+                        selected = selected / selected.sum(-1, keepdim=True)
+                    dense_weights = torch.zeros_like(logits).scatter(1, indices, selected)
+                    accumulation_dtype = torch.promote_types(dtype, torch.float32)
+                    dense_outputs = torch.stack([expert(hidden) for expert in experts], dim=1)
+                    expected = (dense_outputs.to(accumulation_dtype)
+                                * dense_weights[..., None].to(accumulation_dtype)).sum(1).to(dtype)
+                    self.assertEqual(actual.dtype, dtype)
+                    torch.testing.assert_close(actual, expected, atol=0.004, rtol=0.02)
+                    parameters = (hidden, router_weight, *experts.parameters())
+                    actual_gradients = torch.autograd.grad(actual.float().square().sum(), parameters,
+                                                          retain_graph=True)
+                    expected_gradients = torch.autograd.grad(expected.float().square().sum(), parameters)
+                    for gradient, reference in zip(actual_gradients, expected_gradients):
+                        self.assertTrue(torch.isfinite(gradient).all())
+                        self.assertGreater(gradient.abs().sum().item(), 0)
+                        torch.testing.assert_close(gradient, reference, atol=0.004, rtol=0.02)
+
+    def test_gates_use_at_least_float32(self):
+        for dtype in (torch.bfloat16, torch.float16, torch.float32, torch.float64):
+            logits = torch.tensor([[3., 1., -2.]], dtype=dtype, requires_grad=True)
+            expected_dtype = torch.float64 if dtype == torch.float64 else torch.float32
+            for normalization in ("selected", "full"):
+                indices, weights = MOE.selected_gates(logits, 2, normalization)
+                expected = (logits.to(expected_dtype).softmax(-1).gather(1, indices)
+                            if normalization == "full" else logits.to(expected_dtype).topk(2).values.softmax(-1))
+                self.assertEqual(weights.dtype, expected_dtype)
+                torch.testing.assert_close(weights, expected)
+
+    def test_accumulation_precedes_cast_back_to_bfloat16(self):
+        hidden = torch.ones(1, 1, dtype=torch.bfloat16)
+        logits = torch.zeros(1, 3)
+        experts = torch.nn.ModuleList([torch.nn.Linear(1, 1, bias=False).bfloat16() for _ in range(3)])
+        with torch.no_grad():
+            for expert, value in zip(experts, (256., 1., -256.)):
+                expert.weight.fill_(value)
+        actual = MOE.sparse_moe(hidden, logits, experts, 3)
+        expected = torch.tensor([[1 / 3]], dtype=torch.bfloat16)
+        torch.testing.assert_close(actual, expected)
+        rounded_each_time = torch.zeros_like(hidden)
+        for expert in experts:
+            rounded_each_time += (expert(hidden).float() / 3).bfloat16()
+        self.assertEqual(rounded_each_time.item(), 0.5)
+        self.assertFalse(torch.allclose(rounded_each_time, actual))
+
+    def test_dense_comparison_budget(self):
+        dense = {width: 3 * 128 * width for width in (256, 512, 2048)}
+        moe_parameters = 8 * dense[256]
+        moe_mac = 2 * dense[256]
+        self.assertEqual((moe_parameters, moe_mac), (786432, 196608))
+        self.assertEqual(moe_mac, dense[512])
+        self.assertEqual(moe_parameters, dense[2048])
+        self.assertEqual(moe_parameters // dense[512], 4)
+
+
     def test_unselected_expert_gets_no_task_gradient(self):
         hidden = torch.tensor([[0.3, -0.2]], dtype=torch.float64)
         logits = torch.tensor([[3., 1., -2.]], dtype=torch.float64, requires_grad=True)
@@ -179,6 +247,42 @@ class MoeRoutingTests(unittest.TestCase):
         fractions, probabilities = MOE.balance_statistics(logits, torch.ones(1, 4, dtype=torch.bool), 2)
         torch.testing.assert_close(fractions, torch.tensor([[.375, .375, .125, .125]], dtype=torch.float64))
         torch.testing.assert_close(probabilities.sum(dim=-1), torch.ones(1, dtype=torch.float64))
+
+    def test_low_precision_balance_counts_do_not_overflow(self):
+        valid = torch.ones(1, 8192, dtype=torch.bool)
+        for dtype in (torch.float16, torch.bfloat16, torch.float32, torch.float64):
+            logits = torch.zeros(1, 8192, 8, dtype=dtype)
+            expected_dtype = torch.float64 if dtype == torch.float64 else torch.float32
+            for scope in ("sequence", "batch"):
+                with self.subTest(dtype=dtype, scope=scope):
+                    fractions, probabilities = MOE.balance_statistics(logits, valid, 8, scope)
+                    self.assertEqual(MOE.balance_loss(logits, valid, 8, scope).item(), 1)
+                    self.assertEqual(fractions.dtype, expected_dtype)
+                    self.assertEqual(probabilities.dtype, expected_dtype)
+                    torch.testing.assert_close(fractions, torch.full_like(fractions, 1 / 8))
+                    torch.testing.assert_close(probabilities, torch.full_like(probabilities, 1 / 8))
+
+    def test_low_precision_balance_matches_single_token_reference(self):
+        valid = torch.ones(1, 32769, dtype=torch.bool)
+        valid[:, -1] = False
+        for dtype in (torch.float16, torch.bfloat16):
+            for scope in ("sequence", "batch"):
+                for scoring in ("softmax", "sigmoid"):
+                    with self.subTest(dtype=dtype, scope=scope, scoring=scoring):
+                        reference = torch.tensor([[[2., 1., 0., -1.]]], requires_grad=True)
+                        logits = reference.detach().to(dtype).repeat(1, 32769, 1)
+                        logits[:, -1] = torch.nan
+                        logits.requires_grad_()
+                        expected = MOE.balance_loss(reference, valid[:, :1], 2, scope, scoring)
+                        actual = MOE.balance_loss(logits, valid, 2, scope, scoring)
+                        torch.testing.assert_close(actual.float(), expected)
+                        self.assertEqual(actual.dtype, torch.float32)
+                        expected_gradient = torch.autograd.grad(expected, reference)[0]
+                        gradient = torch.autograd.grad(actual, logits)[0]
+                        self.assertTrue(torch.isfinite(gradient).all())
+                        torch.testing.assert_close(gradient[:, -1], torch.zeros_like(gradient[:, -1]))
+                        torch.testing.assert_close(gradient[:, :32768].float().sum(1, keepdim=True),
+                                                   expected_gradient, atol=0.003, rtol=0.01)
 
     def test_variable_lengths_change_batch_weighting(self):
         logits = torch.tensor([[[0.9, 0.1]] * 4, [[0.1, 0.9]] * 4], dtype=torch.float64).log()

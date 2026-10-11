@@ -7,6 +7,7 @@ import sys
 import tomllib
 import unittest
 from unittest.mock import Mock
+from urllib.parse import urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import build
@@ -144,7 +145,7 @@ class CurriculumTests(unittest.TestCase):
         for language in ('zh', 'en'):
             page = self.catalog['learn/coverage.md'][language]
             markup = curriculum.reference_coverage(page, self.catalog, build.SITE / 'reference-coverage.toml')
-            labels = {'article': ('有正文', 'Article available'), 'overview': ('部分讲解', 'Partial explanation'), 'pending': ('待补', 'To add')}
+            labels = {'article': ('有正文', 'Article available'), 'overview': ('汇总入口', 'Topic index'), 'pending': ('待补', 'To add')}
             for state in present_states:
                 self.assertIn('<td>' + labels[state][language == 'en'] + '</td>', markup)
             if language == 'en':
@@ -180,7 +181,7 @@ topics = [{zh="一个主题", en="A topic", state="pending", notes=[]}]
                     if destination.startswith(('https:', '#')):
                         self.assertNotIn('github.com/tianyi-zhang-02/cooking-agi/blob/main/', destination)
                         continue
-                    resolved = os.path.normpath(str(page.out_rel.parent / destination.split('#')[0]))
+                    resolved = os.path.normpath(str(page.out_rel.parent / urlsplit(destination).path))
                     self.assertIn(resolved, published, f'{source}: {destination}')
 
     def test_appendix_topics_keep_reading_separate_from_coverage(self):
@@ -190,21 +191,24 @@ topics = [{zh="一个主题", en="A topic", state="pending", notes=[]}]
         self.assertEqual(len(topics), 67)
         self.assertEqual(len({topic['id'] for topic in topics}), 67)
         questions = [topic for topic in topics if topic['id'] not in {'algorithms', 'pytorch'}]
-        self.assertEqual(sum(topic['read'] == 'body' for topic in questions), 43)
+        self.assertEqual(sum(topic['read'] == 'body' for topic in questions), 65)
+        for identifier in ('checkpoint', 'training-memory', 'zero-stages',
+                           'entropy-ce-kl', 'kl-estimators', 'grpo-vs-ppo'):
+            topic = next(topic for topic in questions if topic['id'] == identifier)
+            self.assertEqual((topic['state'], topic['read']), ('article', 'body'))
         for topic in topics:
-            self.assertIn(topic['state'], {'article', 'related', 'missing'})
+            self.assertIn(topic['state'], {'article', 'overview', 'related', 'missing'})
             self.assertTrue(topic['gap_zh'] and topic['gap_en'])
             for target in topic['notes']:
                 self.assertIn(target, self.catalog)
         kl = next(topic for topic in topics if topic['id'] == 'kl-estimators')
-        self.assertEqual((kl['state'], kl['read']), ('article', 'title'))
+        self.assertEqual((kl['state'], kl['read']), ('article', 'body'))
         k3 = next(topic for topic in topics if topic['id'] == 'k3-rope')
         self.assertEqual((k3['state'], k3['read']), ('article', 'body'))
         self.assertIn('00-foundations/deep-dives/nope-and-order.md', k3['notes'])
-        for identifier in ('muon', 'dflash-inference', 'mtp-dflash', 'prime-sieve',
-                           'checkpoint', 'training-memory', 'gpu-data-flow'):
+        for identifier in ('dflash-inference', 'mtp-dflash'):
             topic = next(topic for topic in topics if topic['id'] == identifier)
-            self.assertEqual((topic['state'], topic['read']), ('article', 'title'))
+            self.assertEqual((topic['state'], topic['read']), ('article', 'body'))
         for identifier in ('bert', 'bert-lstm', 'encoder-decoder-objectives', 'attention-masks',
                            'moe-routing-code', 'sequence-moe-balance', 'grpo-initial-loss',
                            'clipped-token-gradient', 'grpo-on-policy', 'rejection-sampling',
@@ -213,13 +217,18 @@ topics = [{zh="一个主题", en="A topic", state="pending", notes=[]}]
                            'collectives', 'decoder-tp', 'tp-column-row',
                            'moe-router', 'moe-changes', 'mla-rope',
                            'cross-tokenizer', 'on-policy-distillation', 'rollout',
-                           'qwen-bge', 'bm25-tfidf', 'infonce-cross-entropy'):
+                           'qwen-bge', 'bm25-tfidf', 'infonce-cross-entropy',
+                           'clip-variants', 'rlhf-algorithms', 'importance-token-loss',
+                           'muon', 'gpu-data-flow'):
             topic = next(topic for topic in topics if topic['id'] == identifier)
             self.assertEqual((topic['state'], topic['read']), ('article', 'body'))
         cache = next(topic for topic in topics if topic['id'] == 'kv-placement')
         self.assertEqual((cache['state'], cache['read']), ('article', 'body'))
-        for identifier in ('softmax-implementations',):
-            self.assertEqual(next(topic['read'] for topic in topics if topic['id'] == identifier), 'title')
+        for identifier in ('softmax-implementations', 'moe-vs-dense', 'qwen-versions',
+                           'prime-sieve', 'self-attention-code', 'multi-head-code',
+                           'rope-code', 'bf16-fp16', 'batchnorm-layernorm'):
+            topic = next(topic for topic in questions if topic['id'] == identifier)
+            self.assertEqual((topic['state'], topic['read']), ('article', 'body'))
 
     def test_appendix_widget_languages_and_links(self):
         data = tomllib.loads((build.SITE / 'appendix-coverage.toml').read_text())
@@ -231,9 +240,9 @@ topics = [{zh="一个主题", en="A topic", state="pending", notes=[]}]
             self.assertEqual(markup.count('<li id="coverage-'), 67)
             self.assertEqual(markup.count('<details'), 4)
             self.assertIn('参考正文已读' if language == 'zh' else 'Reference prose read', markup)
-            expected_counts = (f"{total} 个入口：{counts['article']} 项已有专门讲解，{counts['related']} 项需补充或对照，{counts['missing']} 项缺少专题讲解"
+            expected_counts = (f"{total} 个入口：{counts['article']} 项已有专门讲解，{counts['overview']} 项为汇总入口，{counts['related']} 项需补充或对照，{counts['missing']} 项缺少专题讲解"
                                if language == 'zh' else
-                               f"{total} entries: {counts['article']} with dedicated explanations, {counts['related']} needing expansion or comparison, and {counts['missing']} lacking dedicated coverage")
+                               f"{total} entries: {counts['article']} with dedicated explanations, {counts['overview']} topic indexes, {counts['related']} needing expansion or comparison, and {counts['missing']} lacking dedicated coverage")
             self.assertIn(expected_counts, markup)
             if language == 'en':
                 self.assertNotIn('待对照', markup)
@@ -243,6 +252,11 @@ topics = [{zh="一个主题", en="A topic", state="pending", notes=[]}]
                 self.assertIn(target, {note.url for note in self.pages})
                 self.assertEqual('.en.html' in target, language == 'en')
 
+    def test_navigation_guide_uses_current_coverage_states(self):
+        guide = (Path(__file__).resolve().parents[1] / 'NAVIGATION.md').read_text()
+        self.assertIn('它区分有正文、汇总入口和待补', guide)
+        self.assertNotIn('它区分有正文、部分讲解和待补', guide)
+
     def test_public_coverage_summary_matches_inventory(self):
         data = tomllib.loads((build.SITE / 'appendix-coverage.toml').read_text())
         topics = [topic for chapter in data['chapter'] for topic in chapter['topics']]
@@ -250,11 +264,30 @@ topics = [{zh="一个主题", en="A topic", state="pending", notes=[]}]
         root = build.SITE.parent
         chinese = (root / 'learn/coverage.md').read_text()
         english = (root / 'learn/coverage.en.md').read_text()
-        self.assertIn(f"当前 **{counts['article']} 项有专门讲解，{counts['related']} 项仍需补充或对照**", chinese)
-        self.assertIn(f"**{counts['article']} dedicated explanations and {counts['related']} entries still needing expansion or comparison**", english)
+        self.assertIn(f"当前 **{counts['article']} 项有专门讲解，{counts['overview']} 项为汇总入口**", chinese)
+        self.assertIn(f"**{counts['article']} dedicated explanations and {counts['overview']} topic indexes**", english)
+        self.assertEqual({topic['id'] for topic in topics if topic['state'] == 'overview'}, {'algorithms', 'pytorch'})
         chapter = self.catalog['06-systems/tensor-parallel.md']
         for language in ('zh', 'en'):
-            self.assertEqual(chapter[language].section['dir'], 'learn/training-resources')
+                self.assertEqual(chapter[language].section['dir'], 'learn/training-resources')
+
+    def test_appendix_reading_count_tracks_prose_not_coverage(self):
+        original = (build.SITE / 'appendix-coverage.toml').read_text()
+        for unread in (False, True):
+            source = Mock()
+            source.read_text.return_value = (original.replace('read="body"', 'read="title"', 1)
+                                             if unread else original)
+            data = tomllib.loads(source.read_text.return_value)
+            questions = [topic for chapter in data['chapter'] for topic in chapter['topics']
+                         if topic['state'] != 'overview']
+            read_count = sum(topic['read'] == 'body' for topic in questions)
+            for language in ('zh', 'en'):
+                markup = curriculum.appendix_coverage(self.catalog['learn/coverage.md'][language], self.catalog, source)
+                expected = (f'{len(questions)} 个专题的参考正文已读 {read_count} 篇' if language == 'zh'
+                            else f'Reference prose read for {read_count} of {len(questions)} topics')
+                self.assertIn(expected, markup)
+                self.assertIn('正文已读不代表' if language == 'zh' else 'This does not certify', markup)
+                self.assertEqual(markup.count('id="coverage-'), 67)
 
     def test_appendix_rejects_duplicate_or_invalid_states(self):
         for second in ('id="one",state="article",read="title"', 'id="two",state="complete",read="title"'):

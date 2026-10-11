@@ -51,7 +51,7 @@ flowchart LR
   <a class="curriculum-card" href="llama.en.md"><span class="card-step">Dense baseline</span><h3>Llama</h3><p>Scope: Llama 1–3.1 text models. Trace the block, GQA cache, and post-training without applying one generation's configuration to the entire family.</p><b>Start →</b></a>
   <a class="curriculum-card" href="qwen.en.md"><span class="card-step">Family design</span><h3>Qwen</h3><p>Dense and MoE models, many sizes, and thinking and non-thinking modes make it useful for studying how a model family itself is designed.</p><b>Start →</b></a>
   <a class="curriculum-card" href="deepseek.en.md"><span class="card-step">Co-design</span><h3>DeepSeek</h3><p>MLA, fine-grained MoE, the training system, and reasoning post-training are not four isolated tricks but one co-designed stack.</p><b>Start →</b></a>
-  <a class="curriculum-card" href="gemma.en.md"><span class="card-step">Compact & multimodal</span><h3>Gemma</h3><p>Start from smaller models, long context, and visual input to see deployment constraints shape attention and distillation.</p><b>Start →</b></a>
+  <a class="curriculum-card" href="gemma.en.md"><span class="card-step">Deployment & multimodality</span><h3>Gemma</h3><p>Calculate Gemma 3's windowed cache, then distinguish effective, active, and total parameters in 3n and 4. One diagram does not fit every variant.</p><b>Start →</b></a>
 </div>
 
 ## Choose a route by question

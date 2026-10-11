@@ -49,7 +49,7 @@ flowchart LR
   <a class="curriculum-card" href="llama.md"><span class="card-step">稠密模型基线</span><h3>Llama</h3><p>以 Llama 1–3.1 的文本模型为范围，拆 block、GQA 缓存和后训练；不把这一代配置套到整个家族。</p><b>开始精读 →</b></a>
   <a class="curriculum-card" href="qwen.md"><span class="card-step">Family design</span><h3>Qwen</h3><p>同一家族有 dense 和 MoE、大小不同的模型，也有 thinking 和 non-thinking 模式。可以对比不同预算下该怎么选。</p><b>开始精读 →</b></a>
   <a class="curriculum-card" href="deepseek.md"><span class="card-step">Co-design</span><h3>DeepSeek</h3><p>MLA、细粒度 MoE、训练系统和 reasoning post-training 需要放在一起看，才能理解它们如何配合。</p><b>开始精读 →</b></a>
-  <a class="curriculum-card" href="gemma.md"><span class="card-step">Compact & multimodal</span><h3>Gemma</h3><p>看模型在支持长上下文和图像输入时，怎样通过 attention 和蒸馏控制部署开销。</p><b>开始精读 →</b></a>
+  <a class="curriculum-card" href="gemma.md"><span class="card-step">部署与多模态</span><h3>Gemma</h3><p>先算 Gemma 3 的窗口与缓存，再区分 3n 和 4 的 effective、active、total 参数；不同型号不能共用一张结构图。</p><b>开始精读 →</b></a>
 </div>
 
 ## 按你的问题选择读法

@@ -18,9 +18,9 @@
     return {rows, columns, loss: (meanLoss(rows) + meanLoss(columns)) / 2};
   }
   function scenarioScores(scenario) {
+    if (scenario === "duplicate") return [[0.8, 0.8, 0.1], [0.7, 0.7, 0.3], [0.2, 0.2, 0.9]];
     const scores = baseScores.map(row => [...row]);
     if (scenario === "wrong") [scores[0][0], scores[0][1]] = [scores[0][1], scores[0][0]];
-    if (scenario === "duplicate") scores.forEach(row => { row[1] = row[0]; });
     return scores;
   }
   if (typeof module !== "undefined") module.exports = {calculate, scenarioScores};
@@ -34,23 +34,23 @@
         title: "让 3 张图找自己的描述", subtitle: "虚构分数 · 只改变候选与温度，不会训练模型",
         direction: "检索方向", rows: "图搜文 · 沿行", columns: "文搜图 · 沿列", sample: "看哪一个查询",
         scenario: "换个情况", paired: "正确配对更高", wrong: "猫图误选自行车", duplicate: "两句相同的猫描述",
-        temperature: "温度 τ", items: ["猫", "自行车", "咖啡"], duplicateName: "猫（重复）",
+        temperature: "温度 τ", items: ["猫", "自行车", "咖啡"], duplicateName: "猫（重复）", duplicateImages: ["猫图 1", "猫图 2", "咖啡"],
         caption: "行是图片，列是描述。每格显示相似度和当前方向的概率；边框圈出数据配对。",
         corner: "图 ↓ / 文 →", probability: "所选查询的配对概率", loss: "所选查询的 loss", total: "整批双向 loss",
         pairedHint: "试着降低温度：固定分数的排序没变，但概率更集中。",
         wrongHint: "猫图的最高分是错配。降低温度只会更确信地选错；换到猫图观察 loss。",
-        duplicateHint: "两句描述完全相同，却只把对角线当正例。按行看猫图，两句各得一份概率；这是目标冲突，不是温度没调好。"
+        duplicateHint: "这里换成两张猫图，每张都适合两句猫描述，但目标只认对角线。图搜文时，两句分数相同，各自概率不会超过一半。文搜图时，两张猫图的分数可以不同，但另一张合适的猫图仍被当成负例。"
       },
       en: {
         title: "Match 3 images with their captions", subtitle: "Synthetic scores · Change candidates and temperature, not model weights",
         direction: "Retrieval direction", rows: "Image → text · rows", columns: "Text → image · columns", sample: "Query to inspect",
         scenario: "Scenario", paired: "Paired scores are higher", wrong: "Cat image favors bicycle", duplicate: "Two identical cat captions",
-        temperature: "Temperature τ", items: ["Cat", "Bicycle", "Coffee"], duplicateName: "Cat (copy)",
+        temperature: "Temperature τ", items: ["Cat", "Bicycle", "Coffee"], duplicateName: "Cat (copy)", duplicateImages: ["Cat image 1", "Cat image 2", "Coffee"],
         caption: "Images are rows; captions are columns. Cells show similarity and directional probability. Outlines mark dataset pairs.",
         corner: "Image ↓ / text →", probability: "Selected query: paired probability", loss: "Selected query: loss", total: "Batch symmetric loss",
         pairedHint: "Lower temperature: fixed scores keep their ranking, but probability becomes more concentrated.",
         wrongHint: "The cat image favors the wrong caption. Lower temperature becomes more confidently wrong; inspect the cat query's loss.",
-        duplicateHint: "Identical captions have different diagonal targets. In the cat image row they split probability: conflicting supervision, not a temperature fix."
+        duplicateHint: "Both cat images match both captions, but only diagonal pairs count as positives. For image-to-text retrieval, equal caption scores split probability: neither exceeds one half. For text-to-image retrieval, the cat images can score differently, but the other valid cat image still counts as a negative."
       }
     };
     function build() {
@@ -85,14 +85,15 @@
       const words = copy[language];
       const scores = scenarioScores(state.scenario);
       const result = calculate(scores, state.temperature);
+      const images = state.scenario === "duplicate" ? words.duplicateImages : words.items;
       const captions = [...words.items];
       if (state.scenario === "duplicate") captions[1] = words.duplicateName;
       root.querySelectorAll('[data-control="sample"] option').forEach((option, index) => {
-        option.textContent = (state.direction === "columns" ? captions : words.items)[index];
+        option.textContent = (state.direction === "columns" ? captions : images)[index];
       });
       root.querySelector("[data-temperature]").textContent = state.temperature.toFixed(2);
       root.querySelector("thead").innerHTML = `<tr><th scope="col">${words.corner}</th>${captions.map(label => `<th scope="col">${label}</th>`).join("")}</tr>`;
-      root.querySelector("tbody").innerHTML = scores.map((row, rowIndex) => `<tr><th scope="row">${words.items[rowIndex]}</th>${row.map((value, columnIndex) => {
+      root.querySelector("tbody").innerHTML = scores.map((row, rowIndex) => `<tr><th scope="row">${images[rowIndex]}</th>${row.map((value, columnIndex) => {
         const logProbability = state.direction === "rows" ? result.rows[rowIndex][columnIndex] : result.columns[columnIndex][rowIndex];
         const selected = (state.direction === "rows" ? rowIndex : columnIndex) === state.sample;
         return `<td class="${rowIndex === columnIndex ? "is-pair " : ""}${selected ? "is-selected" : ""}"><b>${value.toFixed(1)}</b><small>${(Math.exp(logProbability) * 100).toFixed(1)}%</small></td>`;

@@ -147,7 +147,7 @@ def render(page, repo, data=None):
     guide = page.rel("community/next-stop-guide.html" if zh else "community/next-stop-guide.en.html")
     behind = page.rel("contributors.html" if zh else "contributors.en.html")
     sibling = page.rel("community/next-stop.en.html" if zh else "community/next-stop.html")
-    home = page.rel("index.zh.html" if zh else "index.html")
+    home = page.rel("index.zh.html" if zh else "index.html?lang=en")
     prefix = "../" * page.depth
     coordinates = []
     for index, record in enumerate(records[:24]):

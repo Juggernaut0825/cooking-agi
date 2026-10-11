@@ -14,12 +14,16 @@
 
 观测不自动等于完整状态。有限时域任务中，同一位置在“还剩 10 步”和“只剩 1 步”时价值可能不同；下面默认把剩余时间也放进状态，否则就应写成 $V_t^\pi(s)$。
 
+下面默认转移规律不随时间改变，$\pi(a\mid s)$ 是仅依赖当前状态的平稳策略；若时间或策略记忆会影响后续决策，也须把它们纳入状态。
+
 定义从现在开始的折扣回报：
 
 $$
 G_t=\sum_{k=0}^{T-t-1}\gamma^k r_{t+k},\qquad
 V^\pi(s)=\mathbb E_\pi[G_t\mid s_t=s].
 $$
+
+这里 $T$ 是任务的真实终点，不是外部采样截止；约定 $G_T=V^\pi(s_T)=0$，终止奖励已计入最后一次转移。持续任务则令 $T=\infty$；奖励有界且 $\gamma<1$ 时，无穷和绝对收敛。$\gamma=1$ 可用于有限时域，但不能直接用于任意持续任务。
 
 $Q^\pi(s,a)$ 固定第一步动作，后面继续按 $\pi$ 走；$V^\pi$ 还会对第一步动作取平均。因此 $V^\pi(s)=\mathbb E_{a\sim\pi}[Q^\pi(s,a)]$。
 
@@ -122,4 +126,4 @@ $$
 
 </details>
 
-参考：[RL 基础与 value 定义](https://spinningup.openai.com/en/latest/spinningup/rl_intro.html)。下一篇：[不知道转移概率时，怎样从样本学 value？](returns-and-td.md)
+参考：[RL 基础与 value 定义](https://spinningup.openai.com/en/latest/spinningup/rl_intro.html)、[Ernst 等（2005），§2：有限与无限时域](https://jmlr.org/papers/volume6/ernst05a/ernst05a.pdf)。下一篇：[不知道转移概率时，怎样从样本学 value？](returns-and-td.md)

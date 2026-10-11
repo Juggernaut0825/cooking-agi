@@ -105,12 +105,9 @@ of the token context while the model continues ordinary causal next-token predic
 ### 2. 多轮对话只是更长的左侧上下文 {#2}
 
 第二轮生成时，序列通常包含 system、第一轮 user、第一轮 assistant、第二轮 user，
-最后再加新的 assistant 起始标记。由于 causal attention 可以读取左侧所有未被截断的
-token，新回答能利用此前对话保持连贯。
+最后再加新的 assistant 起始标记。标准 full causal attention 可以读取左侧所有未被截断、未被 mask 排除的 token；滑动窗口等变体的可见范围更小。新回答由此利用此前对话。
 
-这不等于模型拥有脱离输入的永久记忆。若历史消息没有重新放进 prompt，模型在当前
-forward pass 里就看不到它；如果总长度超过 context window，应用还必须截断、总结，
-或通过 retrieval / external memory 选回重要信息。
+这不等于模型拥有脱离上下文的永久记忆。历史必须保留在当前逻辑前缀中：可以重新输入对应 token，也可以复用与该前缀匹配的 KV cache，只输入未缓存的新 token；两者都没有，模型才无法读取那段历史。如果总长度超过 context window，应用还必须截断、总结，或通过 retrieval / external memory 选回重要信息。[缓存接口说明（Transformers v4.57.1）](https://huggingface.co/docs/transformers/v4.57.1/cache_explanation)
 
 KV cache 只缓存**本次推理序列**里已计算的 K/V，减少重复计算；它不会自动把一次会话
 变成跨会话知识库，也不会替你决定哪些历史值得长期保留。
@@ -121,14 +118,9 @@ KV cache 只缓存**本次推理序列**里已计算的 K/V，减少重复计算
 <div class="concept-title-en" role="heading" aria-level="3">2. Multi-turn dialogue is a longer left context</div>
 
 For the second response, the sequence usually contains the system message, first user
-turn, first assistant turn, second user turn, and a new assistant-start marker. Causal
-attention can read every untruncated token to the left, so the new response can remain
-consistent with earlier dialogue.
+turn, first assistant turn, second user turn, and a new assistant-start marker. Standard full causal attention can read earlier tokens that remain in context and are not masked; sliding-window variants have narrower visibility. This lets the response use earlier dialogue.
 
-This is not permanent memory independent of the input. If history is not placed back in
-the prompt, the current forward pass cannot see it. When the sequence exceeds the
-context window, the application must truncate, summarize, or recover important facts
-through retrieval or external memory.
+This is not permanent memory independent of context. History must remain in the logical prefix: either supply its tokens again or reuse a matching KV cache and pass only uncached new tokens. History absent from both cannot be read. When the sequence exceeds the context window, the application must truncate, summarize, or retrieve important facts. [Caching API, Transformers v4.57.1](https://huggingface.co/docs/transformers/v4.57.1/cache_explanation)
 
 KV cache stores already-computed K/V for the **current inference sequence** to avoid
 recomputation. It does not turn one session into a cross-session knowledge base or decide
@@ -371,7 +363,7 @@ by itself guarantee a better model.
 
 ### 4. SwiGLU：让 FFN 同时生成内容和门 {#4-swiglu-ffn}
 
-本章把一个 token 写成行向量。原版 FFN 是升维 → ReLU → 降维：
+本章把一个 token 写成行向量。原版 FFN 是升维 → ReLU → 降维（此处省略 bias）：
 
 $$
 \operatorname{FFN}(x)=\operatorname{ReLU}(xW_1)W_2.
@@ -401,7 +393,7 @@ $W_{\text{gate}},W_{\text{up}}\in\mathbb R^{d\times h}$，$W_{\text{down}}\in\ma
 
 <div class="concept-title-en" role="heading" aria-level="3">4. SwiGLU: content and a learned gate</div>
 
-This chapter represents each token as a row vector. The original FFN expands, applies ReLU, and projects back down:
+This chapter represents each token as a row vector. The original FFN expands, applies ReLU, and projects back down (biases omitted here):
 
 $$
 \operatorname{FFN}(x)=\operatorname{ReLU}(xW_1)W_2.
@@ -487,8 +479,7 @@ fewer total parameters.
 
 ### 6. KV Cache：用显存换掉历史重复计算 {#6-kv-cache}
 
-自回归生成到位置 $t$ 时，过去 token 的 K/V 已经算过，而且模型参数没有变化。
-因此每层保存
+自回归生成到位置 $t$ 时，过去 token 的 K/V 已经算过。Causal mask 保证过去位置不依赖后来的 token；权重与前缀等条件保持不变时，这些状态才可以复用。因此每层保存
 
 $$
 \begin{gathered}
@@ -516,8 +507,7 @@ GQA/MQA 正是通过减少 KV heads 来缩小这块状态。
 
 <div class="concept-title-en" role="heading" aria-level="3">6. KV cache: trading memory for historical recomputation</div>
 
-At generation step $t$, K and V for earlier tokens have already been computed and
-model parameters have not changed. Each layer therefore stores
+At generation step $t$, K and V for earlier tokens have already been computed. Causal masking prevents those states from depending on later tokens, so they remain reusable when weights, prefix, and other conditions stay fixed. Each layer stores
 
 $$
 \begin{gathered}
@@ -553,7 +543,7 @@ state by reducing the number of KV heads.
 
 $$
 \begin{gathered}
-S=QK^\top\\
+S=QK^\top/\sqrt{d_k}+M_{\text{causal}}\\
 A=\operatorname{softmax}(S)\\
 S,A\in\mathbb{R}^{L\times L}.
 \end{gathered}
@@ -575,7 +565,7 @@ A naive implementation materializes and writes
 
 $$
 \begin{gathered}
-S=QK^\top\\
+S=QK^\top/\sqrt{d_k}+M_{\text{causal}}\\
 A=\operatorname{softmax}(S)\\
 S,A\in\mathbb{R}^{L\times L}.
 \end{gathered}
@@ -711,10 +701,13 @@ O=AV.
 \end{gathered}
 $$
 
-这一步底层可以由 FlashAttention 高效实现，但公式不变。完成输出投影和第一次残差：
+这一步底层可以由 FlashAttention 高效实现，但公式不变。把 $h_q$ 个 query head 的输出拼接，再做输出投影和第一次残差：
 
 $$
-H=X_l+OW_O.
+\begin{gathered}
+O_{\text{multi}}=\operatorname{Concat}(O_1,\ldots,O_{h_q}),\\
+H=X_l+O_{\text{multi}}W_O.
+\end{gathered}
 $$
 
 然后走第二条 pre-norm 分支：
@@ -786,10 +779,13 @@ O=AV.
 $$
 
 FlashAttention can implement this step efficiently without changing the formula.
-Apply the output projection and first residual connection:
+Concatenate the outputs of all $h_q$ query heads, then apply the output projection and first residual connection:
 
 $$
-H=X_l+OW_O.
+\begin{gathered}
+O_{\text{multi}}=\operatorname{Concat}(O_1,\ldots,O_{h_q}),\\
+H=X_l+O_{\text{multi}}W_O.
+\end{gathered}
 $$
 
 Then follow the second pre-norm branch:
@@ -930,7 +926,7 @@ p_t=\text{softmax}(z_t / \tau)
 \end{gathered}
 $$
 
-- temperature $\tau$ 调整分布尖锐程度；
+- temperature $\tau>0$ 调整分布尖锐程度；若接口用 0 表示 greedy，应直接取 argmax，不能在公式里除以 0；
 - top-$k$ 只保留概率最高的 $k$ 个候选；
 - top-$p$ 保留累计概率达到阈值的最小候选集合；
 - greedy 每步取最大值，不等于全序列概率最大。
@@ -983,7 +979,7 @@ Sampling 决定怎样从模型给出的概率分布中选择 token，但不会�
 
 **面试回答**
 
-> Decoder-only 模型把 system、user、assistant 与工具消息序列化到同一上下文中，用 causal self-attention 保证每个位置只看左侧。训练对所有位置并行做 next-token prediction；推理先 prefill prompt，再逐 token decode，缓存每层历史 K/V 避免重复投影。
+> Decoder-only 模型把 system、user、assistant 与工具消息序列化到同一上下文中，用 causal self-attention 保证每个位置可以看自己和允许读取的左侧位置，不能看未来。训练对所有位置并行做 next-token prediction；推理先 prefill prompt，再逐 token decode，缓存每层历史 K/V 避免重复投影。
 
 <details markdown="1">
 <summary><b>深挖</b>：KV Cache 缓存什么，为什么不缓存 Q？</summary>

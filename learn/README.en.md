@@ -4,6 +4,8 @@
 
 [中文](README.md) · **English**
 
+Not sure where to begin? [Choose a route for your goal](choose-your-path.en.md). You don't need to finish this section before practicing for interviews or applying.
+
 This section explains how models work, why training methods take the forms they do, and how to judge their results. Start with examples, then explore derivations and implementations as needed. You do not need every prerequisite or every new model; go straight to the subject you care about.
 
 - **New to the subject?** Follow the examples and computations first. Return to derivations on a second pass.

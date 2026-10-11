@@ -87,6 +87,17 @@ class VlmFamilyNotesTests(unittest.TestCase):
             with self.subTest(values=values), self.assertRaises(ValueError):
                 calculate(*values)
 
+    def test_vlm_loss_guidance_identifies_version_guard_and_alternative(self):
+        for suffix in (".md", ".en.md"):
+            source = (FOLDER / ("vlm-finetuning" + suffix)).read_text()
+            for term in ("v0.29.0", "assistant_only_loss=True", "completion_only_loss=True",
+                         "`prompt` / `completion`", "collator", "trl/blob/v0.29.0/trl/trainer/sft_trainer.py"):
+                self.assertIn(term, source)
+        chinese = (FOLDER / "vlm-finetuning.md").read_text()
+        english = (FOLDER / "vlm-finetuning.en.md").read_text()
+        self.assertIn("不支持 `assistant_only_loss=True`", chinese)
+        self.assertIn("rejects `assistant_only_loss=True`", english)
+
     def test_budget_examples(self):
         self.assertAlmostEqual((3000 / 696) ** 2, 18.58, delta=0.01)
         self.assertAlmostEqual(300 / 2100, 1 / 7)

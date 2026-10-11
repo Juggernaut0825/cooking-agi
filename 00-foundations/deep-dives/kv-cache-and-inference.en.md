@@ -181,9 +181,9 @@ KV head count is an architecture choice, not necessarily the GPU count. Tensor-p
 ## Different results with caching: what should you check?
 
 1. **Positions:** the fourth position cannot start at zero again. RoPE positions must continue rather than reset at each decode call.
-2. **Masks:** three cached positions plus two new inputs require 2 × 5 attention, not 2 × 2. The first new position must not see the second.
+2. **Masks:** three cached positions plus two new inputs require 2 × 5 attention, not 2 × 2. The first new position must not see the second. An upper-left triangle loses valid history; [this averaging example](../core/multi-head-attention.en.md#cached-causal-mask) shows the resulting error.
 3. **Prefixes:** changing the system prompt, image input, or adapter can invalidate the cache. Identical text under different weights is not an identical computational prefix.
-4. **Determinism:** start with `eval()` to disable dropout and compare logits before comparing sampled text. Different random samples do not establish a cache bug.
+4. **Determinism:** use `eval()` to disable module dropout; if calling functional SDPA directly, also pass `dropout_p=0.0`. Compare logits before sampled text. Different random samples do not establish a cache bug.
 5. **Lifecycle:** release caches when requests end. Reordering batches must reorder sequence identities and their caches together, never attaching one person's history to another's request.
 
 The useful test is not “can it generate a sentence?” Fix an input and compare corresponding logits from a **full forward pass** against **prefill followed by incremental appends**, within numerical tolerance. The site's [decoder tests](../code/test_model.py) already include cache-equivalence checks.

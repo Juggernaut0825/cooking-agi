@@ -86,7 +86,9 @@ TTFT means time to first token. Cache hits, prefill, decode, and tool waiting af
 
 Maximum accepted context, context length retaining task quality, and context length meeting a latency budget are often three different numbers.
 
-## 5. Are two more correct answers worth a model change?
+<span id="5-are-two-more-correct-answers-worth-a-model-change"></span>
+
+## 5. Are four more correct answers worth a model change?
 
 On 200 items, 160 versus 164 correct answers establishes a sample improvement of two percentage points. It does not yet identify which tasks improved, whether the change is stable, or its extra cost.
 

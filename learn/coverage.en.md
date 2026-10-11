@@ -2,9 +2,11 @@
 
 [中文](coverage.md) · **English**
 
-This list prevents two mistakes: losing existing material during reorganization, and treating a mentioned term as a completed explanation. It is not a completion leaderboard.
+This page tracks what has been written and what still needs checking. It helps us avoid losing material when reorganizing the notes; it is not a checklist readers have to work through.
 
-**As of 2026-10-10, some material still needs writing or review.** The main list has 82 topics; identified appendix entries have grown from the 36 visible in screenshots to 67. These lists overlap and must not be added into an article count. Some explanations already exist but are hard to find; some topics are only mentioned; others are missing. The audit distinguishes these cases.
+**As of 2026-10-10, every listed topic has a reading entry, but the review is not complete.** Of the 82 main topics, 81 have substantive explanations and one is an interview-preparation overview. The appendix lists 65 topics plus algorithm and PyTorch indexes. Several entries link to the same note, so these numbers are not an article count.
+
+The listed Appendix 1 articles have now been read; the generated summary below records their status. The next task is to check whether our explanations are accurate and our examples useful, not to increase a reading count. Reading the prose does not verify every source figure, external link, or implementation.
 
 For studying rather than auditing, start with the [reading routes](README.en.md). This page is a gap list, not a question bank you must finish in order.
 
@@ -18,15 +20,16 @@ Before expanding the notes further, we're bringing the existing changes together
 - **Repository README:** the [main README](../README.md) introduces the project in English, with a separate [Chinese version](../README.zh.md). Reading goals come first, then topic routes, contributing, and local setup.
 - **Explanations and figures:** BERT, RL / post-training, Python, and retrieval now have more examples and derivations. Figure text is written for each language, with optional detail to expand. Article-by-article review is still ongoing.
 
-**Checked in this batch:** language switching and mobile layouts for the homepage, coverage page, and three pairs of retrieval notes, along with the first-visit tip, saved language choice, and existing links. The README now uses short entry lists instead of a table you need to scroll sideways on a phone.
+**Checks so far:** language switching and narrow-screen layouts for the homepage, retrieval notes, and pages changed in subsequent batches; regressions for the first-visit tip, saved language choice, and existing links. Chapter reviews are still in progress. The repository's `CONTENT_RELEASE_CHECKLIST.md` records the scope and findings of each batch, rather than treating a scoped check as site-wide approval. The README uses short entry lists instead of a table that needs horizontal scrolling on a phone.
 
-**Next:** review the remaining references, then continue checking each article's explanations, figures, and wording in both languages. Having an article, reading its reference, testing an example, and reviewing the whole article are different milestones. The records below keep them separate. Teaching examples in engineering notes are not evidence of full GPU training runs.
+**Still to do:** continue reviewing our explanations, examples, figures, and wording in both languages, and verify any image equations or external material used to support our claims. Unused reference material stays outside that verification scope; “read” is not the same as “validated.” Technical claims are checked against original papers or official implementations. Teaching examples in engineering notes are not evidence of full GPU training runs.
 
 ## How to read the table
 
-The new [LatentMoE chapter](../00-foundations/moe/latent-moe.en.md) separates backbone, internal FFN, and expert input widths before working through projection, compute, and communication costs. [MLA / RoPE](../00-foundations/deep-dives/latent-and-sparse-attention.en.md#rope-absorption) now includes a rotation-order example: the difficulty is reordering computation, not using the two together. Both follow the original reports, with language-specific figure explanations; example checks do not reproduce model quality.
+For example, [LatentMoE](../00-foundations/moe/latent-moe.en.md) explains widths, routing, and costs with worked calculations; [MLA / RoPE](../00-foundations/deep-dives/latent-and-sparse-attention.en.md#rope-absorption) uses rotation order to show why certain computations cannot be rearranged. Both qualify as “article available.” That label does not mean we reproduced model training or verified every experiment in the papers.
 
 - **Article available**: a dedicated article or substantive explanation is linked; this does not establish equivalence to every detail in the reference.
+- **Topic index**: an entry connects several notes, such as the algorithm and PyTorch routes; it is not an empty chapter awaiting content.
 - **Partial explanation**: related material exists, but derivations, examples, or scope still need expansion.
 - **To add**: the topic stays on the list without an empty placeholder article pretending it is finished.
 
@@ -50,7 +53,7 @@ Earlier [GPT](../00-foundations/model-families/gpt.en.md) and [Llama](../00-foun
 
 DCA chunk-boundary positions and DSA indexer training and missed-selection examples now extend the context and sparse-attention notes. New bilingual articles cover [Gated Attention](../00-foundations/deep-dives/gated-attention.en.md), [Engram](../00-foundations/deep-dives/engram.en.md), and [Block AttnRes](../00-foundations/deep-dives/attention-residuals.en.md). Local examples test gate initialization, hash collisions, depth softmax, and resource arithmetic, not full-model training. Earlier MoE, MLA, NSA, YaRN, and speculative-decoding examples remain.
 
-Reference code has not been executed, and image-based equations, embedded PDFs, and linked videos have not all been checked. Appendix 2's index has been read; six bilingual notes and local tests now cover string matching, monotonic queues, BSTs, knapsack, and sequence / state-machine DP. Forty-three individual Appendix 1 articles have now been read, as recorded below; the remainder is not complete. Explanations, examples, and code are written independently, with claims checked against papers or official implementations. Site-wide currency and article-by-article technical reviews are still incomplete. A successful build does not establish content completeness.
+Reference code has not been executed, and image-based equations, embedded PDFs, and linked videos have not all been checked. Appendix 2's index has been read; six bilingual notes and local tests now cover string matching, monotonic queues, BSTs, knapsack, and sequence / state-machine DP. Explanations, examples, and code are written independently, with claims checked against papers or official implementations. Site-wide currency and article-by-article technical reviews are still incomplete. A successful build does not establish content completeness.
 
 Inference now includes [the request lifecycle](../06-systems/llm-serving.en.md), [a complete memory budget](../00-foundations/deep-dives/kv-cache-and-inference.en.md#inference-budget), and [cache lifetime](../00-foundations/deep-dives/attention-kernels.en.md#cache-lifecycle). Two more reference articles were read: request handling and inference memory. Implementation links are version-pinned; local arithmetic is not presented as GPU performance measurement.
 
@@ -58,15 +61,15 @@ Inference now includes [the request lifecycle](../06-systems/llm-serving.en.md),
 
 ## Appendix questions: checking individual gaps {#appendix-question-map}
 
-Reopening the reference directory revealed **31 more entries**, bringing the inventory to **67**, including the algorithm and PyTorch appendix entries. This is neither the size of the whole library nor a claim to have read 67 articles. Source reading and site coverage are recorded separately; image equations and external links are not automatically counted as verified.
+The inventory contains **67 entries**: 65 topics plus algorithm and PyTorch indexes. These are not 67 separate articles or the size of the whole reference library. Site coverage and source reading are recorded separately; image equations and external links are not automatically counted as verified.
 
 The useful gaps are not limited to new model names:
 
 | Finding | Examples | What follows |
 | --- | --- | --- |
-| Substantive explanations already exist | Online softmax, MHA implementation, RoPE, BF16/FP16, normalization axes, entropy/CE/KL | Link the right sections and compare additional source questions |
-| Related material needs a more direct explanation | Rejection sampling, entropy collapse, and source questions still awaiting comparison | Add the missing derivation, example, or diagnostic rather than another definition |
-| Previously only named; now covered in dedicated notes | [BM25 versus TF-IDF](../04-search/tfidf-and-bm25.en.md), [primality and sieves](../interview/algorithms/primes-and-sieves.en.md) | Calculations, proofs, and boundaries are present; BM25 prose has been compared, while the sieve reference still needs reading |
+| Substantive explanations already exist | Online softmax, MHA implementation, RoPE, BF16/FP16, normalization axes, entropy/CE/KL | Link the relevant sections and check follow-up questions without duplicating chapters |
+| Earlier explanations were too indirect | Rejection sampling and entropy collapse | Derivations, examples, and diagnostics have been added; check whether they make the ideas easier to follow |
+| Previously only named; now covered in dedicated notes | [BM25 versus TF-IDF](../04-search/tfidf-and-bm25.en.md), [primality and sieves](../interview/algorithms/primes-and-sieves.en.md) | Both reference articles have been read; our calculations, proofs, and boundary cases are independently written |
 | Exact model confirmed and dedicated coverage added | [Kimi K3 / NoPE](../00-foundations/deep-dives/nope-and-order.en.md) | From swapped inputs to matrix recurrence; distinguish no RoPE from no long-context training |
 
 For example, the distillation article already computes entropy, cross-entropy, and KL on the same distributions, so it should not be reported as missing. BM25 previously appeared only in the hybrid-retrieval article; this batch adds a dedicated scoring explanation. That is the distinction an item-level audit should make.
@@ -75,13 +78,13 @@ The 2026-10-09 additions cover [Muon](../00-foundations/deep-dives/muon.en.md), 
 
 Also added: [BERT from inputs to fine-tuning](../00-foundations/core/bert.en.md). One short sequence separates input corruption, attention masking, and loss masking before connecting MLM/NSP to task heads.
 
-The inventory now has **65 dedicated explanations and 2 entries still needing expansion or comparison**. No listed topic entirely lacks relevant dedicated material; that does not complete the release audit. Forty-three Appendix 1 articles have been read. The latest comparisons cover Qwen3 Embedding / BGE, InfoNCE / CE, and BM25 / TF-IDF: training signals, candidate comparisons, normalization, and tied scores. Broad claims in the reference are not adopted automatically. The earlier [Python names, copies, and function calls](../interview/python-objects.en.md) note remains in the coding route.
+The inventory now has **65 dedicated explanations and 2 topic indexes**. No listed topic entirely lacks relevant dedicated material; that does not complete the release audit. Recent additions explain [Muon sharding](../00-foundations/deep-dives/muon.en.md), [DFlash features and shapes](../00-foundations/deep-dives/dflash.en.md#feature-shapes), and [clipping variants](../05-post-training/clipping-variants.en.md). Earlier recomputation, memory, ZeRO, and retrieval material remains, as does [Python names, copies, and function calls](../interview/python-objects.en.md) in the coding route. Reading a reference does not mean adopting its outdated or blanket claims.
 
 In engineering practice, a new [request-tracing example](../practice/post-training/experiments-and-release.en.md#trace-a-failure) distinguishes input, training, and evaluation fixes. Earlier additions cover [GRPO/PPO for long tasks](../05-post-training/deep-rl/llm-bridge.en.md#long-horizon-choice), [student sampling in distillation](../05-post-training/distillation.en.md#opd-choices), and [rollouts as training data](../05-post-training/post-training-infrastructure.en.md#rollout-record). Start with small examples, then open the gradient and code details as needed. CPU checks are not full training or GPU performance replications.
 
 The earlier [two-GPU layer example](../06-systems/tensor-parallel.en.md) and [eight-GPU deployment comparison](../06-systems/distributed-training.en.md#eight-gpus) remain available, including input gradients, communication, and resource arithmetic.
 
-Training engineering now covers [checkpoint recovery](../practice/post-training/checkpoint-and-resume.en.md), [the CPU-to-GPU path](../00-foundations/pytorch/training-loop.en.md), and [memory accounting](../00-foundations/deep-dives/precision-and-memory.en.md). Momentum, three batches, and a billion-parameter estimate introduce the ideas before code and engineering limits. These three reference articles remain unread and do not increase the reading count.
+Training engineering now covers [checkpoint recovery](../practice/post-training/checkpoint-and-resume.en.md), [the CPU-to-GPU path](../00-foundations/pytorch/training-loop.en.md), and [memory accounting](../00-foundations/deep-dives/precision-and-memory.en.md). Momentum, three batches, and a billion-parameter estimate introduce the ideas before code and engineering limits. Those reference articles and the ZeRO stages article have all been read; the data-path note also distinguishes kernels, SMs, and storage. See the [recomputation example](../00-foundations/deep-dives/precision-and-memory.en.md#recompute-example) and [communication ledger](../06-systems/distributed-training.en.md#zero-communication). CPU checks do not establish GPU memory usage or communication performance.
 
 Post-training now explains three common debugging questions: [zero loss with a nonzero gradient](../05-post-training/after-ppo.en.md#zero-loss-gradient), [why an out-of-range ratio can still have a gradient](../05-post-training/rlhf/ppo-clipping.en.md#clipped-token-gradients), and [when a batch is generated, reused, and refreshed](../05-post-training/rlhf/on-off-policy.en.md#grpo-data-lifecycle). Small calculations have matching CPU checks; logged values, gradients, and actual training outcomes remain distinct.
 
@@ -98,7 +101,7 @@ New pages should not follow the reference question order, nor should everything 
 | Focus on retrieval or deployment | Dual encoders and hybrid retrieval for search; generation and KV cache for deployment | You do not have to finish the other route |
 | Implement something | Small modules → shape/gradient checks → a complete small experiment | Getting one module right matters more than collecting algorithm names |
 
-The four groups below organize the audit, not difficulty levels. “Expansion or comparison needed” can mean missing local detail or unread source prose; each entry explains which.
+The four groups below organize the audit, not difficulty levels. Each entry describes our coverage, how much of the reference was read, and what remains unverified. Algorithm and PyTorch indexes are counted separately from individual topic articles.
 
 <!-- widget:appendix-coverage -->
 

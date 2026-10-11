@@ -35,6 +35,8 @@ $$
 
 The expected gradient is unchanged, while variance can decrease. $V^\pi(s)$ is a common baseline, not a guarantee of minimum variance under every gradient-weighted criterion. An arbitrary baseline depending on the sampled action invalidates this proof.
 
+Here $b(s_t)$ must be fixed when averaging over the current action. A state-only network fitted to this sample's return can still depend on its action through the fitted parameters; detach removes graph dependence, not statistical dependence. In the bandit below, fitting a baseline to a single sampled reward makes its advantage zero, despite a nonzero true gradient. One safe ordering is to form advantages with the pre-rollout Critic, then train it; see [GAE §6.1](https://arxiv.org/pdf/1506.02438).
+
 Keep discount conventions consistent. If the objective is $\mathbb E[\sum_t\gamma^t r_t]$ and $G_t$ restarts discounting at the current step, the finite-trajectory derivation needs an outer $\gamma^t$. Some literature absorbs this into the state-visitation distribution. Do not mix conventions.
 
 ## A two-action calculation

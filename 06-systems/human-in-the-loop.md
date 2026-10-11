@@ -67,6 +67,19 @@ HITL 的关键不是模型置信度低就问人，而是同时看**出错概率�
 
 行动发生前让用户批准，适合高风险或不可逆操作。
 
+确认必须对应具体动作，而不是整个会话的通行证。展示目标、关键参数和影响，把批准绑定到这个动作版本及有效期；执行层核验批准者权限，并在执行前检查授权与当前状态。改了收件人、附件、金额等，就不能沿用旧确认。拒绝或确认到期未回复，都不等于批准。参见 [OWASP 的交易授权原则](https://cheatsheetseries.owasp.org/cheatsheets/Transaction_Authorization_Cheat_Sheet.html)。
+
+例如，在要求逐次确认的报价邮件流程中：
+
+```text
+展示：发给采购联系人，附件 quote-v3.pdf
+用户批准这一版 → 才能进入发送前校验
+随后替换为 quote-v4.pdf → 旧批准失效，展示新版并重新确认
+用户拒绝或确认超时 → 不发送，记录原因
+```
+
+这只是状态约束，不是发送实现。恢复暂停的工作流也不等于“从下一行只执行一次”：例如 [LangGraph 的 interrupt](https://docs.langchain.com/oss/python/langgraph/interrupts#side-effects-called-before-interrupt-must-be-idempotent) 恢复时会从节点开头重跑。待批准的外部写操作要放在有效批准之后，重试仍要遵守工具的幂等约定。
+
 ### 事后抽查 {#_9}
 
 从完成的轨迹中抽样，发现系统性失败、judge 偏差和新类型问题。

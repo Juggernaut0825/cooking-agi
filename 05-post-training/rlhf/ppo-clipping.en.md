@@ -155,3 +155,5 @@ It cannot tell whether the scoring standard is sensible. If a reward model favor
 It also does not impose a hard KL limit on the entire parameter update. Samples share parameters, and changes accumulate across rounds. [Spinning Up's PPO notes](https://spinningup.openai.com/en/latest/algorithms/ppo.html) therefore describe early stopping based on KL. PPO clipping is also different from gradient clipping, which acts directly on gradients.
 
 GRPO often retains this kind of clipped objective while changing the advantage estimate. Continue with [GRPO, DPO, and RLVR](after-rlhf.en.md), or revisit [Reference and Critic](reference-and-critic.en.md) if the old policy and Reference still seem interchangeable.
+
+If you are reading training code, [What exactly is being clipped?](../clipping-variants.en.md) compares Dual-clip, CISPO, and SAPO on the same inputs. On a first pass through PPO, there is no need to memorize these names yet.

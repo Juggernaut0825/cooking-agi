@@ -41,7 +41,7 @@ $$
 r'_t=r_t+\gamma\Phi(s_{t+1})-\Phi(s_t).
 $$
 
-折扣求和后，中间项相消，只剩原 return 加 $-\Phi(s_0)+\gamma^T\Phi(s_T)$。若初态固定，且终端 potential 为 0（或无限折扣时尾项消失），策略间的比较保持不变。**不满足这些条件，就不能承诺最优策略不变。**
+折扣求和后，中间项相消，只剩原 return 加 $-\Phi(s_0)+\gamma^T\Phi(s_T)$。若终端 potential 为 0，则从每个初态出发，所有策略的回报都只平移 $-\Phi(s_0)$。因此不只固定初态，从同一个、与策略无关的初态分布比较期望回报时，排序也不变。无限时域下，$0\le\gamma<1$ 且 $\Phi$ 有界可保证尾项消失。**关键是边界项不能随策略改变；不能把任意非零终端 potential 或采集截断直接忽略。**
 
 ## 把 shaping 的抵消真的算一遍
 
@@ -63,13 +63,15 @@ Option 通常包含启动集合、内部策略、终止规则。高层选“走�
 
 $$
 y=\sum_{k=0}^{\tau-1}\gamma^kr_{t+k}
-+\gamma^\tau V(s_{t+\tau}).
++\gamma^\tau(1-d)V(s_{t+\tau}).
 $$
 
-执行 3 步的 option 后，尾部要乘 $\gamma^3$，不是 $\gamma$。这叫 semi-Markov 结构。层级可以缩短高层决策链，但错误的技能边界也可能限制可达策略。
+这里 $d=1$ 只表示环境回合真正终止，不表示 option 自己结束。若只是技能完成，仍需对接下来高层选技能的价值 $V$ 自举；环境回合终止才去掉尾项。$V$ 是后续高层策略的价值；若做最优控制，则用可启动 options 的最大 Q 值。
+
+执行 3 步的 option 后，尾部要乘 $\gamma^3$，不是 $\gamma$。例如三步奖励为 $[1,0,2]$、$\gamma=0.9$、后续 $V=5$：技能结束但回合继续时，$y=2.62+0.9^3\times5=6.265$；若回合真正终止，则 $y=2.62$。这叫 semi-Markov 结构。层级可以缩短高层决策链，但错误的技能边界也可能限制可达策略。
 
 ## 先做哪个实验
 
 先固定外部奖励，记录探索覆盖与成功率是否一起改善；再分别测试 bonus、技能和预算。不把内部 novelty 上升当成任务成功。
 
-这是探索与层级的入口，尚未覆盖完整 option-critic 或贝叶斯探索推导。参考：[RND](https://arxiv.org/abs/1810.12894) · [Potential-based shaping](https://ai.stanford.edu/~ang/papers/shaping-icml99.pdf) · [Options 与 semi-MDP](https://www.sciencedirect.com/science/article/pii/S0004370299000521)。下一篇：[有示范时，为什么还会走偏？](imitation-and-rewards.md)
+这是探索与层级的入口，尚未覆盖完整 option-critic 或贝叶斯探索推导。参考：[RND，第 2.2–2.4 节](https://arxiv.org/abs/1810.12894) · [Potential-based shaping，第 3 节、定理 1](https://ai.stanford.edu/~ang/papers/shaping-icml99.pdf) · [Options 与 semi-MDP，第 2、3.2 节](https://www.sciencedirect.com/science/article/pii/S0004370299000521)。下一篇：[有示范时，为什么还会走偏？](imitation-and-rewards.md)

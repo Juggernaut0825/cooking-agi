@@ -2,7 +2,7 @@
 
 [中文](muon.md) · **English**
 
-> Checked: 2026-10-09 · Prerequisite: [momentum and AdamW](optimizers.en.md) · For a first pass, read the first 2 sections and the comparison table.
+> Checked: 2026-10-10 · Prerequisite: [momentum and AdamW](optimizers.en.md) · For a first pass, read the first 2 sections and the comparison table.
 
 A linear layer has a weight matrix and a gradient matrix. AdamW adapts updates using each coordinate's history; Muon preserves matrix structure and changes the geometry of the update. **It changes parameter updates, not the loss or the attention computation.**
 
@@ -14,7 +14,7 @@ $$M=\begin{bmatrix}6&0\\0&2\end{bmatrix}.$$
 
 Both directions receive an update, but the first has 3 times the magnitude. Dividing the matrix by its norm shrinks both together; the ratio stays 3:1.
 
-The idealized Muon operation differs. Write the singular value decomposition as $U\Sigma V^\top$, then remove the magnitudes of the nonzero singular values, leaving $UV^\top$. In this full-rank example the result is the identity, with a 1:1 ratio. Left and right singular vectors are preserved; the entries are not all set to 1. The [original author's explanation](https://kellerjordan.github.io/posts/muon/) develops this orthogonalization view.
+The idealized Muon operation differs. Write the singular value decomposition as $U\Sigma V^\top$, then replace each nonzero singular value with 1. Keeping only the corresponding singular vectors $U_r,V_r$ gives $U_rV_r^\top$. In this full-rank example the result is the identity, with a 1:1 ratio. Left and right singular vectors are preserved; the entries are not all set to 1. The [original author's explanation](https://kellerjordan.github.io/posts/muon/) develops this orthogonalization view.
 
 | Operation | Result here | Directional ratio |
 | --- | --- | --- |
@@ -23,6 +23,8 @@ The idealized Muon operation differs. Write the singular value decomposition as 
 | Idealized orthogonalization | $\operatorname{diag}(1,1)$ | 1:1 |
 
 This explains the operation, not a guarantee of better learning. A small singular value might describe a useful direction or mostly noise. Equalizing magnitudes does not make the gradient more accurate for free.
+
+For $\operatorname{diag}(2,0)$, our reference instead gives $\operatorname{diag}(1,0)$, not the identity: the zero direction stays zero. Multiplying all the returned $U,V$ vectors can include arbitrary completions associated with zero singular values. The code below uses a threshold to decide which singular values to retain.
 
 ## What happens in one update?
 
@@ -51,11 +53,33 @@ X_{k+1}=aX_k+(bA_k+cA_k^2)X_k.$$
 
 The operation acts on the **update**, not on the weight matrix $W$. A rectangular matrix also cannot satisfy both identity conditions: full column rank can give $O^\top O=I$, while full row rank can give $OO^\top=I$.
 
-An important detail in the [original implementation](https://github.com/KellerJordan/Muon/blob/master/muon.py): the common quintic coefficients `(3.4445, -4.775, 2.0315)` prioritize useful behavior within a small iteration budget. **Repeating them does not guarantee exact convergence to $UV^\top$.** Substitute a singular value of 1:
+An important detail in the [pinned original implementation](https://github.com/KellerJordan/Muon/blob/f90a42b28e00b8d9d2d05865fe90d9f39abcbcbd/muon.py): the quintic coefficients `(3.4445, -4.775, 2.0315)` prioritize useful behavior within a small iteration budget. **Repeating them does not guarantee exact convergence to the ideal polar factor.** Substitute a singular value of 1:
 
 $$3.4445-4.775+2.0315=0.701.$$
 
 One is not even a fixed point of that polynomial. “More iterations must converge exactly to 1” therefore cannot be the explanation. Approximate orthogonalization is not exact orthogonalization at arbitrary iteration counts.
+
+<details markdown="1">
+<summary>What happens to 6 and 2 after five steps?</summary>
+
+For a diagonal matrix, we can check the polynomial one entry at a time. This calculation uses Python floats to illustrate the transformation, not the BF16 rounding of a production implementation:
+
+```python
+import math
+
+diagonal = [6.0, 2.0]
+scale = math.sqrt(sum(value * value for value in diagonal)) + 1e-7
+transformed = [value / scale for value in diagonal]
+for step in range(5):
+    transformed = [3.4445 * value - 4.775 * value**3 + 2.0315 * value**5
+                   for value in transformed]
+assert math.isclose(transformed[0], 0.7530, abs_tol=1e-4)
+assert math.isclose(transformed[1], 1.1337, abs_tol=1e-4)
+```
+
+The ratio is no longer 3:1, but it is not exactly 1:1 either. The SVD reference explains the geometry; the finite-step iteration is a specific algorithm and does not inherit every property of that reference.
+
+</details>
 
 ### Check the geometry with SVD
 
@@ -66,6 +90,12 @@ import torch
 
 
 def polar_reference(matrix):
+    try:
+        inferred = torch.as_tensor(matrix)
+    except RuntimeError:
+        inferred = torch.as_tensor(matrix, dtype=torch.float64)
+    if torch.is_complex(inferred):
+        raise ValueError("expected a real matrix, not complex values")
     matrix = torch.as_tensor(matrix, dtype=torch.float64)
     if matrix.ndim != 2 or matrix.numel() == 0:
         raise ValueError("expected a nonempty real matrix")
@@ -96,9 +126,54 @@ $$\operatorname{RMS}(O)=\sqrt{\frac{\min(m,n)}{mn}}
 
 With the same learning rate, larger matrices receive smaller per-entry RMS updates. The [scaling paper](https://arxiv.org/abs/2502.16982) uses $0.2\sqrt{\max(m,n)}$ to match an empirical AdamW update scale. That constant is not a theorem; the original shape adjustment and RMS matching are different configurations.
 
+For example, the `original` option in [PyTorch v2.9.0](https://github.com/pytorch/pytorch/blob/v2.9.0/torch/optim/_muon.py#L69) uses $\sqrt{\max(1,m/n)}$. For ideal full-rank directions, before multiplying by the learning rate:
+
+| Matrix shape | Without scaling | After `original` | After RMS matching |
+| --- | ---: | ---: | ---: |
+| $8\times2$ | $1/\sqrt8\approx0.3536$ | 0.7071 | 0.2 |
+| $2\times8$ | $1/\sqrt8\approx0.3536$ | 0.3536 | 0.2 |
+
+These are reference values, not a claim that finite-step NS is exactly orthogonal. In that implementation, weight decay uses the base learning rate, not the shape-adjusted rate. With $\eta=0.1,\lambda=0.2$, the decay term is $0.98W$; doubling the update direction does not change it to $0.96W$.
+
 **Second, parameter groups.** The classical hybrid uses Muon for hidden matrices and AdamW for embeddings, output layers, biases, and normalization parameters. Embeddings are themselves matrices, so `ndim == 2` is not a sufficient selector. Deduplicate tied embedding/output weights by object identity to avoid two updates to the same parameter. The [original repository's usage guide](https://github.com/KellerJordan/Muon) distinguishes these groups.
 
 **Finally, distribution.** Orthogonalizing matrix shards separately generally differs from orthogonalizing the full matrix before slicing. If the framework flattens or shards parameters, establish how logical matrices are reconstructed and what communication is needed; do not copy an elementwise AdamW sharding scheme unchanged.
+
+<details id="distributed-step" markdown="1">
+<summary>Why can't two devices each process one row?</summary>
+
+Consider this small, constructed momentum matrix:
+
+$$M=\begin{bmatrix}1&1\\0&1\end{bmatrix}.$$
+
+Give each device one row. Ideal orthogonalization of each row simply normalizes its length. Putting those rows back together does not make them orthogonal. Processing the whole matrix gives a different result:
+
+| Operation | Assembled update | Dot product of its rows |
+| --- | --- | --- |
+| Process each row separately | $\begin{bmatrix}1/\sqrt2&1/\sqrt2\\0&1\end{bmatrix}$ | $1/\sqrt2$ |
+| Process the whole matrix | $\frac1{\sqrt5}\begin{bmatrix}2&1\\-1&2\end{bmatrix}$ | $0$ |
+
+There is no network transfer or low-precision rounding in this example. The operations differ even with exact SVD. Using `polar_reference` from above:
+
+```python
+momentum = torch.tensor([[1.0, 1.0], [0.0, 1.0]], dtype=torch.float64)
+whole_update = polar_reference(momentum)
+row_updates = torch.cat([polar_reference(row) for row in momentum.split(1, dim=0)])
+expected_whole = torch.tensor([[2.0, 1.0], [-1.0, 2.0]], dtype=torch.float64) / math.sqrt(5)
+torch.testing.assert_close(whole_update, expected_whole)
+assert math.isclose(torch.dot(row_updates[0], row_updates[1]).item(), 1 / math.sqrt(2))
+assert not torch.allclose(row_updates, whole_update)
+```
+
+[Moonlight v1 §2.3, Algorithm 1](https://arxiv.org/html/2502.16982v1#S2.SS3) describes one implementation that retains full-matrix computation:
+
+1. Reduce-scatter gradients across DP, then apply local momentum to each local shard.
+2. Gather the required momentum-adjusted shards into a full matrix and run Newton–Schulz.
+3. Keep the local update slice, update the local parameters, then all-gather the updated parameters.
+
+**Orthogonalization is computation, not another communication collective.** TP needs additional handling. The report's communication ratios and negligible latency overhead belong to its configuration and cluster, not every training run. Measure reconstruction, temporary buffers, and overlap in your setup; no multi-GPU benchmark was run here.
+
+</details>
 
 ## What is a meaningful AdamW comparison?
 

@@ -41,10 +41,12 @@ Limit tools and permissions as well. Ordinary offline grading doesn't need a she
 | --- | --- | --- |
 | Strong general model + rubric | Quick setup; broad task coverage | Cost, changing versions, difficult problems |
 | Specialized evaluator | More fixed scoring protocol; possible self-hosting | Domain and rubric mismatch |
-| Multi-model panel | Disagreement exposes cases to review | Correlated mistakes and higher cost |
+| Multi-model panel | Disagreement exposes cases to review | Correlated mistakes; cost depends on models, tokens, and call count |
 | Human + rules + model | Different checks suit different evidence | Annotation and maintenance take work |
 
 [Prometheus 2](https://arxiv.org/abs/2405.01535) is a specialized evaluator example; [PoLL](https://arxiv.org/abs/2404.18796) studies model panels. [JudgeBench](https://arxiv.org/abs/2410.12784) highlights the difficulty of distinguishing answers to challenging problems.
+
+More calls do not necessarily mean a higher bill. At the prices used in the paper, PoLL's three-model panel was cheaper than a single GPT-4 Turbo judgment. That is a historical comparison, not current pricing or a guarantee for any panel. Compare the full input, output, and retry costs per evaluated case—not just the number of models. [PoLL §4.5](https://arxiv.org/html/2404.18796v2#S4.SS5)
 
 Compare erroneous approvals, missed failures, abstention, latency, and cost on the same labeled cases. Being larger than the evaluated model does not automatically qualify a model to judge it.
 

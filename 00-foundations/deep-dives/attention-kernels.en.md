@@ -50,16 +50,55 @@ This is not a mean of independently normalized block outputs. Different denomina
 
 The second step multiplies old statistics by $2/3$ before adding the new block. The result remains $25/3$. Even though the third value is zero, its contribution to the denominator must remain.
 
+### Online does not mean probabilities are final immediately {#online-output}
+
+After the first two positions, their probabilities are $[1/3,2/3]$. Once the third arrives, those entries become $[1/6,2/6]$. The denominator is not final while scores remain unread.
+
+Online softmax can maintain the maximum and normalizer in one pass, **but cannot emit each final probability as soon as it reads the corresponding score**. Algorithm 3 in the [2018 paper](https://arxiv.org/html/1805.02867v2#S3) still has an output stage. Returning every probability requires rereading inputs or retaining the required data. Attention can instead accumulate the weighted numerator $u$ alongside the denominator, then return only $u/\ell$. That is why this example does not need to store a probability row.
+
+<details markdown="1">
+<summary>How do we combine two independently processed blocks?</summary>
+
+Blocks A and B hold $(m_A,\ell_A,u_A)$ and $(m_B,\ell_B,u_B)$. Choose a shared maximum $m=\max(m_A,m_B)$ and rescale both:
+
+$$
+\begin{aligned}
+\ell&=e^{m_A-m}\ell_A+e^{m_B-m}\ell_B,\\
+u&=e^{m_A-m}u_A+e^{m_B-m}u_B.
+\end{aligned}
+$$
+
+The first two positions in our example have weighted output $50/3$; the third alone gives zero. Averaging those outputs happens to give the correct $25/3$, because each block has the same unnormalized weight sum of 3. **That coincidence is not an algorithm.** Change the scores to $[\log1,\log1,\log8]$, keeping values $[10,20,0]$: averaging block outputs gives 7.5, but the correct result is 3. Merging the statistics preserves the blocks' different weights.
+
+In real arithmetic, these statistics can be merged in different orders; floating-point sums can still differ through rounding. Skip entirely masked blocks to avoid $e^{-\infty-(-\infty)}$. An entirely masked row has no distribution to normalize.
+
+</details>
+
+<details markdown="1">
+<summary>What does one fewer scan save?</summary>
+
+In the paper's Algorithms 2 and 3, safe softmax scans for the maximum, the denominator, and the outputs: three reads and one write per element. The online normalizer combines the first two scans, giving two reads and one write. These are algorithmic memory accesses, **not CPU–GPU round trips**.
+
+Both algorithms remain $O(n)$. Keeping data in registers or shared memory, or fusing the next operation, changes actual HBM traffic and runtime. Scan counts alone do not determine a speedup.
+
+</details>
+
 ## Verify the arithmetic before writing a GPU kernel
 
-This single-row, scalar-value implementation tests the mathematics, not GPU performance. Masked scores use negative infinity. An entirely invalid row raises an error rather than silently returning NaN.
+This single-row, scalar-value implementation tests the mathematics, not GPU performance. Negative infinity marks masked positions that can be skipped. NaN, positive infinity, and nonfinite values at visible positions raise errors, as does an entirely invalid row, rather than silently returning NaN.
 
 ```python
 import math
 
 def streaming_attention(scores, values, block_size):
-    if len(scores) != len(values) or block_size < 1:
+    if (len(scores) != len(values) or not isinstance(block_size, int)
+            or isinstance(block_size, bool) or block_size < 1):
         raise ValueError("Invalid shape or block size")
+    if any(score != -math.inf and not math.isfinite(score) for score in scores):
+        raise ValueError("Scores must be finite or -inf for masked positions")
+    if any(not math.isfinite(value) for score, value in zip(scores, values)
+           if score != -math.inf):
+        raise ValueError("Visible values must be finite")
     running_max = -math.inf
     normalizer = 0.0
     numerator = 0.0

@@ -2,7 +2,7 @@
 
 **中文** · [English](seq2seq.en.md)
 
-> 阅读时间：约 8 分钟 · 难度：必修 · 最近审阅：2026-08
+> 阅读时间：约 10 分钟 · 难度：必修 · 最近审阅：2026-10-10
 
 把“明天见”翻成 “See you tomorrow”，输入和输出既不等长，也不用逐字对应。Seq2Seq 用一个 encoder 读取输入，再让 decoder 逐步生成输出。问题是：写到 `tomorrow` 时，decoder 怎样找到输入里与时间有关的信息？这正是 attention 要解决的问题。
 
@@ -16,25 +16,29 @@ $$h_1,\ldots,h_S = \text{Encoder}(x_1,\ldots,x_S), \qquad c = h_S$$
 
 $$s_t = \text{Decoder}(y_{t-1}, s_{t-1}, c), \qquad p(y_t)=\text{softmax}(W s_t)$$
 
-输入长度是 $S$，输出长度是 $T$，二者无需相等。问题在于：它要求整段输入最后都挤进一个固定向量 $c$。短句还能凑合，长句就像把整本书写进一张便利贴。
+输入长度是 $S$，输出长度是 $T$，二者无需相等。decoder 的每一步都会输出一个词表上的概率分布；上式的 $p(y_t)$ 简写了对输入和已有前缀的条件。
+
+固定向量的限制在于：生成开始后，decoder 不能再单独读取某个输入位置。这会增加保留细节的难度，但不是说固定向量遇到长句就一定失败。[Sutskever 等（2014），§2](https://arxiv.org/html/1409.3215v3)介绍了经典 LSTM encoder–decoder；具体效果仍取决于训练和任务。
 
 ## Attention 按需读取 Encoder states {#attention-encoder-states}
 
-既然一张便利贴装不下，那就别只给 decoder 一张。让它每写一个 token，都回头重新翻一遍 encoder states，挑出这一刻真正相关的位置：
+不必只把最后一个状态交给 decoder。保存各个输入位置的 encoder state，生成每个 token 时，重新算一组读取权重：
 
 $$e_{tj}=\text{score}(s_{t-1},h_j), \qquad \alpha_{tj}=\text{softmax}_j(e_{tj})$$
 
 $$c_t = \sum_j \alpha_{tj}h_j$$
 
-$c_t$ 不再是固定瓶颈，而是“生成第 $t$ 个 token 时，从输入的哪些位置取信息”。这就是 cross-attention 的祖先。
+$c_t$ 每一步都可以不同，不再要求一个不变的向量承担整个输出序列的信息需求。早期 RNN attention 的具体做法见 [Bahdanau 等，§3.1](https://arxiv.org/html/1409.0473v7)。它按权重混合状态，不是必须只选一个词。
+
+例如三个状态为 $h_1=(1,0),h_2=(0,1),h_3=(1,1)$。某一步的权重是 $(0.1,0.7,0.2)$，就读出 $c_t=(0.3,0.9)$；下一步改用 $(0.6,0.1,0.3)$，则读出 $(0.9,0.4)$。这些是手设的二维向量，不代表单词真有这两个语义维度。attention 权重是在**输入位置**上归一化，不是最终输出词的概率，也不能单靠权重证明模型用了哪条因果证据。
 
 ```mermaid
-flowchart LR
-    X["source tokens"] --> E["Encoder states<br/>h₁ … hₛ"]
-    E --> A["Attention<br/>query by decoder state"]
+flowchart TB
+    X["输入 token"] --> E["编码状态<br/>h₁ … hₛ"]
+    E --> A["Attention<br/>由 decoder 状态查询"]
     A --> D["Decoder"]
-    D --> Y["next token"]
-    Y -. "feed back" .-> D
+    D --> Y["下一个 token"]
+    Y -. "生成时反馈" .-> D
 ```
 
 ## 训练技巧：Teacher forcing {#teacher-forcing}
@@ -46,6 +50,17 @@ flowchart LR
 $$\mathcal{L} = -\sum_{t=1}^{T}\log p_\theta(y_t \mid y_{<t}, x)$$
 
 训练时可以知道完整正确前缀，推理时错误会进入后续上下文并继续传播。这种 train–inference mismatch 常被称为 exposure bias。
+
+把目标设成 `9, 4, 7, EOS`，右移一位后，decoder 的输入和监督目标这样配对：
+
+| 步骤 | teacher forcing 输入 | 要预测的 token |
+| --- | --- | --- |
+| 1 | BOS | 9 |
+| 2 | 9 | 4 |
+| 3 | 4 | 7 |
+| 4 | 7 | EOS |
+
+如果生成时第 2 步误出了 `5`，第 3 步吃到的就是 `5`，而不是表里的 `4`。teacher forcing 下 loss 很低，不保证接着自己的回答还能写对。评估时要另做自由生成（free-running generation），同时看逐 token 正确率和整段是否全对。
 
 ## 训练与生成的输入分布不同 {#_3}
 
@@ -61,13 +76,17 @@ Beam search 只改变推理时怎样保留候选序列，不改变模型训练�
 
 - encoder / decoder 里的 RNN 无法按时间并行；
 - 任意两位置之间的信息路径仍可能很长；
-- attention 已经解决动态读取，但 recurrent state 仍限制吞吐。
+- attention 提供了动态读取，但 recurrent state 仍限制时间维的并行。
 
 Transformer 的关键动作不是“发明 attention”，而是把 recurrence 全部拿掉，只保留 attention 与逐位置计算。
 
 ## 实验：学习序列反转 {#_5}
 
-运行 [`../code/sequence_torch.py`](../code/sequence_torch.py) 的 `--task reverse`，观察 encoder–decoder 在反转序列任务上学习对齐。然后对照现有 [`../code/vanilla_demo.py`](../code/vanilla_demo.py)，看同一任务如何由 Transformer cross-attention 完成。
+运行 [`../code/sequence_torch.py`](../code/sequence_torch.py) 的 `--task reverse`，先看**不带 attention** 的基线：encoder 的最终状态初始化 decoder，生成过程中不再读取 encoder 的逐位置状态。
+
+这份最小脚本固定输入和输出都为 7 个 token，按已知长度停止，没有训练 EOS；日志中的 `same_batch_greedy_accuracy` 是刚训练过的批次上的逐 token 正确率，不是独立验证集指标。它能帮你读懂 teacher forcing 与自回归生成的不同，但不能拿来证明可变长度泛化或 attention 对齐。
+
+[`../code/vanilla_demo.py`](../code/vanilla_demo.py) 则演示带 cross-attention 的 Transformer，包含变长输入、padding 与 EOS。两份脚本的任务细节和训练预算不同，不能直接把打印分数当成公平对比。想比较架构，先统一数据、预算和评估协议，再检查自由生成；attention 图只是额外观察，不是正确性证据。
 
 ## 自检 {#_6}
 

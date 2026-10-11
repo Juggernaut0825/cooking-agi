@@ -104,6 +104,8 @@ Double DQN 的网络并不真正独立，所以这解释的是动机，不是无
 
 Replay 存历史 transition，不是永久固定的 target。抽出 $(s,a,r,s')$ 后，再按当前约定的目标网络构造标签。随机打散减弱连续样本的相关性，却不保证旧数据覆盖新策略会去的状态。
 
+冻结目标网络不等于所有标签都固定。普通 DQN 对同一 transition 的标签在硬同步之间不变（假设网络输出确定）；Double DQN 的 online 网络仍在选动作，排序变化时标签也会变。例如 $r=1,\gamma=0.9$，target 仍为 $[2,6]$，online 从 $[5,4]$ 变成 $[3,4]$，Double DQN 的标签就从 2.8 变为 6.4，无须同步 target。
+
 目标网络可以周期性硬复制，也可以软更新 $\bar\theta\leftarrow(1-\tau)\bar\theta+\tau\theta$。同步周期要说明按环境步还是梯度步计数：每次交互训练 10 次，与训练 1 次时的“1000 步”，不是同样节奏。
 
 | 增加什么 | 可能的帮助 | 额外风险 |
@@ -118,4 +120,4 @@ Replay 存历史 transition，不是永久固定的 target。抽出 $(s,a,r,s')$
 
 先测终止 target 是否等于 reward；再确认 target 无梯度；再核对 replay 里的 action 与 state 是否对齐；最后看 target 同步和环境步数的单位。Loss 降低但 return 不涨，优先排查这些语义，不要先堆更大网络。
 
-参考：[Double DQN](https://arxiv.org/abs/1509.06461)。下一篇：[连续动作没法枚举最大值，怎么办？](continuous-control.md)
+参考：[Double DQN（arXiv v3，2015）](https://arxiv.org/abs/1509.06461v3)。下一篇：[连续动作没法枚举最大值，怎么办？](continuous-control.md)

@@ -7,6 +7,8 @@
 }
 .side-nav { display: flex; flex-direction: column; min-height: 0; flex: 1; margin-top: 0; }
 .side-context { flex-shrink: 0; padding: .45rem .9rem .9rem; color: var(--ink); font: 600 .95rem/1.5 var(--body); }
+.side-route-link { flex-shrink: 0; display: block; margin: -.4rem .45rem .55rem; padding: .45rem; color: var(--muted); font: .78rem/1.5 var(--body); text-decoration: none; }
+.side-route-link:hover { color: var(--link); text-decoration: underline; text-underline-offset: 3px; }
 .side-tools { flex-shrink: 0; margin: 0 .45rem .4rem; }
 .side-tools[hidden], .side-nav [hidden] { display: none !important; }
 .side-views { display: flex; gap: .2rem; border-bottom: 1px solid var(--rule); margin-bottom: .4rem; }

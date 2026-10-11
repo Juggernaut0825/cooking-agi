@@ -47,8 +47,8 @@ class TrainingEngineeringDocsTests(unittest.TestCase):
         for chapter in CHAPTERS:
             chinese = (ROOT / f"{chapter}.md").read_text()
             english = (ROOT / f"{chapter}.en.md").read_text()
-            chinese_figures = re.findall(r'<figure class="worked-update[^"]*">(.*?)</figure>', chinese, re.S)
-            english_figures = re.findall(r'<figure class="worked-update[^"]*">(.*?)</figure>', english, re.S)
+            chinese_figures = re.findall(r'<figure class="worked-update[^"]*"[^>]*>(.*?)</figure>', chinese, re.S)
+            english_figures = re.findall(r'<figure class="worked-update[^"]*"[^>]*>(.*?)</figure>', english, re.S)
             self.assertEqual(len(chinese_figures), len(english_figures))
             self.assertTrue(chinese_figures)
             for figure in chinese_figures:
@@ -69,7 +69,7 @@ class TrainingEngineeringDocsTests(unittest.TestCase):
 class TrainingEngineeringArithmeticTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.memory = selected_namespace(CHAPTERS[2])
+        cls.memory = selected_namespace(CHAPTERS[2], "state_bytes")
         cls.resume = selected_namespace(CHAPTERS[0])
         cls.pipeline = selected_namespace(CHAPTERS[1], "ideal_pipeline_ms")
 

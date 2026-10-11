@@ -67,14 +67,9 @@ of the token context while the model continues ordinary causal next-token predic
 ### 2. Multi-turn dialogue is a longer left context {#2-multi-turn-dialogue-is-a-longer-left-context}
 
 For the second response, the sequence usually contains the system message, first user
-turn, first assistant turn, second user turn, and a new assistant-start marker. Causal
-attention can read every untruncated token to the left, so the new response can remain
-consistent with earlier dialogue.
+turn, first assistant turn, second user turn, and a new assistant-start marker. Standard full causal attention can read earlier tokens that remain in context and are not masked; sliding-window variants have narrower visibility. This lets the response use earlier dialogue.
 
-This is not permanent memory independent of the input. If history is not placed back in
-the prompt, the current forward pass cannot see it. When the sequence exceeds the
-context window, the application must truncate, summarize, or recover important facts
-through retrieval or external memory.
+This is not permanent memory independent of context. History must remain in the logical prefix: either supply its tokens again or reuse a matching KV cache and pass only uncached new tokens. History absent from both cannot be read. When the sequence exceeds the context window, the application must truncate, summarize, or retrieve important facts. [Caching API, Transformers v4.57.1](https://huggingface.co/docs/transformers/v4.57.1/cache_explanation)
 
 KV cache stores already-computed K/V for the **current inference sequence** to avoid
 recomputation. It does not turn one session into a cross-session knowledge base or decide
@@ -184,7 +179,7 @@ by itself guarantee a better model.
 
 ### 4. SwiGLU: content and a learned gate {#4-swiglu-content-and-a-learned-gate}
 
-This chapter represents each token as a row vector. The original FFN expands, applies ReLU, and projects back down:
+This chapter represents each token as a row vector. The original FFN expands, applies ReLU, and projects back down (biases omitted here):
 
 $$
 \operatorname{FFN}(x)=\operatorname{ReLU}(xW_1)W_2.
@@ -236,8 +231,7 @@ fewer total parameters.
 
 ### 6. KV cache: trading memory for historical recomputation {#6-kv-cache-trading-memory-for-historical-recomputation}
 
-At generation step $t$, K and V for earlier tokens have already been computed and
-model parameters have not changed. Each layer therefore stores
+At generation step $t$, K and V for earlier tokens have already been computed. Causal masking prevents those states from depending on later tokens, so they remain reusable when weights, prefix, and other conditions stay fixed. Each layer stores
 
 $$
 \begin{gathered}
@@ -267,7 +261,7 @@ A naive implementation materializes and writes
 
 $$
 \begin{gathered}
-S=QK^\top\\
+S=QK^\top/\sqrt{d_k}+M_{\text{causal}}\\
 A=\operatorname{softmax}(S)\\
 S,A\in\mathbb{R}^{L\times L}.
 \end{gathered}
@@ -352,10 +346,13 @@ O=AV.
 $$
 
 FlashAttention can implement this step efficiently without changing the formula.
-Apply the output projection and first residual connection:
+Concatenate the outputs of all $h_q$ query heads, then apply the output projection and first residual connection:
 
 $$
-H=X_l+OW_O.
+\begin{gathered}
+O_{\text{multi}}=\operatorname{Concat}(O_1,\ldots,O_{h_q}),\\
+H=X_l+O_{\text{multi}}W_O.
+\end{gathered}
 $$
 
 Then follow the second pre-norm branch:
@@ -493,7 +490,7 @@ p_t=\text{softmax}(z_t / \tau)
 \end{gathered}
 $$
 
-- temperature $\tau$ adjusts how sharp the distribution is;
+- temperature $\tau>0$ adjusts how sharp the distribution is; if an API uses 0 for greedy decoding, take argmax directly rather than dividing by zero;
 - top-$k$ keeps only the $k$ most probable candidates;
 - top-$p$ keeps the smallest candidate set whose cumulative probability reaches the threshold;
 - greedy takes the maximum at every step, which is not the same as maximizing the probability of the whole sequence.
@@ -546,7 +543,7 @@ Continue with [language-model objectives and generation](../deep-dives/language-
 
 **Interview answer**
 
-> A decoder-only model serializes system, user, assistant, and tool messages into one context and uses causal self-attention so that every position sees only what is to its left. Training does next-token prediction at all positions in parallel; inference first prefills the prompt and then decodes token by token, caching each layer's historical K/V to avoid repeating the projections.
+> A decoder-only model serializes system, user, assistant, and tool messages into one context and uses causal self-attention so that every position can see itself and permitted earlier positions, but not the future. Training does next-token prediction at all positions in parallel; inference first prefills the prompt and then decodes token by token, caching each layer's historical K/V to avoid repeating the projections.
 
 <details markdown="1">
 <summary><b>Deep dive</b>: what does the KV cache store, and why not Q?</summary>

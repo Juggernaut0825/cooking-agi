@@ -2,7 +2,7 @@
 
 [中文](README.md) · **English**
 
-> Reading time: ~3 min · Level: advanced · Last reviewed: 2026-10-09
+> Reading time: ~5 min · Level: advanced · Last reviewed: 2026-10-10
 
 Suppose a layer stores eight equally sized FFNs but each token uses only two. Different tokens can access different parameters without running all eight each time. The eight sets of weights still need storage, and tokens may travel between devices. To understand MoE, separate what is stored from what is used on one pass.
 
@@ -38,6 +38,23 @@ Mixtral 8x7B is not 56B: only the FFNs are copied eight times, while attention a
 Running fewer experts does not mean storing only those experts. All weights still live on GPUs, CPUs, or other storage. Full GPU residency follows total parameters; offloading lowers GPU occupancy at the cost of transfers and waiting. A fair dense comparison also fixes precision, target quality, and batch size rather than treating sparsity as a memory guarantee.
 
 Parameter sources are linked in the [review page's model reports](review.en.md); deployment tradeoffs are covered in [system costs](systems.en.md).
+
+### Cheaper than which dense model? {#dense-comparison}
+
+For a toy comparison, count only the main FFN matrix products. Fix input width `d=128` and use SwiGLU's three matrices. With intermediate width `h`, parameters and main multiply-accumulates per token both equal `3dh`. Exclude biases, activations, routing, attention, and communication:
+
+<div class="worked-table" markdown="1">
+
+| Configuration | FFN parameters | Main MACs / token |
+| --- | --- | --- |
+| Dense, h=256 | 98,304 | 98,304 |
+| MoE, eight h=256 experts, top-2 | 786,432 | 196,608 |
+| Dense, h=512: matched MoE compute | 196,608 | 196,608 |
+| Dense, h=2048: matched MoE parameters | 786,432 | 786,432 |
+
+</div>
+
+This MoE does twice the work of a single same-width FFN, but one quarter of the work of a parameter-matched dense FFN. Against the compute-matched dense version, it stores four times as many parameters, with routing and transfers on top. **The baseline changes the conclusion.** These counts establish neither equal quality nor proportional latency savings.
 
 ## How this series reads
 

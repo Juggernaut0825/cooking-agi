@@ -130,6 +130,22 @@ Suppose parameters, gradients, and optimizer states occupy 2, 2, and 12 GB. On f
 
 This excludes activations, communication buffers, and temporary gathers. Four GB is not a peak-memory promise, and the largest computational unit must still fit.
 
+### Same communication volume, same speed? {#zero-communication}
+
+After a Stage 2 update, each rank owns only the part of the parameters it updated. Each still needs a complete model for the next forward, so the updated shards must be gathered. Avoiding persistent full gradients does not remove synchronization.
+
+Here is a small communication ledger. Use four ranks, 8 MiB each for the full gradient and parameter tensors, and evenly partitioned ring collectives. Count **payload sent per rank**, without adding received bytes again. A reduce-scatter or all-gather sends $8\times3/4=6$ MiB per rank:
+
+| Simplified path for one update | Sent per rank |
+| --- | ---: |
+| DP: gradient reduce-scatter → gradient all-gather | 6 + 6 = 12 MiB |
+| Stage 2: gradient reduce-scatter → local update → parameter all-gather | 6 + 6 = 12 MiB |
+| Stage 3: gather for forward → release → regather for backward → gradient reduce-scatter | 6 + 6 + 6 = 18 MiB |
+
+This instantiates the analysis in [ZeRO §7](https://arxiv.org/html/1910.02054v3#S7), assuming equal transfer precision for parameters and gradients, no gradient accumulation, and no extra regathers. Bucketing, parameter retention, and recomputation can change the path. The Stage 3 total is not universal.
+
+Equal bytes still need not take equal time. Message sizes, launch timing, overlap with computation, and the slowest rank all affect waiting. Measure **volume, scheduling, and exposed wait**, not just whether the byte count increased. This is arithmetic, not a multi-GPU benchmark.
+
 ## TP splits individual matrix operations
 
 Using row vectors, $Y=XW$ can be column-partitioned:

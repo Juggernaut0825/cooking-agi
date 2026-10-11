@@ -2,7 +2,7 @@
 
 **中文** · [English](after-ppo.en.md)
 
-> 阅读时间：约 18 分钟 · 类型：教学 · 最近审阅：2026-10-09
+> 阅读时间：约 18 分钟 · 类型：教学 · 最近审阅：2026-10-10
 
 <span id="ppo"></span>
 
@@ -18,7 +18,7 @@ PPO、GRPO 和 DPO 回答的是同一个问题：已经有了 SFT 模型，怎�
 
 ### 先用同一道题建立直觉 {#_2}
 
-Prompt 都是“计算 $17\times24$”：
+Prompt 都是“计算 $17\times24$”。先把整条回答当作一次动作，只看终局奖励、暂不计 KL，所以表里的 PPO 优势可以简写成 $R-V$；真实的逐 token PPO 还要处理 return、GAE 和各前缀的 value。
 
 | 方法 | 它看到了什么 | 它怎样得到更新方向 |
 | --- | --- | --- |
@@ -45,19 +45,21 @@ Critic 也要训练，除了前向和反向计算，还要保存优化器状态�
 
 Critic 估计状态价值，既可以提供降低方差的 baseline，也参与 TD / GAE 的 bootstrapping。若任务适合整条回答的终局评分，可以考虑用采样统计构造相对信号；多步、延迟奖励的情况则要重新考虑 credit assignment。
 
-| 算法 | 基线从哪来 | 代价 |
+| 算法 | 比较信号怎么得到 | 代价与检查点 |
 | --- | --- | --- |
-| **GRPO** | 同一个提示采一组回答，用组内均值（并除以标准差） | 每个提示要采多个回答，采样成本上去了 |
-| **RLOO** | 留一法：某个样本的基线 = 其余样本奖励的均值 | 同样要多采样；且把整个回复当**一个动作**，放弃 token 级信用分配 |
-| **REINFORCE++** | 全局 batch 的统计量做优势归一化 | 基线更粗，但保留了 PPO 的剪切与 KL 稳定化 |
+| **GRPO** | 同一提示采一组回答；奖励减组均值，再除组标准差 | 每个提示要采多个回答，采样成本上去了 |
+| **RLOO** | 留一法：某个样本的基线 = 其余样本奖励的均值 | 同样要多采样；常见形式用整条回答的优势，不另学各前缀的 value |
+| **REINFORCE++** | 用包含 KL 惩罚的 return 构造优势，再做 batch 归一化 | 不训练 value；需检查 return、KL 和归一化范围 |
 
-这些方法不再依赖独立训练的 value model，但并没有消除估计误差。省下的训练状态，要和额外采样、信号方差及任务结构一起比较。
+这些方法不再依赖独立训练的 value model，但并没有消除估计误差。省下的训练状态，要和额外采样、信号方差及任务结构一起比较。表中 REINFORCE++ 对应[首版论文 §3](https://arxiv.org/html/2501.03262v1#S3)；batch 归一化不是另一个训练出来的 baseline，也不保证梯度无偏或训练稳定。
 
 RLOO 的基线写出来是这样，$k$ 是同一提示下的采样数：
 
 $$\hat A_i = r_i - \frac{1}{k-1}\sum_{j \neq i} r_j$$
 
-它的立论是：RLHF 的起点是训好的 SFT 模型，不是随机初始化的网络，所以 PPO 里那些为不稳定训练准备的机制（GAE、逐 token 的价值估计）未必必要。
+[RLOO 原论文 §2.2–2.3](https://arxiv.org/html/2402.14740v1#S2.SS2)把整条生成当作一个动作，但不等于 token 不接收梯度：整条回答的 log-prob 是各 token 条件 log-prob 的和，同一个优势会乘到这些项上。它没有单独估计“哪一步比预期更好”。留一基线的无偏性还依赖同 prompt 下独立采样等条件，不能套到任意相关样本上。
+
+该论文在特定的预训练模型和偏好任务上比较了这些简化，不意味着所有任务都不需要 Critic 或 GAE。
 
 ### GRPO 的组相对 advantage {#grpo-advantage}
 
@@ -225,7 +227,21 @@ $$
 
 $\beta$ 同时参与 Reference 约束的理论关系和 preference logit 的尺度。把它机械记成“越大越保守”容易出错：不同推导约定、loss 实现和数据尺度会影响观察到的训练行为，面试中最好先写清公式和代码库定义，再讨论调大调小。
 
-标准 DPO 的典型代价是使用**固定的离线偏好对**。策略在训练中一直变，数据却由过去的策略产生，分布错配会逐渐扩大；它也不能主动发现当前 policy 的新失败模式。Online DPO 和迭代式数据刷新可以缓解这一点，所以“DPO 只能离线”并不是算法家族的绝对边界。真正关键的是数据是否跟随当前 policy 更新，以及反馈是否能形成闭环。
+标准离线 DPO 使用**固定的偏好对**。策略会变，数据不会自动跟着变，因此可能漏掉当前 policy 的新失败；分布错配是否变大，要实际测，不是必然单调增加。Online DPO 和迭代式数据刷新会重新收集反馈，所以“DPO 只能离线”不是整个算法家族的边界。
+
+### 相对更好，不等于概率一定上升 {#relative-not-absolute}
+
+用三类输出做一个小检查：
+
+| 输出 | Reference 概率 | 当前概率 |
+| --- | --- | --- |
+| chosen | 0.4 | 0.3 |
+| rejected | 0.3 | 0.1 |
+| 其余输出合计 | 0.3 | 0.6 |
+
+chosen 的概率下降了，但 rejected 降得更多。相对 Reference 的概率比之比为 $(0.3/0.1)/(0.4/0.3)=2.25$。取教学值 $\beta=1$，这对数据的 DPO loss 从 $\log 2\approx0.6931$ 降到 $\log(1+1/2.25)\approx0.3677$。
+
+这不是一次真实梯度更新的轨迹，而是两组合法分布的对照：**偏好损失更低，不保证 chosen 的绝对概率更高**。这正是相对目标和只模仿 chosen 的区别。目标定义见 [DPO 原论文 §4](https://arxiv.org/html/2305.18290v2#S4)。
 
 两个后续修补：
 
@@ -234,19 +250,19 @@ $\beta$ 同时参与 Reference 约束的理论关系和 preference logit 的尺�
 
 ## RLVR：让程序检查答案 {#_3}
 
-数学题可以对答案，代码可以跑测试。这类任务的奖励**不需要学**，写个检查器就行。
+数学题可以核对答案，代码可以跑测试。有可靠检查器时，可以直接把结果变成 reward，不必为这部分反馈另训 Reward Model。[DeepSeek-R1-Zero 的奖励设置](https://arxiv.org/html/2501.12948v1#S2.SS2.SSS2)就是一个例子；这说的是奖励来源，并没有指定必须用 PPO 还是 GRPO。
 
-这一步删掉的是 Reward Model。确定性检查器消除了一个主要攻击面——learned Reward Model 的近似误差——但检查器仍可能写错目标或留下漏洞。可验证奖励缩小了 reward hacking 的空间，并不自动保证 objective 正确。
+比如函数通过了公开的 5 个测试，也可能只对这 5 个输入返回写死的答案。检查器的结果很确定，不代表它完整表达了需求。它避免了这部分 learned reward 的拟合误差，却不能保证 reward hacking 更少；仍需检查测试覆盖、执行隔离和独立评估。
 
-局限也明显：只适用于能写出检查器的任务。
+RLVR 适合有可验证结果的部分。复杂任务也可以混合程序检查、人工判断和 learned reward，不必把所有要求硬塞进同一个检查器。
 
 ## 一张表收尾 {#_4}
 
 | | 典型训练数据 | 显式 Reward | Critic | 训练时 rollout | 核心取舍 |
 | --- | --- | --- | --- | --- | --- |
-| PPO | prompt + 当前/近期 policy 的回答 | RM、规则或环境 | 需要 | 需要 | 反馈灵活、可在线探索；系统最复杂 |
+| PPO | prompt + 当前/近期 policy 的回答 | RM、规则或环境 | 通常使用 | 需要 | 可在线收集反馈；常见配置需协调采样、打分与 Actor–Critic 更新 |
 | GRPO | prompt + 同题一组回答 | RM、verifier 或环境 | 不需要 | 需要，而且每题多次 | 省 Critic；依赖组内差异并增加生成成本 |
-| DPO | 固定 chosen/rejected pairs | 不显式调用，reward difference 隐含在 loss 中 | 不需要 | 标准离线训练不需要 | 简单稳定；受偏好数据覆盖和分布错配限制 |
+| DPO | 固定 chosen/rejected pairs | 不显式调用，reward difference 隐含在 loss 中 | 不需要 | 标准离线训练不需要 | 少了在线采样环节；仍受标签、覆盖和优化设置影响 |
 
 再看扩展方法，就不必只数“少了几个模型”：RLOO 改的是 baseline 的估计，REINFORCE++ 使用 batch statistics，RLVR 改的是奖励来源，DAPO 则调整了采样、clipping、token weighting 和超长回答的处理。这些选择不全在同一层，也不一定互斥。
 
@@ -308,14 +324,14 @@ Learned Reward Model 要监控 reward hacking、长度偏好、风格捷径以�
 <details class="interview" markdown="1">
 <summary>5. DPO 偏好数据来自哪个 policy？为什么重要？</summary>
 
-记录数据生成 checkpoint、sampling temperature、解码约束和标注时间。当前 policy 离数据生成 policy 越远，固定 pair 越难覆盖它现在会犯的错。用 held-out prompt 检查覆盖范围，并在明显漂移后重新采样、重新标注或切换到 iterative / online preference loop。
+记录数据生成 checkpoint、sampling temperature、解码约束和标注时间。模型变了，旧 pair 可能没包含它现在会犯的新错误；但不能只凭 policy 偏离多远，就判断数据覆盖得好不好。先用 held-out prompt 找出实际缺口，再决定是否重新采样、标注，或转向 iterative / online preference loop。
 
 </details>
 
 <details class="interview" markdown="1">
 <summary>6. DPO 能完全替代 PPO / GRPO 吗？</summary>
 
-不能一概而论。标准 DPO 用固定偏好对，便宜、稳定，适合高质量离线数据已经覆盖目标行为的场景；PPO / GRPO 能从当前 policy rollout 并接收新 reward，更适合 exploration、环境交互和多步可验证任务，但训练更贵、更不稳定。关键区别是 feedback loop，而不只是 loss 名字。
+不能一概而论。已有合适的偏好对时，离线 DPO 省去训练中的在线生成；但收集和标注这些数据的成本并没有消失。PPO / GRPO 可以持续采样并接收新反馈，同时也需要生成预算和更多系统协调。总成本和稳定性要在同任务、同预算下比较，不能只凭算法名判断。
 
 </details>
 
@@ -324,7 +340,7 @@ Learned Reward Model 要监控 reward hacking、长度偏好、风格捷径以�
 <details class="interview" markdown="1">
 <summary>请写出 PPO、GRPO 与 DPO 最关键的三个式子。</summary>
 
-PPO 的核心方向是 $\hat A_t\approx G_t-V_\phi(s_t)$，再用 probability ratio 的 clipped surrogate 限制单次更新。GRPO 把 learned value baseline 换成 $\hat A_i=(R_i-\mu_R)/(\sigma_R+\varepsilon)$。DPO 使用 $-\log\sigma\!\left(\beta[\Delta_w-\Delta_l]\right)$，其中 $\Delta$ 是当前 policy 相对 Reference 的 log-probability 变化。
+用 Monte Carlo return 时，PPO 的优势可写成 $\hat A_t=G_t-V_\phi(s_t)$；GAE 则另有 bootstrapping。Clipped surrogate 会截平部分收益，**不保证一次更新后的 ratio 或 KL 被硬性限制**。GRPO 常用 $\hat A_i=(R_i-\mu_R)/(\sigma_R+\varepsilon)$。DPO 使用 $-\log\sigma\!\left(\beta[\Delta_w-\Delta_l]\right)$，其中 $\Delta$ 是当前 policy 相对 Reference 的 log-probability 变化。
 
 </details>
 
@@ -345,7 +361,7 @@ PPO 的核心方向是 $\hat A_t\approx G_t-V_\phi(s_t)$，再用 probability ra
 <details class="interview" markdown="1">
 <summary>两分钟结论：DPO 能完全替代 PPO 吗？</summary>
 
-不能。DPO 适合高质量、覆盖充分的固定偏好对，训练像监督学习一样简单稳定；它不会自动探索当前 policy 的新失败。PPO / GRPO 可以持续从当前 policy 采样并接收环境、Reward Model 或 verifier 的反馈，更适合需要 exploration 和多步结果的任务，但 rollout 更贵，优化也更难稳定。Online DPO 说明真正的分界在数据是否随 policy 更新，而不是算法名称本身。
+不能。先问数据从哪来、反馈多久更新：离线 DPO 不会自己采集新失败；PPO / GRPO 通常在训练中持续生成并打分。Online DPO 也能刷新偏好数据，因此 online / offline 和偏好损失 / 策略梯度是两个不同的选择。再比较实际成本、覆盖和验证结果，不把它们排成优劣榜。
 
 </details>
 
@@ -354,17 +370,18 @@ PPO 的核心方向是 $\hat A_t\approx G_t-V_\phi(s_t)$，再用 probability ra
 - [RLHF 的三个阶段，和后来发生了什么](rlhf/)：四个模型各自在干嘛，DPO 的推导
 - [数据与反馈](../01-data-and-feedback/)：偏好标签本身的质量问题
 - [Evaluation](../07-evaluation/)：怎么判断对齐之后真的变好了
+- [Clipping 与梯度](clipping-variants.md)：用同一个输入比较 Dual-clip、CISPO 与 SAPO；基础读者可以稍后再看
 
-## 快速学习：PPO、GRPO、DPO 在删什么 {#ppogrpodpo}
+## 回到实际选择：手上有什么反馈？ {#ppogrpodpo}
 
 <details class="interview" markdown="1">
 <summary>先看数据是否 online、奖励是否可验证，再选算法</summary>
 
-**快速记忆**：PPO 有 Actor + Critic + RM + Reference；GRPO 用同 prompt 的组相对 baseline 删 Critic；DPO 用静态 chosen/rejected pairs 连显式 RM 与 rollout loop 一起删。
+**先分清三件事**：经典 PPO-RLHF 用 Critic 估 baseline，reward 和 Reference 各有职责；GRPO 从同 prompt 的回答组估计相对 advantage；标准离线 DPO 直接读取偏好对，没有在线 rollout loop。模型是否独立部署、奖励是否由程序给出，要另外看配置。
 
 **面试回答**
 
-> DPO 便宜稳定，但主要学习离线偏好对，不能自动探索当前 policy 的新失败。GRPO 仍需 online rollout，只是用组内相对 reward 估 advantage。奖励可验证且需要多步探索时 online RL 更自然；只有静态偏好数据时 DPO 更合适。
+> 只有高质量偏好对时，可以先考虑离线 DPO，训练流程更简单，但它不会自己去收集当前 policy 的新失败。如果能持续采样并获得可靠 reward，再比较 PPO、GRPO 等在线方法。是否需要 Critic、能负担多少组内采样，得结合任务与预算看；换个 loss 不会自动让训练稳定。
 
 <details markdown="1">
 <summary><b>深挖</b>：GRPO 组内全对或全错为什么没有梯度信号？</summary>
@@ -386,4 +403,4 @@ PPO 的核心方向是 $\hat A_t\approx G_t-V_\phi(s_t)$，再用 probability ra
 
 ## 中文导读 {#_10}
 
-- [大模型中的强化学习](https://zhuanlan.zhihu.com/p/693582342) — 知乎 @大家好我是爱因，专栏《机器学习小王子》。本章按「删掉了什么」这一条轴组织，只覆盖主干；那篇是百科式的全景，从 MDP 要素、贝尔曼方程、MC/TD/GAE 一路铺到各算法的细节，想要更全的地图从它开始。
+- [大模型中的强化学习](https://zhuanlan.zhihu.com/p/693582342) — 知乎 @大家好我是爱因，专栏《机器学习小王子》，作为补充中文资料。本文按反馈、baseline 和更新目标来比较；具体公式和实现仍需回到原论文与固定版本的代码核对。

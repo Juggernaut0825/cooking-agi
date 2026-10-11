@@ -172,8 +172,7 @@ This describes attention without order constraints, not a causal decoder with no
 
 ## 从 token ID 到下一个 token：完整走一遍 {#token-id-token}
 
-用英译中的小例子，把 2017 原版 Transformer 的整条前向路径串起来。先只看 shape，
-再看每个模块的职责。
+用英译中的小例子，把 2017 原版 Transformer 的整条前向路径串起来。下文的 512 维、8 个头、2048 维 FFN 指论文的 **base 配置**，不是所有原版配置。先只看 shape，再看每个模块的职责。
 
 <section class="concept-card" data-concept-card markdown="1">
 <div class="concept-face concept-zh" data-concept-zh markdown="1">
@@ -628,7 +627,7 @@ softmax 才把它变成条件概率：
 
 $$p(y_t\mid y_{<t},x)=\operatorname{softmax}(Z_t).$$
 
-训练时拿这个分布与目标 token 做 cross-entropy；推理时则用 greedy、beam search
+训练时用 cross-entropy，原论文还采用了 $\epsilon_{ls}=0.1$ 的 label smoothing，而不是纯 one-hot 目标；推理时则用 greedy、beam search
 或 sampling 选出一个 token，再把它接回 decoder 继续生成。Softmax 本身只给概率，
 并不规定必须选 argmax。
 
@@ -656,7 +655,7 @@ them into a conditional distribution:
 
 $$p(y_t\mid y_{<t},x)=\operatorname{softmax}(Z_t).$$
 
-Training compares this distribution with the target token using cross-entropy.
+Training uses cross-entropy; the original paper also applies label smoothing with $\epsilon_{ls}=0.1$ rather than a purely one-hot target.
 Inference uses greedy decoding, beam search, or sampling to select a token, feeds it
 back into the decoder, and continues. Softmax provides probabilities; it does not
 itself require argmax.
@@ -684,7 +683,7 @@ $$
 | position | sinusoidal | 多为 RoPE |
 | attention | MHA | 常见 GQA / MQA |
 | FFN | ReLU | 常见 SwiGLU |
-| 目标 | 条件序列生成 | next-token prediction |
+| 预测条件 | source + target prefix → 下一个 target token | 同一 token stream 的 prefix → 下一个 token |
 
 原版最适合学习三处 attention 的职责；现代版本最适合理解今天语言模型的训练与推理。
 
@@ -707,7 +706,7 @@ $$
 | Position | sinusoidal encoding | usually RoPE |
 | Attention | MHA | often GQA / MQA |
 | FFN | ReLU | often SwiGLU |
-| Objective | conditional sequence generation | next-token prediction |
+| Prediction context | source + target prefix → next target token | prefix of one token stream → next token |
 
 The original architecture is the cleanest place to learn the roles of its three
 attention sites. Modern decoder-only models are the right reference for today's LLM

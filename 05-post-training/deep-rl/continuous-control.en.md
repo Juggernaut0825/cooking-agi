@@ -22,16 +22,18 @@ For $Q(s,a)=-(a-0.7)^2$ and current action 0.2, the slope is $-2(0.2-0.7)=1$, pu
 
 ## One DDPG update
 
-Sample replay data, generate next actions with a target Actor, and evaluate them with a target Critic. Fit the current Critic to this bootstrap target. Then update the Actor with $-Q_\phi(s,\mu_\theta(s))$ and slowly synchronize target parameters.
+Sample replay data and form $y=r+\gamma(1-d)Q_{\bar\phi}(s',\mu_{\bar\theta}(s'))$, where $d$ denotes true termination only. Fit the current Critic to this target. Then update the Actor with $-Q_\phi(s,\mu_\theta(s))$ and slowly synchronize target parameters.
 
 ```text
-replay (s, a, r, s')
-    → target actor(s') → target critic(s', a') → detached target
+replay (s, a, r, s', d)
+    → target actor(s') → target critic(s', a') → r + γ(1-d)Q' → detached target
     → critic(s, a) → regression update
     → actor(s) → critic(s, actor(s)) → actor update
 ```
 
 Behavior collection adds noise to deterministic actions. This exploration noise is not SAC's policy entropy, nor the target smoothing below.
+
+Replay stores the executed action, including exploration noise and boundary clipping. An external time-limit truncation, unlike task termination, still bootstraps from the final pre-reset $s'$, not the new reset state. This boundary applies to both DDPG and TD3.
 
 ## Why TD3 combines 3 changes
 
@@ -87,7 +89,7 @@ Make the update switches explicit. For illustration, update the Actor once every
 | Current-action improvement | Current Actor + first current Critic | Through Q's action derivative into the Actor | Every 2 updates |
 | Slow synchronization | Current parameters → target parameters | Not an optimizer gradient | Usually with delayed Actor updates |
 
-A common convention is $\bar\phi\leftarrow(1-\tau)\bar\phi+\tau\phi$. Other code uses $\rho$ for the old-parameter weight, equal to $1-\tau$. A coefficient close to 1 therefore does not necessarily mean fast synchronization.
+Initialize each target network by copying its current network's parameters. A common synchronization convention is $\bar\phi\leftarrow(1-\tau)\bar\phi+\tau\phi$, with the same update for the target Actor. Other code uses $\rho$ for the old-parameter weight, equal to $1-\tau$. A coefficient close to 1 therefore does not necessarily mean fast synchronization.
 
 Work a target by hand: $r=1,\gamma=0.9$, and the same smoothed next action receives target-Q estimates 4 and 6. A nonterminal target is $y=1+0.9\times4=4.6$; a terminal target is 1. If current Q estimates are 3 and 5, squared errors against the frozen target are 2.56 and 0.16. No Actor update has happened yet.
 
@@ -97,7 +99,7 @@ Work a target by hand: $r=1,\gamma=0.9$, and the same smoothed next action recei
 | Target-smoothing noise | Next-action target branch during training | Prevent sharp local peaks from dominating bootstrap targets |
 | Q estimation error | Learned value estimates | An error to manage, not deliberate exploration |
 
-This approach is attractive for continuous control when interaction is expensive and historical transitions can be reused. It adds replay, several target networks, update schedules, and action-scale decisions. The update-to-data ratio counts optimizer updates per environment step. Increasing it can save interaction or overfit stale data.
+This approach is attractive for continuous control when interaction is expensive and historical transitions can be reused. It adds replay, several target networks, update schedules, and action-scale decisions. Here, update-to-data ratio counts Critic minibatch update rounds per newly collected environment transition: updating both Q-functions on one batch counts as one round, without adding Actor optimizer steps. Report batch size separately. Increasing the ratio can save interaction or overfit stale data.
 
 <details markdown="1">
 <summary>Can the whole Critic call run under no_grad during the Actor update?</summary>

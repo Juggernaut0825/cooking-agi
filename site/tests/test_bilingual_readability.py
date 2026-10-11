@@ -1,9 +1,12 @@
 from contextlib import redirect_stdout
 from html.parser import HTMLParser
 import io
+import json
 import math
 from pathlib import Path
 import re
+import shutil
+import subprocess
 import sys
 import unittest
 
@@ -138,6 +141,50 @@ class BilingualReadabilityTests(unittest.TestCase):
         self.assertEqual(gap, 0)
         self.assertNotEqual(math.exp(preferred), math.exp(rejected))
         self.assertAlmostEqual(math.log1p(math.exp(-0.2 * gap)), math.log(2))
+
+
+class RouterCopyTests(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("node"), "Node.js required")
+    def test_initial_slider_values_are_on_their_step_grid(self):
+        source = (ROOT / "site/static/tx-lab.js").read_text()
+        start = source.index("  var P = { hard: 35")
+        end = source.index("  var W = 560", start)
+        script = source[start:end] + "\nconsole.log(JSON.stringify(P));"
+        parameters = json.loads(subprocess.check_output([shutil.which("node"), "-e", script], text=True))
+        controls = re.findall(r"min: (\d+), max: (\d+), step: (\d+), value: P\.(\w+)", source[end:])
+        controls = [control for control in controls if control[3] in parameters]
+        self.assertEqual(len(controls), 4)
+        for minimum, maximum, step, parameter in controls:
+            with self.subTest(parameter=parameter):
+                value = parameters[parameter]
+                self.assertGreaterEqual(value, int(minimum))
+                self.assertLessEqual(value, int(maximum))
+                self.assertEqual((value - int(minimum)) % int(step), 0)
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js required")
+    def test_router_overhead_copy_matches_the_computed_cost_and_latency(self):
+        path = ROOT / "site/static/tx-lab.js"
+        source = path.read_text()
+        start = source.index("  var P = { hard: 35")
+        end = source.index("  var W = 560", start)
+        script = source[start:end] + "\nconsole.log(JSON.stringify({parameters: P, plans: plans()}));"
+        result = subprocess.run([shutil.which("node"), "-e", script],
+                                text=True, capture_output=True, check=True)
+        output = json.loads(result.stdout)
+        parameters, plans = output["parameters"], output["plans"]
+        hard = parameters["hard"] / 100
+        judge = parameters["judge"] / 100
+        sent = hard * judge + (1 - hard) * (1 - judge)
+        model_cost = sent * parameters["cost"] + (1 - sent)
+        model_latency = sent * 2.2 + (1 - sent)
+        self.assertAlmostEqual(plans["router"]["c"] - model_cost, 0.05)
+        self.assertAlmostEqual(plans["router"]["lat"] - model_latency, 0.1)
+        caption = re.search(r"TX\.bi\(note,\s*'([^']*)',\s*'([^']*)'\);", source[end:])
+        self.assertIsNotNone(caption)
+        self.assertIn("Checking overhead is omitted", caption[1])
+        self.assertIn("routing adds fixed toy overheads of 0.05 cost units and 0.1 latency units", caption[1])
+        self.assertIn("检查开销未计入", caption[2])
+        self.assertIn("路由另加固定的示意开销：成本 0.05、延迟 0.1", caption[2])
 
 
 if __name__ == "__main__":

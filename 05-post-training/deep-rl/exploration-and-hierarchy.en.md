@@ -41,7 +41,7 @@ $$
 r'_t=r_t+\gamma\Phi(s_{t+1})-\Phi(s_t).
 $$
 
-The discounted sum telescopes, leaving the original return plus $-\Phi(s_0)+\gamma^T\Phi(s_T)$. For a fixed initial state and zero terminal potential, or a vanishing infinite-horizon discounted tail, policy comparisons are preserved. **Without these conditions, policy invariance is not guaranteed.**
+The discounted sum telescopes, leaving the original return plus $-\Phi(s_0)+\gamma^T\Phi(s_T)$. With zero terminal potential, every policy's return shifts by $-\Phi(s_0)$ from each starting state. Expected-return rankings are therefore preserved not only for a fixed initial state but also under the same policy-independent initial-state distribution. On an infinite horizon, $0\le\gamma<1$ and bounded $\Phi$ ensure the tail vanishes. **The boundary contribution must not depend on the policy; arbitrary nonzero terminal potentials or collection cutoffs cannot simply be ignored.**
 
 ## Calculate the shaping cancellation explicitly
 
@@ -63,13 +63,15 @@ An option usually specifies an initiation set, an internal policy, and a termina
 
 $$
 y=\sum_{k=0}^{\tau-1}\gamma^kr_{t+k}
-+\gamma^\tau V(s_{t+\tau}).
++\gamma^\tau(1-d)V(s_{t+\tau}).
 $$
 
-After a 3-step option, the tail is discounted by $\gamma^3$, not $\gamma$. This is semi-Markov structure. Hierarchy can shorten high-level decision chains, but poorly chosen skills may restrict reachable policies.
+Here $d=1$ means true environment termination, not option termination. Completing a skill still bootstraps from the value $V$ of subsequent high-level choices; only environment termination removes that tail. $V$ evaluates the subsequent high-level policy; for optimal control, use the maximum Q over options available in that state.
+
+After a 3-step option, the tail is discounted by $\gamma^3$, not $\gamma$. For rewards $[1,0,2]$, $\gamma=0.9$, and successor $V=5$, a completed skill with a continuing episode gives $y=2.62+0.9^3\times5=6.265$; true episode termination gives $y=2.62$. This is semi-Markov structure. Hierarchy can shorten high-level decision chains, but poorly chosen skills may restrict reachable policies.
 
 ## What to test first
 
 Hold the external reward fixed and check whether exploration coverage and success improve together. Then isolate bonuses, skills, and budgets. Increased internal novelty is not task success.
 
-This is an introduction, not a complete derivation of option-critic or Bayesian exploration. References: [RND](https://arxiv.org/abs/1810.12894) · [Potential-based shaping](https://ai.stanford.edu/~ang/papers/shaping-icml99.pdf) · [Options and semi-MDPs](https://www.sciencedirect.com/science/article/pii/S0004370299000521). Next: [Why policies can drift despite good demonstrations](imitation-and-rewards.en.md).
+This is an introduction, not a complete derivation of option-critic or Bayesian exploration. References: [RND, §§2.2–2.4](https://arxiv.org/abs/1810.12894) · [Potential-based shaping, §3, Theorem 1](https://ai.stanford.edu/~ang/papers/shaping-icml99.pdf) · [Options and semi-MDPs, §§2, 3.2](https://www.sciencedirect.com/science/article/pii/S0004370299000521). Next: [Why policies can drift despite good demonstrations](imitation-and-rewards.en.md).

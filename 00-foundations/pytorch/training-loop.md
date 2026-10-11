@@ -238,6 +238,8 @@ TensorBoard 画出的网络图依赖捕获方式和示例输入，不能当作�
 
 设备内部也不是所有数据都一直待在同一个地方：张量通常放在 GPU 的全局内存中，kernel 按需把一部分数据读到 cache、shared memory 或寄存器里运算。算完的结果再留给后续算子。具体经过哪层、是否融合，取决于 kernel；Python 里一个 `matmul` 不代表整块矩阵一次装进片上存储。想继续看这部分，可以接着读 [attention kernel](../deep-dives/attention-kernels.md)。
 
+这里的 kernel 是启动到 GPU 上执行的函数，不是一块存储器。计算由 SM（Streaming Multiprocessor）里的计算单元执行；shared memory、cache 和寄存器负责放数据，不能简单说“在 SRAM 里做计算”。它们的容量和配置随硬件变化，也不该把某张卡的数字背成通用规格。具体区分见 [CUDA 编程模型的硬件与内存说明](https://docs.nvidia.com/cuda/cuda-programming-guide/01-introduction/programming-model.html#gpu-hardware-model)（2026-10-10 核对）。
+
 ### 先把设备放对，再谈加速 {#device-placement}
 
 下面只改一次更新的设备处理。实际迁移时，先把模型放到目标设备，再建立 optimizer；DataLoader 可以先保持简单，等测出瓶颈再调整。
@@ -259,11 +261,26 @@ def device_step(model, optimizer, features, labels):
 
 `non_blocking=True` 的意思是尽可能不让主机在复制调用处等待，不等于“下一批传输已经和当前计算重叠”。真要重叠，还要有合适的 pinned 源数据、不同 stream、可用复制引擎和正确依赖。先用普通循环跑通，再看 profiler，通常比一开始手写预取器好排查。[PyTorch 的传输教程](https://docs.pytorch.org/tutorials/intermediate/pinmem_nonblock.html)有对应的时间线对照。
 
+### 复制已经返回，数据就能改了吗？ {#async-copy-safety}
+
+不一定。比如把一个 pinned CPU batch 异步复制到 GPU，调用返回后马上对源张量做 `zero_()`。如果复制还没完成，GPU 收到的数据就可能被改掉。反过来，异步从 GPU 复制到 CPU 后，CPU 也不能立刻读取目标。要等相关复制完成，而不是只等 Python 函数返回。[官方教程的反例](https://docs.pytorch.org/tutorials/intermediate/pinmem_nonblock.html#other-copy-directions-gpu-cpu-cpu-mps)说明了这两种情况。
+
+`DataLoader(pin_memory=True)` 可以把取出的张量放进 pinned 主机内存，但**pinning 不是搬到 GPU**；后面仍要调用 `.to(device)`。自定义 batch 类型可能还需要自己的 `pin_memory()` 方法，见 [DataLoader 说明](https://docs.pytorch.org/docs/2.8/data.html#memory-pinning)。
+
+如果进一步使用不同 CUDA streams，还要分清两件事：
+
+| 问题 | 要保证什么 | 相关机制 |
+| --- | --- | --- |
+| 消费方能开始计算了吗？ | 等待生产方之前提交的复制或计算完成 | event / `wait_stream`，建立执行顺序 |
+| 这块显存能被别的张量复用了吗？ | 使用它的 stream 尚未结束时，不能提前回收 | `record_stream` 通知分配器，或自行完整管理生命周期 |
+
+`record_stream` 不会替消费方等待数据准备好；`wait_stream` 本身也不是完整的生命周期管理。不要把其中一个当成另一个的替代品。这里先记住区别，不急着写多 stream 预取器；[PyTorch 2.8 的生命周期示例](https://docs.pytorch.org/docs/2.8/generated/torch.Tensor.record_stream.html)给出了两种管理方式。本页没有用 CPU 测试验证这些 CUDA 竞态。
+
 ### 用 3 个 batch 看懂等待发生在哪儿 {#pipeline-example}
 
 假设每批准备数据需要 4 ms，传输 2 ms，GPU 计算 8 ms。数字仅用于算时间，**不是测量结果**。串行执行 3 批要 $3\times(4+2+8)=42$ ms。
 
-如果 3 个阶段各有独立资源、没有资源争用，并且能提前准备下一批，第一批仍需要 14 ms。之后最慢的计算阶段每 8 ms 才能完成一批，总共是 $14+2\times8=30$ ms：
+如果 3 个阶段各有独立资源、没有资源争用，而且有足够缓冲来提前准备下一批，第一批仍需要 14 ms。之后最慢的计算阶段每 8 ms 才能完成一批，总共是 $14+2\times8=30$ ms：
 
 | Batch | CPU 准备 | 传输 | GPU 计算 |
 | --- | --- | --- | --- |

@@ -2,7 +2,7 @@
 
 **中文** · [English](policy-ratios.en.md)
 
-> 最近审阅：2026-10-08 · 先读：[PPO clipping](rlhf/ppo-clipping.md)与 [GRPO](rlhf/after-rlhf.md)
+> 最近审阅：2026-10-10 · 先读：[PPO clipping](rlhf/ppo-clipping.md)与 [GRPO](rlhf/after-rlhf.md)
 
 一段回答整体答对了，其中某个 token 的概率却下降了。训练时，是把整段回答一起推高，还是单独照顾那个 token？GSPO 和 ASPO 从不同方向处理这个问题。先别背缩写，看看它们把权重放在哪里。
 
@@ -33,6 +33,8 @@ $$
 
 它是 token 比值的**几何平均**，不是算术平均，也不是原始序列概率比 $\prod_t\rho_t$。开 $T$ 次方可以减轻长度对数值范围的影响，但也改变了权重；不能据此宣称它是无偏的整条轨迹 importance sampling。
 
+读论文的动机时，也要把“估计很不稳”和“恒等式不成立”分开。满足支持条件时，单个样本的 importance-sampling 估计也可以无偏，只是方差可能很大；不能仅凭“每个位置只采了一个 token”就判定它无效。逐 token 比值没有修正旧前缀分布，是另一个问题。[这个两步例子](rlhf/on-off-policy.md#prefix-distribution)里，第二步 ratio 全是 1，整段回答的成功率却从 0.35 变成 0.65。GSPO 的实验结果值得看，但不等于证明所有逐 token surrogate 都不成立。
+
 ### 两个 token，变化方向相反
 
 下面是自拟数值，不是模型实测。设 $A=1$，两个 token 的比值为 `[2, 0.5]`：
@@ -50,6 +52,10 @@ $$
 $$
 
 这里每个 token 得到相同的外部系数 $sA/T$，**不代表参数梯度相同**：不同位置的网络 Jacobian 仍然不同。这个例子也暴露了代价：序列平均可能掩盖局部的大幅变化。
+
+这也不是“只拿高分回答来训练”。把同一例子的 $A$ 改成 −1，$s$ 仍是 1，两个位置各自的局部 log-prob 导数都是 −0.5，负向信号没有被删掉。裁剪取决于比值和 advantage 的方向，而不是回答有没有得高分。
+
+MoE 还有一层工程问题：[原论文 §5.3](https://arxiv.org/html/2507.18071v2#S5.SS3)报告了路由变化下的训练不稳定。但新旧模型选了不同专家，并不自动使两个输出概率不能相除。仍需检查相同前缀、实际采样分布和支持条件，以及 rollout 与训练实现算出的概率是否一致；换成 GSPO 不能代替这些检查。
 
 ```python
 import math
@@ -125,7 +131,7 @@ assert math.isclose(derivative, 2.0, rel_tol=1e-6)
 | 观察到的现象 | 值得检查 | 不能仅凭什么下结论 |
 | --- | --- | --- |
 | 少数 token 比值极端 | 序列聚合是否改善稳定性；是否掩盖局部异常 | 不能只看平均 ratio 接近 1 |
-| 正负样本的权重分布很不一样 | 按 advantage 符号画分布，核对 detach 与 clipping | 不能把所有熵下降都叫训练崩溃 |
+| advantage 为正和为负时，权重分布很不一样 | 按 advantage 符号画分布，核对 detach 与 clipping | 不能把所有熵下降都叫训练崩溃 |
 | 有效梯度越来越少 | 按 token / sequence 分别统计 mask 比例 | 两种粒度的 clip fraction 不能直接横比 |
 | 分数涨了、回答也长了很多 | 固定推理预算，再比较正确率与失败类型 | 更长不自动等于更会推理 |
 

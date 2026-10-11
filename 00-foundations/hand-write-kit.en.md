@@ -2,7 +2,7 @@
 
 [中文](hand-write-kit.md) · **English**
 
-> Reading time: ~5 min · Type: quick reference · Last reviewed: 2026-10-09
+> Reading time: ~8 min · Type: quick reference and small experiments · Last reviewed: 2026-10-10
 
 ## What the seven formulas are checking {#what-the-seven-formulas-are-checking}
 
@@ -14,19 +14,61 @@ The reference implementations in [`code/interview_kit.py`](code/) depend only on
 python3 00-foundations/code/interview_kit.py
 ```
 
-## The seven, and their traps {#the-seven-and-their-traps}
+## What to check in each implementation {#the-seven-and-their-traps}
 
 | What to write | The trap | The usual follow-up |
 | --- | --- | --- |
 | **softmax** | overflows without subtracting the max | "why is subtracting still correct?" — softmax is shift-invariant; numerator and denominator both pick up $e^c$ and it cancels, so subtracting the max is free |
 | **BCE from logits** | computing $p$ then its log underflows to $-\infty$ | "what's the gradient?" — $p-y$; the $\sigma'$ cancels |
-| **LayerNorm** | `eps` goes **inside** the sqrt; variance divides by $N$, not $N-1$; last dimension only | "why not BatchNorm?" |
+| **LayerNorm** | `eps` goes inside the sqrt; variance divides by $N$, not $N-1$; this implementation normalizes the last dimension | `normalized_shape=(T,d)` also normalizes across time, unlike the per-token configuration |
 | **attention + causal mask** | the $\sqrt{d_k}$; mask added **before** the softmax | "could you zero it after the softmax instead?" — no, it breaks normalization |
 | **KV cache decode** | A single-token query can omit the causal mask when its cache contains only valid past and current positions | Padding, sliding windows, and multi-token decoding can still require masks |
 | **top-k / top-p** | top-p must keep **the token that crosses the threshold**, and at least one | "what if the top probability already exceeds p?" — writing `cum <= p` deletes every token |
 | **MLP forward + backward** | Define mean / sum reduction, then apply the chain rule | For ordinary ReLU, `z1 > 0` and `a1 > 0` are equivalent; do not assume this for other activations |
 
-## The last one is the dividing line {#the-last-one-is-the-dividing-line}
+One small sampling detail is easy to miss: which two tokens does top-k keep from `[2, 2, 2, 1]` when k=2? This implementation breaks ties by token ID and keeps IDs 0 and 1. Filtering by “at least the kth score” would keep all three tied tokens instead. Either convention can be useful, but code that keeps ties does not implement a fixed count. Existing masks stay blocked, and `top_p=1` disables further truncation.
+
+## Softmax: put the numbers in a workable range {#softmax-numerics}
+
+Take logits `[1000, 1001, 1002]`. Their exponentials overflow, but the probabilities depend on their relative values. Subtract 1002 from each to get `[-2, -1, 0]`. Exponentiating and normalizing now gives approximately `[0.0900, 0.2447, 0.6652]`.
+
+$$
+p_i=\frac{e^{x_i-m}}{\sum_j e^{x_j-m}},\qquad m=\max_j x_j.
+$$
+
+Dividing the numerator and denominator by $e^m$ leaves the mathematical result unchanged. The largest exponential is now 1 and the others are at most 1, preventing exponential overflow. **Subtracting the maximum does not solve every numerical problem**, though:
+
+| Input or situation | What happens | What this implementation does |
+| --- | --- | --- |
+| `[1000, 1001, 1002]` | Direct exponentiation overflows | Subtract the maximum first |
+| 65,536 zeros in FP16 | Every exponential is 1, but the FP16 sum still overflows | Compute and return at least FP32; do not immediately cast back to FP16 |
+| `[0, -inf]` | The second position is masked | Return `[1, 0]` |
+| `[-inf, -inf]` | No allowed position remains; the distribution is undefined | Raise an error, rather than invent a uniform distribution |
+| `NaN` or `+inf` | The upstream computation needs checking | Raise an error; these are not mask values |
+
+These are choices in the accompanying NumPy teaching implementation, not defaults shared by all frameworks. Integer inputs also require an exact conversion: casting `[2**60, 2**60+1]` to float64 loses the difference, so the helper rejects it rather than silently returning uniform probabilities. Higher precision cannot preserve arbitrarily small probabilities or repair logits that have already overflowed upstream.
+
+### If you need log-probabilities, compute them directly {#log-softmax-example}
+
+For `[0, -1000]`, the second probability underflows to zero in common floating-point formats. Taking its logarithm then gives `-inf`, while direct log-softmax still gives approximately `-1000`. A loss that needs a log-probability need not first represent that tiny probability.
+
+```python
+import numpy as np
+
+logits = np.array([0.0, -1000.0], dtype=np.float64)
+shifted = logits - logits.max()
+weights = np.exp(shifted)
+probabilities = weights / weights.sum()
+with np.errstate(divide="ignore"):
+    indirect = np.log(probabilities)
+direct = shifted - np.log(weights.sum())
+assert np.isneginf(indirect[1])
+assert np.allclose(direct, [0.0, -1000.0])
+```
+
+[PyTorch's `log_softmax` documentation](https://docs.pytorch.org/docs/2.8/generated/torch.nn.functional.log_softmax.html) makes this distinction explicitly. For blockwise computation and attention without a stored probability row, continue to the [online softmax example](deep-dives/attention-kernels.en.md#online-output). Numerical range, output representation, and intermediate storage are related but separate concerns.
+
+## Connect the forward and backward passes {#the-last-one-is-the-dividing-line}
 
 The earlier modules can be tested separately; backpropagation connects them. Start with a binary-classification MLP with one ReLU hidden layer and one output logit. Sketch the forward pass, then walk backward through each shape and gradient.
 
@@ -44,9 +86,9 @@ For a sufficiently smooth function, central-difference truncation error is $O(\e
 
 ## How to practice {#how-to-practice}
 
-**Don't read it. Write it.** Close this page, type it from scratch in an empty file, then check yourself against `interview_kit.py`'s self-tests. Wherever you stall is where you thought you knew it and didn't.
+Pick one module to start with; there is no need to implement all seven at once. For softmax, check that rows sum to approximately one, masked entries are zero, and adding a shared constant preserves the result within a tolerance. Refer back to the relevant section when you get stuck.
 
-A harder version: **write the checks before the implementation.** If you can state that "softmax must produce rows summing to one and must be shift-invariant," you actually know what it is. The one whose criteria you can't state is the one where you only memorized the shape of the formula.
+Once that feels familiar, try writing the tests first. Include large logits, partial masks, and entirely masked rows, not just typical inputs. That checks both the formula and what the code does with inputs it does not support.
 
 ## Where to read next {#where-to-read-next}
 
@@ -70,7 +112,7 @@ For every formula, ask: what are the inputs and outputs, why is it defined this 
 <details markdown="1">
 <summary><b>Deep dive</b>: why are assumptions often the most discriminative part?</summary>
 
-BLUE requires linearity, unbiasedness, homoscedastic uncorrelated errors; L1 sparsity relies on the nonsmooth kink and optimality conditions; stable LogSumExp relies on shift invariance. Many candidates can recall formulas. Knowing when a theorem stops applying demonstrates actual understanding.
+For the Gauss–Markov result in linear regression, check full column rank, zero conditional mean errors, and homoscedastic, uncorrelated errors—not just the phrase “best linear unbiased.” For another example, softmax is unchanged by a common shift, but LogSumExp increases by that same constant: its stable implementation must add the subtracted maximum back. These details tell you when a formula is safe to use.
 
 </details>
 

@@ -2,7 +2,7 @@
 
 **中文** · [English](normalization.en.md)
 
-> 阅读时间：约 12 分钟 · 难度：必修 · 最近审阅：2026-10-09
+> 阅读时间：约 16 分钟 · 难度：必修 · 最近审阅：2026-10-10
 
 拿向量 `[1, 3]` 看归一化会比较直观。暂时忽略 epsilon 和可学习参数：LayerNorm 先减均值 2，再除以标准差 1，得到 `[-1, 1]`；RMSNorm 不减均值，而是除以均方根 √5。两者都改变尺度，却没有做同一件事。下面再把这笔计算放回一批序列里，看清到底沿哪个轴统计。
 
@@ -13,6 +13,8 @@
 先看统计轴，再看 running statistics 与 train / eval 模式，才能判断变长、batch size 为 1 和自回归生成时的行为。轴的选择很重要，但不是唯一的实现约定。
 
 ![三种归一化各自沿哪条轴](../assets/norm-axes.svg)
+
+图中每行是一条 feature vector。放到 `[B,T,d]` 序列里，逐 token 归一化对应 `LayerNorm(d)` / `RMSNorm(d)`；写成 `(T,d)` 就会把时间维也算进去。**是不是逐 token，要看 `normalized_shape`，不能只看层的名字。** [LayerNorm](https://docs.pytorch.org/docs/2.8/generated/torch.nn.LayerNorm.html) 和 [RMSNorm](https://docs.pytorch.org/docs/2.8/generated/torch.nn.RMSNorm.html) 的接口都允许归一化多个末尾维度。
 
 ## 三个公式 {#_2}
 
@@ -34,9 +36,62 @@ $$y_{ij} = \gamma_j\,\frac{x_{ij}}{\sqrt{\frac{1}{d}\sum_{k} x_{ik}^2+\epsilon}}
 
 把开头的 `[1, 3]` 整体加 10，得到 `[11, 13]`。忽略 epsilon，LayerNorm 仍输出 `[-1, 1]`；RMSNorm 的分母从 $\sqrt{5}$ 变成 $\sqrt{145}$，输出当然也变了。它没有去掉这次平移。至于 Norm 放在子层前还是后，那是 **Pre-Norm / Post-Norm 的另一个选择**，不能与使用哪种归一化公式混为一谈。[RMSNorm 原论文](https://arxiv.org/abs/1910.07467)讨论的正是去掉 re-centering 后的尺度归一化。
 
-## 四个概念：先会答，再深挖 {#_3}
+## 同一批数据，train 和 eval 为什么不一样？ {#train-eval-statistics}
 
-这里的 BatchNorm 公式用二维输入举例；在 `[N,C,L]` 上，`BatchNorm1d` 对每个 channel 沿 `N,L` 统计。训练前向的方差通常用 `correction=0`，更新 running variance 时使用的估计量则不同。默认 eval 使用 running statistics；`track_running_stats=False` 时 eval 也使用当前 batch。均值 / 方差是统计状态，不是像 gamma / beta 那样由梯度学习的参数。[PyTorch 文档](https://docs.pytorch.org/docs/main/generated/torch.nn.BatchNorm1d.html)明确区分了这些行为。
+上面的 BatchNorm 公式用二维输入举例；在 `[N,C,L]` 上，`BatchNorm1d` 对每个 channel 沿 `N,L` 统计。默认训练用当前输入的统计量，eval 用积累下来的 running statistics；`track_running_stats=False` 时 eval 也用当前输入。它们是统计状态，不是由优化器学习的 gamma / beta。[PyTorch 2.8 文档](https://docs.pytorch.org/docs/2.8/generated/torch.nn.BatchNorm1d.html)明确区分了这些行为。
+
+先别急着归因于“训练和测试的数据分布不同”。**就算喂同一批 `[1,3]`，结果也可能不同。** 令 `eps=0`、不加 affine，并用 `momentum=1` 让 running statistics 直接采用这一批的值：
+
+<figure class="worked-update worked-update--pairs" id="normalization-train-eval" lang="zh-CN">
+<figcaption>同样输入 [1, 3]，分母不同</figcaption>
+<ol>
+<li><span>训练前向</span><strong>[-1, 1]</strong><p>均值 2；平方偏差之和为 2，除以样本数 2，方差为 1。</p></li>
+<li><span>随后切到 eval</span><strong>约 [-0.707, 0.707]</strong><p>存储的方差用了样本数减一作分母，得到 2；这次除的是 √2。</p></li>
+</ol>
+</figure>
+
+这里有两个分母：训练前向用 $v_b=\sum(x-\mu)^2/m$；更新 running variance 用 $v_u=\sum(x-\mu)^2/(m-1)$。$m$ 是每个 channel 参与统计的值数。若 `momentum=a`，更新为 $v_{\rm run}\leftarrow(1-a)v_{\rm run}+av_u$，均值也按同样的加权方式更新。这不是优化器的 momentum。[原始 BN 论文 §3.1](https://proceedings.mlr.press/v37/ioffe15.pdf)也区分了训练统计量与推理时的估计量。
+
+<details markdown="1">
+<summary>用几行代码复算（PyTorch 2.8 / CPU）</summary>
+
+```python
+import torch
+
+def batchnorm_train_eval_example():
+    inputs = torch.tensor([[1.0], [3.0]])
+    norm = torch.nn.BatchNorm1d(1, eps=0, momentum=1, affine=False)
+    training = norm(inputs)
+    stored_variance = norm.running_var.clone()
+    norm.eval()
+    evaluation = norm(inputs)
+    return training, evaluation, stored_variance
+
+training, evaluation, stored_variance = batchnorm_train_eval_example()
+print(training.flatten().tolist())
+print(evaluation.flatten().tolist(), stored_variance.item())
+```
+
+默认 `momentum=0.1` 时还会混入之前的统计量，上面的数字就不适用了。这个例子故意选 `momentum=1`，只是为了单独看清方差估计的区别。
+
+</details>
+
+### 梯度累积，并没有把 BN 的 batch 变大 {#batchnorm-accumulation}
+
+一次喂 `[0,2,10,12]`，均值是 6；拆成 `[0,2]` 和 `[10,12]` 两次前向，每次均值分别是 1 和 11。梯度可以攒到一起再更新，**已经发生的两次归一化却不会合成一次**。BN 的 running statistics 也是每次前向更新，不是等到 `optimizer.step()` 才更新。
+
+从 running mean 为 0、running variance 为 1 开始，用 `momentum=0.1`：
+
+| 喂数据的方式 | 最后 running mean | 最后 running variance |
+| --- | ---: | ---: |
+| 4 个值一起前向 | 0.6 | 4.3667 |
+| 分两次、每次 2 个值 | 1.19 | 1.19 |
+
+第一行的样本方差是 $104/3$；第二行每批都是 2，但更新了两次。输入的归一化结果、后续 loss 和梯度也可能不同。因此不能把“有效 batch size 一样”当成带 BN 训练等价的证明。
+
+还有一个常见混淆：`torch.no_grad()` 关闭梯度记录，不会切换 BN 模式；训练模式下仍会更新 running statistics。要用已有统计量做验证，通常是 `.eval()` 加 `no_grad()`，分别控制两件事。[Autograd 文档](https://docs.pytorch.org/docs/2.8/notes/autograd.html#evaluation-mode-nn-module-eval)
+
+## 四个概念：先会答，再深挖 {#_3}
 
 需要先补输入特征的 min–max 与 Z-score，可以看[预处理和网络 Norm 的区别](../deep-dives/generalization.md)。
 
@@ -86,16 +141,16 @@ $$
 
 **快速学习**
 
-1. **Variable length + padding**：批内长度不同，统计量可能被 padding 污染；即使做 mask，后部位置的有效样本也很少。
+1. **Variable length + padding**：普通 `BatchNorm1d` 不接收 padding mask，填充值会混入统计。若自己实现有效 token 的 pooled statistics，长度 `[3,1]` 会贡献 4 个 token；只有“每个位置单独统计”的实现，才会在后部位置只剩一个有效样本。
 2. **依赖 batch composition**：训练时换一组同行样本，同一个 token 的输出也会改变；小 batch 的统计量尤其噪。
 3. **Train / inference mismatch**：训练用当前 batch statistics，推理通常改用 running statistics。自回归解码常是小 batch 或 batch size 1，不能依赖现场批统计量。
-4. **可能破坏 causality**：如果实现把 time 轴也纳入统计，未来 token 会通过均值和方差影响过去 token，绕过 causal attention mask。
+4. **可能破坏 causality**：若用当前序列计算统计量，并把 time 轴也算进去，未来 token 会影响过去 token，绕过 causal attention mask。使用冻结的 running statistics 没有这条旁路。
 
-LayerNorm 对每个 token 自己的 hidden features 做统计，与 batch、序列中其他位置和训练/推理模式都无关。
+Transformer 常用的 `LayerNorm(d)` 只统计每个 token 的 hidden features，不依赖 batch、其他位置或 train/eval 模式。`LayerNorm((T,d))` 则不是这个行为：修改最后一个 token，也会影响第一个 token 的输出。
 
 **面试版回答**
 
-> Transformer 使用 LayerNorm，是因为 LN 对每个 token 独立地沿 hidden dimension 归一化；它不依赖 batch size、序列长度或其他 token，训练与推理一致。BatchNorm 会引入 batch composition、padding 和 running statistics 问题；若统计还跨 time 轴，则会把未来 token 泄漏到过去位置。
+> Transformer 通常沿每个 token 的 hidden dimension 使用 LN，训练与推理的归一化方式相同。BN 还要处理 batch composition、padding 和 running statistics；如果从当前序列跨 time 统计，就会读到未来位置。关键是统计轴和模式，而不只是层的名字。
 
 <details markdown="1">
 <summary><b>深挖</b>：BatchNorm 什么时候真的会泄漏未来？</summary>
@@ -103,12 +158,12 @@ LayerNorm 对每个 token 自己的 hidden features 做统计，与 batch、序�
 必须看张量布局和 reduction axes，不能笼统说“BN 一定泄漏”。
 
 - 若对 $X\in\mathbb R^{B\times T\times d}$ 的每个位置 $t$，只沿 $B$ 统计，那么当前位置不会直接读取同一序列的未来 token；但输出仍依赖同 batch 的其他样本，而且每个位置的有效样本数不同。
-- 若像常见的 sequence <code>BatchNorm1d</code> 用法那样，对每个 channel 同时沿 $B$ 和 $T$ 统计，那么 $\mu_j,\sigma_j$ 包含 $t'>t$ 的 token。此时位置 $t$ 的归一化结果已经带有未来信息，causal mask 只限制 attention，挡不住这条旁路。
-- 如果先把 $B\times T$ 展平再做 BN，也会出现同样的问题。
+- 若像常见的 sequence <code>BatchNorm1d</code> 训练前向那样，从当前输入同时沿 $B$ 和 $T$ 统计，那么 $\mu_j,\sigma_j$ 包含 $t'>t$ 的 token。此时位置 $t$ 的归一化结果已经带有未来信息，causal mask 只限制 attention，挡不住这条旁路。
+- 如果先把 $B\times T$ 展平，再用当前输入做 BN 统计，也会出现同样的问题。
 
 所以最准确的说法是：
 
-> **BatchNorm 的统计轴一旦包含 time，就破坏自回归因果性；即使不包含 time，它仍有 batch dependence、padding、small-batch 和 train/eval mismatch，因此依然不是语言模型的好默认选择。**
+> **从当前序列跨 time 计算统计量，会让早期位置依赖未来。使用固定 running statistics 的 eval 不会；但 BN 的训练 / 推理差异，以及批次和 padding 的处理，仍要额外考虑。**
 
 推理时 batch size 1 并不意味着 BatchNorm 一定报错：在 eval mode 它可以使用 running statistics。真正的问题是这些统计来自训练分布，不是当前 token 自己，而且 train / inference 执行的是两套不同函数。
 
@@ -215,7 +270,9 @@ $$
 \sqrt{\frac{1}{d}\sum_jx_j^2+\epsilon}.
 $$
 
-当特征均值接近 0 时，两者非常接近；当均值偏移明显时，两者不同。模型可以通过前后线性层、bias-free 设计和训练过程适应这种差异。
+判断“均值小不小”，要和向量本身的尺度比。由 $\mathbb E[x^2]=\operatorname{Var}(x)+\mu^2$ 可知，只有 $\mu^2\ll\operatorname{Var}(x)+\epsilon$ 时，两个分母才接近；输出还差了一步减均值。
+
+比如 `[0.000001,0.000003]` 的均值已经很小，但忽略 epsilon，LN 仍输出 `[-1,1]`，RMSNorm 却约为 `[0.447,1.342]`。把输入一起缩小，并不会让这个区别消失。均值恰好为 0、epsilon 和 affine 设置也一致时，两个公式才重合；模型如何适应非零均值，仍是训练和架构的问题，不能只从公式推断质量。
 
 工程上 RMSNorm 的主要收益是少算一次 mean reduction，并减少相关的同步与内存流量。实现时平方和通常使用 fp32 accumulation，避免 bf16 / fp16 的数值误差。
 

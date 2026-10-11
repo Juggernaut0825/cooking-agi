@@ -2,7 +2,7 @@
 
 [中文](model-adaptation.md) · **English**
 
-> Reading time: about 16 minutes · Level: core · Last reviewed: 2026-09
+> Reading time: about 16 minutes · Level: core · Last reviewed: 2026-10
 
 To make a model reliably produce a required JSON format, you might update all parameters or train LoRA adapters. The signal might come from demonstrations or preference comparisons. Which parameters change and which objective trains them are separate decisions: LoRA and SFT can be used together.
 
@@ -183,9 +183,50 @@ them to business classes, avoiding tokenization and label-length bias.
 
 ### Constrained decoding {#constrained-decoding}
 
-Mask every token outside the legal label set to $-\infty$ before softmax. This guarantees
-that the output belongs to the enum; it does not guarantee that the classification is
-correct.
+Constrain **complete label sequences**, not a fixed whitelist containing every token
+that appears in a label. If the legal labels are the two-token sequences `a b` and
+`a c`, allowing `a/b/c` still permits the invalid sequence `b a`. Even single-token
+labels `A/B/C` can produce the invalid output `AA` if generation continues for two steps.
+
+A prefix tree can represent multi-token labels. At each step, use the **generated label
+prefix** to allow only next tokens that can still lead to a legal label. Allow termination
+only when the prefix is already a complete label. When one label is a prefix of another,
+both termination and a valid continuation may be allowed. Mask all other logits to $-\infty$.
+
+Here letters stand for already determined token IDs, and the reserved symbol `<EOS>`
+means termination; it is not part of any label. `prefix` contains only the generated
+label, not the input question. This computes allowed next tokens, not a complete decoder:
+
+```python
+def legal_next_tokens(prefix, labels):
+    allowed = set()
+    for label in labels:
+        if label[:len(prefix)] != prefix:
+            continue
+        allowed.add("<EOS>" if len(prefix) == len(label) else label[len(prefix)])
+    return allowed
+
+
+labels = (("a", "b"), ("a", "c"))
+print(sorted(legal_next_tokens((), labels)))
+print(sorted(legal_next_tokens(("a",), labels)))
+print(sorted(legal_next_tokens(("a", "b"), labels)))
+print(sorted(legal_next_tokens(("b",), labels)))
+```
+
+The four outputs are `['a']`, `['b', 'c']`, `['<EOS>']`, and `[]`. An empty set means
+the path is invalid: report failure rather than falling back to unconstrained generation.
+Serving still needs tokenization, logits masking, and stopping rules. **An incomplete
+label cut off by a length or time limit must not be returned as a valid result.**
+
+If each business label has been verified to occupy one token under the actual tokenizer
+and generation context, allow those tokens, **generate exactly one step and stop**, then
+map that token to the enum. Prefix constraints and this single-step special case enforce
+format on successful completion, not classification accuracy or successful completion
+of every request.
+
+For an implementation interface, see the [Transformers 4.57.1 prefix-constraint documentation](https://huggingface.co/docs/transformers/v4.57.1/internal/generation_utils#transformers.PrefixConstrainedLogitsProcessor)
+(checked 2026-10-10). This example does not call the library or assume behavior in other versions.
 
 ### Add a classification head {#add-a-classification-head}
 

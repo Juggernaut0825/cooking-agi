@@ -65,6 +65,45 @@ assert abs(clipped - 0.22) < 1e-12
 
 所以“使用了 IPW”不是“消除了偏差”的同义词。若没有这些条件，先把数据缺口说清楚，往往比硬套估计器更有用。
 
+### 无偏，为什么一次算出来还是会差很远？ {#weight-variance}
+
+先只看一个机会，假设它一旦曝光就会点击，也就是潜在反馈固定为 $Y=1$。曝光像抛硬币：概率为 $e$。这条机会对加权总和的贡献 $Z=EY/e$，只有两种结果：
+
+| 展示概率 | 没展示时的贡献 | 展示时的贡献 | 平均贡献 | 方差 |
+| --- | --- | --- | --- | --- |
+| $e=0.5$ | 0，概率 0.5 | 2，概率 0.5 | 1 | 1 |
+| $e=0.1$ | 0，概率 0.9 | 10，概率 0.1 | 1 | 9 |
+
+两行都无偏，但第二行更容易遇到“这次完全没看到，下一次突然多了 10”。**无偏说的是重复采样的平均，不是每份日志都准。**这也解释了为什么 IPW 估计一个比例时，有限样本的结果可能超过 1：它不是单个样本的预测概率。
+
+<details markdown="1">
+<summary>把期望和方差算出来</summary>
+
+在这个固定 $Y=1$ 的例子里，$\mathbb E[Z]=e(1/e)=1$，而 $\mathbb E[Z^2]=e(1/e^2)=1/e$，所以 $\operatorname{Var}(Z)=1/e-1$。下面直接枚举两种结果，不靠随机模拟碰运气：
+
+```python
+from fractions import Fraction
+
+def contribution_moments(propensity, floor=Fraction(0)):
+    if not 0 < propensity <= 1 or not 0 <= floor <= 1:
+        raise ValueError("propensity must be positive; probabilities cannot exceed one")
+    weighted_value = 1 / max(propensity, floor)
+    outcomes = [(1 - propensity, 0), (propensity, weighted_value)]
+    mean = sum(probability * value for probability, value in outcomes)
+    variance = sum(probability * (value - mean) ** 2 for probability, value in outcomes)
+    return mean, variance
+
+assert contribution_moments(Fraction(1, 2)) == (1, 1)
+assert contribution_moments(Fraction(1, 10)) == (1, 9)
+assert contribution_moments(Fraction(1, 10), Fraction(1, 4)) == (
+    Fraction(2, 5), Fraction(36, 25)
+)
+```
+
+最后一行把最大权重从 10 限成 4：方差降到 1.44，期望却从 1 降到 0.4。对 $N$ 条独立且同分布的这种机会取平均，方差才是单条方差除以 $N$；同一用户的多次行为可能相关，不能直接照搬。这里的计算只说明权重的代价，不是在证明某个实际日志满足随机曝光。
+
+</details>
+
 ## 先约定标签到底是什么意思
 
 假设我们要学习“愿意读完的技术文章”。至少写清这几件事：

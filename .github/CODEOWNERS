@@ -40,6 +40,7 @@
 /00-foundations/pytorch/ @tianyi-zhang-02 @2pir2
 /learn/ml-exercises/ @tianyi-zhang-02 @2pir2
 /learn/system-design/ @tianyi-zhang-02 @2pir2
+/practice/web-lab/ @tianyi-zhang-02 @2pir2
 /practice/recommender-systems/ @tianyi-zhang-02 @2pir2
 /practice/rag/ @tianyi-zhang-02 @2pir2
 /practice/post-training/ @tianyi-zhang-02 @2pir2
@@ -113,6 +114,8 @@
 /05-post-training/after-ppo.en.md @tianyi-zhang-02 @2pir2
 /05-post-training/dapo.md @tianyi-zhang-02 @2pir2
 /05-post-training/dapo.en.md @tianyi-zhang-02 @2pir2
+/05-post-training/clipping-variants.md @tianyi-zhang-02 @2pir2
+/05-post-training/clipping-variants.en.md @tianyi-zhang-02 @2pir2
 /05-post-training/policy-ratios.md @tianyi-zhang-02 @2pir2
 /05-post-training/policy-ratios.en.md @tianyi-zhang-02 @2pir2
 /05-post-training/async-policy-learning.md @tianyi-zhang-02 @2pir2

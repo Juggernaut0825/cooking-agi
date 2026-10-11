@@ -165,7 +165,8 @@
       hits.slice(0, 12).forEach(function (item) {
         var row = element("li");
         var link = element("a", "note-search-result");
-        link.href = (window.SITE.prefix || "") + item.u;
+        var explicitLanguage = item.u === "index.html" && item.l === "en" ? "?lang=en" : "";
+        link.href = (window.SITE.prefix || "") + item.u + explicitLanguage;
         var context = element("span", "note-search-context");
         context.append(element("span", "", item.s), element("span", "note-search-language", item.l === "en" ? "EN" : "中文"));
         link.append(context, highlighted("strong", "note-search-title", item.t, query),

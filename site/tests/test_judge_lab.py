@@ -215,6 +215,14 @@ class JudgeReferenceTests(unittest.TestCase):
         self.output["verdict"] = "maybe"
         self.assertEqual(self.parse(self.output)["status"], "invalid")
 
+    def test_abstention_exercise_still_validates_citations(self):
+        self.output.update(verdict="pass", evidence_ids=["made-up"])
+        self.assertEqual(self.parse(self.output)["status"], "invalid")
+        self.output["verdict"] = "unknown"
+        self.assertEqual(self.parse(self.output)["status"], "invalid")
+        self.output["evidence_ids"] = []
+        self.assertEqual(self.parse(self.output)["status"], "unknown")
+
     def test_contract_rejects_bad_outputs(self):
         variants = [
             {"verdict": True}, {"verdict": []}, {"criterion_id": "old"},

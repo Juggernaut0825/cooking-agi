@@ -238,6 +238,8 @@ So far, everything has run on the CPU. Moving to a GPU does not mean moving the 
 
 Inside the GPU, tensors usually reside in global memory. Kernels move working portions through caches, shared memory, or registers and leave outputs for later operations. The exact path depends on the kernel and fusion choices; a Python `matmul` does not mean the entire matrix fits into on-chip storage. The [attention-kernel chapter](../deep-dives/attention-kernels.en.md) follows that distinction further.
 
+A kernel is a function launched on the GPU, not a memory region. Functional units within an SM (Streaming Multiprocessor) perform the computation; shared memory, caches, and registers store data. “Computing in SRAM” blurs that distinction. Capacities and configurations vary by hardware, so one GPU's numbers are not universal specifications. See the [CUDA hardware and memory model](https://docs.nvidia.com/cuda/cuda-programming-guide/01-introduction/programming-model.html#gpu-hardware-model), checked on 2026-10-10.
+
 ### Get placement right before tuning throughput {#device-placement}
 
 This version changes device handling for one update. Move the model to its destination before creating the optimizer. Keep the loader simple until measurements point to a bottleneck.
@@ -258,6 +260,21 @@ def device_step(model, optimizer, features, labels):
 This assumes a single-device model and the two input tensors used earlier, not an arbitrary nested or multi-device batch. Numerical tests cover its CPU path; **no CUDA throughput experiment was run for this note**. The returned loss is detached but stays on its device. Keeping every return value in a list still accumulates tensors.
 
 `non_blocking=True` avoids waiting at the host copy call where possible. It does not establish overlap between the next transfer and current computation. That also needs suitable pinned input, separate streams, available copy hardware, and correct dependencies. Start with the ordinary loop and inspect a profiler trace before building a prefetcher. [PyTorch's transfer tutorial](https://docs.pytorch.org/tutorials/intermediate/pinmem_nonblock.html) compares the timelines.
+
+### The copy call returned. Can I change the data? {#async-copy-safety}
+
+Not necessarily. Suppose you copy a pinned CPU batch to the GPU asynchronously, then immediately call `zero_()` on the source. If the transfer is unfinished, that mutation can corrupt what the GPU receives. Likewise, after an asynchronous GPU-to-CPU copy, the CPU must not immediately read the destination. Wait for the relevant transfer to finish, not merely for the Python call to return. The [official tutorial](https://docs.pytorch.org/tutorials/intermediate/pinmem_nonblock.html#other-copy-directions-gpu-cpu-cpu-mps) demonstrates both cases.
+
+`DataLoader(pin_memory=True)` can place fetched tensors in pinned host memory. **Pinning does not move them to the GPU**; `.to(device)` is still needed. Custom batch types may require their own `pin_memory()` method; see the [DataLoader documentation](https://docs.pytorch.org/docs/2.8/data.html#memory-pinning).
+
+If you introduce separate CUDA streams, distinguish these two responsibilities:
+
+| Question | Required guarantee | Relevant mechanism |
+| --- | --- | --- |
+| Can the consumer start computing? | Previously submitted producer work must finish first | Events / `wait_stream` establish execution order |
+| Can another tensor reuse this GPU allocation? | The allocation must remain valid until the consuming stream finishes | `record_stream` informs the allocator, or manage the full lifetime explicitly |
+
+`record_stream` does not make the consumer wait for its input. Nor is `wait_stream` alone a complete lifetime-management scheme. Neither substitutes for the other. Understand the distinction before building a multistream prefetcher; the [PyTorch 2.8 lifetime example](https://docs.pytorch.org/docs/2.8/generated/torch.Tensor.record_stream.html) describes both management approaches. CPU tests in this note do not validate these CUDA races.
 
 ### Where does the time go? Try three batches {#pipeline-example}
 

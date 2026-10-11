@@ -2,7 +2,7 @@
 
 [中文](models.md) · **English**
 
-> Reading time: ~4 min · Level: advanced · Last reviewed: 2026-10-09
+> Reading time: ~4 min · Level: advanced · Last reviewed: 2026-10-10
 
 ## Huginn: prelude, recurrent block, coda
 
@@ -16,15 +16,15 @@ Training samples recurrent depth with a configured expectation around 32 and bac
 
 ## Ouro: looping built into pretraining
 
-[Ouro (2025)](https://arxiv.org/abs/2510.25741) repeats the decoder stack, not the token-embedding lookup:
+[Ouro (2025; details from v5, 2026-07-01)](https://arxiv.org/html/2510.25741v5) repeats the decoder stack, not the token-embedding lookup:
 
 | | Ouro 1.4B | Ouro 2.6B |
 | --- | --- | --- |
 | Layers × width | 24 × 2048 | 48 × 2048 (upcycled by duplicating layers) |
-| Loops | 4 | 4 |
+| Loops in the final configuration | 4 | 4 |
 | Training tokens | 7.7T | 7.7T |
 
-The 7.7T-token training lineage includes the shared phase before the sizes branch; it is not 7.7T independent tokens at 2.6B from initialization. The paper reports stability issues with deeper recurrence, and depth extrapolation is not guaranteed to help. See [adaptive depth](adaptive-depth.en.md) for the distinction between an exit gate and actually skipping computation.
+The 7.7T-token training lineage includes the shared phase before the sizes branch; it is not 7.7T independent tokens at 2.6B from initialization. Table 1 and §4.3 specify eight loops for the shared first 3T tokens, then four for stability as the 2.6B branch is created. Four is the final configuration, not the entire training history. Depth extrapolation is not guaranteed to help. See [adaptive depth](adaptive-depth.en.md) for the distinction between an exit gate and actually skipping computation.
 
 ## Relaxed Recursive Transformers: converting an existing model
 
@@ -35,7 +35,7 @@ The 7.7T-token training lineage includes the shared phase before the sizes branc
 | | What loops | Loops in training | Input re-injected | How depth is set |
 | --- | --- | --- | --- | --- |
 | Huginn | the middle 4 layers | random, mean 32 | yes | chosen at inference |
-| Ouro | decoder stack | 4 | no | gate selects output; skipped work depends on engine |
+| Ouro | decoder stack | 8 in shared phase, then 4 | no | gate selects output; skipped work depends on engine |
 | Relaxed Recursive | shared base with depth-specific LoRAs | configured maximum | no | early exit and depth batching can be studied |
 | Mixture-of-Recursions | a shared block | assigned by a router | no | one depth per token |
 

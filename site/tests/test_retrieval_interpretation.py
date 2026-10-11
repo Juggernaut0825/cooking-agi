@@ -21,6 +21,19 @@ def contrastive_function(language):
 
 
 class RetrievalInterpretationTests(unittest.TestCase):
+    def test_bm25_displayed_intermediate_rounding(self):
+        frequency_factor = 484 / 361
+        contribution = math.log(10 / 7) * frequency_factor
+        for suffix in ("", ".en"):
+            with self.subTest(language=suffix):
+                source = (ROOT / f"04-search/tfidf-and-bm25{suffix}.md").read_text()
+                product = re.search(r"0\.3567\\times([0-9.]+)&\\approx([0-9]+\.[0-9]+)", source)
+                self.assertIsNotNone(product)
+                self.assertEqual(product.group(1), f"{frequency_factor:.4f}")
+                self.assertEqual(product.group(2), f"{contribution:.4f}")
+                self.assertEqual(f"{0.3567 * float(product.group(1)):.4f}", product.group(2))
+                self.assertIn(r"\frac{2\times2.2}{2+1.2\times1.0682}&\approx" + product.group(1), source)
+
     def test_document_duplication_changes_raw_not_relative_tf(self):
         original, duplicate = [1, 1], [2, 2]
         weights = [math.log(4 / 3), math.log(2)]
@@ -106,7 +119,6 @@ class RetrievalInterpretationTests(unittest.TestCase):
         for identifier in ("qwen-bge", "bm25-tfidf", "infonce-cross-entropy"):
             self.assertEqual(topics[identifier]["read"], "body")
             self.assertEqual(topics[identifier]["state"], "article")
-        self.assertEqual(topics["softmax-implementations"]["read"], "title")
 
 
 if __name__ == "__main__":

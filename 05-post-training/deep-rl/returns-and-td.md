@@ -51,11 +51,16 @@ $$
 
 ```python
 def td_target(reward, next_value, gamma, terminated):
-    return reward + gamma * (not terminated) * next_value
+    if terminated or gamma == 0:
+        return reward
+    return reward + gamma * next_value
 
 assert td_target(1.0, 5.0, 0.9, True) == 1.0
 assert td_target(1.0, 5.0, 0.9, False) == 5.5
+assert td_target(1.0, float("nan"), 0.9, True) == 1.0
 ```
+
+这里直接分支返回 reward，而不是把无效的后继估值乘零：`0 * NaN` 仍是 NaN。$\gamma=0$ 时也不需要后继估值；实际调用时应跳过这些不需要的 value 计算。
 
 ## SARSA 和 Q-learning：下一步听谁的
 
@@ -69,6 +74,8 @@ $$
 这里先写非终止转移；真实终止时，两者的后续项都为 0。
 
 假设 $Q(s',\cdot)=[2,5]$，探索选中了第一个动作。$r=1,\gamma=0.9$ 时，SARSA 的 target 是 2.8，Q-learning 是 5.5。区别不是有没有探索，而是 target 在评价哪个后续行为。
+
+这也是 off-policy control：行为策略可以探索，target 却使用贪心后续。单步 Q-learning 已条件于 $(s,a)$，在同一 MDP 中使用这对状态动作的真实转移样本，不必再乘当前动作的策略概率比；但仍需充分的状态–动作覆盖。不能把这个结论直接套到未经校正的多步 off-policy return。
 
 ## 在同一段轨迹上比较三种 target
 
@@ -96,7 +103,7 @@ MC target 不依赖当前参数，比较像普通监督回归；TD target 会随
 
 ## 表格里收敛，也要满足条件
 
-固定策略的表格 TD(0)，在适当的访问条件与学习率条件下可以收敛到该策略价值。常见随机逼近条件是每个状态的步长满足 $\sum_t\eta_t=\infty$、$\sum_t\eta_t^2<\infty$。直觉上要持续有机会纠错，又要逐渐压下采样噪声。
+在有限状态、奖励有界且 $0\le\gamma<1$ 的 MDP 中，固定策略的 on-policy 表格 TD(0)，在每个待估状态被无限次访问等适当采样条件与学习率条件下，可以收敛到该策略价值。常见随机逼近条件是每个状态的步长满足 $\sum_t\eta_t=\infty$、$\sum_t\eta_t^2<\infty$。直觉上要持续有机会纠错，又要逐渐压下采样噪声。
 
 固定学习率可能更适合跟踪变化，但不能照搬“精确收敛”的结论。换成非线性网络、off-policy 数据或不充分覆盖，更要重新检查前提。实作时先拿小的表格环境核对更新，再把网络放进去，可以少猜很多参数。
 
@@ -109,4 +116,4 @@ MC target 不依赖当前参数，比较像普通监督回归；TD target 会随
 
 </details>
 
-参考：[Gymnasium 对 termination / truncation 的说明](https://farama.org/Gymnasium-Terminated-Truncated-Step-API)。接下来先看[怎样直接更新 policy](policy-gradients.md)。
+参考：[Gymnasium v1.1.0：termination / truncation](https://gymnasium.farama.org/v1.1.0/tutorials/gymnasium_basics/handling_time_limits/)、[Watkins 与 Dayan（1992），§2–3：Q-learning 的采样与收敛条件](https://www.gatsby.ucl.ac.uk/~dayan/papers/cjch.pdf)。接下来先看[怎样直接更新 policy](policy-gradients.md)。

@@ -143,6 +143,17 @@ assert active_positions == [[0, 2], [0, 3]]
 
 We shift manually because this code calls CE directly. The [Transformers causal LM loss](https://github.com/huggingface/transformers/blob/v4.57.1/src/transformers/loss/loss_utils.py) already handles shifting; do not pre-shift labels again when passing them to a model that does this internally.
 
+<details id="teacher-forcing" markdown="1">
+<summary>Why test generation if both token predictions look good?</summary>
+
+When predicting `<EOS>` above, the model sees the demonstration's `5`, not a token it just sampled. This is **teacher forcing**: each position learns the next step from the correct preceding tokens.
+
+The 0.6 probability therefore means “emit `<EOS>` given that the preceding token is `5`.” Sampling step by step from these probabilities produces the complete `5 → <EOS>` sequence with probability $0.8\times0.6=0.48$, or $\exp(-2\times\text{mean loss})$. This is the probability of that two-token sequence, not overall task success; other answers could also be correct.
+
+If the first sampled token is different, the next prediction sees a different prefix. This demonstration's loss does not directly check that situation. Shared parameters may generalize, but generation tests are still needed: inspect complete answers, behavior after a wrong prefix, and stopping.
+
+</details>
+
 ### If user targets are masked, how does the model learn to use the question?
 
 A loss mask selects predictions to score, not text to read. Predicting `5` still depends on the preceding `2 + 3`. Gradients can pass through attention and shared parameters into computations that process context. **Not scoring reconstruction of the question does not remove its influence on learning.**
@@ -192,6 +203,8 @@ SFT can store new facts in model parameters, but does not guarantee reliable lea
 Suppose a return window changes from 30 days to 14. Fine-tuning is one option; if policies change often, retrieving the current document may be easier to update and audit. Both approaches need tests for stale rules, correct citations, and fabrication when evidence is missing.
 
 Choosing SFT, continued pretraining, or retrieval depends on knowledge volume, update frequency, and task structure—not a rule that SFT cannot learn facts.
+
+In a [2024 closed-book QA study](https://arxiv.org/html/2405.05904v3), Gekhman and colleagues found that new facts were fitted more slowly than familiar knowledge, with increased hallucination in their setup. This motivates testing new-fact learning separately from regressions on familiar questions. It does not establish that SFT cannot learn facts, or that every model, dataset, and training method behaves the same way.
 
 ## So when is SFT enough {#so-when-is-sft-enough}
 
@@ -260,7 +273,7 @@ That is a chain-rule difference, not a precision issue. The [tests](../site/test
 2. Is the correctness I care about "does it look right overall" or "are these few pivotal tokens right"? For the latter, test the decision separately from mean loss.
 3. Does my SFT set contain context-appropriate abstention or clarification? Test what happens when essential evidence is missing.
 4. Can the model recall the correct facts under different phrasings, rather than just sound confident?
-5. Does this task really need RL? With a correct answer and a fixed format, SFT plus good data is usually the better deal.
+5. Does this task really need RL? When useful demonstrations are available, start with an SFT baseline and compare equal-budget task quality. A fixed output format alone does not decide which method is more cost-effective.
 
 ## Where to read next {#where-to-read-next}
 
@@ -274,11 +287,11 @@ That is a chain-rule difference, not a precision issue. The [tests](../site/test
 <details class="interview" markdown="1">
 <summary>Assistant-only CE, behavior cloning, and the capability ceiling</summary>
 
-**Quick memory**: SFT remains next-token CE, but the loss is usually computed only on assistant tokens. It raises the probability of demonstrated behavior; it does not automatically discover strategies missing from the data.
+**Remember**: SFT optimizes demonstration-token likelihood given the preceding context; conversational setups often score only assistant tokens. That objective does not guarantee that every demonstration becomes more likely after every update, or that unseen tasks are solved.
 
 **Interview answer**
 
-> SFT serializes a structured conversation, conditions on the system and user tokens, and supervises only the assistant answer and the end token. It is effective for format, tone, tool protocols, and known solutions, but it remains behavior cloning, constrained by demonstration coverage, demonstration quality, and a teacher-forced token objective.
+> In a common assistant-only setup, SFT serializes the conversation and uses the system and user messages as context to learn the assistant answer and its end token. Demonstrations can teach format, tone, tool calls, and solutions. Their coverage and quality matter, and teacher-forced token loss still needs to be checked against complete generated answers.
 
 <details markdown="1">
 <summary><b>Deep dive</b>: why does low token CE not imply a better complete answer?</summary>
