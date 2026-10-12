@@ -38,7 +38,11 @@ from pathlib import Path
 import markdown
 import collaboration
 import curriculum
+import prep_progress
+import prep_schedule
+import prep_workspace
 import next_stop
+import technology_chronicle
 from markdown.extensions.toc import TocExtension, slugify
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -56,7 +60,7 @@ PROTECTED = {"code", "pre", "a", "script", "style", "abbr",
 # inside one splits a word in half and breaks the grid, so they are skipped
 # wholesale -- the annotation belongs in running prose, not in a summary card.
 NOGLOSS_CLASSES = {"lesson-recipe", "taste-check", "widget", "mermaid",
-                   "study-atlas", "study-route", "chapter-context", "worked-update",
+                   "study-atlas", "study-route", "chapter-context", "worked-update", "engine-map", "technology-tree", "tree-eras", "rl-budget", "prep-hub", "prep-progress", "prep-note", "study-workspace",
                    "home-block", "term", "curriculum-card", "curriculum-hero",
                    "learning-path", "lab-matrix", "bilingual-intro",
                    "drl-flow", "drl-paths", "drl-lab", "interview-roles", "method-map"}
@@ -1047,6 +1051,8 @@ class Page:
         self.updated = last_updated(str(rel))
         if home:
             self.kind = "home"
+        elif rel.parent.as_posix() == "community" and rel.stem.replace(".en", "") in {"roadmap", "updates"}:
+            self.kind = "project"
         elif any(part in {"code", "projects", "modules"} for part in rel.parts):
             self.kind = "workshop"
         elif rel.name in {"README.md", "README.en.md"}:
@@ -1300,6 +1306,11 @@ def build_page(page: Page, terms, repo: str, known: set):
             count=1,
             flags=re.M,
         )
+        home_details = {"怎么用这些笔记": "how-to-use-the-notes",
+                        "各个板块放什么": "whats-in-each-section"}
+        for title, identifier in home_details.items():
+            raw = re.sub(r"^### " + re.escape(title) + r"$",
+                         f"### {title} {{#{identifier}}}", raw, flags=re.M)
     meta = re.search(r"^>\s*(?:阅读时间|Reading time)[:：]?\s*(.+)$", raw, re.M)
     if meta:
         parts = [p.strip() for p in meta.group(1).split("·")]
@@ -1313,6 +1324,7 @@ def build_page(page: Page, terms, repo: str, known: set):
     raw = re.sub(r"^\[中文\]\([^)]*\)\s*[·|].*$", "", raw, count=1, flags=re.M)
 
     body, toc = render_markdown(raw)
+    body = technology_chronicle.expand(body, page.lang)
     used = []
     if page.lang == "zh":
         body, used = annotate(body, glossary_for_page(page, terms))
@@ -1368,7 +1380,7 @@ def section_html(page, sec, show_head=True):
         note = target.src.relative_to(ROOT).as_posix().replace('.en.md', '.md')
         if note == "README.zh.md":
             note = "README.md"
-        items.append(f'<li><a{cls} data-note="{html.escape(note, quote=True)}" '
+        items.append(f'<li><a{cls} data-note="{html.escape(note, quote=True)}" data-progress-id="{prep_progress.identifier(note)}" '
                      f'href="{page.rel(target.url)}" title="{html.escape(target.title, quote=True)}">'
                      f'{html.escape(nav_label(target))}</a></li>')
     links = f'<ul class="chapter-pages">{"".join(items)}</ul>'
@@ -1573,6 +1585,7 @@ def page_header_html(page):
         "workshop": "实践" if zh else "Practice",
         "guide": "参考资料" if zh else "Reference",
         "article": "概念笔记" if zh else "Concept note",
+        "project": "项目进展" if zh else "Project updates",
     }
     if page.section.get("group") == "career":
         labels["article"] = "求职记录" if zh else "Career journal"
@@ -1580,7 +1593,7 @@ def page_header_html(page):
         labels["article"] = "阅读导航" if zh else "Reading guide"
     read = f"约 {page.read_minutes} 分钟" if zh else f"{page.read_minutes} min read"
     position = ((f"本章 {page.position} / {page.section_count} 篇" if zh else f"Note {page.position} of {page.section_count}")
-                if page.kind != "home" and page.section_count > 1 else "")
+                if page.kind not in {"home", "project"} and page.section_count > 1 else "")
     reviewed = (("最近核对 " if zh else "Reviewed ") + page.reviewed
                 if page.reviewed else "")
     number_match = re.match(r"^(\d\d)-", page.section["dir"])
@@ -1598,7 +1611,7 @@ def page_header_html(page):
     tools = ""
     if page.kind not in {"home", "index"}:
         note = html.escape(page.src.relative_to(ROOT).as_posix().replace(".en.md", ".md"), quote=True)
-        tools = (f'<div class="note-tools" data-reading-note="{note}" hidden>'
+        tools = (f'<div class="note-tools" data-reading-note="{note}" data-progress-id="{prep_progress.identifier(note)}" hidden>'
                  f'<button type="button" data-side-save aria-pressed="false">{"收藏本页" if zh else "Save this page"}</button>'
                  '<a class="note-resume" data-note-resume hidden></a>'
                  f'<span class="note-tool-status" role="status" aria-live="polite"></span></div>')
@@ -1610,6 +1623,7 @@ def page_header_html(page):
   <h1>{html.escape(page.title)}</h1>
   <div class="article-meta">{'<b aria-hidden="true"></b>'.join(bits)}</div>
   {tools}
+  {prep_progress.note_controls(page, ROOT)}
 </header>"""
 
 
@@ -1943,6 +1957,39 @@ def assemble(page, sections, people, nav, built, template):
     twitter_card = "summary_large_image"
     description = share_description(page) or site["tagline_zh" if zh else "tagline_en"]
     content = curriculum.chapter_context(page, BY_SRC) + page.body
+    is_prep_hub = 'data-prep-hub' in page.body
+    is_prep_workspace = 'data-prep-workspace' in page.body
+    if is_prep_workspace:
+        content = page.body
+    content = content.replace('<div data-prep-dashboard></div>', prep_progress.dashboard(zh))
+    content = content.replace('<div data-prep-schedule></div>', prep_schedule.planner(zh))
+    if is_prep_workspace:
+        content = content.replace('<div data-prep-routes></div>', prep_workspace.library(page, BY_SRC))
+        content = content.replace('<div data-prep-updates></div>', prep_progress.updates_panel(zh))
+    template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/prep-progress.css?v={built}">\n<script defer src="{prefix}static/prep-progress-store.js?v={built}"></script>\n<script defer src="{prefix}static/prep-content-updates.js?v={built}"></script>\n<script defer src="{prefix}static/prep-library-state.js?v={built}"></script>\n<script defer src="{prefix}static/prep-progress.js?v={built}"></script>\n</head>')
+    if is_prep_workspace:
+        template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/prep-schedule.css?v={built}">\n<script defer src="{prefix}static/prep-schedule.js?v={built}"></script>\n</head>')
+        template = template.replace('</head>', f'<script defer src="{prefix}static/prep-calendar.js?v={built}"></script>\n</head>')
+        template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/prep-workspace.css?v={built}">\n<script defer src="{prefix}static/prep-workspace.js?v={built}"></script>\n</head>')
+        template = template.replace('</head>', f'<script defer src="{prefix}static/prep-route-planner.js?v={built}"></script>\n</head>')
+        template = template.replace('</head>', f'<script defer src="{prefix}static/prep-updates-ui.js?v={built}"></script>\n</head>')
+        template = re.sub(r'<div class="shell">.*?(?=<dialog id="note-search")', '<main id="content" class="study-desk prose">{{content}}</main>\n\n', template, count=1, flags=re.S)
+        template = re.sub(r'<button class="icon-btn menu".*?</button>', '', template, count=1, flags=re.S)
+        template = template.replace('class="topbar-brand" href=', 'class="topbar-brand" aria-label="{{site_title}}" href=')
+        template = template.replace('<canvas class="sky" aria-hidden="true"></canvas>\n', '')
+        template = re.sub(r'<script defer src="\{\{prefix\}\}static/sky\.js[^>]*></script>\n?', '', template)
+        back = page.rel('learn/index.html' if zh else 'learn/index.en.html')
+        template = template.replace('{{tabs}}', f'<a class="study-back" href="{back}">{"← 返回知识库" if zh else "← Back to the library"}</a>')
+    if is_prep_hub:
+        template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/prep-hub.css?v={built}">\n<script defer src="{prefix}static/prep-hub.js?v={built}"></script>\n</head>')
+    if 'data-technology-tree' in page.body or 'class="tech-timeline"' in page.body:
+        template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/technology-tree.css?v={built}">\n</head>')
+    if 'data-technology-tree' in page.body:
+        template = template.replace('</head>', f'<script defer src="{prefix}static/technology-atlas.js?v={built}"></script>\n</head>')
+        template = template.replace('</head>', f'<script defer src="{prefix}static/world-exhibit.js?v={built}"></script>\n</head>')
+        template = template.replace('</head>', f'<script defer src="{prefix}static/world-grove.js?v={built}"></script>\n</head>')
+        template = template.replace('<canvas class="sky" aria-hidden="true"></canvas>\n', "")
+        template = re.sub(r'<script defer src="\{\{prefix\}\}static/sky\.js[^>]*></script>\n?', "", template)
     if 'class="method-map"' in page.body:
         template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/method-map.css?v={built}">\n</head>')
     if 'data-bert-story' in page.body:
@@ -1975,6 +2022,12 @@ def assemble(page, sections, people, nav, built, template):
             template, count=1, flags=re.S,
         )
     page_class = "page-crew page-next-stop" if is_next_stop else "page-crew" if is_community_scene else f"page-{page.kind}"
+    if is_prep_hub:
+        page_class += " page-prep-hub"
+    if is_prep_workspace:
+        page_class += " page-prep-workspace"
+    if 'data-technology-tree' in page.body:
+        page_class += " page-technology-tree"
     return (template
             .replace("{{lang}}", "zh-Hans" if zh else "en")
             .replace("{{dir_class}}", "lang-zh" if zh else "lang-en")
@@ -2017,7 +2070,7 @@ def assemble(page, sections, people, nav, built, template):
             .replace("{{repo}}", site["repo"])
             .replace("{{content}}", content)
             .replace("{{page_header}}", page_header_html(page))
-            .replace("{{page_nav}}", "" if is_community_scene else page_nav_html(page))
+            .replace("{{page_nav}}", "" if is_community_scene or is_prep_hub else page_nav_html(page))
             .replace("{{glossary}}", glossary_html(page))
             .replace("{{footer}}", footer_html(page, people, site["repo"], built))
             .replace("{{built}}", built))
@@ -2070,6 +2123,8 @@ def main():
 
     # static assets + every section's figures
     shutil.copytree(SITE / "static", OUT / "static")
+    (OUT / 'static/prep-progress-catalog.json').write_text(
+        json.dumps(prep_progress.catalog(BY_SRC), ensure_ascii=False), encoding='utf-8')
     for d in ROOT.glob("*/assets"):
         shutil.copytree(d, OUT / d.relative_to(ROOT))
         print(f"  assets: {d.relative_to(ROOT)}")

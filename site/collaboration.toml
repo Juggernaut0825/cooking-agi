@@ -5,7 +5,7 @@ acknowledgements = []
 id = "foundations"
 zh = "大模型基础"
 en = "Foundations"
-groups = ["study", "foundations", "architectures", "pretraining", "inference"]
+groups = ["study", "history", "foundations", "architectures", "pretraining", "inference"]
 reviewers = ["tianyi-zhang-02", "2pir2"]
 
 [[area]]

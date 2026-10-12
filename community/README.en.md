@@ -8,6 +8,8 @@ These started as one person's study notes. We're opening them up for more people
 
 ## Where to start
 
+For a concrete small task, see the [roadmap](roadmap.en.md). This version focuses on interview preparation and the study dashboard; future proposals can cover CV, autonomous driving, Jetson, simulation, and robotics. [Updates](updates.en.md) distinguishes proposed releases from published ones.
+
 | What you want to do | First step |
 | --- | --- |
 | Fix a typo, reference, or translation | Open a small PR; no permission needed first |
@@ -20,6 +22,8 @@ Reader updates live in [Next stop](next-stop.en.md): voluntary internship, full-
 
 Discussions live in GitHub Issues; reviews of specific edits live in PRs. Chinese and English versions share a discussion entry. Search first and continue an existing thread when possible. We won't maintain a separate comments system.
 
+The [feedback form](https://github.com/tianyi-zhang-02/cooking-agi/issues/new?template=note-feedback.yml) has five types: corrections, outdated information, explanation requests, topic requests, and site problems. Pick the closest fit. Leave the area or source blank if unsure; maintainers can add them. Public evidence helps when available, but you don't need a paper just to ask a question.
+
 ## Who looks after each area
 
 <div data-collaboration-areas></div>
@@ -28,15 +32,25 @@ Discussions live in GitHub Issues; reviews of specific edits live in PRs. Chines
 
 Authors own their content; area reviewers check accuracy, explanations, and validation; maintainers handle cross-area consistency, releases, and unresolved decisions. These are responsibilities, not ranks. Anyone can discuss or review, but a formal merge needs an authorized reviewer.
 
+<span id="review"></span>
+
 ## How a change gets reviewed
 
 1. **Keep it focused.** Aim for one problem per PR. List affected areas and involve their reviewers when a change crosses boundaries.
 2. **Show the basis.** Cite public sources, give reproduction conditions, and separate observations, hypotheses, and validated claims. Passing checks does not establish correctness.
 3. **Get another human's review.** Routine changes need at least one relevant CODEOWNER approval from someone other than the author. Address or explicitly resolve review comments before merging; new commits invalidate earlier approvals.
-4. **Pass automated checks.** Build, privacy scan, collaboration checks, and tests must pass. Bilingual structure checks are currently advisory, not proof of translation quality. A one-language change needs a follow-up plan in its PR.
+4. **Pass automated checks.** Build, privacy scan, collaboration, tests, and bilingual structure checks must pass. Matching structure is not proof of good translation. Start a one-language change as a draft PR and complete the pair before merging.
 5. **Merge, then publish.** Preserve authors and co-authors. Only main deploys; a draft PR is not a publication.
 
 There is currently only one confirmed maintainer. Administrators temporarily retain an emergency bypass for small fixes without another available reviewer or release failures. Explain its use in the PR; self-checking is not independent review. Revisit this exception once a second reviewer confirms. Written rules and GitHub's active protections are separate; maintainers should verify repository settings.
+
+## Where AI can help
+
+Maintainers can select public excerpts for three roles to review: technical accuracy, teaching, and evidence/safety. The [review tool](../site/REVIEW_ASSIST.md) prepares local requests by default; API calls require an explicit opt-in. No automatic review bot is currently enabled.
+
+We keep the three reports together rather than voting on approval. The models have not opened the linked sources or run experiments. People still need to verify findings. Failed calls, disagreements, and missing evidence remain open work, not a pass. Formal review and publication decisions stay with humans.
+
+Issues are public immediately: do not submit internal materials or private progress files expecting AI to remove them. Topic selection is subjective, and different learning routes can coexist. For factual disagreements, compare sources and reproducible conditions.
 
 ## When we disagree
 
@@ -63,6 +77,7 @@ No committee or weekly meetings required. Ordinary content uses the normal PR pr
 - Use public sources or publicly reproducible examples. Don't submit internal company data, recruiting details, credentials, or other people's private information. If unsure, don't post it. Automated scanning is only a backstop.
 - AI can help with writing, translation, or code, but the author must verify it. Describe material AI assistance in the PR; don't fabricate citations, experiments, or independent reviews.
 - Credit sources and confirm permission to reuse figures and code. Explain new external scripts, dependencies, or third-party services before adding them.
+- Original code uses MIT and original notes use CC BY 4.0. Confirm you have authority to contribute under those terms, and retain third-party licenses. See the [license scope](../LICENSE.md).
 - Usually explain the problem and give a warning first; restrict participation for repeated or serious abuse. Safety issues may require immediate action. Don't erase valid past contributions over disagreements; handle removal requests for privacy or documented abuse.
 
 For writing conventions and local preview, see the [contributing guide](../CONTRIBUTING.md#english).

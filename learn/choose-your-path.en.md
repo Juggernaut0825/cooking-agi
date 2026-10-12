@@ -27,6 +27,8 @@ A little Python is enough to begin. If vectors and gradients are unfamiliar, sta
 
 ## Interviews: find the part that needs practice {#interviews}
 
+In [Interview prep](../interview/README.en.md), choose a quick review or a gradual study plan. The first narrows the scope; the second follows the prerequisites. Both let you start with what you know. Suggested hour budgets are not deadlines.
+
 Start with the job description and any interview information you've received. Two MLE roles may emphasize quite different things. Without a particular interview coming up, try one concept question and one small implementation to see where you get stuck.
 
 1. **Hard to explain the idea?** Use the [ML / LLM questions](../interview/basics/README.en.md). Answer without notes, then explain with an example.
@@ -87,6 +89,6 @@ For a particular term, use the search button at the top or press `/`. Try either
 
 ## See the full collection, or come back later {#all-notes}
 
-The complete collection still has four areas: [Foundations](README.en.md), [Interview prep](../interview/README.en.md), [Engineering practice](../practice/README.en.md), and [Career](../career/README.en.md). A note lives in one place; routes link to it rather than duplicating it. Starting from another route doesn't mean reading the same material again.
+Pick an area for what you need: [Foundations](README.en.md) explains mechanisms, [Interview prep](../interview/README.en.md) has review and practice, [Engineering practice](../practice/README.en.md) breaks down systems, [Tech history](technology-timeline.en.md) follows how the field developed, and [Career](../career/README.en.md) covers experiences and decisions. A note lives in one place; routes link to it rather than duplicating it.
 
 Use **中文 / EN** at the top to switch the same note. **My reading** keeps saved and recently opened pages in this browser; export bookmarks before moving devices. The collection is still growing. [Coverage and backlog](coverage.en.md) distinguishes what is written from what still needs checking.

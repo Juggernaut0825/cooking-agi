@@ -6,6 +6,8 @@
 
 Not sure where to begin? [Choose a route for your goal](choose-your-path.en.md). You don't need to finish this section before practicing for interviews or applying.
 
+For interviews, go straight to [Interview prep](../interview/README.en.md): choose a quick review or a gradual study plan. The full explanations stay here in Foundations whenever you want to go deeper.
+
 This section explains how models work, why training methods take the forms they do, and how to judge their results. Start with examples, then explore derivations and implementations as needed. You do not need every prerequisite or every new model; go straight to the subject you care about.
 
 - **New to the subject?** Follow the examples and computations first. Return to derivations on a second pass.
@@ -85,6 +87,8 @@ Open an overview or expand a chapter for all its articles. Model families follow
 <!-- widget:study-atlas -->
 
 ## Reading and updates
+
+For the history behind these methods, use the separate [Tech history](technology-timeline.en.md) area. Foundations stays focused on how things work rather than mixing historical routes into its directory.
 
 Use **EN / 中文** at the top right to switch the current article. Chinese pages retain useful English terminology; English pages contain the full examples, derivations, and code.
 

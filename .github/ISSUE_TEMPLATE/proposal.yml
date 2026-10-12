@@ -2,6 +2,22 @@ name: 内容与结构提案 · Proposal
 description: 新内容、板块认领、结构或规则调整。 / New content, area ownership, structure, or rules.
 title: "[Proposal] "
 body:
+  - type: markdown
+    attributes:
+      value: "先看看 [roadmap](https://github.com/tianyi-zhang-02/cooking-agi/blob/main/community/roadmap.en.md) 和已有 issues，避免重复。一次提一个能讲清的小问题即可，不需要认领整个领域。 / Check the roadmap and existing issues first. One focused explanation or experiment is enough; no commitment to a whole field is required."
+  - type: dropdown
+    id: direction
+    attributes:
+      label: 方向（可选）· Direction (optional)
+      options:
+        - 学习台与面试准备 · Study dashboard & interview prep
+        - 现有笔记与讲解 · Existing notes & explanations
+        - 计算机视觉 · Computer vision
+        - 自动驾驶 · Autonomous driving
+        - Jetson 与边缘部署 · Jetson & edge deployment
+        - 物理仿真 · Physical simulation
+        - 机器人 · Robotics
+        - 其他或跨方向 · Other or cross-area
   - type: input
     id: area
     attributes:
@@ -21,7 +37,7 @@ body:
     id: approach
     attributes:
       label: 打算怎么做 · Approach
-      description: 提纲、公开来源、最小版本。普通内容到这里就够了。 / Outline, public sources, smallest useful version.
+      description: 提纲、公开来源、最小例子和验证办法。涉及硬件请写设备需求与替代方式；也说明愿意做哪一部分。 / Outline, public sources, a small example, checks, and what you can contribute. Note hardware requirements and alternatives when relevant.
     validations:
       required: true
   - type: textarea

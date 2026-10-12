@@ -71,11 +71,22 @@
   var current = active ? active.dataset.note : null;
   var readingKey = "cooking-agi:reading:v1";
   var treeKey = "cooking-agi:navigation:v2";
+  var library = window.PreparationProgress?.library;
+  var identifiers = Object.fromEntries(links.filter(function (link) { return link.dataset.progressId; }).map(function (link) { return [link.dataset.note, link.dataset.progressId]; }));
   function load(key) {
+    if (library && key === readingKey) {
+      try { return library.read(identifiers); } catch (error) { return null; }
+    }
     try { return JSON.parse(localStorage.getItem(key) || "null"); }
     catch (error) { return null; }
   }
   function persist(key, value) {
+    if (library && key === readingKey) {
+      try { return library.write(value, identifiers); } catch (error) { return false; }
+    }
+    if (library && key === "cooking-agi:positions:v1") {
+      try { return library.clearPositions(); } catch (error) { return false; }
+    }
     try { localStorage.setItem(key, JSON.stringify(value)); return true; }
     catch (error) {
       side.querySelector(".side-local").textContent = zh
@@ -259,7 +270,7 @@
     });
   });
   window.addEventListener("storage", function (event) {
-    if (event.key === readingKey || event.key === null) {
+    if (event.key === readingKey || event.key === window.PreparationProgress?.storageKey || event.key === null) {
       state = cleanReading(load(readingKey), catalog);
       renderReading();
     }

@@ -6,12 +6,16 @@
 
 ## 先选一件小事
 
+还没想好做什么？[路线图](community/roadmap.md#contribute)列了可以独立完成的小任务和未来方向。[版本记录](community/updates.md)说明这版范围；不要为了赶版本，把没写完或没验证的内容标成完成。
+
 - **错字、引用、翻译**：直接 fork → 修改 → PR。
-- **解释看不懂或发现问题**：用[提问与纠错](https://github.com/tianyi-zhang-02/cooking-agi/issues/new?template=note-feedback.yml)，贴页面链接和具体段落。
+- **解释看不懂或发现问题**：用[反馈表](https://github.com/tianyi-zhang-02/cooking-agi/issues/new?template=note-feedback.yml)，选内容纠错、信息过时、解释不清、想加主题或网站问题，贴页面链接和具体段落。不用先知道答案；不确定板块可以留空。
 - **新文章、交互图或目录调整**：先开[内容提案](https://github.com/tianyi-zhang-02/cooking-agi/issues/new?template=proposal.yml)，避免重复劳动，再开 draft PR。
 - **想长期参与**：先看[板块分工与审核约定](community/README.md)。没有认领的板块由维护者接审，不要求你随时在线。
 
 每个 PR 尽量只做一件事。写清改了什么、依据是什么、怎么检查的。常规合并需要一位非作者的相关 CODEOWNER 批准、检查通过、讨论处理完；大范围调整才走提案，具体例外和分歧处理见上面的协作约定。
+
+维护者可以手动用[三角色初审工具](site/REVIEW_ASSIST.md)，分别检查技术、讲解、依据与公开边界。默认只在本地生成请求，不调用模型；发送到 API 需要另行选择模型、配置密钥并明确开启。AI 意见要由人核实，不自动留言、批准或合并。公开 issue 一发出就公开，不要把私人进度备份或内部材料交给初审来脱敏。
 
 ## 内容怎么写
 
@@ -25,7 +29,7 @@
 
 ## 目录和本地检查
 
-站点分四个入口：`learn/` 组织基础知识，`interview/` 放 coding 和面试复习，`practice/` 讲系统设计与工程取舍，`career/` 留求职经历和准备方法。文章仍放在各自的主题目录；只调整导航时不要搬文件，避免已有链接失效。论文来源直接附在相关文章里，不再单设一级栏目。
+站点分五个入口：`learn/` 组织基础知识，`interview/` 放 coding 和面试复习，`practice/` 讲系统设计与工程取舍，独立的「编年史」梳理技术与基础设施的发展，`career/` 留求职经历和准备方法。文章仍放在各自的主题目录；只调整导航时不要搬文件，避免已有链接失效。论文来源直接附在相关文章里，不再单设一级栏目。
 
 ```bash
 pip install markdown pygments numpy
@@ -41,6 +45,8 @@ python site/build.py --serve
 新增导航 group 或调整 reviewer 时，修改 `site/collaboration.toml`，然后运行 `python site/collaboration.py --write`，把生成的 `.github/CODEOWNERS` 一起提交。**配置文件不授予 GitHub 权限**；新 reviewer 须本人同意，并由仓库所有者确认相应权限后再加入。审核配置、构建和协作规则由维护者审核。
 
 ## 署名与参与
+
+原创代码按 MIT、原创笔记按 CC BY 4.0 许可，见[许可范围](LICENSE.md)。提交贡献前请确认有权按对应许可分享；保留已有署名，第三方素材单独标明来源和许可。旧贡献没有明确授权的，需要先确认，不能直接替原作者同意。
 
 代码与笔记署名来自 main 的提交和 `Co-authored-by`；合并时请保留。审阅、提问、翻译和纠错也可以在[贡献记录](https://github.com/tianyi-zhang-02/cooking-agi/issues/new?template=add-me-to-the-crew.yml)里附链接，经本人同意后补到[幕后](contributors.md)。提交数不是质量排名，也不决定权限。
 
@@ -60,12 +66,16 @@ Fix a sentence, question a formula, or ask about something unclear. You don't ne
 
 ## Start small
 
+Not sure where to help? The [roadmap](community/roadmap.en.md#contribute) lists small tasks and proposed directions. [Updates](community/updates.en.md) defines the release scope; a version target is not a reason to mark unfinished or unverified work complete.
+
 - **Typos, references, translations:** fork → edit → PR.
-- **Questions or corrections:** use [note feedback](https://github.com/tianyi-zhang-02/cooking-agi/issues/new?template=note-feedback.yml) with a page and passage.
+- **Questions or corrections:** use [feedback](https://github.com/tianyi-zhang-02/cooking-agi/issues/new?template=note-feedback.yml) and choose a correction, outdated information, explanation request, topic request, or site problem. Link the page or passage; no solution is required, and the area can be left blank.
 - **New notes, visualizations, or navigation changes:** open a [proposal](https://github.com/tianyi-zhang-02/cooking-agi/issues/new?template=proposal.yml) before a draft PR to avoid duplicate work.
 - **Ongoing involvement:** see [area contacts and review rules](community/README.en.md). Maintainers cover unassigned areas; constant availability isn't expected.
 
 Keep each PR focused and explain the change, evidence, and checks. Routine merges require one relevant CODEOWNER approval from a non-author, passing checks, and resolved discussions. Proposals are for broader changes; the collaboration guide explains exceptions and disagreements.
+
+Maintainers can run the optional [three-role review tool](site/REVIEW_ASSIST.md) for technical accuracy, teaching, and evidence/safety. It prepares requests locally by default. Remote calls need an explicit model, key, and opt-in. Humans verify the findings; the tool never comments, approves, or merges. Issues are public immediately, so never submit private progress backups or internal material expecting AI to sanitize them.
 
 ## Writing notes
 
@@ -79,7 +89,7 @@ Keep each PR focused and explain the change, evidence, and checks. Routine merge
 
 ## Structure and local checks
 
-The site has four entry points: `learn/` for foundations, `interview/` for coding and interview revision, `practice/` for system design and engineering decisions, and `career/` for job-search experiences and preparation. Articles stay in their topic directories. Don't move files just to reorganize navigation; preserve existing URLs. Link papers from the relevant articles rather than adding a separate top-level section.
+The site has five entry points: `learn/` for foundations, `interview/` for coding and interview revision, `practice/` for system design and engineering decisions, a separate history section for developments in technology and infrastructure, and `career/` for job-search experiences and preparation. Articles stay in their topic directories. Don't move files just to reorganize navigation; preserve existing URLs. Link papers from the relevant articles rather than adding a separate top-level section.
 
 ```bash
 pip install markdown pygments numpy
@@ -95,6 +105,8 @@ Visit <http://localhost:8000>. For UI changes, check narrow screens, keyboard na
 For new navigation groups or reviewers, update `site/collaboration.toml`, run `python site/collaboration.py --write`, and include the generated `.github/CODEOWNERS` in the PR. **Configuration does not grant GitHub access.** Reviewers must consent and the owner must verify their permissions first. Maintainers review changes to collaboration rules, reviewer configuration, and builds.
 
 ## Credit and participation
+
+Original code uses MIT; original notes use CC BY 4.0. See the [license scope](LICENSE.md). Submit only contributions you have authority to share under the relevant license. Preserve existing credit and identify third-party materials and their terms. Earlier contributions without clear permission need confirmation rather than assumed consent.
 
 Preserve main-branch authors and `Co-authored-by` trailers when merging. Reviews, questions, translations, and corrections can also receive credit on [Behind the notes](contributors.en.md): submit a [contribution record](https://github.com/tianyi-zhang-02/cooking-agi/issues/new?template=add-me-to-the-crew.yml) with evidence and the person's consent. Commit counts do not determine quality or access.
 

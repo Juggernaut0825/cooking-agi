@@ -51,7 +51,7 @@ class NoteReadingTests(unittest.TestCase):
     def test_missing_overview_does_not_create_broken_link(self):
         page = self.page('zh')
         page.section['pages'] = []
-        self.assertNotIn('index.html', build.page_header_html(page))
+        self.assertNotIn('href="../../00-foundations/core/index.html"', build.page_header_html(page))
         self.assertNotIn('page-turn-context', build.page_nav_html(page))
 
     def test_template_loads_reading_script(self):

@@ -70,9 +70,9 @@ class StudyNavigationTests(unittest.TestCase):
         self.assertIn('href="../interview/index.html" class="active"', markup)
         self.assertIn('href="../practice/index.html"', markup)
 
-    def test_four_categories_separate_learning_preparation_and_design(self):
+    def test_categories_separate_learning_preparation_design_and_history(self):
         self.assertEqual([category['id'] for category in self.nav['category']],
-                         ['learn', 'interview', 'practice', 'career'])
+                         ['learn', 'interview', 'practice', 'history', 'career'])
         expected = {
             '00-foundations/core/multi-head-attention.md': 'learn',
             '04-search/tfidf-and-bm25.md': 'learn',
@@ -84,11 +84,22 @@ class StudyNavigationTests(unittest.TestCase):
             'learn/system-design/feed.md': 'practice',
             'practice/post-training/README.md': 'practice',
             'career/README.md': 'career',
+            'learn/technology-timeline.md': 'history',
+            'learn/rl-timeline.md': 'history',
         }
         for source, category in expected.items():
             page = self.chinese[source]
             self.assertEqual(build.page_category(page), category, source)
             self.assertEqual(build.page_category(page.sibling), category, source)
+
+        sidebar = build.sidebar_html(self.chinese['learn/README.md'], self.sections, self.nav['group'])
+        self.assertIn('data-category="history" hidden', sidebar)
+        self.assertNotIn('data-category="history">', sidebar)
+        for language_page in (self.chinese['learn/technology-timeline.md'],
+                              self.chinese['learn/technology-timeline.md'].sibling):
+            markup = build.tabs_html(language_page)
+            self.assertEqual(markup.count('class="active"'), 1)
+            self.assertIn('technology-timeline', markup)
 
     def test_papers_leave_primary_navigation_without_breaking_old_urls(self):
         for source in ('papers/README.md', 'EDITORIAL.md'):

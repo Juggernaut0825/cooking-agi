@@ -31,6 +31,63 @@ request → TokenizerManager → Scheduler → model execution
 
 TokenizerManager handles inputs and request results; Scheduler selects batches; the execution path runs forward passes; DetokenizerManager converts tokens to text. This omits multi-GPU topology and cross-instance routing, rather than promising exactly three processes in every deployment. It also helps diagnosis: low GPU load with slow requests may call for inspecting input preparation and output handling, not only attention kernels.
 
+## Trace both implementations side by side {#engine-map}
+
+Follow vLLM down the left column, then SGLang down the right. Arrows label what crosses an interface; they do not mean copying the whole model or KV cache at every step. This diagram covers ordinary autoregressive text generation. Multimodal input, speculation, and asynchronous execution add branches.
+
+<figure class="engine-map" lang="en">
+<div class="engine-map__lanes">
+<section aria-label="vLLM request path"><h3>vLLM V1</h3><ol>
+<li><strong>API server / AsyncLLM</strong><span>Validate and prepare input; track requests and streaming output</span><small>↓ token IDs, sampling settings, request ID</small></li>
+<li><strong>EngineCore → Scheduler</strong><span>Queues, compute budgets, KV block allocation</span><small>↓ SchedulerOutput: request updates, token counts, block IDs</small></li>
+<li><strong>Executor → GPU workers</strong><span>Dispatch scheduling results to workers that hold model shards</span><small>↓ SchedulerOutput → the worker's model runner</small></li>
+<li><strong>Model runner → kernels</strong><span>Prepare input tensors and attention metadata, then run the model, access KV, and sample</span><small>↑ tokens / execution results return to scheduling and output</small></li>
+</ol></section>
+<section aria-label="SGLang request path"><h3>SGLang SRT</h3><ol>
+<li><strong>HTTP → TokenizerManager</strong><span>Input processing, request state, returned results</span><small>↓ tokenized request</small></li>
+<li><strong>Scheduler + cache / pools</strong><span>Waiting and running requests, prefix matching, cache locations</span><small>↓ ScheduleBatch; converted to ForwardBatch inside the worker</small></li>
+<li><strong>Model worker → ModelRunner</strong><span>Execute the scheduled batch; not a separate serving service</span><small>↓ input tensors and attention metadata</small></li>
+<li><strong>Model → attention backend</strong><span>Run kernels, update KV, send output through detokenization</span><small>↑ DetokenizerManager → TokenizerManager</small></li>
+</ol></section>
+</div>
+<figcaption>Unfinished requests continue into the next iteration. These are responsibility maps, not matching process diagrams. SGLang's ModelRunner belongs to the scheduler's execution path; a box does not imply a separate process.</figcaption>
+</figure>
+
+For vLLM process boundaries, see the [architecture documentation](https://docs.vllm.ai/en/v0.21.0/design/arch_overview/), then follow [EngineCore](https://github.com/vllm-project/vllm/blob/v0.21.0/vllm/v1/engine/core.py). It passes `SchedulerOutput` to the executor; [GPUModelRunner](https://github.com/vllm-project/vllm/blob/v0.21.0/vllm/v1/worker/gpu_model_runner.py) combines it with local request state to prepare tokens, positions, and attention metadata. The scheduler does not assemble all model-input tensors beforehand. The SGLang path is checked against a fixed commit: [Scheduler.run_batch](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/managers/scheduler.py#L4405), the [worker's batch conversion and forward call](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/managers/tp_worker.py#L598), and [ModelRunner](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/model_executor/model_runner.py). These are reading coordinates, not names to memorize.
+
+Suppose request R has six prompt tokens and the first four belong to reusable complete cache blocks. A hit does not finish the request: the scheduler must validate reuse, allocate writable space for two remaining tokens, and find iteration budget. After computation, sampling produces the first new token X. **X's KV does not exist merely because X was sampled.** Feeding X into the next iteration creates its KV and predicts the next token. For a fully cached prompt, obtaining next-token logits still depends on the implementation, such as recomputing the last position. A cache is not a stored answer.
+
+Distinguish two kinds of traffic:
+
+- **Control messages:** request metadata, cancellation, execution plans, completion notices. API-to-engine IPC does not imply sending weights with each message.
+- **Tensor transfers:** TP collectives, PP activations, and moving KV between devices or instances. These have concrete bandwidth, synchronization, and topology costs.
+
+## What sits beneath model execution? {#runtime-stack}
+
+| Layer | Responsibility | A useful follow-up |
+| --- | --- | --- |
+| Model runner | Prepare tokens, positions, cache indices, and model calls | How does a changing batch become executable tensors? Why do shapes affect execution paths? |
+| Model layers and attention backend | QKV projections, attention, MLPs, KV reads/writes | How do prefill and decode shapes differ? How does GQA affect the cache? |
+| Compilation, kernels, CUDA Graphs | Generate or select kernels; reduce launch and scheduling overhead | Capture constraints on shapes and buffers; fallback paths when they do not fit |
+| GPU memory and communication | HBM holds weights and KV; registers / shared memory reuse local data; devices exchange tensors | Compute, HBM bandwidth, or interconnect bound? Can transfers overlap useful computation? |
+
+PyTorch, Triton, CUDA, and vendor libraries appear in different backends; they are not a fixed series of services that every request traverses. CUDA Graphs primarily reduce CPU overhead for launching GPU work. They do not make KV storage free or eliminate TP communication. FlashAttention's IO optimization and paged KV management also address different layers: how attention is computed versus how cached state is allocated and addressed. See [attention kernels and cache layouts](../00-foundations/deep-dives/attention-kernels.en.md).
+
+Continue through the pinned [SGLang ModelRunner](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/model_executor/model_runner.py) for execution choices. If you have only read a backend, say so; source reading is not measured optimization experience.
+
+## Several GPUs can mean different things {#deployment-map}
+
+<figure class="worked-update" lang="en">
+<ol>
+<li><small>Split requests / Replicas</small><strong>Request A → replica 1<br>Request B → replica 2</strong><span>Complete replicas handle different requests. Capacity may grow, but weights are duplicated and a selected replica may not hold the warm prefix.</span></li>
+<li><small>Split the model / TP</small><strong>One request → GPU 0 + GPU 1</strong><span>Devices compute different parts of the same layer. These are not independent requests; layer-level communication can be expensive on a weak interconnect.</span></li>
+<li><small>Split stages / P–D</small><strong>Prefill worker → KV → decode worker</strong><span>Schedule different compute shapes separately, at the cost of KV transfers, routing, and two queues. Slow decode alone is not a reason to split.</span></li>
+</ol>
+<figcaption>These choices can combine. “Replica” here means a complete inference replica, not every MoE DP / EP topology.</figcaption>
+</figure>
+
+For a teaching configuration with eight GPUs, TP=2 and four complete replicas means a request uses one two-GPU group, with four groups scheduling requests independently. It does not mean every request automatically uses all eight GPUs. Whether this beats TP=8 depends on model fit, KV headroom, single-request latency, arrivals, and interconnects. Start with the [memory budget](../00-foundations/deep-dives/kv-cache-and-inference.en.md#inference-budget), then measure representative traffic.
+
 ## Refill a batch as requests finish {#batching}
 
 Take an idealized decode schedule. A and B have completed prefill and need two and five more tokens. C is ready and needs three. Each round accommodates two requests, producing one token each; ignore every other cost.
@@ -95,3 +152,21 @@ A single “hello” request is insufficient. Include short questions, long docu
 An open-arrival test keeps sending on schedule and exposes queue buildup. A closed-loop test waits for prior completions, so offered load can fall when the system slows. Both are useful if labeled, with offered and completed work reported. A shared seed does not guarantee identical generated text across engines, batches, or kernels; run quality and format regressions separately.
 
 The outcome should be a reproducible record: versions, configuration, inputs, results, and failures. Continue with [serving and feedback](../practice/ml-system/serving-and-feedback.en.md) to place the engine inside a product.
+
+## Explain the path before listing features {#interview-walkthrough}
+
+One short opening can establish the scope:
+
+> I would trace a request first. The application handles access, prompts, and incoming traffic. The engine owns queues, compute budgets, and KV state, and schedules each iteration. Workers execute the model and kernels, then return results for streaming. Input/output lengths, arrival rate, and latency targets tell me which bottleneck to investigate before changing batches, replicas, or model/stage partitioning.
+
+That is an answer structure, not a script. Continue into a part you know well:
+
+| Follow-up | Explain | Evidence to bring |
+| --- | --- | --- |
+| Why is a service slow despite a high prefix hit rate? | How many tokens hit, and on which replica? Queues, decode, and transfers remain after prefill reuse | Phase traces, reused tokens, cold/warm comparisons |
+| What happens when KV is full? | Wait, reject, evict reclaimable blocks, preempt, or recompute; distinguish reclaimable cache from state still used by active requests | Capacity, references, preemption/recomputation, tail latency |
+| Is TP=4 always faster than TP=2? | Less work per device can come with more communication or a larger communication share; small batches may underutilize hardware | Compute/collective timings, interconnect, batch and model structure |
+| A client disconnected but memory did not drop—is that a leak? | Check termination and references; retaining a memory pool does not mean continuing to serve the request | Request lifecycle, active blocks versus idle pool, not process memory alone |
+| How would you demonstrate an improvement? | Match versions and traffic; compare completions meeting quality and latency targets, cost, and errors | Open-arrival testing, failures, reproducible settings—not just tokens/s |
+
+Read source by following a request object into a batch, cache indices, and execution. You do not need to read the repository in file order. For the broader preparation route, see [RE / MLE and inference interviews](../interview/ai-roles-prep.en.md#inference). This chapter checks source and teaching examples; it does not run GPU benchmarks for either framework.

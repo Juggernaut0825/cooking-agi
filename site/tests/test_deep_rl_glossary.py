@@ -101,7 +101,7 @@ class DeepRLGlossaryTests(unittest.TestCase):
             pages, _ = build.discover(nav)
             known = {page.url for page in pages}
             selected = [page for page in pages if page.section["group"] == "deep-rl"]
-            self.assertEqual(len(selected), 34)
+            self.assertEqual(len(selected), 38)
             for page in selected:
                 with self.subTest(page=page.url):
                     build.build_page(page, build.load_glossary(), nav["site"]["repo"], known)

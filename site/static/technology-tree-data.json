@@ -1,0 +1,3345 @@
+{
+  "version": 3,
+  "reviewed": "2026-10-12",
+  "nodes": [
+    {
+      "id": "mycin",
+      "year": 1975,
+      "status": "historical",
+      "title": {
+        "zh": "MYCIN · 专家知识写成规则",
+        "en": "MYCIN · rules from expertise"
+      },
+      "body": {
+        "zh": "把领域知识写成规则，并能解释建议、接收新规则。这里关注知识工程的做法，不把研究系统当作今天的临床工具。",
+        "en": "Domain knowledge is represented as rules, with facilities to explain recommendations and acquire new rules. The historical point is knowledge engineering, not present-day clinical use."
+      },
+      "limit": {
+        "zh": "1975 年标记所引系统报告，不是 MYCIN 项目启动年；知识维护和规则覆盖之外的情况仍是问题。",
+        "en": "1975 dates the cited system report, not the project's start; knowledge maintenance and cases beyond the rules remain challenges."
+      },
+      "sources": [
+        [
+          "Shortliffe et al. · 1975",
+          "https://www.inf.ufpr.br/alexd/ARTIGOS_IA/Shortliffe_et_al_1975.pdf"
+        ]
+      ],
+      "kind": "system",
+      "topic": "applications"
+    },
+    {
+      "id": "svm",
+      "year": 1995,
+      "status": "historical",
+      "title": {
+        "zh": "SVM · 间隔与泛化",
+        "en": "SVM · margins and generalization"
+      },
+      "body": {
+        "zh": "用间隔、正则化与核方法处理分类问题。统计学习并不是神经网络的过渡版本，而是另一组建模选择。",
+        "en": "Margins, regularization, and kernels support classification. Statistical learning offers another set of modeling choices, not merely a temporary version of neural networks."
+      },
+      "limit": {
+        "zh": "这里标记 1995 年对不可分数据的代表工作，不是所有核方法的起点。",
+        "en": "This marks the 1995 work on non-separable data, not the origin of every kernel method."
+      },
+      "sources": [
+        [
+          "Cortes & Vapnik · 1995",
+          "https://homepages.math.uic.edu/~lreyzin/papers/cortes95.pdf"
+        ]
+      ],
+      "kind": "research",
+      "topic": "models"
+    },
+    {
+      "id": "dartmouth",
+      "year": 1956,
+      "status": "historical",
+      "title": {
+        "zh": "Dartmouth · 把 AI 作为研究问题",
+        "en": "Dartmouth · an AI research agenda"
+      },
+      "body": {
+        "zh": "1955 年的提案为 1956 年的 Dartmouth 项目列出学习、语言和推理等问题。一群研究者开始围绕 AI 这个名称共同组织研究，而不是此时才第一次想到机器智能。",
+        "en": "The 1955 proposal set out learning, language, and reasoning questions for the 1956 Dartmouth project. Researchers organized work around the name AI; machine intelligence itself was not a new question."
+      },
+      "limit": {
+        "zh": "很多路线同时出现；这不是一条通往 LLM 的必然路线。",
+        "en": "Several approaches coexist; none makes LLMs an inevitable destination."
+      },
+      "sources": [
+        [
+          "Dartmouth proposal · 1955",
+          "https://www-formal.stanford.edu/jmc/history/dartmouth/dartmouth.html"
+        ]
+      ],
+      "kind": "research",
+      "topic": "ecosystem"
+    },
+    {
+      "id": "symbolic",
+      "year": 1956,
+      "status": "historical",
+      "title": {
+        "zh": "Logic Theory Machine · 启发式证明搜索",
+        "en": "Logic Theory Machine · heuristic proof search"
+      },
+      "body": {
+        "zh": "Newell 与 Simon 在 1956 年报告中给出一个寻找符号逻辑证明的系统规格。它用启发式方法选择搜索方向，把推理过程写成可供计算机实现的规则。",
+        "en": "Newell and Simon's 1956 report specifies a system for finding proofs in symbolic logic. Heuristics guide the search, expressing reasoning as rules suitable for computer implementation."
+      },
+      "limit": {
+        "zh": "本条标记 1956 年报告；原文侧重系统规格而非计算机实现，不代表整个符号 AI 的起源。",
+        "en": "This marks the 1956 report, which focuses on the system specification rather than its computer implementation; it does not date the origin of all symbolic AI."
+      },
+      "sources": [
+        [
+          "Newell & Simon · RAND P-868 (1956), original report and abstract",
+          "https://www.rand.org/pubs/papers/P868.html"
+        ]
+      ],
+      "kind": "research",
+      "topic": "models"
+    },
+    {
+      "id": "backprop",
+      "year": 1986,
+      "status": "historical",
+      "title": {
+        "zh": "Backpropagation · 反向传播",
+        "en": "Backpropagation · learning hidden representations"
+      },
+      "body": {
+        "zh": "反向传播让输出误差能逐层用于调整权重。1986 年这篇代表性工作展示了隐藏表示的学习，不是反向微分最早的起点。",
+        "en": "Backpropagation uses output errors to adjust weights throughout a network. The 1986 work is a landmark in learning hidden representations, not the first appearance of reverse-mode differentiation."
+      },
+      "limit": {
+        "zh": "有了梯度，并不代表深网络就容易优化，也不保证泛化。",
+        "en": "Having gradients does not make every deep network easy to optimize or ensure generalization."
+      },
+      "sources": [
+        [
+          "Rumelhart, Hinton & Williams · 1986",
+          "https://www.nature.com/articles/323533a0"
+        ]
+      ],
+      "kind": "research",
+      "topic": "models"
+    },
+    {
+      "id": "qlearning",
+      "year": 1992,
+      "status": "historical",
+      "title": {
+        "zh": "从反馈学动作价值",
+        "en": "Learning action values"
+      },
+      "body": {
+        "zh": "Q-learning 用当前奖励和后续价值更新一个动作的估值。1992 年的论文给出表格情形的收敛分析；方法更早出现在 Watkins 的 1989 年博士论文中。",
+        "en": "Q-learning updates action values from immediate reward and future estimates. The 1992 paper analyzes tabular convergence; the method appeared in Watkins’s 1989 thesis."
+      },
+      "limit": {
+        "zh": "表格情形的条件不能直接移到深度网络上。",
+        "en": "Tabular convergence conditions do not automatically carry over to neural networks."
+      },
+      "sources": [
+        [
+          "Watkins & Dayan · 1992",
+          "https://www.gatsby.ucl.ac.uk/~dayan/papers/cjch.pdf"
+        ]
+      ],
+      "kind": "research",
+      "topic": "models"
+    },
+    {
+      "id": "lstm",
+      "year": 1997,
+      "status": "historical",
+      "title": {
+        "zh": "LSTM · 保留较远的信息",
+        "en": "LSTM · retaining information"
+      },
+      "body": {
+        "zh": "循环网络处理序列时，较早的信息不容易一直保留。LSTM 用记忆状态和门控改善长距离学习。",
+        "en": "Recurrent networks can struggle to retain information across long sequences. LSTM introduces a memory state and gates to improve long-range learning."
+      },
+      "limit": {
+        "zh": "门控缓解问题，不等于任意长度都能记住。",
+        "en": "Gating helps; it does not guarantee memory over arbitrary distances."
+      },
+      "sources": [
+        [
+          "Hochreiter & Schmidhuber · 1997",
+          "https://www.bioinf.jku.at/publications/older/2604.pdf"
+        ]
+      ],
+      "kind": "research",
+      "topic": "models"
+    },
+    {
+      "id": "alexnet",
+      "year": 2012,
+      "status": "historical",
+      "title": {
+        "zh": "AlexNet · 视觉识别",
+        "en": "AlexNet · visual recognition"
+      },
+      "body": {
+        "zh": "识别照片里的物体，过去常需要人工设计特征。AlexNet 从像素中学习多层特征，并结合大规模标注数据、ReLU、数据增强和 GPU 实现。论文报告的 ILSVRC-2012 参赛结果，top-5 错误率为 15.3%，第二名为 26.2%。",
+        "en": "AlexNet learned layered features from pixels rather than relying on a hand-designed feature pipeline. It combined labeled images, ReLUs, augmentation, and a GPU implementation. The paper reported a 15.3% top-5 error rate for its ILSVRC-2012 entry, versus 26.2% for the runner-up."
+      },
+      "limit": {
+        "zh": "图像分类的成功，不代表已经会理解或生成所有视觉内容。",
+        "en": "Image classification success is not general visual understanding or generation."
+      },
+      "sources": [
+        [
+          "AlexNet · 2012",
+          "https://proceedings.neurips.cc/paper/2012/hash/c399862d3b9d6b76c8436e924a68c45b-Abstract.html"
+        ],
+        [
+          "AlexNet · original paper",
+          "https://papers.nips.cc/paper_files/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf"
+        ]
+      ],
+      "kind": "research",
+      "topic": "models",
+      "detail": {
+        "zh": "这里的 top-5 是看模型给出的五个类别里有没有正确答案。另一个值得留意的细节是显存：网络放不进一张 3GB GPU，作者把它分到两张卡上，并控制跨卡通信。模型结构、数据与工程在同一个结果里交汇。",
+        "en": "Top-5 asks whether the correct class appears among five predictions. Memory also shaped the implementation: the network did not fit on one 3GB GPU, so it was split across two, with limited cross-device communication. The result joined model design, data, and engineering."
+      }
+    },
+    {
+      "id": "dqn",
+      "year": 2013,
+      "status": "historical",
+      "title": {
+        "zh": "DQN · 从画面学决策",
+        "en": "DQN · decisions from pixels"
+      },
+      "body": {
+        "zh": "用神经网络估计动作价值，把 RL 接到 Atari 的画面输入。经验回放让过去的交互能再次用于训练。",
+        "en": "A neural network estimates action values from Atari pixels, while replay reuses past interactions for training."
+      },
+      "limit": {
+        "zh": "这类可反复重置的游戏，与真实机器人有不同的试错成本。",
+        "en": "Resettable games and physical robots have different costs of failure."
+      },
+      "sources": [
+        [
+          "Playing Atari with Deep RL · 2013",
+          "https://arxiv.org/abs/1312.5602"
+        ]
+      ],
+      "kind": "research",
+      "topic": "models"
+    },
+    {
+      "id": "seq2seq",
+      "year": 2014,
+      "status": "historical",
+      "title": {
+        "zh": "Seq2Seq · 序列到序列",
+        "en": "Seq2Seq · sequence to sequence"
+      },
+      "body": {
+        "zh": "编码输入，再生成输出，让长度不同的序列能放进统一的学习流程，例如机器翻译。",
+        "en": "Encoding an input and generating an output gives variable-length sequences a shared learning setup, as in machine translation."
+      },
+      "limit": {
+        "zh": "这里标记编码器—解码器思路的一项代表工作，不是所有后续模型的唯一来源。",
+        "en": "This marks a representative encoder–decoder approach, not the sole origin of later models."
+      },
+      "sources": [
+        [
+          "Sequence to Sequence Learning · 2014",
+          "https://arxiv.org/abs/1409.3215"
+        ]
+      ],
+      "kind": "research",
+      "topic": "models"
+    },
+    {
+      "id": "transformer",
+      "year": 2017,
+      "status": "adopted",
+      "title": {
+        "zh": "Transformer · Attention",
+        "en": "Transformer · attention"
+      },
+      "body": {
+        "zh": "早期翻译模型常按顺序更新循环状态。Transformer 改用 attention，让一个位置按内容从其他位置汇集信息，减少对逐步循环的依赖。原论文研究的是带编码器和解码器的机器翻译模型。",
+        "en": "Earlier translation models commonly updated recurrent states in sequence. Transformer used attention to let a position gather information from other positions by content, reducing dependence on sequential recurrence. The original work studied an encoder–decoder translation model."
+      },
+      "limit": {
+        "zh": "取消循环层不等于取消生成顺序：原文的自回归解码仍逐个生成输出。结构也不等于训练目标或能力等级。",
+        "en": "Removing recurrent layers does not remove generation order: the paper's autoregressive decoder still produces outputs sequentially. Architecture is not a training objective or capability ranking."
+      },
+      "sources": [
+        [
+          "Attention Is All You Need · 2017",
+          "https://arxiv.org/abs/1706.03762"
+        ],
+        [
+          "ViT · 2020",
+          "https://arxiv.org/abs/2010.11929"
+        ]
+      ],
+      "kind": "research",
+      "topic": "models",
+      "detail": {
+        "zh": "读一句话时，某个词的表示可以直接结合远处的词；在编码器中，这些位置能并行计算。生成译文则仍要逐步输出，解码器用 causal mask 避免看到未来答案。后来 BERT 和 GPT 对这套结构作了不同选择。",
+        "en": "A word's representation can draw directly on a distant word, with encoder positions computed in parallel. Producing a translation still proceeds step by step, and causal masking prevents the decoder from reading future answers. BERT and GPT later made different choices within this architectural family."
+      }
+    },
+    {
+      "id": "ppo",
+      "year": 2017,
+      "status": "adopted",
+      "title": {
+        "zh": "PPO · 控制更新幅度",
+        "en": "PPO · moderating policy updates"
+      },
+      "body": {
+        "zh": "用裁剪等设计约束策略更新的激励，兼顾实现与训练效率。它后来也被用于人类反馈训练。",
+        "en": "Clipping moderates the incentive for large policy updates with a practical training procedure. PPO is later used in learning from human feedback."
+      },
+      "limit": {
+        "zh": "裁剪不是实际 KL 永远受限的保证。",
+        "en": "Clipping is not a hard guarantee on the actual KL divergence."
+      },
+      "sources": [
+        [
+          "PPO · 2017",
+          "https://arxiv.org/abs/1707.06347"
+        ],
+        [
+          "InstructGPT · 2022",
+          "https://arxiv.org/abs/2203.02155"
+        ]
+      ],
+      "kind": "research",
+      "topic": "models"
+    },
+    {
+      "id": "bert",
+      "year": 2018,
+      "status": "historical",
+      "title": {
+        "zh": "BERT · 双向预训练",
+        "en": "BERT · bidirectional pretraining"
+      },
+      "body": {
+        "zh": "先用掩码语言建模学习表示，再适配下游任务。预训练模型不再只服务于原来的一个任务。",
+        "en": "Masked language modeling learns representations that can be adapted to downstream tasks, extending pretraining beyond a single task."
+      },
+      "limit": {
+        "zh": "双向编码与自回归生成的可见信息不同。",
+        "en": "Bidirectional encoding and autoregressive generation have different visibility constraints."
+      },
+      "sources": [
+        [
+          "BERT · 2018",
+          "https://arxiv.org/abs/1810.04805"
+        ]
+      ],
+      "kind": "research",
+      "topic": "models"
+    },
+    {
+      "id": "sac",
+      "year": 2018,
+      "status": "adopted",
+      "title": {
+        "zh": "SAC · 连续控制",
+        "en": "SAC · continuous control"
+      },
+      "body": {
+        "zh": "把最大熵目标和离策略数据重用放在一起，学习连续动作。它体现了机器人与模拟控制中对样本效率的关注。",
+        "en": "Maximum-entropy learning and off-policy reuse support continuous actions, addressing sample efficiency in control."
+      },
+      "limit": {
+        "zh": "模拟器里学会，不等于在真实硬件上安全可靠。",
+        "en": "Success in simulation does not establish safety on physical hardware."
+      },
+      "sources": [
+        [
+          "Soft Actor-Critic · 2018",
+          "https://arxiv.org/abs/1801.01290"
+        ]
+      ],
+      "kind": "research",
+      "topic": "models"
+    },
+    {
+      "id": "zero",
+      "year": 2019,
+      "status": "adopted",
+      "title": {
+        "zh": "ZeRO · 拆分训练状态",
+        "en": "ZeRO · sharded training state"
+      },
+      "body": {
+        "zh": "普通数据并行让每张 GPU 保存一份训练状态，模型变大时会浪费大量显存。ZeRO 逐步把优化器状态、梯度和参数分片，让不同 GPU 分担保存工作，需要时再通信。",
+        "en": "Ordinary data parallelism replicates training state on each GPU. For large models, those copies consume substantial memory. ZeRO progressively partitions optimizer state, gradients, and parameters, distributing storage and communicating when needed."
+      },
+      "limit": {
+        "zh": "分片不代表通信免费，也不是把所有并行方式合成一个选项。",
+        "en": "Sharding does not make communication free or replace every other form of parallelism."
+      },
+      "sources": [
+        [
+          "ZeRO · 2019",
+          "https://arxiv.org/abs/1910.02054"
+        ]
+      ],
+      "kind": "research",
+      "topic": "distributed",
+      "detail": {
+        "zh": "例如四张卡都保存一份优化器状态，可以改成每张只负责其中一部分。这样能省掉重复副本，但计算需要的数据要及时交换。ZeRO 的核心是换一种组织状态的办法，不是把所有训练内存无条件缩小到四分之一。",
+        "en": "With four GPUs, optimizer state that was copied four times can instead be divided among them. This removes duplication but requires exchanging data when computation needs it. It does not make every component of training memory one quarter of its original size."
+      }
+    },
+    {
+      "id": "gpt3",
+      "year": 2020,
+      "status": "historical",
+      "title": {
+        "zh": "GPT-3 · 扩大语言预训练",
+        "en": "GPT-3 · scaling language pretraining"
+      },
+      "body": {
+        "zh": "大规模自回归预训练展示了通过上下文示例完成不同任务的能力。一个模型可以先读提示和示例，再尝试新任务，而不必每次重新微调。",
+        "en": "Large-scale autoregressive pretraining demonstrated task adaptation from examples in context, without a separate fine-tuning run for every task."
+      },
+      "limit": {
+        "zh": "上下文学习不等于改了模型权重，也不保证所有任务都能泛化。",
+        "en": "In-context learning does not update model weights or guarantee generalization to every task."
+      },
+      "sources": [
+        [
+          "Language Models are Few-Shot Learners · 2020",
+          "https://arxiv.org/abs/2005.14165"
+        ]
+      ],
+      "kind": "research",
+      "topic": "models"
+    },
+    {
+      "id": "vit",
+      "year": 2020,
+      "status": "adopted",
+      "title": {
+        "zh": "ViT · 图像也能用 Transformer",
+        "en": "ViT · transformers for images"
+      },
+      "body": {
+        "zh": "把图像切成 patch，再交给 Transformer 编码。序列结构被用于视觉，但训练规模和归纳偏置仍重要。",
+        "en": "Image patches become a sequence for a Transformer. Scale and inductive bias still matter when moving the architecture into vision."
+      },
+      "limit": {
+        "zh": "用相似结构处理，不表示图像和文字的数据特点相同。",
+        "en": "A shared architecture does not make images and text equivalent data."
+      },
+      "sources": [
+        [
+          "An Image is Worth 16x16 Words · 2020",
+          "https://arxiv.org/abs/2010.11929"
+        ]
+      ],
+      "kind": "research",
+      "topic": "models"
+    },
+    {
+      "id": "diffusion",
+      "year": 2020,
+      "status": "adopted",
+      "title": {
+        "zh": "Diffusion · 从噪声生成",
+        "en": "Diffusion · generation from noise"
+      },
+      "body": {
+        "zh": "DDPM 学习逐步去噪，成为生成建模的一条重要路线。它不是语言模型长出来后才出现的附属分支。",
+        "en": "DDPM learns iterative denoising as an important generative modeling route. It is not merely a branch that appeared after language models."
+      },
+      "limit": {
+        "zh": "这里用 DDPM 标记代表节点，不称它为扩散思想的首次提出。",
+        "en": "DDPM is a representative landmark, not the first proposal of diffusion-based modeling."
+      },
+      "sources": [
+        [
+          "DDPM · 2020",
+          "https://arxiv.org/abs/2006.11239"
+        ]
+      ],
+      "kind": "research",
+      "topic": "models"
+    },
+    {
+      "id": "clip",
+      "year": 2021,
+      "status": "adopted",
+      "title": {
+        "zh": "CLIP · 把图像和文字接起来",
+        "en": "CLIP · connecting images and text"
+      },
+      "body": {
+        "zh": "固定类别标签很难覆盖所有想识别的东西。CLIP 用成对的图片和文字训练两个编码器，让配对内容的表示更接近，再用自然语言描述构造识别任务。",
+        "en": "A fixed label set cannot cover everything people might want to recognize. CLIP trained image and text encoders on paired examples, bringing matching representations together and allowing natural-language descriptions to define recognition tasks."
+      },
+      "limit": {
+        "zh": "对齐表示不等于自动会生成有依据的回答。",
+        "en": "Aligned representations do not by themselves generate grounded answers."
+      },
+      "sources": [
+        [
+          "CLIP · 2021",
+          "https://arxiv.org/abs/2103.00020"
+        ]
+      ],
+      "kind": "research",
+      "topic": "models",
+      "detail": {
+        "zh": "比如要区分自行车和汽车，可以分别编码“自行车的照片”和“汽车的照片”，再与图片表示比较。这种用法不必为这两个类别另训一个分类头；但换个描述，结果也可能变化，而且模型本身并不负责生成解释。",
+        "en": "For bicycle-versus-car recognition, encode descriptions such as “a photo of a bicycle” and “a photo of a car,” then compare them with the image representation. No new classifier head is needed for those labels, but wording can affect the result. The model itself does not generate an explanation."
+      }
+    },
+    {
+      "id": "instructgpt",
+      "year": 2022,
+      "status": "historical",
+      "title": {
+        "zh": "InstructGPT · 学习人的要求",
+        "en": "InstructGPT · learning from feedback"
+      },
+      "body": {
+        "zh": "把示范、偏好标注、奖励模型和 PPO 接起来，调整语言模型的回答行为。它是公开的 RLHF 实践节点，不是人类反馈学习的起源。",
+        "en": "Demonstrations, preference labels, a reward model, and PPO adjust language-model behavior. This is a public RLHF landmark, not the origin of learning from human feedback."
+      },
+      "limit": {
+        "zh": "标注群体的偏好不能直接代表所有人的需要。",
+        "en": "Annotator preferences do not automatically represent everyone’s needs."
+      },
+      "sources": [
+        [
+          "InstructGPT · 2022",
+          "https://arxiv.org/abs/2203.02155"
+        ]
+      ],
+      "kind": "research",
+      "topic": "models"
+    },
+    {
+      "id": "flash",
+      "year": 2022,
+      "status": "adopted",
+      "title": {
+        "zh": "FlashAttention · 减少读写",
+        "en": "FlashAttention · reducing IO"
+      },
+      "body": {
+        "zh": "FlashAttention 用分块计算减少 GPU 显存与片上 SRAM 之间的 attention 中间结果读写。它保持精确 attention，并支持前向与反向计算，不只是推理服务优化。",
+        "en": "FlashAttention tiles attention computation to reduce intermediate transfers between GPU memory and on-chip SRAM. It preserves exact attention and supports forward and backward computation, rather than only optimizing inference serving."
+      },
+      "limit": {
+        "zh": "实际收益仍依赖形状、硬件和实现版本。",
+        "en": "Gains still depend on shapes, hardware, and implementation."
+      },
+      "sources": [
+        [
+          "FlashAttention · 2022",
+          "https://arxiv.org/abs/2205.14135"
+        ]
+      ],
+      "kind": "research",
+      "topic": "software",
+      "detail": {
+        "zh": "普通实现会把很大的 attention 分数矩阵写到显存里，再读回来做后续计算。FlashAttention 分块处理，并维护归一化所需的统计量，避免完整保存这个中间矩阵。省的是数据搬运和中间存储，不是把需要关注的 token 随意丢掉。",
+        "en": "A conventional implementation writes a large attention-score matrix to GPU memory and reads it back for later operations. FlashAttention works in tiles and maintains the statistics needed for normalization without storing the full intermediate matrix. It reduces movement and storage rather than discarding arbitrary tokens."
+      }
+    },
+    {
+      "id": "dpo",
+      "year": 2023,
+      "status": "adopted",
+      "title": {
+        "zh": "DPO · 从回答对学偏好",
+        "en": "DPO · learning from preference pairs"
+      },
+      "body": {
+        "zh": "收集“同一个问题，哪份回答更好”的偏好对，可以直接用 DPO 更新语言模型。它从带 KL 约束的奖励优化目标推导出偏好损失，普通离线训练流程不必另训显式奖励模型或边训练边采样。",
+        "en": "DPO trains a language model directly on preferred and rejected responses to the same prompt. Its preference loss is derived from a KL-regularized reward objective. The ordinary offline workflow needs neither a separately trained reward model nor rollouts during training."
+      },
+      "limit": {
+        "zh": "离线 DPO 不等于在线 RL，也不自动解决偏好数据偏差。",
+        "en": "Offline DPO is not online RL and does not automatically fix preference-data bias."
+      },
+      "sources": [
+        [
+          "DPO · 2023",
+          "https://arxiv.org/abs/2305.18290"
+        ],
+        [
+          "Tülu 3 · recipe",
+          "https://arxiv.org/html/2411.15124v3"
+        ]
+      ],
+      "kind": "research",
+      "topic": "models",
+      "detail": {
+        "zh": "假设两份摘要中，A 保留了关键事实，B 漏掉了一个重要条件。偏好标签告诉模型更偏向 A，但训练比较的是相对于 reference model 的回答概率比，而不是简单地把 A 当成唯一正确答案。数据中的偏好是否可靠，仍要另行检查。",
+        "en": "Suppose summary A preserves the key facts while B omits an important condition. A preference label favors A, but the loss compares response probability ratios relative to a reference model—not merely A as the only correct answer. The reliability of that preference still needs checking."
+      }
+    },
+    {
+      "id": "vllm",
+      "year": 2023,
+      "status": "adopted",
+      "title": {
+        "zh": "vLLM · 管好 KV cache",
+        "en": "vLLM · managing KV cache"
+      },
+      "body": {
+        "zh": "PagedAttention 借鉴分页式管理，减少 KV cache 的内存浪费，支撑更有效的服务调度。",
+        "en": "PagedAttention uses paged memory management to reduce KV-cache waste and support more effective serving."
+      },
+      "limit": {
+        "zh": "这里的 KV cache 是注意力键和值的张量缓存，不是 CPU 硬件缓存；减少内存浪费也不保证每个请求延迟都下降。",
+        "en": "This KV cache stores attention key and value tensors, not CPU hardware cache lines; reducing memory waste does not guarantee lower latency for every request."
+      },
+      "sources": [
+        [
+          "PagedAttention · 2023",
+          "https://arxiv.org/abs/2309.06180"
+        ]
+      ],
+      "kind": "system",
+      "topic": "distributed",
+      "detail": {
+        "zh": "一个请求只生成了几十个 token，另一个还要继续写很长。若预先给每个请求留一大块连续空间，容易浪费显存。PagedAttention 把 KV cache 切成块、通过映射访问，按需要分配；这和 CPU 的硬件缓存不是同一层机制。",
+        "en": "One request may finish after a few dozen tokens while another keeps growing. Reserving large contiguous buffers can waste memory. PagedAttention divides the KV cache into blocks accessed through a mapping, allocating as needed. This is distinct from a CPU's hardware cache."
+      }
+    },
+    {
+      "id": "rt2",
+      "year": 2023,
+      "status": "historical",
+      "title": {
+        "zh": "RT-2 · 视觉语言走向动作",
+        "en": "RT-2 · vision-language to action"
+      },
+      "body": {
+        "zh": "机器人不仅要看懂画面和指令，还要输出动作。RT-2 把视觉语言预训练和机器人动作数据结合起来，尝试把已有的视觉语言能力用到控制任务里。",
+        "en": "A robot needs to act, not just interpret images and instructions. RT-2 combines vision-language pretraining with robot-action data to transfer some of those capabilities into control."
+      },
+      "limit": {
+        "zh": "VLA 不等于 RL；这个节点不说明机器人训练已有统一配方。",
+        "en": "VLA is not synonymous with RL, nor does this establish a universal robotics recipe."
+      },
+      "sources": [
+        [
+          "RT-2 · 2023",
+          "https://arxiv.org/abs/2307.15818"
+        ]
+      ],
+      "kind": "system",
+      "topic": "applications"
+    },
+    {
+      "id": "grpo",
+      "year": 2024,
+      "status": "adopted",
+      "title": {
+        "zh": "GRPO · 用一组回答作比较",
+        "en": "GRPO · comparing sampled groups"
+      },
+      "body": {
+        "zh": "同一道题生成几份回答，用它们的奖励差异估计优势（advantage），不用另训价值模型。DeepSeekMath 提出后，R1 采用了它，TRL 和 verl 也提供了实现。",
+        "en": "Generate several answers to a prompt and compare their rewards to estimate advantages, without training a separate value model. DeepSeekMath introduced GRPO; R1 used it, and TRL and verl provide implementations."
+      },
+      "limit": {
+        "zh": "2024 年是 DeepSeekMath 论文年份；框架文档是后续实现证据，不是 2024 年的发布记录。省去价值模型不等于省去奖励设计或采样成本。",
+        "en": "2024 dates the DeepSeekMath paper; framework documentation evidences later implementations, not 2024 releases. Omitting a value model does not eliminate reward design or sampling costs."
+      },
+      "sources": [
+        [
+          "DeepSeekMath · 2024",
+          "https://arxiv.org/html/2402.03300v3"
+        ],
+        [
+          "DeepSeek-R1 · January 2025 report, v1",
+          "https://arxiv.org/html/2501.12948v1"
+        ],
+        [
+          "TRL · implementation",
+          "https://huggingface.co/docs/trl/grpo_trainer"
+        ],
+        [
+          "verl · implementation",
+          "https://verl.readthedocs.io/en/latest/algo/grpo.html"
+        ]
+      ],
+      "kind": "research",
+      "topic": "models",
+      "detail": {
+        "zh": "用一个简化的结果奖励例子看：同一题的四个回答得到 1、1、0、0，组内平均是 0.5，于是能区分高于和低于平均的回答。若四个全得 0，标准的组内相对奖励就没有区分信号；多采样有成本，也不一定带来可用反馈。",
+        "en": "Consider four answers with simple outcome rewards of 1, 1, 0, and 0. Their mean is 0.5, giving a signal that distinguishes above-average from below-average answers. If all four score zero, the standard relative group reward supplies no distinction. More sampling costs resources without necessarily yielding useful feedback."
+      }
+    },
+    {
+      "id": "posttraining-open",
+      "year": 2025,
+      "status": "evolving",
+      "title": {
+        "zh": "后训练配方 · 还在探索",
+        "en": "Post-training recipes · still evolving"
+      },
+      "body": {
+        "zh": "模型具备某种能力，不代表一次训练就能稳定地把它调出来。SFT、DPO、PPO、GRPO 处理不同的数据和反馈；所列报告展示了可行配方，也留下了任务、预算和训练稳定性上的取舍。",
+        "en": "A model's potential capability is not always easy to elicit reliably through training. SFT, DPO, PPO, and GRPO use different data and feedback. The reports here describe working recipes along with trade-offs in task coverage, budget, and stability."
+      },
+      "limit": {
+        "zh": "2025 年是这组开放问题的材料时间坐标，不是后训练诞生年；Tülu 3 初稿发表于 2024 年，此处引用的是 2025 年修订本。",
+        "en": "2025 locates this evidence-based open question, not the birth of post-training; Tülu 3 first appeared in 2024, while the cited revision is from 2025."
+      },
+      "sources": [
+        [
+          "Tülu 3 · recipe and ablations",
+          "https://arxiv.org/html/2411.15124v3"
+        ],
+        [
+          "DeepSeek-R1 · January 2025 report, v1",
+          "https://arxiv.org/html/2501.12948v1"
+        ]
+      ],
+      "kind": "open",
+      "topic": "models",
+      "detail": {
+        "zh": "比较方案时，可以先固定任务与评估，再问：高质量示范是否足够？奖励能否核验？每次 rollout 要花多久？同样的预算是多收数据、增加采样，还是多更新几步？这些选择往往比只比较算法名称更接近实际工作。",
+        "en": "To compare approaches, fix the task and evaluation first. Then ask whether good demonstrations are available, rewards can be checked, and rollouts are affordable. A fixed budget could buy more data, more samples, or more updates. Those choices often say more about the work than the algorithm name alone."
+      }
+    },
+    {
+      "id": "resnet",
+      "year": 2015,
+      "kind": "research",
+      "status": "adopted",
+      "title": {
+        "zh": "ResNet · 更深的网络也能训练",
+        "en": "ResNet · training deeper networks"
+      },
+      "body": {
+        "zh": "网络更深，表达能力更强，却可能连训练误差都变大。ResNet 用残差连接（residual connection），让一组层学习 F(x)，输出再加上原来的 x。2015 年公开预印本，发表于 CVPR 2016。",
+        "en": "A deeper network can be more expressive yet harder to fit even on its training set. ResNet used residual connections: a block learns F(x), then adds the original input x. The preprint appeared in 2015, followed by CVPR publication in 2016."
+      },
+      "limit": {
+        "zh": "不是 CNN 的起点，也不意味着网络越深就一定越好。",
+        "en": "It did not originate CNNs, and greater depth is not always better."
+      },
+      "sources": [
+        [
+          "ResNet · 2015 / CVPR 2016",
+          "https://arxiv.org/abs/1512.03385"
+        ]
+      ],
+      "topic": "models",
+      "detail": {
+        "zh": "假设某处已经有足够好的表示，后面几层暂时不需要改它。同维度的残差块只要把 F(x) 学到接近零，就能近似保留输入。这个例子解释了 shortcut 在优化上提供什么便利，而不是说所有层最后都会什么也不做。",
+        "en": "Suppose a representation is already useful and the next layers need not change it much. A same-dimensional residual block can approximate an identity mapping by making F(x) close to zero. This illustrates the optimization benefit, not a claim that every block eventually does nothing."
+      }
+    },
+    {
+      "id": "gcn",
+      "year": 2016,
+      "kind": "research",
+      "status": "adopted",
+      "title": {
+        "zh": "图卷积网络 GCN · 从邻居那里学信息",
+        "en": "Graph convolutional networks · learning from neighbors"
+      },
+      "body": {
+        "zh": "结合节点特征和图的连接关系，在只有少量标签时做节点分类。它让图卷积有了一种简洁、可实现的传播规则。预印本是 2016 年，会议论文是 ICLR 2017。",
+        "en": "GCN combines node features and graph connectivity for classification with limited labels, using a compact propagation rule. The preprint is from 2016; the conference paper is ICLR 2017."
+      },
+      "limit": {
+        "zh": "GNN 早已有研究。这里是代表工作，不把 2016 年说成整个领域的诞生。",
+        "en": "GNN research predates this work. This is a representative paper, not the birth of the field."
+      },
+      "sources": [
+        [
+          "Kipf & Welling · GCN",
+          "https://arxiv.org/abs/1609.02907"
+        ]
+      ],
+      "topic": "models"
+    },
+    {
+      "id": "graphsage",
+      "year": 2017,
+      "kind": "research",
+      "status": "adopted",
+      "title": {
+        "zh": "GraphSAGE · 处理没见过的节点",
+        "en": "GraphSAGE · handling unseen nodes"
+      },
+      "body": {
+        "zh": "不为每个节点单独记一份 embedding，而是学会采样、聚合邻居特征。这样遇到新节点时，也能用同一套函数计算表示。",
+        "en": "Rather than store an embedding for every node, learn a function that samples and aggregates neighborhood features. The same function can then represent unseen nodes."
+      },
+      "limit": {
+        "zh": "仍依赖可用的节点特征、邻居信息和数据分布，不是任意新图都能直接泛化。",
+        "en": "Generalization still depends on features, neighborhoods, and the data distribution."
+      },
+      "sources": [
+        [
+          "Hamilton et al. · 2017",
+          "https://arxiv.org/abs/1706.02216"
+        ]
+      ],
+      "topic": "models"
+    },
+    {
+      "id": "gat",
+      "year": 2017,
+      "kind": "research",
+      "status": "adopted",
+      "title": {
+        "zh": "GAT · 邻居不必同样重要",
+        "en": "GAT · weighting neighbors differently"
+      },
+      "body": {
+        "zh": "用 attention 学习邻居的权重，再聚合信息。2017 年公开预印本，发表于 ICLR 2018。和 GCN、GraphSAGE 放在一起，能看到当时图表示学习的几种选择。",
+        "en": "Attention learns how to weight a node’s neighbors before aggregation. Released in 2017 and published at ICLR 2018, GAT sits alongside GCN and GraphSAGE as a different design choice."
+      },
+      "limit": {
+        "zh": "这里按时间并列展示，不表示 GAT 是 GraphSAGE 的直接后继。",
+        "en": "Chronological grouping does not make GAT a direct successor to GraphSAGE."
+      },
+      "sources": [
+        [
+          "Veličković et al. · GAT",
+          "https://arxiv.org/abs/1710.10903"
+        ]
+      ],
+      "topic": "models"
+    },
+    {
+      "id": "alphago",
+      "year": 2016,
+      "kind": "system",
+      "status": "historical",
+      "title": {
+        "zh": "AlphaGo · 围棋成为公共事件",
+        "en": "AlphaGo · a public milestone"
+      },
+      "body": {
+        "zh": "2016 年与李世石的比赛让更多人看到了 AI 的能力。AlphaGo 将策略网络、价值网络和树搜索结合起来；最初版本也使用了人类棋谱，并非完全从零自学。",
+        "en": "The 2016 match with Lee Sedol made AI progress visible to a much wider audience. AlphaGo combined policy and value networks with tree search; the original system also learned from human games."
+      },
+      "limit": {
+        "zh": "2015 年已击败樊麾；这里用 2016 年标记论文与李世石比赛。不要和后来的 AlphaGo Zero 混为一谈。",
+        "en": "It had beaten Fan Hui in 2015. This entry marks the 2016 paper and Lee Sedol match, not the later AlphaGo Zero."
+      },
+      "sources": [
+        [
+          "AlphaGo · Nature 2016",
+          "https://www.nature.com/articles/nature16961"
+        ],
+        [
+          "2016 match · DeepMind",
+          "https://deepmind.google/blog/deep-reinforcement-learning/"
+        ]
+      ],
+      "topic": "applications"
+    },
+    {
+      "id": "alphafold2",
+      "year": 2020,
+      "kind": "system",
+      "status": "historical",
+      "title": {
+        "zh": "AlphaFold 2 · 蛋白质结构预测",
+        "en": "AlphaFold 2 · protein structures"
+      },
+      "body": {
+        "zh": "2020 年 CASP14 的结果展示了蛋白质结构预测的重要进展。完整方法于 2021 年发表；它代表 AI 用于科学问题的一条路线，不只是聊天或识图。",
+        "en": "Results at CASP14 in 2020 marked a major advance in protein structure prediction. The full method was published in 2021, illustrating a route into scientific problems beyond chat and image recognition."
+      },
+      "limit": {
+        "zh": "预测结构不等于已经解释全部蛋白质功能或动态，也不取代所有实验。",
+        "en": "A predicted structure does not explain all protein function or dynamics, nor replace every experiment."
+      },
+      "sources": [
+        [
+          "CASP14 · 2020 announcement",
+          "https://deepmind.google/blog/alphafold-a-solution-to-a-50-year-old-grand-challenge-in-biology/"
+        ],
+        [
+          "AlphaFold 2 · Nature 2021",
+          "https://www.nature.com/articles/s41586-021-03819-2"
+        ]
+      ],
+      "topic": "applications"
+    },
+    {
+      "id": "chatgpt",
+      "year": 2022,
+      "kind": "product",
+      "status": "historical",
+      "title": {
+        "zh": "ChatGPT · 用对话接触语言模型",
+        "en": "ChatGPT · language models in conversation"
+      },
+      "body": {
+        "zh": "2022 年 11 月开放研究预览。对话界面让用户能够追问、修改要求，语言模型不再只是论文里的 benchmark 或开发者调用的接口。",
+        "en": "The research preview opened in November 2022. A conversational interface let people follow up and revise requests, making language models accessible beyond benchmarks and developer APIs."
+      },
+      "limit": {
+        "zh": "这是产品发布节点，不是 Transformer、RLHF 或聊天机器人的起源。公告也明确记录了会生成错误答案等限制。",
+        "en": "This is a product launch, not the origin of Transformers, RLHF, or chatbots. The announcement also documents incorrect answers and other limitations."
+      },
+      "sources": [
+        [
+          "Introducing ChatGPT · 2022-11-30",
+          "https://openai.com/index/chatgpt/"
+        ]
+      ],
+      "topic": "applications",
+      "detail": {
+        "zh": "同一个模型能力，通过对话也能有不同的使用体验：用户先给要求，再追问“短一点”或补充背景。这里值得观察的是交互方式和反馈如何进入产品，而不是把一次产品发布当作所有底层技术同时诞生。",
+        "en": "Conversation changes how people use a model: a request can be followed by “make it shorter” or extra context. The milestone is the interaction and feedback loop around the model, not the simultaneous invention of its underlying techniques."
+      }
+    },
+    {
+      "id": "stable-diffusion",
+      "year": 2022,
+      "kind": "product",
+      "status": "historical",
+      "title": {
+        "zh": "Stable Diffusion · 图像生成工具",
+        "en": "Stable Diffusion · image generation tools"
+      },
+      "body": {
+        "zh": "2022 年公开发布模型权重与代码，也提供演示和工具入口。除了论文结果，读者开始能实际试用、改造图像生成模型。",
+        "en": "The 2022 public release provided weights, code, demonstrations, and tool access. Image generation became something people could try and adapt, not only inspect in a paper."
+      },
+      "limit": {
+        "zh": "公开权重不等于没有许可证、内容安全或数据来源方面的限制。",
+        "en": "Available weights do not remove licensing, safety, or training-data concerns."
+      },
+      "sources": [
+        [
+          "Stable Diffusion · public release",
+          "https://stability.ai/news-updates/stable-diffusion-public-release"
+        ]
+      ],
+      "topic": "applications"
+    },
+    {
+      "id": "deepseek-r1",
+      "year": 2025,
+      "kind": "research",
+      "status": "historical",
+      "title": {
+        "zh": "DeepSeek-R1 · 推理与 RL",
+        "en": "DeepSeek-R1 · reasoning and RL"
+      },
+      "body": {
+        "zh": "报告比较了直接从基座进行 RL 的 R1-Zero，以及加入冷启动数据和多阶段训练的 R1。这里关注 RL 怎样与数据、SFT 和评估配合，而不是把它当作一套通用解法。",
+        "en": "The report distinguishes R1-Zero’s RL from a base model and R1’s cold-start data and multi-stage training. The point is how RL, data, SFT, and evaluation fit together, not a universal recipe."
+      },
+      "limit": {
+        "zh": "2025 年指 1 月公开的首版报告；这里引用 v1，而非 2026 年修订的 v2。其任务奖励与训练结果不能直接推广到所有模型。",
+        "en": "The year marks the initial January 2025 report; this entry cites v1, not the 2026 v2 revision. Its task rewards and training results do not generalize automatically to every model."
+      },
+      "sources": [
+        [
+          "DeepSeek-R1 · January 2025 report, v1",
+          "https://arxiv.org/html/2501.12948v1"
+        ]
+      ],
+      "topic": "models",
+      "detail": {
+        "zh": "R1-Zero 用来观察基座直接进行 RL 会出现什么能力与问题；R1 再加入冷启动数据等阶段。这两个设置放在一起读，能看出“奖励驱动的学习有效”和“完整产品不再需要数据准备”是完全不同的判断。",
+        "en": "R1-Zero explored what emerged when RL was applied directly to the base model; R1 added stages including cold-start data. Reading them together separates evidence that reward-driven learning can work from the much stronger—and unsupported—claim that data preparation is no longer needed."
+      }
+    },
+    {
+      "id": "energy-pearl-street-1882",
+      "year": 1882,
+      "topic": "energy",
+      "kind": "system",
+      "status": "historical",
+      "title": {
+        "zh": "珍珠街电站 · 街区供电",
+        "en": "Pearl Street · neighborhood power"
+      },
+      "body": {
+        "zh": "1882 年，纽约珍珠街电站开始为曼哈顿下城的一个街区供电。发电站和地下线路把多座建筑接到同一套直流供电系统里。",
+        "en": "In 1882, Pearl Street Station began supplying electricity to a district in Lower Manhattan. A central station and underground cables brought several buildings onto the same direct-current supply."
+      },
+      "limit": {
+        "zh": "这里指局部街区的直流供电，不是世界上首次发电，也不是现代跨区域交流电网的诞生。",
+        "en": "This was local direct-current service, not the first generation of electricity worldwide or the birth of a modern interconnected AC grid."
+      },
+      "sources": [
+        [
+          "Con Edison corporate history (2023), September 4, 1882 entry",
+          "https://prodcdc10.coned.com/en/about-us/media-center/news/2023/03-26/con-edison-celebrates-200-years-of-energizing-new-york"
+        ],
+        [
+          "Thomas A. Edison Papers: Pearl Street archival headnote",
+          "https://edison.rutgers.edu/images/archive/innovations/EL/PearlStreetHeadnote.pdf"
+        ]
+      ]
+    },
+    {
+      "id": "networks-arpanet-1969",
+      "year": 1969,
+      "topic": "networks",
+      "kind": "system",
+      "status": "historical",
+      "title": {
+        "zh": "ARPANET · 连接远程主机",
+        "en": "ARPANET · connecting distant hosts"
+      },
+      "body": {
+        "zh": "1969 年 10 月 29 日，UCLA 团队通过 ARPANET 尝试登录斯坦福研究所的主机。远程登录把异地计算机连接用于实际交互，为研究跨机构访问计算资源提供了试验基础。",
+        "en": "On October 29, 1969, the UCLA team attempted to log into a Stanford Research Institute host over ARPANET. Remote login put a connection between distant computers to interactive use, providing an experimental basis for access to computing resources across institutions."
+      },
+      "limit": {
+        "zh": "首次尝试只传出“lo”就发生故障，完整登录稍后才成功；这不是成熟的公众互联网。",
+        "en": "The initial attempt transmitted only “lo” before a crash; full login succeeded later, and this was not a mature public Internet."
+      },
+      "sources": [
+        [
+          "Leonard Kleinrock: UCLA IMP log and participant account of October 29, 1969",
+          "https://www.lk.cs.ucla.edu/internet_first_words.html"
+        ]
+      ]
+    },
+    {
+      "id": "software-unix-1969",
+      "year": 1969,
+      "topic": "software",
+      "kind": "system",
+      "status": "historical",
+      "title": {
+        "zh": "Unix · 交互式编程环境",
+        "en": "Unix · an interactive programming environment"
+      },
+      "body": {
+        "zh": "1969 年，贝尔实验室团队为保留交互式编程环境，在 PDP-7 上发展出后来称为 Unix 的系统。文件系统、进程和命令解释器逐步组成可自我开发的环境，让程序编写与日常工具使用有了共同基础。",
+        "en": "In 1969, a Bell Labs team developed the PDP-7 system later called Unix to preserve an interactive programming environment. Its filesystem, processes, and shell formed a self-supporting development environment, giving programming and everyday tools a common foundation."
+      },
+      "limit": {
+        "zh": "1969 年指系统开发起点，名称到 1970 年才提出；1974 年的系统论文不是诞生日期。",
+        "en": "1969 dates the system's beginnings; its name followed in 1970, and the 1974 descriptive paper does not date its creation."
+      },
+      "sources": [
+        [
+          "Dennis Ritchie: Unix evolution, participant history presented 1979, published 1980, reprinted 1984",
+          "https://www.nokia.com/bell-labs/about/dennis-m-ritchie/hist.html"
+        ]
+      ]
+    },
+    {
+      "id": "networks-ethernet-paper-1976",
+      "year": 1976,
+      "topic": "networks",
+      "kind": "research",
+      "status": "historical",
+      "title": {
+        "zh": "Ethernet · 连接局域网",
+        "en": "Ethernet · local networking"
+      },
+      "body": {
+        "zh": "1976 年，Metcalfe 与 Boggs 发表论文，说明附近计算机如何共享同轴电缆传送数据包。分布式接入控制和碰撞后的重传，使局域网不必依靠一个中央控制器来分配每次发送机会。",
+        "en": "In 1976, Metcalfe and Boggs published how nearby computers could share coaxial cable to exchange packets. Distributed access control and retransmission after collisions allowed local networking without a central controller assigning every transmission opportunity."
+      },
+      "limit": {
+        "zh": "1976 年是论文发表年，不是 1973 年备忘录的日期；论文描述的是实验性共享电缆网络。",
+        "en": "1976 is the paper's publication year, not the date of the 1973 memo; the paper describes an experimental shared-cable network."
+      },
+      "sources": [
+        [
+          "Metcalfe and Boggs: original CACM paper, July 1976 (Cambridge scan)",
+          "https://www.cl.cam.ac.uk/teaching/1920/CompNet/files/p395-metcalfe.pdf"
+        ],
+        [
+          "Computer History Museum: May 22, 1973 Ethernet memo archival account",
+          "https://www.computerhistory.org/tdih/may/22/"
+        ]
+      ]
+    },
+    {
+      "id": "networks-tcp-ip-transition-1983",
+      "year": 1983,
+      "topic": "networks",
+      "kind": "system",
+      "status": "historical",
+      "title": {
+        "zh": "TCP/IP · 连接不同网络",
+        "en": "TCP/IP · connecting networks"
+      },
+      "body": {
+        "zh": "为连接采用不同通信技术的网络，ARPANET 把 1983 年 1 月 1 日定为从 NCP 转向 TCP/IP 的目标日期。共同协议让远程登录、文件传输和邮件能够跨越原有网络边界，1983 年的主机调查记录了实际服务情况。",
+        "en": "To connect networks using different communication technologies, ARPANET set January 1, 1983 as its NCP-to-TCP/IP transition target. Common protocols enabled login, file transfer, and mail across network boundaries, with 1983 host surveys recording operational services."
+      },
+      "limit": {
+        "zh": "这是部署转换节点，不是协议发明年；2 月调查仍有服务未响应，不能把目标日期等同于所有主机全部就绪。",
+        "en": "This dates deployment, not protocol invention; February surveys still found unresponsive services, so the target did not imply universal readiness."
+      },
+      "sources": [
+        [
+          "Jon Postel: RFC 801 transition plan, November 1981",
+          "https://www.rfc-editor.org/rfc/rfc801"
+        ],
+        [
+          "David Smallberg: RFC 842 operational survey, February 1983",
+          "https://www.rfc-editor.org/rfc/rfc842.txt"
+        ]
+      ]
+    },
+    {
+      "id": "software-gnu-announcement-1983",
+      "year": 1983,
+      "topic": "software",
+      "kind": "system",
+      "status": "historical",
+      "title": {
+        "zh": "GNU · 自由分享的软件",
+        "en": "GNU · freely shareable software"
+      },
+      "body": {
+        "zh": "1983 年 9 月 27 日，Richard Stallman 宣布 GNU 计划，目标是建立可以自由分享的 Unix 兼容系统。计划把内核、编译器、编辑器和命令行工具放在同一建设目标中，希望让协作不再依赖禁止分享的软件。",
+        "en": "On September 27, 1983, Richard Stallman announced GNU, aiming to build a freely shareable Unix-compatible system. The plan joined a kernel, compiler, editor, and shell tools in one effort so collaboration need not depend on software that prohibited sharing."
+      },
+      "limit": {
+        "zh": "1983 年是公告年份，实际工作于 1984 年 1 月开始；公告不是完整系统或编译器的发布。",
+        "en": "1983 dates the announcement; work began in January 1984, and the announcement was not a complete system or compiler release."
+      },
+      "sources": [
+        [
+          "GNU: original September 27, 1983 announcement with project historical notes",
+          "https://www.gnu.org/gnu/initial-announcement.html"
+        ]
+      ]
+    },
+    {
+      "id": "networks-web-proposal-1989",
+      "year": 1989,
+      "topic": "networks",
+      "kind": "research",
+      "status": "historical",
+      "title": {
+        "zh": "Web · 把分散的信息连起来",
+        "en": "The Web · linking scattered information"
+      },
+      "body": {
+        "zh": "1989 年 3 月，Tim Berners-Lee 为解决 CERN 人员流动和资料分散造成的信息流失，提出分布式超文本系统。把文档与相关人物、项目和系统相互链接，使跨团队查找知识有了不受单一目录层级束缚的思路。",
+        "en": "In March 1989, Tim Berners-Lee proposed distributed hypertext to address information loss from staff turnover and scattered records at CERN. Linking documents, people, projects, and systems offered a way to find knowledge across teams without imposing one directory hierarchy."
+      },
+      "limit": {
+        "zh": "1989 年指提案，不是网站上线；存档中的 1990 年 5 月是再分发日期，万维网名称也到 1990 年才确定。",
+        "en": "1989 dates a proposal, not a website launch; May 1990 marks redistribution, and the World Wide Web name was chosen in 1990."
+      },
+      "sources": [
+        [
+          "Tim Berners-Lee: original 1989 proposal, W3C transcription and author provenance note",
+          "https://www.w3.org/History/1989/proposal.html"
+        ]
+      ]
+    },
+    {
+      "id": "software-linux-kernel-1991",
+      "year": 1991,
+      "topic": "software",
+      "kind": "system",
+      "status": "historical",
+      "title": {
+        "zh": "Linux · 开放的内核源码",
+        "en": "Linux · shared kernel source"
+      },
+      "body": {
+        "zh": "1991 年，Linus Torvalds 公开 Linux 内核 0.01 的源代码，探索在 386 电脑上运行类 Unix 软件。源代码让其他人可以研究和改动进程、内存与文件系统实现，也为后续协作留下了可运行的基础。",
+        "en": "In 1991, Linus Torvalds released Linux kernel 0.01 source to explore running Unix-like software on 386 computers. Available source let others study and modify process, memory, and filesystem implementations, providing a working basis for further collaboration."
+      },
+      "limit": {
+        "zh": "0.01 不是完整发行版；原始许可禁止收费分发，发布说明还要求借助 Minix 准备系统，并另备外壳和编译器。",
+        "en": "Version 0.01 was not a complete distribution: its original license prohibited fee-based redistribution, and its notes required Minix for bootstrapping plus separate shells and compilers."
+      },
+      "sources": [
+        [
+          "Linus Torvalds: original Linux 0.01 release notes, 1991, kernel.org archive",
+          "https://www.kernel.org/pub/linux/kernel/Historic/old-versions/RELNOTES-0.01"
+        ]
+      ],
+      "detail": {
+        "zh": "内核负责进程、内存和设备等基础工作，外壳、编译器和应用则在它之上。Linux 的这个起点，适合用来区分“内核”“操作系统环境”和“发行版”：它们不是同一份东西。",
+        "en": "The kernel handles processes, memory, and devices; shells, compilers, and applications run above it. This early release helps distinguish a kernel from a working operating-system environment and from a distribution."
+      }
+    },
+    {
+      "id": "distributed-mpi-1994",
+      "year": 1994,
+      "topic": "distributed",
+      "kind": "system",
+      "status": "historical",
+      "title": {
+        "zh": "MPI · 共同的通信接口",
+        "en": "MPI · a common communication interface"
+      },
+      "body": {
+        "zh": "1994 年，MPI Forum 完成 MPI 1.0，为并行程序提供共同的消息传递接口。点对点通信、集体操作及 C 和 Fortran 绑定，使程序不必完全依附于某一家机器的通信接口。",
+        "en": "In 1994, the MPI Forum completed MPI 1.0 to provide common message-passing interfaces for parallel programs. Point-to-point communication, collective operations, and C and Fortran bindings reduced dependence on machine-specific communication interfaces."
+      },
+      "limit": {
+        "zh": "MPI 规定接口而非统一实现，早期标准不含任务管理或 I/O；所引 1995 年修订本明确追溯到 1994 年版本。",
+        "en": "MPI specifies interfaces, not one implementation; the early standard excluded task management and I/O, and the cited 1995 revision explicitly dates its predecessor to 1994."
+      },
+      "sources": [
+        [
+          "MPI Forum: MPI 1.1 (1995), foreword identifying MPI 1.0 (1994)",
+          "https://www.mpi-forum.org/docs/mpi-1.1/mpi-11-html/mpi-report.html"
+        ],
+        [
+          "MPI Forum: early standard scope, included interfaces",
+          "https://www.mpi-forum.org/docs/mpi-1.1/mpi-11-html/node5.html"
+        ],
+        [
+          "MPI Forum: early standard scope, excluded facilities",
+          "https://www.mpi-forum.org/docs/mpi-1.1/mpi-11-html/node6.html"
+        ]
+      ]
+    },
+    {
+      "id": "distributed-mapreduce-paper-2004",
+      "year": 2004,
+      "topic": "distributed",
+      "kind": "research",
+      "status": "historical",
+      "title": {
+        "zh": "MapReduce · 集群数据处理",
+        "en": "MapReduce · cluster data processing"
+      },
+      "body": {
+        "zh": "2004 年，Dean 与 Ghemawat 发表 MapReduce 论文，把大规模数据处理表达为映射与归约操作。运行系统承担数据划分、调度、通信和失败任务重跑，让应用作者少写重复的分布式协调代码。",
+        "en": "In 2004, Dean and Ghemawat published MapReduce, expressing large-scale data processing through map and reduce operations. Its runtime handled partitioning, scheduling, communication, and task re-execution after failures, reducing repetitive distributed coordination code for application authors."
+      },
+      "limit": {
+        "zh": "2004 年是论文节点，文中把初版实现追溯到 2003 年 2 月；该批处理模型并不覆盖任意交互式计算。",
+        "en": "2004 dates the paper; it traces the first implementation to February 2003, and its batch model does not cover arbitrary interactive computation."
+      },
+      "sources": [
+        [
+          "Dean and Ghemawat: original OSDI 2004 paper, especially sections 1, 3 and 6",
+          "https://www.usenix.org/legacy/events/osdi04/tech/full_papers/dean/dean_html/index.html"
+        ]
+      ],
+      "detail": {
+        "zh": "用词频统计理解它最方便：map 为每个词发出一次计数，系统把相同词的记录汇在一起，reduce 再相加。分片、调度和失败重跑由运行系统负责；代价是计算要能表达成这种批处理流程。",
+        "en": "Word counting makes the division clear: map emits counts, the runtime groups records by word, and reduce adds them. Partitioning, scheduling, and retries belong to the runtime. The trade-off is that the computation must fit this batch-processing structure."
+      }
+    },
+    {
+      "id": "energy-warehouse-scale-computing-2009",
+      "year": 2009,
+      "topic": "energy",
+      "kind": "research",
+      "status": "historical",
+      "title": {
+        "zh": "仓库级计算 · 机房也是系统",
+        "en": "Warehouse-scale computing · the facility as a system"
+      },
+      "body": {
+        "zh": "机房不只是把服务器放在一起。2009 年，Barroso 和 Hölzle 把整个数据中心视为一台计算机：服务器、网络、供电和冷却，需要一起设计。",
+        "en": "A datacenter is more than a collection of servers. Barroso and Hölzle’s 2009 monograph treated it as one computer, bringing servers, networking, power, and cooling into the same design."
+      },
+      "limit": {
+        "zh": "2009 年是专著出版年，不是数据中心或冷却技术的起点；其整合型服务模型也不等同于所有托管机房。",
+        "en": "2009 dates the book, not the invention of datacenters or cooling; its integrated-service model does not describe every colocation facility."
+      },
+      "sources": [
+        [
+          "Google Research: first-edition publication record, 2009",
+          "https://research.google/pubs/the-datacenter-as-a-computer-an-introduction-to-the-design-of-warehouse-scale-machines/"
+        ],
+        [
+          "Barroso and Hölzle: original 2009 monograph, chapters 1, 4–6 (PDF mirror)",
+          "https://zhjwpku.com/assets/pdf/TheDatacenterAsaComputer.pdf"
+        ]
+      ],
+      "detail": {
+        "zh": "把它放到今天的训练任务里想：加一批 GPU，除了采购卡，还要确认机柜供电、冷却和网络能否承受。若其中一项没跟上，新卡也未必能按预期工作。这是理解书中整体设计视角的例子，不是原书的 GPU 实验。",
+        "en": "For a present-day illustration, adding GPUs also requires checking rack power, cooling, and networking. If one cannot support the expansion, the new devices may not deliver the expected capacity. This illustrates the book's whole-facility perspective; it is not a GPU experiment reported in the book."
+      }
+    },
+    {
+      "id": "distributed-kubernetes-v1-2015",
+      "year": 2015,
+      "topic": "distributed",
+      "kind": "system",
+      "status": "historical",
+      "title": {
+        "zh": "Kubernetes 1.0 · 集群编排",
+        "en": "Kubernetes 1.0 · cluster orchestration"
+      },
+      "body": {
+        "zh": "2015 年 7 月 21 日，Kubernetes 宣布 1.0 版，为跨主机运行容器应用提供共同的管理系统。调度、扩缩容、服务发现和健康检查把分散的运维工作集中到集群层，减少逐台管理应用的负担。",
+        "en": "On July 21, 2015, Kubernetes announced version 1.0 as a common management system for container applications across hosts. Scheduling, scaling, service discovery, and health checks moved scattered operational work to the cluster level, reducing per-machine application management."
+      },
+      "limit": {
+        "zh": "2015 年是 1.0 发布节点，项目已于 2014 年 6 月公开；编排系统不是完整容器工具链，也不等于底层计算资源本身。",
+        "en": "2015 dates the 1.0 launch; the project went public in June 2014, and orchestration is neither the whole container toolchain nor the underlying compute resources."
+      },
+      "sources": [
+        [
+          "Google: original Kubernetes v1 announcement, July 21, 2015",
+          "https://cloudplatform.googleblog.com/2015/07/Kubernetes-V1-Released.html"
+        ],
+        [
+          "Joe Beda: dated project history distinguishing June 6 commit and June 10, 2014 announcement",
+          "https://kubernetes.io/blog/2018/06/06/4-years-of-k8s/"
+        ]
+      ]
+    },
+    {
+      "id": "dennard-dram-patent-1967",
+      "year": 1967,
+      "topic": "memory",
+      "kind": "research",
+      "status": "historical",
+      "title": {
+        "zh": "单晶体管 DRAM 存储单元",
+        "en": "The single-transistor DRAM cell"
+      },
+      "body": {
+        "zh": "Dennard 的专利用一个晶体管控制电容充放电，以电荷表示一位信息。减少每个单元的器件数量，让同一芯片能够容纳更密集的存储阵列。",
+        "en": "Dennard's patent describes a cell in which one transistor controls a capacitor whose charge represents a bit. Using fewer components per cell enables denser memory arrays on a chip."
+      },
+      "limit": {
+        "zh": "1967 年指 7 月 14 日申请，授权在 1968 年 6 月 4 日；电荷泄漏要求定期刷新。",
+        "en": "The year marks filing on July 14, 1967, not the June 4, 1968 patent grant; charge leakage requires periodic refresh."
+      },
+      "sources": [
+        [
+          "Dennard, US3387286A: filing, abstract and claims",
+          "https://patents.google.com/patent/US3387286A/en"
+        ]
+      ]
+    },
+    {
+      "id": "ibm-model85-cache-1968",
+      "year": 1968,
+      "topic": "memory",
+      "kind": "system",
+      "status": "historical",
+      "title": {
+        "zh": "System/360 Model 85 的硬件缓存",
+        "en": "Hardware-managed cache in System/360 Model 85"
+      },
+      "body": {
+        "zh": "Model 85 用小而快的缓存保存正在使用的主存内容，缓解处理器等待慢速存储的问题。硬件自动装入和替换数据，程序不必显式管理这层存储。",
+        "en": "The Model 85 uses a small, fast cache to hold actively used main-memory contents, reducing processor waits for slower storage. Hardware loads and replaces data without requiring programs to manage this layer explicitly."
+      },
+      "limit": {
+        "zh": "1968 年是 Liptay 论文的发表年，不是缓存概念的发明年；未命中仍需访问主存。",
+        "en": "1968 dates Liptay's paper, not the invention of caching; a miss still requires access to main memory."
+      },
+      "sources": [
+        [
+          "Liptay, IBM Systems Journal 7(1), 1968, pp. 15–21; original paper scan",
+          "https://www.andrew.cmu.edu/course/15-440/assets/READINGS/liptay1968.pdf"
+        ]
+      ]
+    },
+    {
+      "id": "intel-4004-1971",
+      "year": 1971,
+      "topic": "chips",
+      "kind": "product",
+      "status": "historical",
+      "title": {
+        "zh": "Intel 4004：单芯片 CPU",
+        "en": "Intel 4004: a single-chip CPU"
+      },
+      "body": {
+        "zh": "Intel 4004 把四位运算器、寄存器和程序执行功能集成到一颗 CPU 芯片中。配合外部程序存储器，同一处理器可通过不同程序用于多种控制设备。",
+        "en": "Intel's 4004 integrates four-bit arithmetic, registers and program execution into one CPU chip. With external program memory, the same processor can serve different control devices by running different programs."
+      },
+      "limit": {
+        "zh": "1971 年 11 月 15 日是公开产品公告日期；程序仍存于外部 ROM，并非完整的单芯片计算机。",
+        "en": "November 15, 1971 is the public product-announcement date; external ROM remains necessary, so this is not a complete single-chip computer."
+      },
+      "sources": [
+        [
+          "Intel MCS-4 announcement, 1971-11-15; original advertisement archive",
+          "https://4004.com/history/1971-announcement/"
+        ]
+      ]
+    },
+    {
+      "id": "nvidia-cuda-2006",
+      "year": 2006,
+      "topic": "software",
+      "kind": "system",
+      "status": "adopted",
+      "title": {
+        "zh": "CUDA：用 C 编程调用 GPU 并行计算",
+        "en": "CUDA: C programming for GPU parallel computation"
+      },
+      "body": {
+        "zh": "CUDA 将 GPU 的并行计算能力通过 C 编程接口提供给开发者。大量线程可以协作和共享数据，让科学计算不必伪装成图形绘制任务。",
+        "en": "CUDA exposes GPU parallel computation through a C programming interface. Cooperating threads and shared data let developers express scientific computation without disguising it as graphics rendering."
+      },
+      "limit": {
+        "zh": "2006 年 11 月 8 日是公布日期，当时 SDK 面向注册开发者；公开测试版公告为 2007 年 2 月 16 日。",
+        "en": "CUDA was unveiled on November 8, 2006 with registered-developer SDK access; the public-beta announcement is dated February 16, 2007."
+      },
+      "sources": [
+        [
+          "NVIDIA CUDA announcement, 2006-11-08; press-release reprint",
+          "https://www.bit-tech.net/press-releases/nvidia_unveils_cuda_the_gpu_computing_revolution_begins/1/"
+        ],
+        [
+          "NVIDIA GeForce 8800 technical brief, 2006-11-08, pp. 12–14",
+          "https://www.nvidia.com/content/PDF/Geforce_8800/GeForce_8800_GPU_Architecture_Technical_Brief.pdf"
+        ],
+        [
+          "NVIDIA public-beta release, 2007-02-16; WebWire archive",
+          "https://www.webwire.com/ViewPressRel.asp?aId=27584"
+        ]
+      ]
+    },
+    {
+      "id": "amd-gcn-2011",
+      "year": 2011,
+      "topic": "chips",
+      "kind": "system",
+      "status": "historical",
+      "title": {
+        "zh": "AMD GCN：兼顾图形与通用计算",
+        "en": "AMD Graphics Core Next: graphics and general-purpose computation"
+      },
+      "body": {
+        "zh": "AMD 的 GCN 用包含标量单元与向量 SIMD 单元的计算单元，取代此前的 VLIW 执行组织。它降低了对编译器挖掘指令级并行的依赖，同时服务图形和通用计算。",
+        "en": "AMD's GCN replaces its earlier VLIW organization with compute units containing scalar units and vector SIMD units. It reduces dependence on compiler-discovered instruction-level parallelism while supporting graphics and general-purpose computation."
+      },
+      "limit": {
+        "zh": "HD 7970 于 2011 年 12 月 22 日公布，零售定于 2012 年 1 月 9 日；所引白皮书发表于 2012 年 6 月。",
+        "en": "The HD 7970 announcement was December 22, 2011, with retail availability set for January 9, 2012; the cited whitepaper is dated June 2012."
+      },
+      "sources": [
+        [
+          "AMD HD 7970 announcement, 2011-12-22",
+          "https://ir.amd.com/news-events/press-releases/detail/201/amd-launches-worlds-fastest-single-gpu-graphics-card----the-amd-radeontm-hd-7970"
+        ],
+        [
+          "AMD GCN whitepaper, June 2012, pp. 3–6; CMU mirror",
+          "https://www.cs.cmu.edu/afs/cs/academic/class/15869-f11/www/readings/amd_gcn_whitepaper.pdf"
+        ]
+      ]
+    },
+    {
+      "id": "hbm-gpu-packaging-2015",
+      "year": 2015,
+      "topic": "memory",
+      "kind": "product",
+      "status": "historical",
+      "title": {
+        "zh": "HBM 进入 GPU 封装",
+        "en": "HBM enters GPU packaging"
+      },
+      "body": {
+        "zh": "AMD 的 Fury X 采用 HBM，把堆叠 DRAM 带入 GPU 产品。硅通孔连接存储层，中介层连接处理器，以宽接口和短连线提供带宽，而非仅提高引脚速率。",
+        "en": "AMD's Fury X brings stacked HBM DRAM into a GPU product. Through-silicon vias connect memory layers and an interposer links the processor, providing bandwidth through wide interfaces and short connections rather than pin speed alone."
+      },
+      "limit": {
+        "zh": "2015 年指 6 月 16 日产品公告，原稿计划 6 月 24 日供货；不是 HBM 的发明年份。",
+        "en": "The year marks the June 16, 2015 product announcement, which scheduled availability for June 24; it is not HBM's invention year."
+      },
+      "sources": [
+        [
+          "AMD HBM/Fury announcement, 2015-06-16",
+          "https://ir.amd.com/news-events/press-releases/detail/619/amd-ushers-in-a-new-era-of-pc-gaming-with-radeontm-r9-and-r7-300-series-graphics-line-up-including-worlds-first-graphics-family-with-revolutionary-hbm-technology"
+        ],
+        [
+          "SK hynix, Hot Chips 26, August 2014, slides 4–10",
+          "https://old.hotchips.org/wp-content/uploads/hc_archives/hc26/HC26-11-day1-epub/HC26.11-3-Technology-epub/HC26.11.310-HBM-Bandwidth-Kim-Hynix-Hot%20Chips%20HBM%202014%20v7.pdf"
+        ]
+      ]
+    },
+    {
+      "id": "nvidia-volta-2017",
+      "year": 2017,
+      "topic": "chips",
+      "kind": "system",
+      "status": "historical",
+      "title": {
+        "zh": "Volta：Tensor Core 矩阵计算单元",
+        "en": "Volta: Tensor Cores for matrix computation"
+      },
+      "body": {
+        "zh": "Volta V100 引入 Tensor Core，用专门单元执行矩阵乘加。FP16 输入配合 FP32 累加，为深度学习的密集矩阵运算提供混合精度硬件路径。",
+        "en": "Volta's V100 introduces Tensor Cores dedicated to matrix multiply-accumulate operations. FP16 inputs with FP32 accumulation provide a mixed-precision hardware path for dense matrix computation in deep learning."
+      },
+      "limit": {
+        "zh": "2017 年 5 月 10 日是架构与产品公布日，所引白皮书为 8 月修订版；这代 Tensor Core 不执行 FP64 矩阵乘法。",
+        "en": "May 10, 2017 dates the architecture and product announcement; the cited whitepaper revision is from August, and these Tensor Cores do not perform FP64 matrix multiplication."
+      },
+      "sources": [
+        [
+          "NVIDIA Volta announcement, 2017-05-10",
+          "https://nvidianews.nvidia.com/news/nvidia-launches-revolutionary-volta-gpu-platform-fueling-next-era-of-ai-and-high-performance-computing"
+        ],
+        [
+          "NVIDIA V100 whitepaper v1.1, August 2017, pp. 14–16",
+          "https://images.nvidia.com/content/volta-architecture/pdf/volta-architecture-whitepaper.pdf"
+        ]
+      ],
+      "detail": {
+        "zh": "可以把它理解成在通用计算单元之外，增加一组专做矩阵乘加的硬件。神经网络里合适的运算能从中受益，但数据仍要搬进搬出，其他算子也仍需执行，所以不能用矩阵峰值直接推算整个程序的速度。",
+        "en": "Alongside general computation, the chip has hardware specialized for matrix multiply–accumulate. Suitable neural-network operations can benefit, but data still moves and other operations still run. Peak matrix throughput therefore does not directly determine whole-program speed."
+      }
+    },
+    {
+      "id": "amd-rdna-2019",
+      "year": 2019,
+      "topic": "chips",
+      "kind": "system",
+      "status": "historical",
+      "title": {
+        "zh": "RDNA：重新组织图形计算单元",
+        "en": "RDNA: reorganizing graphics compute units"
+      },
+      "body": {
+        "zh": "RDNA 随 Radeon RX 5700 系列进入市场，侧重游戏图形效率。它引入原生 32 线程波前和 32 通道 SIMD，并重构缓存层次，降低执行与数据访问开销。",
+        "en": "RDNA reaches the market in the Radeon RX 5700 series with an emphasis on gaming graphics efficiency. Native 32-thread wavefronts, 32-lane SIMD units and a redesigned cache hierarchy reduce execution and data-access overhead."
+      },
+      "limit": {
+        "zh": "2019 年 7 月 7 日是产品上市日期；RDNA 仍支持通用计算，不能简单等同于“只能绘图”。",
+        "en": "July 7, 2019 is the product-availability date; RDNA still supports general-purpose computation and is not graphics-only."
+      },
+      "sources": [
+        [
+          "AMD RX 5700 availability release, 2019-07-07",
+          "https://ir.amd.com/news-events/press-releases/detail/899/amd-unleashes-ultimate-pc-gaming-platform-with-worldwide-availability-of-amd-radeon-rx-5700-series-graphics-cards-and-amd-ryzen-3000-series-desktop-processors"
+        ],
+        [
+          "AMD RDNA whitepaper, 2019, pp. 4–5 and 12–16; original PDF mirror",
+          "https://www.igorslab.de/wp-content/uploads/2019/08/rdna-whitepaper.pdf"
+        ]
+      ]
+    },
+    {
+      "id": "nvidia-ampere-2020",
+      "year": 2020,
+      "topic": "chips",
+      "kind": "system",
+      "status": "historical",
+      "title": {
+        "zh": "Ampere A100：扩展矩阵精度与 GPU 分区",
+        "en": "Ampere A100: broader matrix formats and GPU partitioning"
+      },
+      "body": {
+        "zh": "Ampere A100 将 TF32、BF16 和 FP64 加入 Tensor Core，扩展 AI 与科学计算的矩阵运算路径。MIG 可把一颗 A100 划分为最多七个独立实例，让不同任务共享硬件。",
+        "en": "Ampere's A100 adds TF32, BF16 and FP64 Tensor Core support, broadening matrix acceleration for AI and scientific computing. MIG partitions one A100 into up to seven independent instances for separate workloads."
+      },
+      "limit": {
+        "zh": "2020 年 5 月 14 日公告确认 A100 已量产出货；TF32 保留 FP32 的指数范围，但尾数精度更低。",
+        "en": "The May 14, 2020 release confirms A100 production and shipment; TF32 retains FP32's exponent range but uses lower mantissa precision."
+      },
+      "sources": [
+        [
+          "NVIDIA A100 production release, 2020-05-14",
+          "https://nvidianews.nvidia.com/news/nvidias-new-ampere-data-center-gpu-in-full-production"
+        ],
+        [
+          "NVIDIA A100 architecture whitepaper, Tensor Core formats and MIG",
+          "https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf"
+        ]
+      ]
+    },
+    {
+      "id": "amd-cdna-2020",
+      "year": 2020,
+      "topic": "chips",
+      "kind": "system",
+      "status": "historical",
+      "title": {
+        "zh": "CDNA：独立的计算架构分支",
+        "en": "CDNA: a separate compute-oriented architecture"
+      },
+      "body": {
+        "zh": "AMD 通过 MI100 将面向高性能计算和 AI 的 CDNA 与侧重图形的 RDNA 分开。CDNA 在 GCN 衍生的标量和向量单元旁增加矩阵核心，专门执行混合精度矩阵乘加。",
+        "en": "AMD's MI100 establishes CDNA for HPC and AI alongside the graphics-oriented RDNA branch. CDNA augments GCN-derived scalar and vector units with matrix cores for mixed-precision matrix multiply-accumulate operations."
+      },
+      "limit": {
+        "zh": "本条按 2020 年 11 月 16 日 MI100 发布定年；它移除了光栅化与显示硬件，不是游戏显卡。",
+        "en": "This entry dates the MI100 launch on November 16, 2020; it removes rasterization and display hardware and is not a gaming graphics card."
+      },
+      "sources": [
+        [
+          "AMD MI100 launch release, 2020-11-16",
+          "https://ir.amd.com/news-events/press-releases/detail/980/amd-epyc-processors-and-new-amd-instinct-mi100-accelerator-redefine-performance-for-hpc-and-scientific-research"
+        ],
+        [
+          "AMD CDNA whitepaper, 2020, pp. 2–5",
+          "https://www.amd.com/content/dam/amd/en/documents/instinct-business-docs/white-papers/amd-cdna-white-paper.pdf"
+        ]
+      ]
+    },
+    {
+      "id": "nvidia-hopper-2022",
+      "year": 2022,
+      "topic": "chips",
+      "kind": "system",
+      "status": "historical",
+      "title": {
+        "zh": "Hopper：面向 Transformer 与多 GPU 扩展",
+        "en": "Hopper: Transformer acceleration and multi-GPU scaling"
+      },
+      "body": {
+        "zh": "Hopper H100 加入 Transformer Engine 和 FP8 计算，将 Transformer 模型加速列为专门的架构目标。第四代 NVLink 配合外部交换系统，把高速 GPU 互连扩展到多服务器规模。",
+        "en": "Hopper's H100 adds a Transformer Engine and FP8 computation, making Transformer acceleration an explicit architectural focus. Fourth-generation NVLink and an external switch system extend high-speed GPU interconnection across multiple servers."
+      },
+      "limit": {
+        "zh": "架构公布于 2022 年 3 月 22 日；9 月 20 日才宣布全面量产，首批合作伙伴产品计划 10 月推出。",
+        "en": "The architecture announcement was March 22, 2022; full production was announced September 20, with initial partner offerings planned for October."
+      },
+      "sources": [
+        [
+          "NVIDIA Hopper announcement, 2022-03-22",
+          "https://nvidianews.nvidia.com/news/nvidia-announces-hopper-architecture-the-next-generation-of-accelerated-computing"
+        ],
+        [
+          "NVIDIA H100 production release, 2022-09-20",
+          "https://nvidianews.nvidia.com/news/nvidia-hopper-in-full-production"
+        ]
+      ]
+    },
+    {
+      "id": "amd-cdna3-mi300-2023",
+      "year": 2023,
+      "topic": "chips",
+      "kind": "product",
+      "status": "historical",
+      "title": {
+        "zh": "CDNA 3 与 MI300：封装级异构集成",
+        "en": "CDNA 3 and MI300: package-level heterogeneous integration"
+      },
+      "body": {
+        "zh": "MI300 系列结合 CDNA 3、3D 封装与 HBM3，服务 AI 和科学计算。MI300A 在同一封装内整合 Zen 4 CPU 与 GPU，以共享内存简化异构编程，而 MI300X 不集成 CPU。",
+        "en": "The MI300 family combines CDNA 3, 3D packaging and HBM3 for AI and scientific computing. MI300A integrates Zen 4 CPUs and GPUs with shared memory to simplify heterogeneous programming, while MI300X omits integrated CPUs."
+      },
+      "limit": {
+        "zh": "本条按 2023 年 12 月 6 日可用性公告定年；部分整机当时仍计划 2024 年上市，并非全部同步交付。",
+        "en": "This entry dates the December 6, 2023 availability announcement; some complete systems were still scheduled for 2024 rather than simultaneous delivery."
+      },
+      "sources": [
+        [
+          "AMD MI300 availability release, 2023-12-06",
+          "https://www.amd.com/en/newsroom/press-releases/2023-12-6-amd-delivers-leadership-portfolio-of-data-center-a.html"
+        ]
+      ]
+    },
+    {
+      "id": "turing-computability-1936",
+      "year": 1936,
+      "topic": "algorithms",
+      "kind": "research",
+      "status": "historical",
+      "title": {
+        "zh": "图灵机 · 什么问题可以计算？",
+        "en": "Turing machines · what can be computed?"
+      },
+      "body": {
+        "zh": "把读写符号和有限条规则组合起来，图灵给出了计算过程的一种精确定义。通用机器可以模拟其他机器，但并不是每个数学问题都有算法能解决。",
+        "en": "Turing formalized computation through symbol manipulation and finite rules. A universal machine can simulate other machines, yet not every mathematical problem admits an algorithmic solution."
+      },
+      "limit": {
+        "zh": "这里讨论可计算性，不是程序速度；1936 年对应论文收稿与宣读，期刊出版记录标为 1937 年。",
+        "en": "This concerns computability, not execution speed. The year 1936 marks receipt and presentation of the paper; the journal publication record is dated 1937."
+      },
+      "sources": [
+        [
+          "Turing · On Computable Numbers (received/read 1936)",
+          "https://theory.stanford.edu/~trevisan/cs172-07/turing36.pdf"
+        ],
+        [
+          "London Mathematical Society · publication record (1937)",
+          "https://londmathsoc.onlinelibrary.wiley.com/doi/10.1112/plms/s2-42.1.230"
+        ]
+      ]
+    },
+    {
+      "id": "dijkstra-shortest-path-1959",
+      "year": 1959,
+      "topic": "algorithms",
+      "kind": "research",
+      "status": "historical",
+      "title": {
+        "zh": "Dijkstra · 最短路也有计算顺序",
+        "en": "Dijkstra · ordering shortest-path computation"
+      },
+      "body": {
+        "zh": "每次确定尚未处理节点中距离最短的一个，再更新它的邻居，不必枚举所有可能路径。这个例子也提醒我们：图算法和从图中学习，是两类不同的问题。",
+        "en": "Settle the nearest unsettled vertex, then update its neighbors instead of enumerating all possible paths. This is a graph algorithm, a different problem from learning representations of graphs."
+      },
+      "limit": {
+        "zh": "这一做法要求边权非负；1959 年论文还讨论了最小生成树，不能把两种问题混在一起。",
+        "en": "The procedure requires nonnegative edge weights. The 1959 paper also discusses minimum spanning trees, a separate problem."
+      },
+      "sources": [
+        [
+          "Dijkstra · A Note on Two Problems in Connexion with Graphs (1959)",
+          "https://jmvidal.cse.sc.edu/library/dijkstra59a.pdf"
+        ]
+      ]
+    },
+    {
+      "id": "imagenet-2009",
+      "year": 2009,
+      "topic": "data",
+      "kind": "research",
+      "status": "historical",
+      "title": {
+        "zh": "ImageNet · 大规模图像数据集",
+        "en": "ImageNet · a large-scale image dataset"
+      },
+      "body": {
+        "zh": "按 WordNet 的概念层次收集图像，再由人工核验候选图片。规模背后不仅是下载文件，还有类别设计、检索、标注和质量检查。",
+        "en": "ImageNet organizes images around WordNet concepts and uses human verification of collected candidates. Scale requires category design, retrieval, annotation, and quality checks—not just downloading files."
+      },
+      "limit": {
+        "zh": "2009 年是数据集论文；完整 ImageNet 与后来 ILSVRC 竞赛使用的子集不是一回事。",
+        "en": "2009 dates the dataset paper. The full ImageNet collection is not the same as the later ILSVRC competition subsets."
+      },
+      "sources": [
+        [
+          "Deng et al. · ImageNet (CVPR 2009)",
+          "https://www.image-net.org/static_files/papers/imagenet_cvpr09.pdf"
+        ]
+      ]
+    },
+    {
+      "id": "datasheets-2018",
+      "year": 2018,
+      "topic": "data",
+      "kind": "research",
+      "status": "historical",
+      "title": {
+        "zh": "Datasheets · 数据也要有说明书",
+        "en": "Datasheets · documenting datasets"
+      },
+      "body": {
+        "zh": "记录数据为什么收集、怎样标注、适合哪些用途，以及之后由谁维护。读者不必只凭文件名和一行下载说明猜测数据的边界。",
+        "en": "Document why data was collected, how it was annotated, what uses it supports, and who maintains it. Users should not have to infer a dataset's limits from its filename and download link."
+      },
+      "limit": {
+        "zh": "2018 年首次公开，2021 年正式发表。说明书提供审查线索，不自动证明数据公平、准确或适用。",
+        "en": "First public in 2018 and published in 2021. Documentation supports scrutiny; it does not certify fairness, accuracy, or fitness for use."
+      },
+      "sources": [
+        [
+          "Gebru et al. · Datasheets for Datasets",
+          "https://arxiv.org/html/1803.09010v8"
+        ]
+      ]
+    },
+    {
+      "id": "model-cards-2018",
+      "year": 2018,
+      "topic": "ecosystem",
+      "kind": "research",
+      "status": "historical",
+      "title": {
+        "zh": "Model Cards · 发布模型时交代使用边界",
+        "en": "Model Cards · reporting intended uses and limits"
+      },
+      "body": {
+        "zh": "模型说明除了一个总分，还应交代用途、评估条件、不同群体的表现和已知限制。这让开发者、使用者和受影响的人有机会判断：这个模型是否适合眼前的场景。",
+        "en": "Model reports should include intended uses, evaluation conditions, disaggregated performance, and known limits, not just one aggregate score. Developers, users, and affected people need that context to judge suitability."
+      },
+      "limit": {
+        "zh": "预印本发表于 2018 年，会议论文为 2019 年。填写说明不等于完成安全审计，也不能替代独立评估。",
+        "en": "The preprint appeared in 2018; the conference paper followed in 2019. A completed card is not a safety audit or a substitute for independent evaluation."
+      },
+      "sources": [
+        [
+          "Mitchell et al. · Model Cards for Model Reporting",
+          "https://arxiv.org/html/1810.03993v2"
+        ]
+      ]
+    },
+    {
+      "id": "mmlu-2020",
+      "year": 2020,
+      "topic": "data",
+      "kind": "research",
+      "status": "historical",
+      "title": {
+        "zh": "MMLU · 把评估扩展到多个学科",
+        "en": "MMLU · evaluation across academic subjects"
+      },
+      "body": {
+        "zh": "用 57 个学科的选择题检查模型从预训练中学到的知识，而不只看单一语言任务。分学科的结果，也能暴露总分掩盖的薄弱处。",
+        "en": "Multiple-choice questions across 57 subjects probe knowledge acquired during pretraining, beyond a single language task. Subject-level results expose weaknesses hidden by an aggregate score."
+      },
+      "limit": {
+        "zh": "2020 年预印本，2021 年会议论文；选择题成绩不能替代开放式生成、工具使用或真实部署评估。",
+        "en": "The preprint dates to 2020 and the conference paper to 2021. Multiple-choice performance does not replace evaluation of open-ended generation, tool use, or deployment."
+      },
+      "sources": [
+        [
+          "Hendrycks et al. · Measuring Massive Multitask Language Understanding",
+          "https://arxiv.org/html/2009.03300v3"
+        ]
+      ]
+    },
+    {
+      "id": "transistor-1947",
+      "year": 1947,
+      "topic": "chips",
+      "kind": "research",
+      "status": "historical",
+      "title": {
+        "zh": "晶体管 · 用半导体放大信号",
+        "en": "The transistor · semiconductor amplification"
+      },
+      "body": {
+        "zh": "1947 年，贝尔实验室做出点接触晶体管，用半导体器件放大电信号。当时的问题来自电话系统对可靠器件的需求，并不是为了训练神经网络。",
+        "en": "Bell Labs demonstrated a point-contact transistor in 1947, amplifying electrical signals with a semiconductor device. The work addressed reliable components for telephone systems, not neural-network training."
+      },
+      "limit": {
+        "zh": "1947 年指实验器件，Bardeen 与 Brattain 的论文发表于 1948 年；点接触器件不同于今天芯片中的 MOS 晶体管。",
+        "en": "1947 dates the experimental device; Bardeen and Brattain's paper appeared in 1948. The point-contact device differs from the MOS transistors in modern chips."
+      },
+      "sources": [
+        [
+          "Bell Labs · transistor history",
+          "https://www.nokia.com/bell-labs/about/awards/1956-nobel-prize-physics/"
+        ],
+        [
+          "Bardeen & Brattain · Physical Review 74, 230 (1948), publication record",
+          "https://journals.aps.org/pr/abstract/10.1103/PhysRev.74.230"
+        ]
+      ]
+    },
+    {
+      "id": "databases-relational-model-1970",
+      "year": 1970,
+      "topic": "distributed",
+      "kind": "research",
+      "status": "historical",
+      "title": {
+        "zh": "关系模型 · 数据含义与存放方式分开",
+        "en": "The relational model · separating data from storage layout"
+      },
+      "body": {
+        "zh": "1970 年 6 月，Codd 的论文用关系描述共享数据，主张应用不应依赖记录的物理顺序、索引或访问路径。改变存储组织时，尽量不必重写应用，是这里的数据独立性问题。",
+        "en": "Codd's June 1970 paper described shared data through relations rather than physical record order, indexes, or access paths. Data independence means reducing the need to rewrite applications when storage organization changes."
+      },
+      "detail": {
+        "zh": "与机器学习的一个具体交点是 2012 年的 MADlib：它在 PostgreSQL 和 Greenplum 内实现回归、聚类等方法，让计算靠近数据库中的数据。这是后来数据库参与学习计算的实例，不是说 Codd 当时就在设计 AI 训练系统。",
+        "en": "MADlib provides a concrete later connection: its 2012 paper implemented regression and clustering inside PostgreSQL and Greenplum. This is an example of learning within a database, not evidence that Codd was designing an AI training system."
+      },
+      "limit": {
+        "zh": "1970 年标记论文，不是 SQL 或数据库产品的发布；关系模型本身也不规定分布式事务、物理执行计划或数据质量。",
+        "en": "1970 dates the paper, not a SQL or database product release. The relational model alone does not specify distributed transactions, physical execution plans, or data quality."
+      },
+      "sources": [
+        [
+          "Codd · CACM, June 1970, original paper (university-hosted copy)",
+          "https://www.seas.upenn.edu/~zives/03f/cis550/codd.pdf"
+        ],
+        [
+          "IBM Research · publication record, June 1970",
+          "https://research.ibm.com/publications/a-relational-model-of-data-for-large-shared-data-banks"
+        ],
+        [
+          "Hellerstein et al. · MADlib, PVLDB 2012, sections 3–4",
+          "https://dsf.berkeley.edu/cs286/papers/madlib-vldb2012.pdf"
+        ]
+      ]
+    },
+    {
+      "id": "software-llvm-paper-2004",
+      "year": 2004,
+      "topic": "software",
+      "kind": "research",
+      "status": "historical",
+      "title": {
+        "zh": "LLVM · 可复用的编译中间层",
+        "en": "LLVM · reusable compiler infrastructure"
+      },
+      "body": {
+        "zh": "2004 年的 LLVM 论文介绍一种带类型、采用静态单赋值形式的低层中间表示，以及围绕它组织的编译框架。程序可以在编译、链接和运行等阶段接受分析与变换，不必把所有优化都绑在一种源语言上。",
+        "en": "The 2004 LLVM paper described a typed, low-level intermediate representation in static single-assignment form. Its compiler framework supported analysis and transformations at compilation, linking, and runtime without tying every optimization to one source language."
+      },
+      "detail": {
+        "zh": "2018 年 TVM 论文的系统图列出 LLVM IR 这条代码生成路径，同时区分神经网络计算图与低层指令表示。AI 编译器可以复用通用工具，但张量布局、算子融合和硬件调度仍需要专门处理。",
+        "en": "TVM's 2018 system diagram includes an LLVM IR code-generation path while distinguishing neural-network graphs from low-level instructions. AI compilers can reuse general infrastructure, but tensor layouts, operator fusion, and hardware scheduling still require specialized work."
+      },
+      "limit": {
+        "zh": "2004 年是 CGO 论文年份；LLVM 1.0 已在 2003 年公布。低层中间表示不等于完整的模型编译器，也不能单独保证性能。",
+        "en": "2004 dates the CGO paper; LLVM 1.0 was announced in 2003. A low-level IR is not a complete model compiler and does not guarantee performance by itself."
+      },
+      "sources": [
+        [
+          "Lattner & Adve · LLVM, CGO 2004, original paper",
+          "https://llvm.org/pubs/2004-01-30-CGO-LLVM.pdf"
+        ],
+        [
+          "LLVM · CGO publication record, March 2004",
+          "https://llvm.org/pubs/2004-01-30-CGO-LLVM.html"
+        ],
+        [
+          "LLVM · project archive, November 18, 2003 release entry",
+          "https://www.llvm.org/OldNews.html"
+        ],
+        [
+          "Chen et al. · TVM, OSDI 2018, figure 2 and sections 3–4",
+          "https://www.usenix.org/system/files/osdi18-chen.pdf"
+        ]
+      ]
+    },
+    {
+      "id": "networks-rdmap-rfc-2007",
+      "year": 2007,
+      "topic": "networks",
+      "kind": "system",
+      "status": "historical",
+      "title": {
+        "zh": "RDMAP · 远端内存读写的协议边界",
+        "en": "RDMAP · specifying remote memory access"
+      },
+      "body": {
+        "zh": "2007 年 10 月的 RFC 5040 规定 RDMAP：在保留内存保护语义的前提下，读写对端已公布的缓冲区。它基于直接数据放置协议 DDP，目标是减少通信中的数据复制和 CPU 开销，而不是让程序随意访问远端内存。",
+        "en": "RFC 5040, published in October 2007, specified RDMAP reads and writes to advertised remote buffers while preserving memory protection. Built over Direct Data Placement, it aimed to reduce copying and CPU overhead, not permit unrestricted access to remote memory."
+      },
+      "detail": {
+        "zh": "2016 年 TensorFlow 系统论文记载，跨任务通信支持 gRPC/TCP 和 RoCE。这个例子说明 RDMA 技术确实进入了机器学习系统；但 RoCE 是另一条协议路线，不能据此宣称 TensorFlow 使用 RFC 5040 的 RDMAP。",
+        "en": "The 2016 TensorFlow system paper reported gRPC/TCP and RoCE for inter-task communication. That documents RDMA in a machine-learning system, but RoCE is a different protocol path: it does not establish TensorFlow's use of RFC 5040 RDMAP."
+      },
+      "limit": {
+        "zh": "这里定年的是一份协议标准，不是 RDMA 的发明或 InfiniBand、RoCE 的起点。少复制也不等于没有通信、同步和缓冲区管理成本。",
+        "en": "This dates a protocol specification, not the invention of RDMA or the origins of InfiniBand and RoCE. Fewer copies do not eliminate communication, synchronization, or buffer-management costs."
+      },
+      "sources": [
+        [
+          "Recio et al. · RFC 5040, October 2007, sections 1–3",
+          "https://www.rfc-editor.org/rfc/rfc5040.html"
+        ],
+        [
+          "IETF Datatracker · RFC 5040 publication history",
+          "https://datatracker.ietf.org/doc/rfc5040/history/"
+        ],
+        [
+          "Abadi et al. · TensorFlow, OSDI 2016, section 5",
+          "https://www.usenix.org/system/files/conference/osdi16/osdi16-abadi.pdf"
+        ]
+      ]
+    },
+    {
+      "id": "energy-proportional-computing-2007",
+      "year": 2007,
+      "topic": "energy",
+      "kind": "research",
+      "status": "historical",
+      "title": {
+        "zh": "能耗比例性 · 少做事时也要少耗电",
+        "en": "Energy proportionality · power should follow work"
+      },
+      "body": {
+        "zh": "服务器没干多少活，也可能一直耗电。2007 年，Barroso 和 Hölzle 提出：负载降下来时，整台服务器的功耗也应该跟着降，而不只是提高满载时的能效。",
+        "en": "An almost-idle server can still draw substantial power. In 2007, Barroso and Hölzle argued that power use should fall with the workload across the whole server—not just become more efficient at full load."
+      },
+      "detail": {
+        "zh": "2017 年的 TPU 研究专门测量负载变化时的功耗，并区分包含主机与扣除主机的统计口径。AI 加速器满载时每瓦完成多少计算，与服务空闲时能否省电，是两个不同问题。",
+        "en": "The 2017 TPU study measured power across offered loads and distinguished totals including the host from incremental accelerator power. High full-load performance per watt and low power during quiet service periods are different properties."
+      },
+      "limit": {
+        "zh": "这是 2007 年的设计主张，不是已经实现的行业定律。后续 PowerNap 提出不同的节能路线；旧服务器或 TPU 的结果也不能直接套到今天的设备。",
+        "en": "This was a 2007 design goal, not an achieved industry-wide law. PowerNap later explored a different energy-saving approach; measurements of old servers or TPUs do not automatically describe today's devices."
+      },
+      "sources": [
+        [
+          "Barroso & Hölzle · IEEE Computer, December 2007, original article",
+          "https://storage.googleapis.com/gweb-sustainability.appspot.com/pdf/33387.pdf"
+        ],
+        [
+          "Google Research · 2007 publication record",
+          "https://research.google/pubs/the-case-for-energy-proportional-computing/"
+        ],
+        [
+          "Meisner, Gold & Wenisch · PowerNap, ASPLOS 2009, independent follow-up",
+          "https://web.eecs.umich.edu/~twenisch/papers/asplos09.pdf"
+        ],
+        [
+          "Jouppi et al. · TPU study, April 2017 v1, sections 5–6",
+          "https://arxiv.org/pdf/1704.04760v1"
+        ]
+      ]
+    },
+    {
+      "id": "chips-roofline-report-2008",
+      "year": 2008,
+      "topic": "chips",
+      "kind": "research",
+      "status": "historical",
+      "title": {
+        "zh": "Roofline · 算得快，还得供得上数据",
+        "en": "Roofline · compute speed meets memory bandwidth"
+      },
+      "body": {
+        "zh": "2008 年的 Berkeley 技术报告用 Roofline 模型一起看多核处理器的计算上限、内存带宽和运算强度。运算强度指每读写一个字节的 DRAM 数据所完成的运算量；同一颗 CPU 跑不同程序，可能分别卡在计算或数据供给上。",
+        "en": "A 2008 Berkeley report used Roofline to relate multicore compute capacity, memory bandwidth, and operational intensity: operations per byte transferred to or from DRAM. Different programs on the same CPU can be limited by arithmetic or by data supply."
+      },
+      "detail": {
+        "zh": "基本上限取计算峰值与“带宽 × 运算强度”中较小的一个。2017 年 TPU 论文明确改用这个模型比较神经网络在 CPU、GPU 和 TPU 上的瓶颈，并针对量化计算调整运算与字节的口径。",
+        "en": "The basic bound is the smaller of peak computation and bandwidth times operational intensity. The 2017 TPU paper explicitly adapted this model for neural-network workloads on CPUs, GPUs, and TPUs, adjusting the operation and byte counts for quantized computation."
+      },
+      "limit": {
+        "zh": "2008 年指公开技术报告，期刊文章发表于 2009 年；不是多核 CPU 的诞生年。Roofline 是上限分析，不是实测速率保证，延迟、依赖和并行度仍会限制性能。",
+        "en": "2008 dates the public report; the journal article appeared in 2009. It does not date the birth of multicore CPUs. Roofline gives bounds, not guaranteed throughput; latency, dependencies, and available parallelism still matter."
+      },
+      "sources": [
+        [
+          "Williams, Waterman & Patterson · UCB/EECS-2008-134, original report",
+          "https://www2.eecs.berkeley.edu/Pubs/TechRpts/2008/Archive/EECS-2008-134.pdf"
+        ],
+        [
+          "UC Berkeley · report record, October 17, 2008",
+          "https://www2.eecs.berkeley.edu/Pubs/TechRpts/2008/EECS-2008-134.html"
+        ],
+        [
+          "Berkeley Lab · publication list, April 2009 journal article",
+          "https://amcr.lbl.gov/departments/computer-science-department/ppan/roofline-performance-model/ppan-roofline-publications/"
+        ],
+        [
+          "Jouppi et al. · TPU study, April 2017 v1, section 4",
+          "https://arxiv.org/pdf/1704.04760v1"
+        ]
+      ]
+    },
+    {
+      "id": "storage-hdfs-paper-2010",
+      "year": 2010,
+      "topic": "memory",
+      "kind": "research",
+      "status": "historical",
+      "title": {
+        "zh": "HDFS · 大文件怎样跨机器保存",
+        "en": "HDFS · storing large files across machines"
+      },
+      "body": {
+        "zh": "2010 年的 HDFS 论文描述了大规模文件存储的分工：NameNode 管目录与块位置，DataNode 保存数据块，多副本帮助应对机器故障。存储与计算安排在同一批服务器上，也让任务有机会靠近数据执行。",
+        "en": "The 2010 HDFS paper separated namespace and block-location management in the NameNode from block storage in DataNodes. Replicas helped tolerate failures, while colocated storage and computation allowed tasks to run near their data."
+      },
+      "detail": {
+        "zh": "2012 年 Spark 的 RDD 论文在逻辑回归和 k-means 实验中，从 HDFS 读取初始输入，再在迭代间复用内存中的数据。这说明可靠存储和训练时的内存复用分属不同层，不能把分布式文件系统当成 GPU 显存或模型缓存。",
+        "en": "In the 2012 Spark RDD experiments, logistic regression and k-means read initial input from HDFS and reused data in memory across iterations. Durable storage and in-memory reuse serve different roles; a distributed file system is not GPU memory or a model cache."
+      },
+      "limit": {
+        "zh": "2010 年是 MSST 论文年份，不是 HDFS 项目启动年。文中采用单写者、多读者模型；这种面向大文件吞吐的设计不能替代关系数据库的事务语义。",
+        "en": "2010 dates the MSST paper, not the project's start. Its single-writer, multiple-reader model targets large-file throughput rather than providing relational database transaction semantics."
+      },
+      "sources": [
+        [
+          "Shvachko et al. · HDFS, MSST 2010, original paper, sections II–III",
+          "https://msstconference.org/MSST-history/2010/Papers/MSST/Shvachko.pdf"
+        ],
+        [
+          "Shvachko · author publication list, May 2010 entry",
+          "https://shvachko.github.io/Publications.html"
+        ],
+        [
+          "Zaharia et al. · RDDs, NSDI 2012, section 6.1",
+          "https://www.usenix.org/system/files/conference/nsdi12/nsdi12-final138.pdf"
+        ]
+      ]
+    },
+    {
+      "id": "hmm-rabiner-tutorial-1989",
+      "year": 1989,
+      "topic": "models",
+      "kind": "research",
+      "status": "historical",
+      "title": {"zh": "HMM · 从声音推测隐藏状态", "en": "HMM · inferring hidden states from observations"},
+      "body": {"zh": "语音有长短和变化，不能只给每一帧声音单独分类。Rabiner 的 1989 年教程系统介绍 HMM：隐藏状态按概率转移，每个状态产生声音特征等观测，再根据整段观测推断可能的过程。", "en": "Speech varies over time; classifying each frame independently misses its sequence structure. Rabiner's 1989 tutorial explained HMMs: hidden states follow probabilistic transitions and produce observations, from which a sequence can be inferred."},
+      "detail": {"zh": "三个问题要分清：这段观测有多大可能、哪条状态路径最可能、参数怎样从数据中学习。它们分别需要求和、找最优路径和参数估计，不是同一道题的不同叫法。", "en": "Three problems matter: scoring an observation sequence, finding a likely state path, and fitting parameters. Summing over paths, choosing one path, and learning a model are different operations."},
+      "limit": {"zh": "1989 年是教程发表年，不是 HMM 或语音应用的诞生年。基本模型的 Markov 与条件独立假设方便计算，也限制了能表达的依赖。", "en": "1989 dates the tutorial, not HMMs or their first speech applications. Markov and conditional-independence assumptions simplify computation but restrict dependencies."},
+      "sources": [
+        ["Rabiner · HMM tutorial, IEEE 1989, sections II–III", "https://web.mit.edu/6.435/www/Rabiner89.pdf"],
+        ["CMU AI Repository · HMM speech implementation, 1994 release", "https://www.cs.cmu.edu/afs/cs/project/ai-repository/ai/areas/speech/systems/hmm/0.html"]
+      ]
+    },
+    {
+      "id": "lenet5-1998",
+      "year": 1998,
+      "topic": "models",
+      "kind": "research",
+      "status": "historical",
+      "title": {"zh": "LeNet-5 · 让识别器自己学特征", "en": "LeNet-5 · learning features for recognition"},
+      "body": {"zh": "识别手写数字时，字体和位置都在变。1998 年的文档识别论文用 LeNet-5 展示卷积、权重共享与下采样如何配合，并通过梯度学习，而不是把所有识别规则手写出来。", "en": "Handwritten digits vary in shape and position. The 1998 document-recognition paper used LeNet-5 to show convolution, shared weights, and subsampling working together, with parameters learned through gradients rather than entirely hand-written recognition rules."},
+      "detail": {"zh": "可以把权重共享理解为：同一组局部检测器在图像各处使用，不必为每个位置各学一套。后续层再组合这些局部特征；这是理解 CNN 为什么适合图像的一个具体入口。", "en": "Weight sharing applies the same local detectors across an image instead of learning a separate set at every position. Later layers combine those local features, providing a concrete introduction to CNNs."},
+      "limit": {"zh": "1998 年对应这篇论文，不代表 CNN 从这一年开始。LeNet-5 的下采样和输出层也不能直接按今天常见的 max pooling 与 softmax 配方理解。", "en": "1998 dates this paper, not the origin of CNNs. Its subsampling and output layers should not be silently replaced with today's common max-pooling and softmax recipe."},
+      "sources": [
+        ["LeCun et al. · Gradient-Based Learning Applied to Document Recognition, 1998", "https://leon.bottou.org/publications/pdf/ieee-1998.pdf"],
+        ["Bottou · author publication record", "https://bottou.org/papers/lecun-98h"]
+      ]
+    },
+    {
+      "id": "google-search-prototype-1998",
+      "year": 1998,
+      "topic": "applications",
+      "kind": "system",
+      "status": "historical",
+      "title": {"zh": "Google 原型 · 搜索不只是一条排序公式", "en": "Google prototype · beyond a ranking formula"},
+      "body": {"zh": "1998 年的 Google 原型论文把抓取、存储、索引和排序放在同一个系统里讲。PageRank 利用网页链接关系，anchor text 则借用其他页面对目标的描述；排序不只看关键词出现几次。", "en": "The 1998 Google prototype paper described crawling, storage, indexing, and ranking as one system. PageRank used link structure, while anchor text supplied descriptions from other pages. Ranking went beyond counting query terms."},
+      "detail": {"zh": "链接数量相同，分数也未必一样：链接来自哪些页面、这些页面有多少出链都会影响传播的权重。它仍只是排序的一部分，不能替代文本匹配与索引。", "en": "Equal numbers of incoming links need not yield equal scores: their source pages and outgoing-link counts affect propagated weight. This remains one ranking signal, not a replacement for text matching or indexing."},
+      "limit": {"zh": "这里记录的是当时的原型，不是今天 Google 的内部架构。链接重要性也不等于事实正确，更不保证每次查询都相关。", "en": "This is the historical prototype, not today's internal Google architecture. Link-based importance does not establish truth or relevance to every query."},
+      "sources": [
+        ["Brin & Page · The Anatomy of a Large-Scale Hypertextual Web Search Engine, 1998", "https://snap.stanford.edu/class/cs224w-readings/Brin98Anatomy.pdf"],
+        ["Google Research · original publication record", "https://research.google/pubs/the-anatomy-of-a-large-scale-hypertextual-web-search-engine/"]
+      ]
+    },
+    {
+      "id": "word2vec-2013",
+      "year": 2013,
+      "topic": "models",
+      "kind": "research",
+      "status": "historical",
+      "title": {"zh": "word2vec · 用上下文学词向量", "en": "word2vec · learning word vectors from context"},
+      "body": {"zh": "word2vec 的一个关键选择是把训练任务做得简单，从而更高效地利用大量文本。CBOW 用周围的词预测中间词；Skip-gram 反过来，用当前词预测附近的词。", "en": "word2vec simplified the prediction task to learn word vectors efficiently from large text collections. CBOW predicts a word from its surrounding words; Skip-gram predicts nearby words from the current one."},
+      "detail": {"zh": "同一个词反复出现在不同上下文中，训练就不断调整它在词表中的向量。但取出这个向量时，它本身并不会随当前句子改变；这和后来模型的上下文化表示不同。", "en": "Occurrences in many contexts keep updating a word's vector during training. Looking that vector up does not itself change it for the current sentence, unlike a contextual representation."},
+      "limit": {"zh": "2013 年不是词向量的起点。这里依据 1 月初稿解释 CBOW 与 Skip-gram；不把后来关于 negative sampling 的工作倒填进初稿。", "en": "Word vectors predate 2013. This entry follows the January version for CBOW and Skip-gram, without attributing later negative-sampling work to that initial paper."},
+      "sources": [
+        ["Mikolov et al. · Efficient Estimation of Word Representations, January 2013 v1", "https://arxiv.org/pdf/1301.3781v1"],
+        ["arXiv · submission and revision history", "https://arxiv.org/abs/1301.3781"]
+      ]
+    },
+    {
+      "id": "applications-sojourner-1997",
+      "year": 1997,
+      "topic": "applications",
+      "kind": "system",
+      "status": "historical",
+      "title": {
+        "zh": "Sojourner · 按目标自主避障",
+        "en": "Sojourner · autonomy under commanded goals"
+      },
+      "body": {
+        "zh": "Sojourner 随 Pathfinder 于 1997 年 7 月 4 日着陆火星。它根据地面目标、地形和位置感知自主避障，把传感器、移动与通信接到有限的机载计算上。",
+        "en": "Sojourner landed with Pathfinder on July 4, 1997. Its navigation behaviors combined commanded goals with terrain and position sensing, coupling mobility and communication to limited onboard computing."
+      },
+      "limit": {
+        "zh": "自主导航不等于 RL：这里记载的是导航行为与地面协作，不是强化学习训练。",
+        "en": "Autonomy is not RL: these sources describe navigation behaviors and ground support, not reinforcement-learning training."
+      },
+      "sources": [
+        [
+          "JPL Robotics · Sojourner software and electronics",
+          "https://www-robotics.jpl.nasa.gov/what-we-do/flight-projects/pathfinder/software-electronics/"
+        ],
+        [
+          "NASA · mission history, July 4, 1997 landing",
+          "https://www.nasa.gov/history/25-years-of-continuous-robotic-mars-exploration-from-pathfinder-to-perseverance/"
+        ],
+        [
+          "JPL mission archive · rover description and navigation subsystem",
+          "https://planetarydata.jpl.nasa.gov/img/data/mpfr-m-rvreng-2_3-edr_rdr-v1.0/mprv_0001/document/insthost.htm"
+        ]
+      ]
+    }
+  ],
+  "eras": [
+    {
+      "id": "origins",
+      "start": 1882,
+      "end": 1955,
+      "title": {
+        "zh": "电力、计算与晶体管",
+        "en": "Power, computation, and the transistor"
+      },
+      "summary": {
+        "zh": "这几条历史最初相距很远：电站给街区供电，图灵研究什么能被计算，贝尔实验室改进电子器件。后来，稳定的电力、可编程计算和半导体，才逐渐成为计算机共同依赖的基础。",
+        "en": "These histories began with different problems: supplying a city block, defining computation, and improving electronic devices. Electric power, programmable computation, and semiconductors would become foundations that computers depend on together."
+      },
+      "featured": [
+        "energy-pearl-street-1882",
+        "turing-computability-1936",
+        "transistor-1947"
+      ],
+      "branches": [
+        {
+          "id": "field-energy",
+          "title": {
+            "zh": "电力与机房",
+            "en": "Power & facilities"
+          },
+          "summary": {
+            "zh": "珍珠街电站把发电和配电作为一项共同服务：用户不必各自发电，而是接入供电线路。它让我们先看到计算之外的基础设施问题。",
+            "en": "Pearl Street combined generation and distribution into a shared service. Customers connected to a supply rather than generating their own electricity—a useful starting point for infrastructure before computing."
+          },
+          "works": [
+            "energy-pearl-street-1882"
+          ]
+        },
+        {
+          "id": "field-algorithms",
+          "title": {
+            "zh": "数学与算法",
+            "en": "Math & algorithms"
+          },
+          "summary": {
+            "zh": "在讨论机器能有多聪明之前，先得说明“执行一个算法”是什么意思。图灵用一个很简洁的机器模型，把这个问题变得可以严格讨论。",
+            "en": "Before asking how intelligent a machine could be, we need to define what it means to execute an algorithm. Turing made that question precise with a deliberately simple machine model."
+          },
+          "works": [
+            "turing-computability-1936"
+          ]
+        },
+        {
+          "id": "field-chips",
+          "title": {
+            "zh": "芯片与计算",
+            "en": "Chips & compute"
+          },
+          "summary": {
+            "zh": "电话通信需要可靠的放大器件。点接触晶体管展示了半导体放大信号的可能性；此时离后来集成了大量晶体管的芯片，还隔着很多工程工作。",
+            "en": "Telephone systems needed reliable amplification. The point-contact transistor demonstrated semiconductor amplification; integrating huge numbers of transistors into chips remained a separate engineering journey."
+          },
+          "works": [
+            "transistor-1947"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "early-ai",
+      "start": 1956,
+      "end": 1985,
+      "title": {
+        "zh": "计算机连成网络，知识写进程序",
+        "en": "Connecting computers, encoding knowledge"
+      },
+      "summary": {
+        "zh": "计算机开始有更密集的内存、可交互的操作系统，也能和远处的机器通信。AI 的一条重要路线，是把人的知识写成规则，让程序搜索、推理或给出建议。",
+        "en": "Denser memory, interactive operating systems, and computer networks changed what machines could do. One important AI approach was to encode human knowledge as rules that a program could search, reason with, or use to make recommendations."
+      },
+      "featured": [
+        "dartmouth",
+        "dennard-dram-patent-1967",
+        "software-unix-1969"
+      ],
+      "branches": [
+        {
+          "id": "knowledge",
+          "title": {
+            "zh": "符号 AI 与专家系统",
+            "en": "Symbolic AI & expert systems"
+          },
+          "summary": {
+            "zh": "如果专家能说出自己的判断规则，能不能把规则交给机器？从证明搜索到 MYCIN，这条路线尝试显式表达知识，再让程序据此推理。",
+            "en": "If experts can state their reasoning as rules, could a machine use them? From proof search to MYCIN, this approach represented knowledge explicitly and built programs that reasoned with it."
+          },
+          "works": [
+            "dartmouth",
+            "symbolic",
+            "mycin"
+          ]
+        },
+        {
+          "id": "field-networks",
+          "title": {
+            "zh": "网络与互连",
+            "en": "Networks & interconnects"
+          },
+          "summary": {
+            "zh": "先让两台远程主机互相通信，再解决附近许多机器如何共享线路，最后让不同网络也能互通。ARPANET、Ethernet 和 TCP/IP 对应的是不同层次的问题。",
+            "en": "Connecting remote hosts, sharing a local cable, and joining different networks are distinct problems. ARPANET, Ethernet, and TCP/IP address different layers of that story."
+          },
+          "works": [
+            "networks-arpanet-1969",
+            "networks-ethernet-paper-1976",
+            "networks-tcp-ip-transition-1983"
+          ]
+        },
+        {
+          "id": "field-software",
+          "title": {
+            "zh": "系统软件",
+            "en": "Systems software"
+          },
+          "summary": {
+            "zh": "Unix 把文件、进程和命令组织成交互式工作环境。GNU 后来提出另一个问题：这套日常依赖的软件，能不能由使用者自由分享和修改？",
+            "en": "Unix organized files, processes, and commands into an interactive working environment. GNU later asked who should be able to share and modify the software people depended on."
+          },
+          "works": [
+            "software-unix-1969",
+            "software-gnu-announcement-1983"
+          ]
+        },
+        {
+          "id": "field-memory",
+          "title": {
+            "zh": "内存与存储",
+            "en": "Memory & storage"
+          },
+          "summary": {
+            "zh": "DRAM 关心怎样把更多位放进芯片，缓存关心怎样减少处理器等待。容量更大和访问更快，是两种不同的改进。",
+            "en": "DRAM sought denser storage; caches reduced processor waiting. Fitting more bits and getting to them faster were different improvements."
+          },
+          "works": [
+            "dennard-dram-patent-1967",
+            "ibm-model85-cache-1968"
+          ]
+        },
+        {
+          "id": "field-chips",
+          "title": {
+            "zh": "芯片与计算",
+            "en": "Chips & compute"
+          },
+          "summary": {
+            "zh": "4004 把 CPU 集成到一颗芯片里。配上存储器和外围设备，同一种处理器就能通过不同程序承担不同工作，而不必每项任务都重新设计运算电路。",
+            "en": "The 4004 put a CPU on one chip. With memory and peripherals, the same processor could do different jobs through different programs instead of requiring a new arithmetic circuit for each task."
+          },
+          "works": [
+            "intel-4004-1971"
+          ]
+        },
+        {
+          "id": "field-algorithms",
+          "title": {
+            "zh": "数学与算法",
+            "en": "Math & algorithms"
+          },
+          "summary": {
+            "zh": "最短路看起来像“把所有路线试一遍”，但好的计算顺序能省掉许多尝试。Dijkstra 是一个很直接的例子：算法的进步不一定来自更多硬件。",
+            "en": "A shortest-path problem might suggest trying every route. A better processing order avoids much of that work. Dijkstra offers a concrete example of progress that comes from the algorithm rather than more hardware."
+          },
+          "works": [
+            "dijkstra-shortest-path-1959"
+          ]
+        },
+        {
+          "id": "field-distributed",
+          "title": {
+            "zh": "数据库与数据独立性",
+            "en": "Databases & data independence"
+          },
+          "summary": {
+            "zh": "共享数据越来越多，应用却常被具体存放方式绑住。关系模型从数据如何表达入手，尝试把逻辑关系与物理访问路径分开；这里还不是分布式事务的故事。",
+            "en": "Shared data could leave applications tied to a particular storage layout. The relational model separated logical relationships from physical access paths; this chapter is not yet about distributed transactions."
+          },
+          "works": [
+            "databases-relational-model-1970"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "learning",
+      "start": 1986,
+      "end": 1997,
+      "title": {
+        "zh": "从样本和反馈中学习",
+        "en": "Learning from examples and feedback"
+      },
+      "summary": {
+        "zh": "手写规则之外，研究者用样本训练分类器、用反向传播学习表示，也用奖励学习动作。与此同时，Web、Linux 和 MPI 分别让信息链接、软件协作和并行编程有了新的工具。",
+        "en": "Alongside hand-written rules, researchers trained classifiers from examples, learned representations with backpropagation, and learned actions from rewards. The Web, Linux, and MPI brought new tools for linking information, sharing software, and programming parallel machines."
+      },
+      "featured": [
+        "backprop",
+        "software-linux-kernel-1991",
+        "distributed-mpi-1994"
+      ],
+      "branches": [
+        {
+          "id": "neural",
+          "title": {
+            "zh": "神经网络与序列",
+            "en": "Neural networks & sequences"
+          },
+          "summary": {
+            "zh": "隐藏层该学什么，可以由任务误差反过来调整；但序列一长，信息和梯度又容易衰减。反向传播与 LSTM 分别帮助理解这两个问题。",
+            "en": "Task error can guide what hidden layers learn. Long sequences introduce another difficulty: retaining information and useful gradients. Backpropagation and LSTM address different parts of this problem."
+          },
+          "works": [
+            "backprop",
+            "lstm"
+          ]
+        },
+        {
+          "id": "statistics",
+          "title": {
+            "zh": "统计学习",
+            "en": "Statistical learning"
+          },
+          "summary": {
+            "zh": "统计学习不只有分类：HMM 用隐藏状态解释语音序列，SVM 则从分类间隔和正则化入手处理新样本。它们面对不同任务，不能排成一条互相替代的路线。",
+            "en": "Statistical learning includes different tasks. HMMs explain observed sequences through hidden states; SVMs use margins and regularization for classification. They are not successive replacements for one another."
+          },
+          "works": [
+            "hmm-rabiner-tutorial-1989",
+            "svm"
+          ]
+        },
+        {
+          "id": "feedback",
+          "title": {
+            "zh": "从反馈学决策",
+            "en": "Learning decisions from feedback"
+          },
+          "summary": {
+            "zh": "有些任务没有逐步标准答案，只有行动后的奖励。Q-learning 估计的是：现在做这个动作，加上后续较好的选择，长期能得到多少回报？",
+            "en": "Some tasks have rewards rather than a correct label for every step. Q-learning estimates the return from an action followed by good future choices."
+          },
+          "works": [
+            "qlearning"
+          ]
+        },
+        {
+          "id": "field-networks",
+          "title": {
+            "zh": "网络与互连",
+            "en": "Networks & interconnects"
+          },
+          "summary": {
+            "zh": "CERN 的资料散落在不同系统里，人一流动，信息更难找。Web 提案从链接文档入手，让人能沿着关系找资料，而不必事先知道它属于哪个目录。",
+            "en": "At CERN, information was scattered across systems and became harder to find as people moved on. The Web proposal connected documents so readers could follow relationships rather than know the right directory in advance."
+          },
+          "works": [
+            "networks-web-proposal-1989"
+          ]
+        },
+        {
+          "id": "field-software",
+          "title": {
+            "zh": "系统软件",
+            "en": "Systems software"
+          },
+          "summary": {
+            "zh": "Linux 0.01 把一个可研究、可修改的内核交到其他开发者手里。它还不是完整系统，但读代码、试着运行、再改进的协作方式已经有了具体对象。",
+            "en": "Linux 0.01 gave developers a kernel they could inspect and modify. It was not a complete system, but it offered something concrete to read, run, and improve together."
+          },
+          "works": [
+            "software-linux-kernel-1991"
+          ]
+        },
+        {
+          "id": "field-distributed",
+          "title": {
+            "zh": "分布式与服务",
+            "en": "Distributed systems"
+          },
+          "summary": {
+            "zh": "并行程序需要互相发消息、交换结果。MPI 统一常见通信操作的接口，让同一套程序更容易迁移到不同机器和实现上。",
+            "en": "Parallel programs exchange messages and combine results. MPI standardized common communication interfaces so applications could move more readily between machines and implementations."
+          },
+          "works": [
+            "distributed-mpi-1994"
+          ]
+        },
+        {
+          "id": "field-applications",
+          "title": {
+            "zh": "受约束的机器人自主性",
+            "en": "Robotic autonomy under constraints"
+          },
+          "summary": {
+            "zh": "火星车仍需要地面给目标，也要在当地感知地形、避开障碍。Sojourner 把有限的机载导航与人工指挥结合起来，而不是靠强化学习独自决定任务。",
+            "en": "The rover needed ground-supplied goals and local obstacle sensing. Sojourner combined limited onboard navigation with human direction rather than using reinforcement learning to choose its mission."
+          },
+          "works": [
+            "applications-sojourner-1997"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "connected-computing",
+      "start": 1998,
+      "end": 2011,
+      "title": {
+        "zh": "数据和计算一起变大",
+        "en": "Data and computing grow together"
+      },
+      "summary": {
+        "zh": "识别手写数字、从海量网页中找资料，是这一时期两类很具体的任务。LeNet-5 展示学习特征的做法，Google 原型把抓取、索引和排序接成系统。规模继续扩大后，集群、GPU、数据集以及机房的供电和散热，也越来越影响能做成什么。",
+        "en": "Reading handwritten digits and finding useful web pages were two concrete tasks of this period. LeNet-5 learned visual features; the Google prototype connected crawling, indexing, and ranking. As workloads grew, clusters, GPUs, datasets, power, and cooling increasingly shaped what could be built."
+      },
+      "featured": [
+        "nvidia-cuda-2006",
+        "imagenet-2009",
+        "energy-warehouse-scale-computing-2009"
+      ],
+      "branches": [
+        {
+          "id": "early-cnn",
+          "title": {"zh": "深度学习热潮之前的 CNN", "en": "CNNs before the deep-learning boom"},
+          "summary": {"zh": "不必先手写一套笔画检测规则：卷积层从图像中学习局部特征，再把特征交给后续层。LeNet-5 是这条路线的代表，不是 CNN 的起点。", "en": "Instead of hand-writing stroke detectors, convolutional layers learn local features for later layers to use. LeNet-5 is a representative example of this approach, not the beginning of CNNs."},
+          "works": ["lenet5-1998"]
+        },
+        {
+          "id": "web-search",
+          "title": {"zh": "网页越来越多，怎么找到有用的？", "en": "Finding useful pages on a growing web"},
+          "summary": {"zh": "关键词匹配之外，链接关系和链接上的文字也能提供线索。但排序公式只是其中一环，还得抓到网页、建好索引，并及时返回结果。", "en": "Links and their text offer evidence beyond keyword matches. A ranking formula is only one component: pages still need to be crawled, indexed, and returned efficiently."},
+          "works": ["google-search-prototype-1998"]
+        },
+        {
+          "id": "field-distributed",
+          "title": {
+            "zh": "分布式与服务",
+            "en": "Distributed systems"
+          },
+          "summary": {
+            "zh": "统计海量文档中的词频不难写，难的是把它分给很多机器，还能处理失败。MapReduce 把这部分协调工作交给运行系统，作者主要描述数据怎样变换。",
+            "en": "Counting words is straightforward; coordinating that count across many machines and failures is harder. MapReduce put much of that coordination in the runtime so application authors could focus on the transformation."
+          },
+          "works": [
+            "distributed-mapreduce-paper-2004"
+          ]
+        },
+        {
+          "id": "field-energy",
+          "title": {
+            "zh": "电力与机房",
+            "en": "Power & facilities"
+          },
+          "summary": {
+            "zh": "服务器少做事时，功耗未必跟着降。能耗比例性讨论低负载效率，仓库级计算则把服务器、网络、供电与冷却一起考虑；两者关注的是不同尺度的系统成本。",
+            "en": "Less work does not necessarily mean proportionally less power. Energy proportionality examines light-load efficiency; warehouse-scale computing considers servers, networks, power, and cooling together. They address system costs at different scales."
+          },
+          "works": [
+            "energy-proportional-computing-2007",
+            "energy-warehouse-scale-computing-2009"
+          ]
+        },
+        {
+          "id": "field-software",
+          "title": {
+            "zh": "系统软件",
+            "en": "Systems software"
+          },
+          "summary": {
+            "zh": "程序怎样变成硬件能执行的工作，有不同层次的问题。LLVM 组织可复用的代码表示与优化；CUDA 让开发者更直接地表达 GPU 线程和内存操作。这是并列的工具层，不是彼此的发明来源。",
+            "en": "Turning programs into executable work involves several layers. LLVM organizes reusable code representations and transformations; CUDA exposes GPU threads and memory operations. These are neighboring tools, not a claimed invention lineage."
+          },
+          "works": [
+            "software-llvm-paper-2004",
+            "nvidia-cuda-2006"
+          ]
+        },
+        {
+          "id": "field-chips",
+          "title": {
+            "zh": "芯片与计算",
+            "en": "Chips & compute"
+          },
+          "summary": {
+            "zh": "核心变多，程序也可能仍在等内存。Roofline 用算力与带宽的上限分析这个问题；AMD 的 GCN 则展示标量与向量执行的组织方式。性能模型和硬件设计是两种观察角度。",
+            "en": "More cores can still leave a program waiting for memory. Roofline analyzes compute and bandwidth limits, while AMD GCN illustrates an organization of scalar and vector execution. Performance modeling and hardware design offer different perspectives."
+          },
+          "works": [
+            "chips-roofline-report-2008",
+            "amd-gcn-2011"
+          ]
+        },
+        {
+          "id": "field-data",
+          "title": {
+            "zh": "数据与评估",
+            "en": "Data & evaluation"
+          },
+          "summary": {
+            "zh": "要比较模型是否真的更会识图，需要足够多、经过整理的图片。ImageNet 的贡献也在类别设计、采集和人工核验，不只是一个更大的下载包。",
+            "en": "Comparing image models required a large, organized collection of examples. ImageNet involved category design, collection, and human verification—not just a bigger file to download."
+          },
+          "works": [
+            "imagenet-2009"
+          ]
+        },
+        {
+          "id": "field-networks",
+          "title": {
+            "zh": "把通信数据放到指定位置",
+            "en": "Placing communicated data directly"
+          },
+          "summary": {
+            "zh": "机器连通之后，复制数据仍会占用 CPU 和内存带宽。RDMAP 规定受保护的远端缓冲区读写，让通信开销成为可单独研究的系统问题；它不涵盖所有 RDMA 协议。",
+            "en": "Connecting machines does not remove the CPU and memory-bandwidth costs of copying. RDMAP specifies protected remote-buffer access as one approach to that overhead, not a specification for every RDMA transport."
+          },
+          "works": [
+            "networks-rdmap-rfc-2007"
+          ]
+        },
+        {
+          "id": "field-memory",
+          "title": {
+            "zh": "存得下，也要经得起机器故障",
+            "en": "Storage capacity with failure recovery"
+          },
+          "summary": {
+            "zh": "大文件拆到多台机器后，目录、块位置和副本都要有人管理。HDFS 把元数据与文件内容分开，让存储层承担故障恢复；这与计算任务怎样调度不是同一层。",
+            "en": "Spreading large files across machines requires namespace, block-location, and replica management. HDFS separates metadata from file contents and handles storage recovery, a different responsibility from scheduling computation."
+          },
+          "works": [
+            "storage-hdfs-paper-2010"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "deep-learning",
+      "start": 2012,
+      "end": 2015,
+      "title": {
+        "zh": "深度网络开始做成更多事",
+        "en": "Deep networks take on more tasks"
+      },
+      "summary": {
+        "zh": "AlexNet 在图像识别中取得突出结果，ResNet 让更深的网络更容易训练。相近时期，神经网络也被用于翻译和游戏决策。数据、训练方法和硬件共同影响了这些结果。",
+        "en": "AlexNet delivered a major image-recognition result, while ResNet made much deeper networks easier to optimize. Neural networks also took on translation and decisions from game screens. Data, training methods, and hardware all mattered."
+      },
+      "featured": [
+        "alexnet",
+        "hbm-gpu-packaging-2015",
+        "distributed-kubernetes-v1-2015"
+      ],
+      "branches": [
+        {
+          "id": "cnn",
+          "title": {
+            "zh": "CNN → ResNet",
+            "en": "CNN → ResNet"
+          },
+          "summary": {
+            "zh": "AlexNet 展示了数据、GPU 和深层卷积网络结合的效果。接下来，ResNet 处理另一个难题：层数增加后，网络有时连训练集都更难拟合。",
+            "en": "AlexNet brought together data, GPUs, and deep convolutional networks. ResNet tackled another problem: adding layers could make even the training set harder to fit."
+          },
+          "works": [
+            "alexnet",
+            "resnet"
+          ]
+        },
+        {
+          "id": "deep-rl",
+          "title": {
+            "zh": "深度 RL 的早期实践",
+            "en": "Early deep RL"
+          },
+          "summary": {
+            "zh": "游戏画面很难做成一张状态—动作表。DQN 用神经网络估计动作价值，把过去的交互存起来再训练，让表示学习和决策学习接在一起。",
+            "en": "Game screens are too varied for a small state–action table. DQN estimated action values with a neural network and reused stored interactions, connecting representation learning to decisions."
+          },
+          "works": [
+            "dqn"
+          ]
+        },
+        {
+          "id": "translation",
+          "title": {
+            "zh": "从词向量到序列建模",
+            "en": "From word vectors to sequence models"
+          },
+          "summary": {
+            "zh": "word2vec 用邻近词提供训练信号，学到可复用的词向量。Seq2Seq 面对的是整句输入和变长输出：先编码输入，再逐步生成译文。词的表示与序列的生成，是两个不同层次的问题。",
+            "en": "word2vec learned reusable vectors from neighboring words. Seq2Seq addressed whole inputs and variable-length outputs by encoding a sentence and generating its translation step by step. Word representation and sequence generation are different problems."
+          },
+          "works": [
+            "word2vec-2013",
+            "seq2seq"
+          ]
+        },
+        {
+          "id": "field-distributed",
+          "title": {
+            "zh": "分布式与服务",
+            "en": "Distributed systems"
+          },
+          "summary": {
+            "zh": "程序装进容器以后，仍要决定放在哪台机器上、失败后怎么重启、服务怎样被找到。Kubernetes 把这些问题提升到集群层统一管理。",
+            "en": "A container still needs a host, recovery after failure, and a way for clients to find its service. Kubernetes managed these responsibilities at the cluster level."
+          },
+          "works": [
+            "distributed-kubernetes-v1-2015"
+          ]
+        },
+        {
+          "id": "field-memory",
+          "title": {
+            "zh": "内存与存储",
+            "en": "Memory & storage"
+          },
+          "summary": {
+            "zh": "GPU 算力增加，数据供给也要跟上。HBM 把存储堆叠起来，再用宽接口连接处理器；芯片之间怎样摆放和连接，开始直接影响带宽。",
+            "en": "More GPU arithmetic needs enough data to feed it. HBM stacked memory and connected it through a wide interface, making placement and packaging part of the bandwidth design."
+          },
+          "works": [
+            "hbm-gpu-packaging-2015"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "branching",
+      "start": 2016,
+      "end": 2018,
+      "title": {
+        "zh": "视觉之外，几条路线同时展开",
+        "en": "Several research paths branch out"
+      },
+      "summary": {
+        "zh": "AlphaGo 把学习与搜索组合起来；图网络学习节点之间的关系；Transformer 和 BERT 改变序列建模与预训练。计算硬件开始专门加速矩阵运算，数据和模型的使用说明也受到更多关注。",
+        "en": "AlphaGo combined learning with search. Graph networks modeled relationships, while Transformer and BERT changed sequence modeling and pretraining. Hardware added dedicated matrix operations, and researchers proposed better documentation for datasets and models."
+      },
+      "featured": [
+        "alphago",
+        "nvidia-volta-2017",
+        "transformer"
+      ],
+      "branches": [
+        {
+          "id": "graphs",
+          "title": {
+            "zh": "图神经网络 · GNN",
+            "en": "Graph neural networks · GNNs"
+          },
+          "summary": {
+            "zh": "像素有规则的网格，分子、社交关系和论文引用没有。GCN、GraphSAGE 和 GAT 分别从传播、采样聚合和邻居权重入手，学习图里的信息。",
+            "en": "Pixels sit on a grid; molecules, social links, and citations do not. GCN, GraphSAGE, and GAT explored propagation, sampled aggregation, and neighbor weighting for graph learning."
+          },
+          "works": [
+            "gcn",
+            "graphsage",
+            "gat"
+          ]
+        },
+        {
+          "id": "language",
+          "title": {
+            "zh": "Attention 与语言预训练",
+            "en": "Attention & language pretraining"
+          },
+          "summary": {
+            "zh": "Transformer 改变了序列内部交换信息的方式；BERT 用遮住部分词的训练任务，学习可以迁移到其他任务的表示。架构与训练目标，是两项可以分别改变的选择。",
+            "en": "Transformer changed how positions exchange information. BERT used masked words to learn representations transferable to other tasks. Architecture and training objective are separate choices."
+          },
+          "works": [
+            "transformer",
+            "bert"
+          ]
+        },
+        {
+          "id": "games-control",
+          "title": {
+            "zh": "围棋、游戏与控制",
+            "en": "Go, games & control"
+          },
+          "summary": {
+            "zh": "AlphaGo 把网络和搜索组成一个下棋系统；PPO 研究如何更新策略，SAC 研究带熵奖励的数据重用。它们都与决策有关，但不是在竞争同一个位置。",
+            "en": "AlphaGo combined networks and search into a playing system. PPO studied policy updates; SAC combined experience reuse with an entropy objective. All concern decisions, but they fill different roles."
+          },
+          "works": [
+            "alphago",
+            "ppo",
+            "sac"
+          ]
+        },
+        {
+          "id": "field-chips",
+          "title": {
+            "zh": "芯片与计算",
+            "en": "Chips & compute"
+          },
+          "summary": {
+            "zh": "神经网络反复做矩阵乘法。Volta 的 Tensor Core 为这类运算设计专用单元，用低精度输入和较高精度累加提高计算效率。",
+            "en": "Neural networks repeatedly multiply matrices. Volta's Tensor Cores specialized in this work, combining lower-precision inputs with higher-precision accumulation."
+          },
+          "works": [
+            "nvidia-volta-2017"
+          ]
+        },
+        {
+          "id": "field-data",
+          "title": {
+            "zh": "数据与评估",
+            "en": "Data & evaluation"
+          },
+          "summary": {
+            "zh": "拿到数据文件，并不意味着知道它适合做什么。Datasheets 建议把采集、标注、用途和维护方式一起记录，方便后来使用的人判断。",
+            "en": "A dataset download does not explain what it is suitable for. Datasheets proposed recording collection, annotation, intended uses, and maintenance alongside the data."
+          },
+          "works": [
+            "datasheets-2018"
+          ]
+        },
+        {
+          "id": "field-ecosystem",
+          "title": {
+            "zh": "人、协作与责任",
+            "en": "People & institutions"
+          },
+          "summary": {
+            "zh": "模型总分不错，也可能在某些人群或场景上很差。Model Cards 建议把评估条件、分组表现和使用边界放进发布说明。",
+            "en": "A strong overall score can conceal poor results for particular groups or settings. Model Cards proposed documenting evaluation conditions, subgroup results, and intended uses at release."
+          },
+          "works": [
+            "model-cards-2018"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scale-science",
+      "start": 2019,
+      "end": 2021,
+      "title": {
+        "zh": "更大的预训练，新的科学成果",
+        "en": "Larger pretrained models, new scientific results"
+      },
+      "summary": {
+        "zh": "GPT-3 展示了通过提示和示例完成不同任务的能力；ViT、CLIP 和扩散模型探索不同的视觉路线。AlphaFold 2 则在蛋白质结构预测上取得进展。它们共享一些工具，却在解决不同问题。",
+        "en": "GPT-3 explored doing tasks through prompts and examples. ViT, CLIP, and diffusion models pursued different visual-learning goals. AlphaFold 2 advanced protein-structure prediction. Shared tools did not make these the same problem."
+      },
+      "featured": [
+        "gpt3",
+        "nvidia-ampere-2020",
+        "alphafold2"
+      ],
+      "branches": [
+        {
+          "id": "large-lm",
+          "title": {
+            "zh": "大规模语言模型",
+            "en": "Large language models"
+          },
+          "summary": {
+            "zh": "给同一个 GPT-3 提供不同指令和示例，它能尝试不同任务。这里的变化是上下文如何引导模型，不是每换一个任务都更新一次权重。",
+            "en": "Different instructions and examples let the same GPT-3 attempt different tasks. The context changes its behavior without a weight update for each new task."
+          },
+          "works": [
+            "gpt3"
+          ]
+        },
+        {
+          "id": "visual-models",
+          "title": {
+            "zh": "视觉、生成与图文学习",
+            "en": "Vision, generation & image–text learning"
+          },
+          "summary": {
+            "zh": "ViT 研究图像怎样交给 Transformer；DDPM 学习从噪声生成图像；CLIP 用文字帮助学习视觉表示。一个偏结构，一个偏生成过程，一个偏监督信号。",
+            "en": "ViT examined how to feed images to a Transformer. DDPM learned image generation through denoising. CLIP used text to supervise visual representations: architecture, generation, and supervision are different design choices."
+          },
+          "works": [
+            "vit",
+            "diffusion",
+            "clip"
+          ]
+        },
+        {
+          "id": "science",
+          "title": {
+            "zh": "AI for Science",
+            "en": "AI for Science"
+          },
+          "summary": {
+            "zh": "蛋白质的氨基酸序列怎样对应三维结构，是一个具体而困难的科学问题。AlphaFold 2 在 CASP14 上的结果，让这条应用路线有了重要进展。",
+            "en": "Predicting a protein's three-dimensional structure from its amino-acid sequence is a specific scientific problem. AlphaFold 2's CASP14 results marked an important advance on that task."
+          },
+          "works": [
+            "alphafold2"
+          ]
+        },
+        {
+          "id": "training",
+          "title": {
+            "zh": "让更大的模型训得起来",
+            "en": "Making larger models trainable"
+          },
+          "summary": {
+            "zh": "训练需要保存的不只是权重，还有梯度和优化器状态。ZeRO 拆分数据并行中重复保存的状态，让多张卡的内存能装下更大的训练任务。",
+            "en": "Training stores gradients and optimizer state as well as weights. ZeRO partitioned redundant data-parallel state, making more of the available device memory usable for a larger training job."
+          },
+          "works": [
+            "zero"
+          ]
+        },
+        {
+          "id": "field-chips",
+          "title": {
+            "zh": "芯片与计算",
+            "en": "Chips & compute"
+          },
+          "summary": {
+            "zh": "同是 GPU，侧重点开始更清楚地分开：RDNA 侧重图形，CDNA 面向计算；A100 扩展矩阵精度，也支持把 GPU 分给不同任务使用。",
+            "en": "GPU priorities diverged: RDNA emphasized graphics, CDNA targeted compute, and A100 expanded matrix formats while adding hardware partitioning for separate workloads."
+          },
+          "works": [
+            "amd-rdna-2019",
+            "nvidia-ampere-2020",
+            "amd-cdna-2020"
+          ]
+        },
+        {
+          "id": "field-data",
+          "title": {
+            "zh": "数据与评估",
+            "en": "Data & evaluation"
+          },
+          "summary": {
+            "zh": "模型能做的任务越来越多，评估也需要覆盖更多内容。MMLU 用跨学科选择题检查知识；它提供一个观察角度，开放式任务仍要另测。",
+            "en": "Broader model capabilities required broader tests. MMLU used multiple-choice questions across subjects to examine knowledge, while open-ended tasks still required separate evaluation."
+          },
+          "works": [
+            "mmlu-2020"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "public-tools",
+      "start": 2022,
+      "end": 2023,
+      "title": {
+        "zh": "生成模型走向更多用户",
+        "en": "Generative models reach more people"
+      },
+      "summary": {
+        "zh": "ChatGPT 和 Stable Diffusion 让更多人直接用上生成模型。面对真实请求，问题从“模型能做什么”扩展到“回答是否有用、服务是否够快、成本能否承担”。后训练与推理系统因此值得放在一起读。",
+        "en": "ChatGPT and Stable Diffusion put generative models in more people's hands. Serving real requests raised questions beyond capability: are the outputs useful, how long do users wait, and what does it cost? Post-training and serving systems are worth reading together here."
+      },
+      "featured": [
+        "nvidia-hopper-2022",
+        "chatgpt",
+        "amd-cdna3-mi300-2023"
+      ],
+      "branches": [
+        {
+          "id": "assistants",
+          "title": {
+            "zh": "对话助手与偏好训练",
+            "en": "Assistants & preference training"
+          },
+          "summary": {
+            "zh": "InstructGPT 展示如何用示范与偏好调整回答，ChatGPT 提供对话入口，DPO 探索更直接的偏好训练。训练方法与产品体验，在这里可以对照着看。",
+            "en": "InstructGPT trained on demonstrations and preferences, ChatGPT supplied a conversational interface, and DPO explored a more direct preference objective. Training methods and product experience can be read side by side."
+          },
+          "works": [
+            "instructgpt",
+            "chatgpt",
+            "dpo"
+          ]
+        },
+        {
+          "id": "image-tools",
+          "title": {
+            "zh": "图像生成工具",
+            "en": "Image generation tools"
+          },
+          "summary": {
+            "zh": "Stable Diffusion 公开权重与代码，让用户能运行和改造图像生成模型。能用到模型，和只能看到论文里的样图，是不同的参与方式。",
+            "en": "Stable Diffusion released weights and code, allowing people to run and adapt an image generator rather than only inspect examples in a paper."
+          },
+          "works": [
+            "stable-diffusion"
+          ]
+        },
+        {
+          "id": "serving",
+          "title": {
+            "zh": "Attention 执行与模型服务",
+            "en": "Attention execution & model serving"
+          },
+          "summary": {
+            "zh": "FlashAttention 减少一次 attention 计算中的数据搬运；vLLM 管理多个请求不断增长的 KV cache。前者偏算子，后者偏服务，瓶颈所在的层次不同。",
+            "en": "FlashAttention reduced data movement within attention. vLLM managed growing KV caches across requests. One focuses on an operation; the other on serving—the bottlenecks sit at different layers."
+          },
+          "works": [
+            "flash",
+            "vllm"
+          ]
+        },
+        {
+          "id": "robots",
+          "title": {
+            "zh": "视觉语言模型走向动作",
+            "en": "Vision-language models meet action"
+          },
+          "summary": {
+            "zh": "模型看懂“把杯子拿起来”之后，还得给机器人可执行的动作。RT-2 把视觉语言数据与机器人轨迹结合，研究这些能力怎样迁移到控制。",
+            "en": "Understanding “pick up the cup” must lead to executable robot actions. RT-2 combined vision-language data and robot trajectories to study that transfer."
+          },
+          "works": [
+            "rt2"
+          ]
+        },
+        {
+          "id": "field-chips",
+          "title": {
+            "zh": "芯片与计算",
+            "en": "Chips & compute"
+          },
+          "summary": {
+            "zh": "H100 关注低精度 Transformer 计算与 GPU 互连，MI300 展示 chiplet、HBM 和异构集成。比较这类硬件，要同时看计算、内存和系统连接。",
+            "en": "H100 emphasized low-precision Transformer computation and GPU interconnects. MI300 combined chiplets, HBM, and heterogeneous integration. Comparing them requires looking at computation, memory, and system connections."
+          },
+          "works": [
+            "nvidia-hopper-2022",
+            "amd-cdna3-mi300-2023"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reasoning",
+      "start": 2024,
+      "end": 2025,
+      "title": {
+        "zh": "用 RL 改进语言模型推理",
+        "en": "RL for language-model reasoning"
+      },
+      "summary": {
+        "zh": "DeepSeekMath 提出 GRPO，DeepSeek-R1 将它用于推理训练。后来研究和开源框架继续采用这一方法；但题目怎么选、奖励怎么写、一次采样是否值得，仍要按任务摸索。",
+        "en": "DeepSeekMath introduced GRPO, and DeepSeek-R1 used it for reasoning training. Later research and open-source frameworks adopted the method. Choosing suitable problems, rewards, and sampling budgets still takes task-specific work."
+      },
+      "featured": [
+        "grpo",
+        "deepseek-r1"
+      ],
+      "branches": [
+        {
+          "id": "reasoning-rl",
+          "title": {
+            "zh": "语言模型上的 RL",
+            "en": "RL for language models"
+          },
+          "summary": {
+            "zh": "同一道题多做几次，再用奖励比较这些回答，是 GRPO 的直观起点。R1 则进一步说明，RL 更新还要和数据准备、SFT 以及评估流程一起设计。",
+            "en": "GRPO starts with several answers to the same problem and compares their rewards. R1 shows how those updates fit alongside data preparation, SFT, and evaluation."
+          },
+          "works": [
+            "grpo",
+            "deepseek-r1"
+          ]
+        },
+        {
+          "id": "open-questions",
+          "title": {
+            "zh": "还没有定论的问题",
+            "en": "Questions still open"
+          },
+          "summary": {
+            "zh": "奖励写得准不准、题目是否太难、采样是否值得，都会影响训练。这些问题已有不少经验，但仍需按任务验证，所以与具体方法分开，标成开放问题。",
+            "en": "Reward quality, task difficulty, and sampling cost all affect training. There is practical experience, but these choices still need task-specific validation; they are shown separately as open questions."
+          },
+          "works": [
+            "posttraining-open"
+          ]
+        }
+      ]
+    }
+  ],
+  "layers": [
+    {
+      "id": "physical",
+      "title": {
+        "zh": "物理基础",
+        "en": "Physical foundations"
+      }
+    },
+    {
+      "id": "software",
+      "title": {
+        "zh": "软件与系统",
+        "en": "Software and systems"
+      }
+    },
+    {
+      "id": "knowledge",
+      "title": {
+        "zh": "方法与证据",
+        "en": "Methods and evidence"
+      }
+    },
+    {
+      "id": "people",
+      "title": {
+        "zh": "应用与人",
+        "en": "Applications and people"
+      }
+    }
+  ],
+  "topics": [
+    {
+      "id": "energy",
+      "layer": "physical",
+      "title": {
+        "zh": "电力与机房",
+        "en": "Power & facilities"
+      },
+      "subtitle": {
+        "zh": "供电 · 冷却 · 数据中心",
+        "en": "Electricity · cooling · datacenters"
+      },
+      "description": {
+        "zh": "一台机器接上电就能跑；一座机房还要解决供电容量、备用电源和散热。沿这条线看，为什么计算的规模不只由芯片决定。",
+        "en": "One machine needs a power socket. A facility also needs enough supply capacity, backup power, and cooling. This branch follows the physical limits behind larger computing systems."
+      },
+      "next": {
+        "zh": "已含早期供电、能耗比例性与仓库级机房案例；仍需独立展开交流电网、UPS、配电和液冷的历史。",
+        "en": "Early utility supply, energy proportionality, and warehouse-scale facilities are represented; AC grids, UPS systems, distribution, and liquid cooling still need dedicated histories."
+      }
+    },
+    {
+      "id": "chips",
+      "layer": "physical",
+      "title": {
+        "zh": "芯片与计算",
+        "en": "Chips & compute"
+      },
+      "subtitle": {
+        "zh": "晶体管 · CPU · GPU · 加速器",
+        "en": "Transistors · CPUs · GPUs · accelerators"
+      },
+      "description": {
+        "zh": "CPU、GPU 和专用加速器，把有限的芯片面积用在不同地方。这里把 NVIDIA、AMD 等路线放在一起，看它们怎样取舍通用性、算力、功耗和数据搬运。",
+        "en": "CPUs, GPUs, and specialized accelerators spend their silicon differently. Follow NVIDIA, AMD, and other approaches through their choices about flexibility, arithmetic, power, and data movement."
+      },
+      "next": {
+        "zh": "已含晶体管、早期 CPU、Roofline 性能分析、GPU 架构及 MI300 封装案例；TPU 在性能分析中作为后续用例出现，CPU 微架构、制程和 TPU / ASIC 设计仍需独立展开。",
+        "en": "Transistors, an early CPU, Roofline analysis, GPU architectures, and MI300 packaging are represented. TPU appears as a later performance-analysis example; CPU microarchitecture, fabrication, and TPU / ASIC designs still need dedicated histories."
+      }
+    },
+    {
+      "id": "memory",
+      "layer": "physical",
+      "title": {
+        "zh": "内存与存储",
+        "en": "Memory & storage"
+      },
+      "subtitle": {
+        "zh": "缓存 · DRAM · HBM · 持久化",
+        "en": "Caches · DRAM · HBM · persistence"
+      },
+      "description": {
+        "zh": "处理器算得再快，也可能在等数据。缓存、DRAM 和 HBM 处理距离、容量与带宽；文件系统还要让数据跨机器保存、在故障后继续可读。内存与持久化存储承担不同任务。",
+        "en": "A fast processor can still wait for data. Caches, DRAM, and HBM address proximity, capacity, and bandwidth; file systems also preserve data across machines and failures. Memory and persistent storage serve different roles."
+      },
+      "next": {
+        "zh": "已含早期硬件缓存、DRAM、HBM 与 HDFS 文件存储；仍缺多级缓存与一致性、DDR、Flash / SSD、对象存储和检查点系统的独立历史。",
+        "en": "Early hardware caching, DRAM, HBM, and HDFS file storage are represented; multilevel caches and coherence, DDR, Flash / SSD, object storage, and checkpoint systems remain gaps."
+      }
+    },
+    {
+      "id": "networks",
+      "layer": "physical",
+      "title": {
+        "zh": "网络与互连",
+        "en": "Networks & interconnects"
+      },
+      "subtitle": {
+        "zh": "互联网 · 集群网络 · 芯片互连",
+        "en": "Internet · cluster fabrics · chip links"
+      },
+      "description": {
+        "zh": "读网页、跨机器传文件、让多张 GPU 一起训练，都需要通信，但连接距离和要求不同。先分清互联网、机房网络和设备互连，再看各自的设计。",
+        "en": "Reading a web page, transferring files, and training across GPUs all require communication. The distances and requirements differ. This branch separates the Internet, facility networks, and device interconnects."
+      },
+      "next": {
+        "zh": "已含 ARPANET、Ethernet、TCP/IP、Web 与 RDMAP 标准，另有 RoCE 用例和 Hopper 的 NVLink；交换网络、InfiniBand、RoCE、PCIe 与 GPU 互连仍需独立展开。",
+        "en": "ARPANET, Ethernet, TCP/IP, the Web, and the RDMAP specification are represented, alongside a RoCE example and NVLink under Hopper. Switched networks, InfiniBand, RoCE, PCIe, and GPU interconnects still need dedicated histories."
+      }
+    },
+    {
+      "id": "software",
+      "layer": "software",
+      "title": {
+        "zh": "系统软件",
+        "en": "Systems software"
+      },
+      "subtitle": {
+        "zh": "Linux · 编译器 · 运行时",
+        "en": "Linux · compilers · runtimes"
+      },
+      "description": {
+        "zh": "程序到硬件之间还有很多层：操作系统分配资源，编译器转换代码，驱动和计算库调用设备。沿 Unix、Linux、CUDA 等节点，看这些工具怎样让硬件更容易被使用。",
+        "en": "Between a program and the hardware sit operating systems, compilers, drivers, and computing libraries. Unix, Linux, CUDA, and other milestones show how software makes machines usable."
+      },
+      "next": {
+        "zh": "已含 Unix、GNU、Linux、LLVM、CUDA 与 FlashAttention，并用 TVM 说明编译框架的后续用途；更早的编译器、虚拟化、ROCm 和 PyTorch / JAX 执行体系仍需独立展开。",
+        "en": "Unix, GNU, Linux, LLVM, CUDA, and FlashAttention are represented, with TVM illustrating later compiler reuse. Earlier compilers, virtualization, ROCm, and PyTorch / JAX execution systems still need dedicated histories."
+      }
+    },
+    {
+      "id": "distributed",
+      "layer": "software",
+      "title": {
+        "zh": "分布式与服务",
+        "en": "Distributed systems"
+      },
+      "subtitle": {
+        "zh": "并行计算 · 云 · 训练与推理",
+        "en": "Parallel computing · cloud · serving"
+      },
+      "description": {
+        "zh": "把工作分给很多机器之后，还得把结果收回来。通信、调度、故障恢复和服务排队，是这条线反复出现的问题；买更多机器只是开始。",
+        "en": "Splitting work across machines is only the beginning. Results must come back, failures need recovery, and requests need scheduling. This branch follows the systems that coordinate that work."
+      },
+      "next": {
+        "zh": "已含关系模型、MPI、MapReduce、Kubernetes、ZeRO 与 vLLM，MADlib 也作为库内学习用例出现；SQL 与数据库执行、事务与一致性、云平台、流处理和更多训练系统仍需展开。",
+        "en": "The relational model, MPI, MapReduce, Kubernetes, ZeRO, and vLLM are represented, with MADlib as an in-database learning example. SQL and database execution, transactions and consistency, cloud platforms, stream processing, and other training systems remain gaps."
+      }
+    },
+    {
+      "id": "algorithms",
+      "layer": "knowledge",
+      "title": {
+        "zh": "数学与算法",
+        "en": "Math & algorithms"
+      },
+      "subtitle": {
+        "zh": "计算理论 · 优化 · 搜索 · 控制",
+        "en": "Computation · optimization · search · control"
+      },
+      "description": {
+        "zh": "有些问题根本没有通用算法，有些能算却太慢。先看“能不能算”，再看怎样少走弯路：搜索、统计、优化和数值计算，都有自己的问题与方法。",
+        "en": "Some problems have no general algorithm; others are computable but expensive. This branch moves from what can be computed to how to do it efficiently, through search, statistics, optimization, and numerical methods."
+      },
+      "next": {
+        "zh": "已含可计算性与最短路，RL 节点也涉及动态规划；信息论、优化、概率统计、动态规划、数值线性代数与控制理论仍需独立展开。",
+        "en": "Computability and shortest paths are represented, with dynamic programming touched on through RL; information theory, optimization, probability and statistics, dynamic programming, numerical linear algebra, and control still need dedicated histories."
+      }
+    },
+    {
+      "id": "data",
+      "layer": "knowledge",
+      "title": {
+        "zh": "数据与评估",
+        "en": "Data & evaluation"
+      },
+      "subtitle": {
+        "zh": "采集 · 标注 · 反馈 · 基准",
+        "en": "Collection · labels · feedback · benchmarks"
+      },
+      "description": {
+        "zh": "同一个模型，换一批数据，学到的东西可能很不一样。数据从哪来、谁来标注、用什么题目评估，决定了很多结果该怎样理解。",
+        "en": "The same model can learn very different things from different data. Collection, annotation, and evaluation choices shape what a reported result actually tells us."
+      },
+      "next": {
+        "zh": "已含 ImageNet、MMLU 与数据说明，后训练节点也涉及偏好标注；仍缺语音与语言数据集、检索评测、人类反馈数据和治理实践的独立历史。",
+        "en": "ImageNet, MMLU, and dataset documentation are represented, with preference labeling covered in post-training; speech and language datasets, retrieval evaluation, human-feedback data, and governance practices still need dedicated histories."
+      }
+    },
+    {
+      "id": "models",
+      "layer": "knowledge",
+      "title": {
+        "zh": "模型与学习",
+        "en": "Models & learning"
+      },
+      "subtitle": {
+        "zh": "符号 · 统计 · 神经网络 · RL",
+        "en": "Symbolic · statistical · neural · RL"
+      },
+      "description": {
+        "zh": "怎样从样本、结构或反馈中学到有用的东西？视觉、语言、图学习和 RL 各有任务，也会借用彼此的方法。可以只跟着你感兴趣的一条线读。",
+        "en": "How can a model learn something useful from examples, structure, or feedback? Vision, language, graph learning, and RL have different tasks and borrow from one another. Follow whichever branch interests you."
+      },
+      "next": {
+        "zh": "已有 LeNet-5、HMM 语音教程、word2vec，以及后来的视觉、语言、图学习与 RL 代表工作；语音的完整演变、其他概率图模型、推荐、因果与世界模型仍需展开。",
+        "en": "LeNet-5, the HMM speech tutorial, and word2vec join later vision, language, graph-learning, and RL examples. The wider speech history, other graphical models, recommendation, causality, and world models still need expansion."
+      }
+    },
+    {
+      "id": "applications",
+      "layer": "people",
+      "title": {
+        "zh": "应用与产品",
+        "en": "Applications & products"
+      },
+      "subtitle": {
+        "zh": "科学 · 机器人 · 搜索 · 助手",
+        "en": "Science · robotics · search · assistants"
+      },
+      "description": {
+        "zh": "AlphaGo 要选棋步，AlphaFold 要预测结构，聊天助手要回应请求。把任务、方法和工程放回同一个案例里，才容易看清一项技术究竟做成了什么。",
+        "en": "AlphaGo chooses moves, AlphaFold predicts structures, and an assistant responds to requests. Looking at the task, methods, and engineering together makes each achievement easier to understand."
+      },
+      "next": {
+        "zh": "已含医疗规则系统、Sojourner 火星车、Google 搜索原型、围棋、蛋白质结构预测、生成工具与 RT-2；搜索后续发展、推荐、工业应用、自动驾驶，以及更多医疗和创作工具的部署历史仍需补充。",
+        "en": "Medical rules, Sojourner, the Google search prototype, Go, protein structures, generative tools, and RT-2 have examples. Later search systems, recommendation, industrial uses, autonomous driving, and broader medical and creative deployment histories remain gaps."
+      }
+    },
+    {
+      "id": "ecosystem",
+      "layer": "people",
+      "title": {
+        "zh": "人、协作与责任",
+        "en": "People & institutions"
+      },
+      "subtitle": {
+        "zh": "研究组织 · 开源 · 标准 · 安全",
+        "en": "Research · open source · standards · safety"
+      },
+      "description": {
+        "zh": "技术也由人和协作方式塑造：谁整理数据、怎样分享代码、发布模型时要交代什么。这里关注研究组织、开源协作，以及使用技术的人。",
+        "en": "Technology is also shaped by people and how they work together: who prepares the data, how code is shared, and what a model release should disclose. This branch follows research communities, open collaboration, and users."
+      },
+      "next": {
+        "zh": "已含 Dartmouth 与 Model Cards，GNU / Linux 也涉及开放协作；仍需展开协作机制、标准组织、研究资助、安全评估与无障碍使用的历史。",
+        "en": "Dartmouth and Model Cards are represented, while GNU / Linux touch on open collaboration; collaboration practices, standards bodies, research funding, safety evaluation, and accessibility still need fuller histories."
+      }
+    }
+  ],
+  "connections": [
+    {
+      "from": "alexnet",
+      "to": "imagenet-2009",
+      "type": "uses",
+      "description": {
+        "zh": "训练与评估使用 ImageNet 的 ILSVRC 子集；数据集与竞赛设置都是结果的一部分。",
+        "en": "Training and evaluation use ILSVRC subsets of ImageNet; the dataset and competition setup are part of the result."
+      },
+      "source": "https://papers.nips.cc/paper_files/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf"
+    },
+    {
+      "from": "alexnet",
+      "to": "nvidia-cuda-2006",
+      "type": "uses",
+      "description": {
+        "zh": "论文提供 GPU 卷积实现，并链接到 cuda-convnet。训练还受当时两块 GPU 的显存与通信限制。",
+        "en": "The paper provides GPU convolution code through cuda-convnet. Training is also constrained by the memory and communication of its two GPUs."
+      },
+      "source": "https://papers.nips.cc/paper_files/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf"
+    },
+    {
+      "from": "vit",
+      "to": "transformer",
+      "type": "adapts",
+      "description": {
+        "zh": "把图像块作为序列输入 Transformer，不是说图像因此和语言完全一样。",
+        "en": "Image patches become a Transformer sequence; this does not make image and language data identical."
+      },
+      "source": "https://arxiv.org/abs/2010.11929"
+    },
+    {
+      "from": "model-cards-2018",
+      "to": "datasheets-2018",
+      "type": "complements",
+      "description": {
+        "zh": "前者交代模型的用途与表现，后者交代数据的来历与边界。原论文明确把两者作为互补文档。",
+        "en": "One reports model uses and behavior; the other documents data provenance and limits. The Model Cards paper explicitly treats them as complementary."
+      },
+      "source": "https://arxiv.org/html/1810.03993v2"
+    }
+  ]
+}

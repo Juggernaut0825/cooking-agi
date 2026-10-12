@@ -1,34 +1,61 @@
-name: 提问与纠错 · Note feedback
-description: 哪段没讲清、哪里可能有错，都可以从这里聊。 / Ask about a note or report a correction.
+name: 内容与网站反馈 · Feedback
+description: 纠错、过时信息、没看懂、缺少主题或网站问题。 / Corrections, outdated notes, explanations, topics, or site problems.
 title: "[Note] "
 body:
+  - type: markdown
+    attributes:
+      value: |
+        不用先知道答案，也不用懂仓库结构。这个 issue 发出后立即公开：请勿附公司内部资料、非公开面试题、私人进度文件、凭据或含个人信息的截图 / 日志。
+        You don't need a solution or repository knowledge. Issues are public immediately. Do not attach internal company material, non-public interview questions, private progress files, credentials, or personal information.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 反馈类型 · Type
+      options:
+        - 内容纠错 · Correction
+        - 信息过时 · Outdated information
+        - 解释不清 · Explanation request
+        - 想加主题 · Topic request
+        - 网站问题 · Site problem
+    validations:
+      required: true
   - type: input
     id: area
     attributes:
       label: 板块 · Area
-      description: "保留 Area: 前缀，方便分区检索。可用 quant / foundations / posttrain / evaluation / data-retrieval / systems-agents / practice / exercises / career / papers / site。"
+      description: "页面入口会预填。不确定可以留空；维护者会补。已知时保留 Area: 前缀，可用 foundations / posttrain / evaluation / data-retrieval / systems-agents / practice / exercises / career / papers / site。 / Prefilled from a note; leave blank if unsure."
       placeholder: "Area: evaluation"
     validations:
-      required: true
+      required: false
   - type: input
     id: source
     attributes:
       label: 页面 · Source
-      description: 页面底部入口会自动填写。中文和英文使用同一中文源文件路径。 / Prefilled from a page; both languages use its canonical Chinese source path.
+      description: 页面底部入口会自动填写。中英文共用同一来源标识；首页使用 README.md。 / Prefilled from a page; both languages share a canonical source, with README.md for the homepage.
       placeholder: 07-evaluation/README.md
     validations:
-      required: true
+      required: false
   - type: textarea
     id: question
     attributes:
       label: 想讨论什么 · Question or correction
-      description: 引用具体段落，说明疑问；有公开依据或复现步骤可以一起贴。 / Quote the passage, explain the issue, and add public evidence if available.
+      description: 哪儿不对或没看懂？希望加什么？网站问题请写操作步骤、预期和实际结果。不要求你先给出答案。 / What seems wrong, confusing, or missing? For a site problem, include steps and expected versus actual behavior. A solution is not required.
     validations:
       required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 公开来源 · Public evidence (optional)
+      description: 论文、官方文档或可复现的小例子；不知道可以留空。 / Papers, documentation, or a reproducible example; leave blank if unknown.
+  - type: input
+    id: context
+    attributes:
+      label: 版本或环境 · Version or environment (optional)
+      description: 内容过时时可填版本 / 日期；网站问题可填浏览器 / 设备。不需要上传完整日志。 / Version or date for changed information; browser or device for site problems. No full logs needed.
   - type: checkboxes
     id: privacy
     attributes:
       label: 公开内容 · Public content
       options:
-        - label: 不包含内部资料、凭据或他人隐私。 / No internal materials, credentials, or other people's private data.
+        - label: 不包含内部资料、非公开面试题、私人进度文件、凭据或他人隐私。 / No internal materials, non-public interview questions, private progress files, credentials, or other people's private data.
           required: true

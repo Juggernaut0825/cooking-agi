@@ -2,3 +2,7 @@ _site/
 __pycache__/
 *.pyc
 .DS_Store
+agi-prep-progress*.json
+agi-prep-progress*.txt
+.study-progress/
+.local-review/

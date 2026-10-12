@@ -67,7 +67,7 @@ Interval merging is a sorted scan. Not every sort-and-scan algorithm is a greedy
 - [Jump Game](https://leetcode.com/problems/jump-game/): explain why a frontier is sufficient.
 - [Best Time to Buy and Sell Stock](https://leetcode.com/problems/best-time-to-buy-and-sell-stock/): retain the earlier minimum price and evaluate selling today; buying must precede selling.
 
-For now, learn the common scanning, lookup, traversal, and state patterns. Trie, Union-Find, and topological sorting can have separate future notes. No need to cram them here or jump to Hard problems for a sense of completeness.
+Start with scanning, lookup, traversal, and state patterns. The [task-dependency exercise](../coding-checks.en.md#dependencies) adds topological sorting and distinguishes it from parallel execution. Trie and Union-Find can be studied as needed; completeness is not a reason to jump straight to Hard problems.
 
 <details class="interview" markdown="1">
 <summary>Why sort by start for merging and finish for activity count?</summary>

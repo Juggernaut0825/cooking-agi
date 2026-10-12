@@ -1,0 +1,46 @@
+.prep-schedule { margin: 2.5rem 0; padding: 1.5rem; border: 1px solid var(--rule); border-radius: 12px; background: var(--panel); scroll-margin-top: 6rem; }
+.prep-schedule[hidden], .prep-schedule [hidden] { display: none !important; }
+.prep-schedule-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+.prose .prep-schedule h2 { margin: 0; font-size: 1.4rem; border: 0; padding: 0; }
+.prose .prep-schedule h3 { margin: 0 0 .7rem; font-size: 1rem; }
+.prose .prep-schedule p { font-size: .86rem; line-height: 1.85; }
+.prose .prep-schedule-intro { max-width: 42rem; color: var(--ink-soft); margin: 1rem 0; }
+.prep-schedule button, .prep-schedule input, .prep-schedule select { font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; min-height: 44px; padding: .55rem .75rem; }
+.prep-schedule button { font-size: .8rem; cursor: pointer; }
+.prep-schedule button:hover { background: var(--ember-bg); }
+.prep-schedule :disabled { opacity: .6; cursor: not-allowed; }
+.prep-schedule :is(button, input, select, a):focus-visible { outline: 2px solid var(--ember); outline-offset: 3px; }
+.prep-schedule-heading > button, .prep-session-actions > button:first-child { background: var(--ember-bg); }
+.prep-session-form { border: 1px solid var(--rule); border-radius: 8px; padding: 1.15rem; margin: 1.2rem 0; background: var(--paper); }
+.prep-session-form fieldset { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; border: 0; padding: 0; margin: 0; min-width: 0; }
+.prep-session-form label { display: flex; flex-direction: column; gap: .4rem; font-size: .8rem; min-width: 0; }
+.prep-session-form :is(input, select) { width: 100%; min-width: 0; box-sizing: border-box; background: var(--panel); }
+.prep-session-wide { grid-column: 1 / -1; }
+.prep-session-actions { display: flex; flex-wrap: wrap; gap: .45rem; }
+.prep-session-form [role="alert"]:empty, [data-schedule-message]:empty { display: none; }
+.prep-schedule-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .7rem; padding: .75rem 0; border-bottom: 1px solid var(--rule); }
+.prep-schedule-toolbar label { display: flex; align-items: center; gap: .5rem; font-size: .78rem; }
+.prep-schedule-toolbar select { max-width: 100%; font-size: .8rem; }
+.prose .prep-schedule-toolbar p { color: var(--muted); font-size: .78rem; margin: 0; }
+.prep-day { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: 1rem; padding: 1.2rem 0; border-bottom: 1px solid var(--rule); }
+.prep-day-heading time { display: block; font-size: .86rem; font-weight: 600; }
+.prep-day-heading small { display: block; font-size: .72rem; color: var(--muted); margin-top: .35rem; }
+.prose .prep-day ul { list-style: none; margin: 0; padding: 0; }
+.prose .prep-day li { margin: 0; padding: 0; }
+.prose .prep-day li + li { border-top: 1px dashed var(--rule); margin-top: 1rem; padding-top: 1rem; }
+.prep-session-title { display: block; font-weight: 550; font-size: .9rem; overflow-wrap: anywhere; white-space: pre-wrap; }
+.prose .prep-session-meta { color: var(--muted); font-size: .75rem; margin: .3rem 0 .65rem; }
+.prep-session-note { display: block; font-size: .78rem; margin: .45rem 0; overflow-wrap: anywhere; }
+.prep-session-row .prep-session-actions button { background: transparent; font-size: .75rem; }
+.prep-session-row .prep-session-actions button:first-child { background: var(--ember-bg); }
+.prep-schedule-empty { padding: 1.4rem 0; color: var(--muted); }
+.prose .prep-schedule-privacy { font-size: .75rem; color: var(--muted); margin: 1.1rem 0 0; }
+@media (max-width: 600px) {
+  .prep-schedule { padding: 1rem; }
+  .prep-day { grid-template-columns: minmax(0, 1fr); gap: .75rem; }
+  .prep-day-heading { display: flex; flex-wrap: wrap; gap: .3rem .7rem; align-items: baseline; }
+  .prep-day-heading small { margin: 0; }
+  .prep-session-form { padding: .85rem; }
+  .prep-session-form fieldset { grid-template-columns: minmax(0, 1fr); }
+  .prep-schedule-toolbar { align-items: flex-start; flex-direction: column; }
+}

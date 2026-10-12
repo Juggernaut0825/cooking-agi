@@ -72,6 +72,13 @@ class CollaborationTests(unittest.TestCase):
         self.assertEqual(query["source"], ["test & more.md"])
         self.assertEqual(query["template"], ["note-feedback.yml"])
 
+    def test_homepage_languages_share_discussion(self):
+        expected = collaboration.discussion_url(self.repo, 'site', 'README.md')
+        for language, filename in [('zh', 'README.zh.md'), ('en', 'README.md')]:
+            page = SimpleNamespace(src=collaboration.ROOT / filename,
+                                   section={'group': 'start'}, lang=language, rel=lambda value: value)
+            self.assertIn(expected, collaboration.page_panel(page, self.config, self.repo))
+
     def test_credit_requires_public_repo_evidence(self):
         self.config["acknowledgements"] = [{"login": "example", "zh": "纠错", "en": "Correction",
                                            "evidence": ["javascript:alert(1)"]}]
