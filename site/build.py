@@ -1982,12 +1982,11 @@ def assemble(page, sections, people, nav, built, template):
         template = template.replace('{{tabs}}', f'<a class="study-back" href="{back}">{"← 返回知识库" if zh else "← Back to the library"}</a>')
     if is_prep_hub:
         template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/prep-hub.css?v={built}">\n<script defer src="{prefix}static/prep-hub.js?v={built}"></script>\n</head>')
-    if 'data-technology-tree' in page.body or 'class="tech-timeline"' in page.body:
+    if 'class="tech-timeline"' in page.body:
         template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/technology-tree.css?v={built}">\n</head>')
     if 'data-technology-tree' in page.body:
-        template = template.replace('</head>', f'<script defer src="{prefix}static/technology-atlas.js?v={built}"></script>\n</head>')
-        template = template.replace('</head>', f'<script defer src="{prefix}static/world-exhibit.js?v={built}"></script>\n</head>')
-        template = template.replace('</head>', f'<script defer src="{prefix}static/world-grove.js?v={built}"></script>\n</head>')
+        template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/chronicle.css?v={built}">\n</head>')
+        template = template.replace('</head>', f'<script defer src="{prefix}static/chronicle.js?v={built}"></script>\n</head>')
         template = template.replace('<canvas class="sky" aria-hidden="true"></canvas>\n', "")
         template = re.sub(r'<script defer src="\{\{prefix\}\}static/sky\.js[^>]*></script>\n?', "", template)
     if 'class="method-map"' in page.body:

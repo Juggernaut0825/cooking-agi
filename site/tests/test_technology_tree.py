@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT / "site"))
 import build
 import paritycheck
 import technology_chronicle
-import world_grove
+import world_tree
 
 SPEC = importlib.util.spec_from_file_location(
     "rl_tradeoffs", ROOT / "05-post-training/deep-rl/code/rl_tradeoffs.py")
@@ -107,45 +107,64 @@ class TechnologyTreeTests(unittest.TestCase):
                     build.build_page(page, [], nav["site"]["repo"], known)
                     output = build.assemble(page, sections, [], nav, "test",
                                             (ROOT / "site/template.html").read_text())
-                    self.assertNotIn("static/technology-tree.js", output)
-                    self.assertEqual("static/technology-atlas.js" in output, source == CHAPTERS[0])
-                    self.assertEqual("static/world-exhibit.js" in output, source == CHAPTERS[0])
-                    self.assertEqual("static/world-grove.js" in output, source == CHAPTERS[0])
-                    self.assertEqual("static/technology-tree.css" in output, source in CHAPTERS[:2])
+                    for retired in ("technology-tree.js", "technology-atlas.js", "world-exhibit.js", "world-grove.js"):
+                        self.assertNotIn(f"static/{retired}", output)
+                    self.assertEqual("static/chronicle.js" in output, source == CHAPTERS[0])
+                    self.assertEqual("static/chronicle.css" in output, source == CHAPTERS[0])
+                    self.assertEqual("static/technology-tree.css" in output, source == CHAPTERS[1])
                     self.assertEqual("page-technology-tree" in output, source == CHAPTERS[0])
                     if source == CHAPTERS[0]:
                         self.assertNotIn("static/sky.js", output)
                         self.assertNotIn('href="rl-timeline.md', output)
                         self.assertIn(f'rl-timeline{".en" if language == "en" else ""}.html', output)
                         self.assertNotIn('.html#robot-control', output)
-                        switches = [attrs for _, attrs in TreeMarkup(output).elements if "data-world-language" in attrs]
-                        self.assertEqual(len(switches), 1)
-                        self.assertEqual(switches[0]["data-language-switch"], "en" if language == "zh" else "zh")
-                        self.assertNotIn("href", switches[0])
-                        self.assertIn("hidden", switches[0])
 
-    def test_grove_has_one_scene_per_field_and_all_milestone_routes(self):
+    def test_world_tree_draws_every_milestone_once(self):
         data = json.loads((ROOT / "site/static/technology-tree-data.json").read_text())
         for language in ("zh", "en"):
-            markup = TreeMarkup(world_grove.render(data, language))
-            scenes = [attrs for _, attrs in markup.elements if "data-grove-scene" in attrs]
-            self.assertEqual({item["data-grove-scene"] for item in scenes}, {"all", *(topic["id"] for topic in data["topics"])})
-            self.assertEqual(sum("hidden" not in item for item in scenes), 1)
-            milestones = [link for link in markup.links if "data-grove-year" in link]
-            self.assertEqual(len(milestones), len(data["nodes"]))
-            self.assertEqual({link["href"] for link in milestones}, {f'#event-{node["id"]}' for node in data["nodes"]})
-            for topic in data["topics"]:
-                field = next(item for item in scenes if item["data-grove-scene"] == topic["id"])
-                self.assertGreaterEqual(int(field["data-grove-height"]), 850)
-            self.assertIn("Alt", world_grove.render(data, language))
+            output = world_tree.render(data, language)
+            self.assertEqual(output, world_tree.render(data, language))
+            markup = TreeMarkup(output)
+            stars = [link for link in markup.links if "data-node" in link]
+            self.assertEqual(sorted(link["href"] for link in stars), sorted(f'#event-{node["id"]}' for node in data["nodes"]))
+            fields = [link for link in markup.links if "data-field-link" in link]
+            self.assertEqual({link["data-field-link"] for link in fields}, {topic["id"] for topic in data["topics"]})
+            self.assertEqual(sum("id" in link for link in fields), len(data["topics"]))
+            self.assertEqual(output.count('class="wt-vine"'), len(data["connections"]))
+            self.assertEqual(output.count('class="wt-aerial"'), sum("root" in topic for topic in data["topics"]))
+            self.assertIn('aria-hidden="true"', output)
 
-    def test_branch_navigation_and_animation_lifecycle(self):
-        node = shutil.which("node")
-        if not node:
-            self.skipTest("Node.js unavailable")
-        result = subprocess.run([node, str(ROOT / "site/tests/technology-tree-behavior.cjs")],
-                                capture_output=True, text=True, check=True)
-        self.assertIn("Technology tree behavior passed", result.stdout)
+    def test_world_tree_grows_outward_in_time(self):
+        data = json.loads((ROOT / "site/static/technology-tree-data.json").read_text())
+        tree = world_tree.layout(data)
+        self.assertEqual(set(tree["positions"]), {node["id"] for node in data["nodes"]})
+        era_of = tree["era_index"]
+        for route in tree["routes"].values():
+            carried = sorted(route["carried"], key=lambda name: tree["arc"][name])
+            self.assertEqual([era_of[name] for name in carried], sorted(era_of[name] for name in carried))
+            if route["parent"] is not None:
+                self.assertTrue(15 <= route["headings"][0] <= 165, route["key"])  # clamped heading plus a small wiggle
+        trunk = [name for name in tree["canonical"] if era_of[name] == 0]
+        self.assertTrue(all(tree["arc"][name] < world_tree.TRUNK for name in trunk))
+        self.assertTrue(all(tree["arc"][name] > world_tree.TRUNK for name in tree["canonical"] if era_of[name] > 0))
+
+    def test_tracks_are_declared_and_used(self):
+        original = json.loads(technology_chronicle.DATA.read_text())
+        for topic in original["topics"]:
+            tracks = {track["id"] for track in topic.get("tracks", [])}
+            for node in original["nodes"]:
+                if node["topic"] == topic["id"]:
+                    self.assertIn(node.get("track"), tracks)
+        for failure in ("unknown", "duplicate", "untranslated"):
+            data = json.loads(json.dumps(original))
+            if failure == "unknown":
+                data["nodes"][0]["track"] = "nowhere"
+            elif failure == "duplicate":
+                data["topics"][0]["tracks"].append(dict(data["topics"][0]["tracks"][0]))
+            else:
+                del data["topics"][0]["tracks"][0]["title"]["en"]
+            with self.assertRaises(ValueError):
+                technology_chronicle.validate(data)
 
     def test_atlas_data_has_bilingual_evidence_and_valid_routes(self):
         data = json.loads((ROOT / "site/static/technology-tree-data.json").read_text())
@@ -189,13 +208,12 @@ class TechnologyTreeTests(unittest.TestCase):
         for language in ("zh", "en"):
             output = technology_chronicle.render(data, language)
             for topic in data["topics"]:
-                self.assertIn(f'id="field-{topic["id"]}"', output)
+                self.assertEqual(output.count(f'id="field-{topic["id"]}"'), 1)
                 self.assertNotIn(escape(topic["next"][language]), output)
-            self.assertEqual(output.count('class="world-topic"'), len(data["topics"]))
-            self.assertIn('aria-controls="chronicle-content" disabled', output)
-            self.assertIn('<noscript>', output)
+                self.assertIn(f'data-field="{topic["id"]}" aria-pressed="false" aria-controls="chronicle-content" disabled', output)
             self.assertIn('id="event-software-linux-kernel-1991"', output)
             self.assertIn('class="chronicle-connections"', output)
+            self.assertIn('class="ch-links"', output)
         self.assertEqual(data["eras"][0]["start"], 1882)
 
     def test_era_branches_explain_their_period_instead_of_repeating_topic_copy(self):
@@ -218,7 +236,6 @@ class TechnologyTreeTests(unittest.TestCase):
                 self.assertTrue(all("open" not in attributes for attributes in disclosures))
             self.assertEqual(output.count('class="chronicle-lead"'), len(data["nodes"]))
             self.assertNotIn("chronicle-work-meta", output)
-            self.assertIn('data-world-year', output)
             for node in data["nodes"]:
                 for field in ("body", "limit"):
                     self.assertIn(escape(node[field][language]), output)
@@ -232,13 +249,20 @@ class TechnologyTreeTests(unittest.TestCase):
         self.assertTrue(expanded)
         for language in ("zh", "en"):
             output = technology_chronicle.render(data, language)
-            self.assertEqual(output.count('class="chronicle-explanation"'), len(expanded))
-            for node in expanded:
-                self.assertIn(escape(node["detail"][language]), output)
+            paragraphs = [paragraph for node in expanded for paragraph in node["detail"][language].split("\n\n")]
+            self.assertEqual(output.count('class="chronicle-explanation"'), len(paragraphs))
+            for paragraph in paragraphs:
+                self.assertIn(f'<p class="chronicle-explanation">{escape(paragraph)}</p>', output)
         for detail in ({"zh": "只有中文"}, {"zh": "有内容", "en": ""}, "untranslated"):
             expanded[0]["detail"] = detail
             with self.assertRaisesRegex(ValueError, "detail translation"):
                 technology_chronicle.validate(data)
+        expanded[0]["detail"] = {"zh": "第一段\n\n第二段", "en": "One paragraph only"}
+        with self.assertRaisesRegex(ValueError, "detail paragraphs differ"):
+            technology_chronicle.validate(data)
+        expanded[0]["detail"] = {"zh": "第一段\n\n第二段", "en": "First\n\nSecond"}
+        self.assertIn('<p class="chronicle-explanation">第一段</p><p class="chronicle-explanation">第二段</p>',
+                      technology_chronicle.render(data, "zh"))
         expanded[0]["detail"] = {"zh": '<script>alert("test")</script>', "en": "Safe explanation"}
         output = technology_chronicle.render(data, "zh")
         self.assertIn("&lt;script&gt;", output)
@@ -249,9 +273,10 @@ class TechnologyTreeTests(unittest.TestCase):
 
     def test_world_tree_rejects_bad_taxonomy_and_unsupported_connections(self):
         original = json.loads(technology_chronicle.DATA.read_text())
-        for failure in ("topic", "layer", "empty-topic", "relation", "evidence", "endpoint", "duplicate-topic"):
+        for failure in ("topic", "layer", "empty-topic", "relation", "evidence", "endpoint", "duplicate-topic", "root-field", "root-language"):
             with self.subTest(failure=failure):
                 data = json.loads(json.dumps(original))
+                rooted = next(topic for topic in data["topics"] if "root" in topic)
                 if failure == "topic":
                     data["nodes"][0]["topic"] = "missing"
                 elif failure == "layer":
@@ -266,30 +291,28 @@ class TechnologyTreeTests(unittest.TestCase):
                     data["connections"][0]["source"] = "https://example.com/unsupported"
                 elif failure == "endpoint":
                     data["connections"][0]["to"] = "missing"
+                elif failure == "root-field":
+                    rooted["root"]["from"] = "alexnet"
+                elif failure == "root-language":
+                    del rooted["root"]["note"]["en"]
                 else:
                     data["topics"].append(data["topics"][0])
                 with self.assertRaises(ValueError):
                     technology_chronicle.validate(data)
 
-    def test_branch_guides_have_real_targets_and_deterministic_artwork(self):
+    def test_internal_links_resolve_and_rendering_is_deterministic(self):
         data = json.loads(technology_chronicle.DATA.read_text())
         for language in ('zh', 'en'):
             output = technology_chronicle.render(data, language)
             self.assertEqual(output, technology_chronicle.render(data, language))
             markup = TreeMarkup(output)
-            limbs = [attributes['data-limb'] for _, attributes in markup.elements if 'data-limb' in attributes]
-            self.assertEqual(set(limbs), {topic['id'] for topic in data['topics']})
-            self.assertEqual(len(limbs), len(data['topics']))
-            self.assertEqual(output.count('class="world-samples"'), len(data['topics']))
-            self.assertEqual(output.count('class="world-crossing"'), len({item['from'] for item in data['connections']}))
-            self.assertIn('data-world-motion disabled', output)
-            self.assertIn('role="status" data-world-announcement', output)
+            self.assertEqual(len(markup.ids), len(set(markup.ids)))
             for link in markup.links:
                 if link.get('href', '').startswith('#'):
                     self.assertIn(link['href'][1:], markup.ids)
-            for tag, attributes in markup.elements:
-                if tag == 'svg':
-                    self.assertEqual(attributes.get('aria-hidden'), 'true')
+            self.assertEqual(output.count('class="ch-chip'), len(data['nodes']))
+            self.assertEqual(output.count('data-era-link="'), len(data['eras']))
+            self.assertIn('data-filter-banner hidden', output)
             self.assertNotIn('这条线还缺什么？' if language == 'zh' else 'What is still missing?', output)
 
     def test_sparse_domains_keep_honest_counts_and_native_reading_paths(self):
@@ -306,52 +329,43 @@ class TechnologyTreeTests(unittest.TestCase):
             era["featured"] = [name for branch in era["branches"] for name in branch["works"]][:1]
         data["eras"] = [era for era in data["eras"] if era["branches"]]
         data["connections"] = []
+        for topic in data["topics"]:
+            topic.pop("root", None)
         for language in ("zh", "en"):
             output = technology_chronicle.render(data, language)
             markup = TreeMarkup(output)
             self.assertEqual(len(markup.ids), len(set(markup.ids)))
-            self.assertEqual(output.count("已收录 1 个代表节点。" if language == "zh" else "1 selected milestone. "), len(data["topics"]))
-            self.assertNotIn("1 selected milestones", output)
+            self.assertEqual(output.count("<small>1 个节点</small>" if language == "zh" else "<small>1 milestone</small>"), len(data["topics"]))
+            self.assertNotIn("1 milestones", output)
             self.assertEqual(output.count("data-work-title>"), len(names))
             self.assertEqual(output.count("data-branch-summary>"), sum(len(era["branches"]) for era in data["eras"]))
             for tag, attributes in markup.elements:
                 if tag == "details":
-                    self.assertNotIn("hidden", attributes)
                     self.assertNotIn("open", attributes)
-                if "data-topic" in attributes:
+                if "data-field" in attributes:
                     self.assertIn("disabled", attributes)
-                    self.assertEqual(attributes["aria-controls"], "chronicle-content")
             for name in names:
                 self.assertIn(f"event-{name}", markup.ids)
-            self.assertIn("<noscript>", output)
 
-    def test_exhibit_periods_and_milestones_are_data_backed(self):
+    def test_period_bar_and_featured_works_are_data_backed(self):
         data = json.loads(technology_chronicle.DATA.read_text())
         for language in ("zh", "en"):
             output = technology_chronicle.render(data, language)
             markup = TreeMarkup(output)
-            controls = [attrs for _, attrs in markup.elements if "data-world-era" in attrs]
-            self.assertEqual([item["data-world-era-key"] for item in controls], ["all", *[era["id"] for era in data["eras"]]])
-            self.assertEqual([item["aria-pressed"] for item in controls], ["true", *["false" for _ in data["eras"]]])
-            self.assertEqual(output.count('data-world-era-copy="'), len(controls))
-            self.assertEqual(output.count('data-world-era-leaves="'), len(controls))
-            for link in markup.links:
-                if "data-world-peek" in link:
-                    self.assertIn(link["href"][1:], markup.ids)
-            self.assertIn('aria-labelledby="world-dialog-title"', output)
-            self.assertIn('id="world-fields"', output)
-            self.assertNotIn('details class="world-directory"', output)
-            self.assertEqual(output.count('data-world-reader-step="'), 2)
-            self.assertEqual(output.count('data-world-era-step="'), 2)
-            self.assertIn('id="world-dialog-title" tabindex="-1"', output)
+            periods = [attrs["data-era-link"] for _, attrs in markup.elements if "data-era-link" in attrs]
+            self.assertEqual(periods, [era["id"] for era in data["eras"]])
+            featured = {name for era in data["eras"] for name in era["featured"]}
+            bold = {attrs["data-node"] for _, attrs in markup.elements if "is-featured" in attrs.get("class", "") and "ch-chip" in attrs.get("class", "")}
+            self.assertEqual(bold, featured)
 
-    def test_exhibit_period_navigation_and_dialog_behavior(self):
+    def test_chronicle_script_stays_local_and_parses(self):
+        script = (ROOT / "site/static/chronicle.js").read_text()
+        for forbidden in ("localStorage", "sessionStorage", "fetch(", "XMLHttpRequest", "innerHTML"):
+            self.assertNotIn(forbidden, script)
         node = shutil.which("node")
         if not node:
             self.skipTest("Node.js unavailable")
-        result = subprocess.run([node, str(ROOT / "site/tests/world-exhibit-behavior.cjs")],
-                                capture_output=True, text=True, check=True)
-        self.assertIn("World exhibit behavior passed", result.stdout)
+        subprocess.run([node, "--check", str(ROOT / "site/static/chronicle.js")], check=True)
 
     def test_external_reading_routes_have_canonical_targets_and_scroll_offset(self):
         data = json.loads(technology_chronicle.DATA.read_text())
@@ -359,8 +373,8 @@ class TechnologyTreeTests(unittest.TestCase):
             markup = TreeMarkup(technology_chronicle.render(data, language))
             for identifier in ("field-energy", "event-alexnet", "event-vllm"):
                 self.assertEqual(markup.ids.count(identifier), 1)
-        stylesheet = (ROOT / "site/static/technology-tree.css").read_text()
-        self.assertRegex(stylesheet, r"\.world-topic\s*\{\s*scroll-margin-top:\s*6rem;")
+        stylesheet = (ROOT / "site/static/chronicle.css").read_text()
+        self.assertRegex(stylesheet, r"\.chronicle-work \{[^}]*scroll-margin-top: 7rem;")
 
     def test_chronicle_is_rendered_without_javascript_and_has_stable_ids(self):
         data = json.loads(technology_chronicle.DATA.read_text())
@@ -403,14 +417,6 @@ class TechnologyTreeTests(unittest.TestCase):
         original["nodes"][0]["body"]["zh"] = '<img src=x onerror="alert(1)">'
         self.assertIn('&lt;img src=x', technology_chronicle.render(original, "zh"))
         self.assertNotIn('<img src=x', technology_chronicle.render(original, "zh"))
-
-    def test_atlas_navigation_data_failure_and_motion(self):
-        node = shutil.which("node")
-        if not node:
-            self.skipTest("Node.js unavailable")
-        result = subprocess.run([node, str(ROOT / "site/tests/technology-atlas-behavior.cjs")],
-                                capture_output=True, text=True, check=True)
-        self.assertIn("Technology atlas behavior passed", result.stdout)
 
     def test_q_learning_terminal_bootstrap_and_validation(self):
         self.assertAlmostEqual(EXAMPLES.q_update(2, 1, [3, 4], .9, .5), 3.3)
