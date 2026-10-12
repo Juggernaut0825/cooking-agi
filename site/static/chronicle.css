@@ -129,7 +129,7 @@
 @keyframes wt-twinkle { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
 .wt-twinkle { animation: wt-twinkle 4.5s ease-in-out infinite; }
 .wt-twinkle:nth-child(3n) { animation-duration: 6.5s; animation-delay: -2s; }
-@media (max-width: 700px) { .wt-svg text { display: none; } }
+@media (max-width: 700px) { .wt-svg text, .wt-leader, .wt-leader-dot { display: none; } }
 
 .ch-table-view { margin-top: 1.6rem; }
 .ch-table-view > summary { display: inline-flex; gap: .5rem; align-items: center; padding: .5rem .9rem; border: 1px solid var(--rule); border-radius: 999px; color: var(--ink); font: 500 .8rem/1 var(--body); list-style: none; cursor: pointer; }
