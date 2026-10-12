@@ -53,7 +53,7 @@ test('clearing empties every reading day and leaves other records alone', () => 
 });
 
 test('settings default to counting on and a tucked-away crow', () => {
-  assert.deepEqual(hub.settings({}), {history: true, mascot: 'collapsed', starAskedOn: ''});
+  assert.deepEqual(hub.settings({}), {history: true, mascot: 'collapsed', starAskedOn: '', starDone: false, snoozedUntil: ''});
   assert.equal(hub.settings({'reader-settings': {history: false, mascot: 'hidden', updatedAt: AT}}).mascot, 'hidden');
   assert.equal(hub.settings({'reader-settings': {mascot: 'dancing', updatedAt: AT}}).mascot, 'collapsed');
 });
@@ -62,14 +62,16 @@ test('the shared store accepts these records and rejects malformed ones', () => 
   const base = {format: 'cooking-agi-prep-progress', version: 1, site: 'cooking-agi', entries: {}, mode: {value: 'review', updatedAt: AT}};
   const ok = Object.assign({}, base, {workspace: {version: 1, records: {
     'reads-20261012': {notes: {[NOTE_A]: 2}, updatedAt: AT},
-    'reader-settings': {history: false, mascot: 'open', starAskedOn: '2026-10-12', updatedAt: AT}}, history: []}});
+    'reader-settings': {history: false, mascot: 'open', starAskedOn: '2026-10-12', starDone: true, snoozedUntil: AT, updatedAt: AT}}, history: []}});
   assert.doesNotThrow(() => store.parse(JSON.stringify(ok)));
   for (const bad of [
     {'reads-2026-10-12': {notes: {}, updatedAt: AT}},
     {'reads-20261012': {notes: {[NOTE_A]: -1}, updatedAt: AT}},
     {'reads-20261012': {notes: {'not-a-note': 1}, updatedAt: AT}},
     {'reader-settings': {mascot: 'dancing', updatedAt: AT}},
-    {'reader-settings': {starAskedOn: 'tomorrow', updatedAt: AT}}
+    {'reader-settings': {starAskedOn: 'tomorrow', updatedAt: AT}},
+    {'reader-settings': {starDone: 'yes', updatedAt: AT}},
+    {'reader-settings': {snoozedUntil: 'later', updatedAt: AT}}
   ]) {
     const value = Object.assign({}, base, {workspace: {version: 1, records: bad, history: []}});
     assert.throws(() => store.parse(JSON.stringify(value)));

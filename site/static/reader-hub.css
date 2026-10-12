@@ -84,7 +84,6 @@
   background: color-mix(in srgb, var(--paper) 84%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3);
   box-shadow: inset 0 0 0 1px rgba(245,184,61,.28), 0 20px 50px -18px rgba(0,0,0,.6); animation: reader-in .25s ease; }
 .kinwu-bubble[hidden] { display: none; }
-.kinwu-name { margin: 0 1.6rem .35rem 0; color: #f5b83d; font: 500 .72rem/1.3 var(--body); letter-spacing: .04em; }
 .kinwu-message { margin: 0; font-size: .86rem; line-height: 1.65; }
 .kinwu-actions { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .75rem; }
 .kinwu-star { display: inline-flex; align-items: center; padding: .48rem .85rem; border-radius: 999px; background: linear-gradient(180deg, #ffd27a, #f5b83d); color: #1a1206; font: 600 .8rem/1 var(--body); text-decoration: none; box-shadow: 0 6px 18px -6px rgba(245,184,61,.7); }

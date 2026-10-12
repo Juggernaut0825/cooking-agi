@@ -3,7 +3,7 @@
    Everything is stored in the shared progress envelope (workspace records), so
    it travels with the existing JSON backup and never leaves the browser:
      reads-YYYYMMDD   {notes: {note-id: count}, updatedAt}   one record per local day
-     reader-settings  {history, mascot, starAskedOn, updatedAt}
+     reader-settings  {history, mascot, starAskedOn, starDone, snoozedUntil, updatedAt}
    A page counts as read once per load, after it has been visible for 15 seconds.
    Days older than 90 are emptied (not deleted), so merges stay timestamp-based.
    No network request except the site's own public note catalog. */
@@ -34,7 +34,9 @@
     return {
       history: record.history !== false,
       mascot: MASCOT_STATES.includes(record.mascot) ? record.mascot : 'collapsed',
-      starAskedOn: typeof record.starAskedOn === 'string' ? record.starAskedOn : ''
+      starAskedOn: typeof record.starAskedOn === 'string' ? record.starAskedOn : '',
+      starDone: record.starDone === true,
+      snoozedUntil: typeof record.snoozedUntil === 'string' ? record.snoozedUntil : ''
     };
   }
 
@@ -341,10 +343,11 @@
     const row = (label, hint, control) => el('div', {class: 'reader-hub-setting'}, [el('div', {}, [el('strong', {text: label}), el('small', {text: hint})]), control]);
     const history = el('button', {type: 'button', role: 'switch', class: 'reader-hub-switch', 'aria-checked': String(config.history), 'aria-label': say('记录阅读次数', 'Count my reading')});
     history.addEventListener('click', () => { saveSettings({history: !config.history}); render(); });
-    const mascot = el('div', {class: 'reader-hub-segment', role: 'radiogroup', 'aria-label': say('小金乌', 'Little golden crow')});
-    for (const [value, label] of [['open', say('展开', 'Open')], ['collapsed', say('收起', 'Tucked')], ['hidden', say('隐藏', 'Hidden')]]) {
-      const option = el('button', {type: 'button', role: 'radio', 'aria-checked': String(config.mascot === value), text: label});
-      option.addEventListener('click', () => { saveSettings({mascot: value}); renderMascot(); render(); });
+    const mascot = el('div', {class: 'reader-hub-segment', role: 'radiogroup', 'aria-label': say('角落的小鸟', 'Corner bird')});
+    for (const [value, label] of [['collapsed', say('显示', 'Show')], ['hidden', say('隐藏', 'Hide')]]) {
+      const on = value === 'hidden' ? config.mascot === 'hidden' : config.mascot !== 'hidden';
+      const option = el('button', {type: 'button', role: 'radio', 'aria-checked': String(on), text: label});
+      option.addEventListener('click', () => { saveSettings({mascot: value, snoozedUntil: ''}); renderMascot(); render(); });
       mascot.append(option);
     }
     const theme = el('div', {class: 'reader-hub-segment', role: 'radiogroup', 'aria-label': say('主题', 'Theme')});
@@ -365,7 +368,7 @@
     const backup = el('a', {class: 'reader-hub-link', href: new URL(say('interview/dashboard.html#progress', 'interview/dashboard.en.html#progress'), base).href, text: say('去学习台导出 / 导入备份 →', 'Export or import a backup in the workspace →')});
     panel.append(
       row(say('记录阅读次数', 'Count my reading'), say('打开一篇笔记读满 15 秒记一次，只存在本机。', 'A note counts after 15 seconds; stored on this device only.'), history),
-      row(say('小金乌', 'Little golden crow'), say('右下角的小助手，可以收起或隐藏。', 'The helper in the corner; tuck it away or hide it.'), mascot),
+      row(say('角落的小鸟', 'Corner bird'), say('右下角那只请你点 Star 的小鸟。', 'The little bird in the corner that asks for a star.'), mascot),
       row(say('主题', 'Theme'), say('和顶栏的切换按钮是同一个设置。', 'Same setting as the toggle in the top bar.'), theme),
       el('div', {class: 'reader-hub-actions'}, [wipe, backup]));
   }
@@ -408,7 +411,7 @@
   ];
   const COLORS = {b: '#f5b83d', s: '#df922c', d: '#c2661a', c: '#e5532e', o: '#f08a24', l: '#b4561a', e: '#1a1206', w: '#fff7e6'};
   const mascot = el('div', {class: 'kinwu', 'data-state': 'collapsed'});
-  const bird = el('button', {type: 'button', class: 'kinwu-bird', 'aria-label': say('小金乌：打开提示', 'Little golden crow: open its note'), 'aria-expanded': 'false'});
+  const bird = el('button', {type: 'button', class: 'kinwu-bird', 'aria-label': say('打开小鸟的提示', 'Open the bird’s note'), 'aria-expanded': 'false'});
   const sprite = svg('svg', {viewBox: '0 0 16 16', 'aria-hidden': 'true', 'shape-rendering': 'crispEdges'});
   const halo = svg('circle', {cx: '8', cy: '8', r: '7.6', class: 'kinwu-halo'});
   sprite.append(halo);
@@ -420,43 +423,46 @@
   }));
   sprite.append(groups.body, groups.wing, groups.eye);
   bird.append(sprite);
-  const bubble = el('div', {class: 'kinwu-bubble', role: 'dialog', 'aria-label': say('小金乌的提示', 'A note from the golden crow'), hidden: true});
+  const bubble = el('div', {class: 'kinwu-bubble', role: 'dialog', 'aria-label': say('小鸟的提示', 'Note from the bird'), hidden: true});
   const message = el('p', {class: 'kinwu-message'});
   const actions = el('div', {class: 'kinwu-actions'});
   const tuck = el('button', {type: 'button', class: 'kinwu-tuck', 'aria-label': say('收起', 'Tuck away'), text: '–'});
-  bubble.append(tuck, el('p', {class: 'kinwu-name', text: say('扶桑树上的小金乌', 'The golden crow of the Fusang tree')}), message, actions);
+  bubble.append(tuck, message, actions);
   mascot.append(bubble, bird);
   document.body.append(mascot);
 
+  const snoozed = config => Boolean(config.snoozedUntil) && Date.parse(config.snoozedUntil) > Date.now();
   function renderMascotMessage() {
     const state = records();
     const config = settings(state);
     const summary = summarize(state, new Date());
     actions.replaceChildren();
-    const askStar = config.starAskedOn !== todayKey();
-    if (askStar) {
-      message.textContent = say('觉得这些笔记有用的话，去 GitHub 点一个 Star 吧，能让更多人看到。', 'If these notes help, a Star on GitHub helps more people find them.');
+    const button = (label, handler, className = 'kinwu-later') => {
+      const node = el('button', {type: 'button', class: className, text: label});
+      node.addEventListener('click', handler);
+      return node;
+    };
+    const never = button(say('不再显示', 'Don’t show again'), () => { saveSettings({mascot: 'hidden', starDone: true}); renderMascot(); });
+    if (!config.starDone) {
+      message.textContent = say('喜欢这些笔记的话，可以去 GitHub 点个 Star。', 'If you like these notes, you can star the repo on GitHub.');
       const star = el('a', {class: 'kinwu-star', href: repo, target: '_blank', rel: 'noopener', text: say('★ 去点 Star', '★ Star on GitHub')});
-      star.addEventListener('click', () => saveSettings({starAskedOn: todayKey()}));
-      const later = el('button', {type: 'button', class: 'kinwu-later', text: say('下次再说', 'Maybe later')});
-      later.addEventListener('click', () => { saveSettings({starAskedOn: todayKey(), mascot: 'collapsed'}); renderMascot(); });
-      actions.append(star, later);
-    } else if (config.history && summary.today.total) {
-      message.textContent = say(`今天读了 ${summary.today.notes.length} 篇、共 ${summary.today.total} 次。读累了就歇一会儿。`,
-        `${summary.today.total} read${summary.today.total === 1 ? '' : 's'} across ${summary.today.notes.length} note${summary.today.notes.length === 1 ? '' : 's'} today. Take a break when you need one.`);
-      const history = el('button', {type: 'button', class: 'kinwu-later', text: say('看阅读记录', 'See my reading')});
-      history.addEventListener('click', () => open('reading'));
-      actions.append(history);
-    } else {
-      message.textContent = say('今天还没开始读。挑一篇笔记，读满 15 秒我就帮你记下。', 'Nothing read yet today. Spend 15 seconds on a note and I will keep count.');
-      const history = el('button', {type: 'button', class: 'kinwu-later', text: say('打开「我的」', 'Open my reading')});
-      history.addEventListener('click', () => open('reading'));
-      actions.append(history);
+      star.addEventListener('click', () => { saveSettings({starDone: true, starAskedOn: todayKey(), mascot: 'collapsed'}); renderMascot(); });
+      const later = button(say('这次先不显示', 'Not now'), () => {
+        saveSettings({snoozedUntil: new Date(Date.now() + 12 * 3600 * 1000).toISOString(), starAskedOn: todayKey(), mascot: 'collapsed'});
+        renderMascot();
+      });
+      actions.append(star, later, never);
+      return;
     }
+    message.textContent = config.history && summary.today.total
+      ? say(`今天读了 ${summary.today.notes.length} 篇，共 ${summary.today.total} 次。`,
+        `Today: ${summary.today.notes.length} note${summary.today.notes.length === 1 ? '' : 's'}, ${summary.today.total} read${summary.today.total === 1 ? '' : 's'}.`)
+      : say('今天还没有阅读记录。', 'No reading recorded today.');
+    actions.append(button(say('阅读记录', 'My reading'), () => open('reading')), never);
   }
   function renderMascot() {
     const config = settings(records());
-    mascot.hidden = config.mascot === 'hidden';
+    mascot.hidden = config.mascot === 'hidden' || snoozed(config);
     const opened = config.mascot === 'open';
     mascot.dataset.state = opened ? 'open' : 'collapsed';
     bubble.hidden = !opened;
@@ -471,7 +477,8 @@
   tuck.addEventListener('click', () => { saveSettings({mascot: 'collapsed'}); renderMascot(); bird.focus(); });
   renderMascot();
   // Once a day, the crow says hello by itself (never while reduced motion asks for calm).
-  if (settings(records()).mascot === 'collapsed' && settings(records()).starAskedOn !== todayKey() && !reduce()) {
+  const initial = settings(records());
+  if (initial.mascot === 'collapsed' && !initial.starDone && !snoozed(initial) && initial.starAskedOn !== todayKey() && !reduce()) {
     scope.setTimeout(() => {
       if (settings(records()).mascot !== 'collapsed') return;
       mascot.dataset.state = 'open';
