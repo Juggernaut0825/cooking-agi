@@ -26,6 +26,19 @@ Sidebar bookmarks, recent notes and general reading positions now use the same e
 
 First use quietly records the current edition; it does not label the entire archive new. Saving a note or a linked session follows its topics unless the reader explicitly unfollowed. Following starts at the current edition. New notes introduced after that point enter an undated queue by default. With auto-add off they remain optional notices. Neither choice changes calendar dates or overwrites saved task text. Substantive revisions to tracked notes show separately, including on the article; acknowledging them never changes the learning status. Dismissal is revision-specific and can be reversed. Saving a planned session marks a queued notice scheduled; opening a draft alone does not.
 
+### Reading history and reader settings (workspace records)
+
+The reader hub (`static/reader-hub.js`, loaded on every page after the progress controller) adds two kinds of workspace records. They use the same envelope, merge, backup and recovery rules as other workspace records; no new storage key is created.
+
+| Key | Fields | Meaning |
+| --- | --- | --- |
+| `reads-YYYYMMDD` | `notes`: up to 200 `note-…` IDs mapped to integers 0–9999; `updatedAt` | How many times each note was read on that local calendar day. A page counts once per load after 15 seconds of visible time; reading a page is not marking it learned. |
+| `reader-settings` | optional `history` (boolean, default on), `mascot` (`open`, `collapsed`, `hidden`; default `collapsed`), `starAskedOn` (`YYYY-MM-DD` or empty); `updatedAt` | Whether reading is counted, the golden-crow helper's state, and the last day it asked for a GitHub star (at most once a day). |
+
+Days older than 90 are emptied rather than deleted, so a later import cannot resurrect them by default and merges stay timestamp-based. Clearing reading history empties every day record and leaves bookmarks, notes and sessions untouched. Each day merges as one record, so the same day edited on two devices keeps the newer copy under the usual policies; counts are approximate, not an audit log. One record per active day accumulates against the 3,000-record workspace limit, which leaves years of daily use but is not unlimited. Turning counting off stops new counts without erasing old ones.
+
+The hub's "Saved" tab reads and writes the existing `bookmark-…` records; it is the same list as the sidebar. Theme stays in its separate `theme` key; the settings tab only presses the existing toggle.
+
 ### Optional schedule in version-1 backups
 
 Route-generated sessions can include an optional `exerciseId` (`exercise-` plus a stable lowercase alphanumeric/hyphen key). It distinguishes different exercises on one note and remains stable across languages and route reordering. Old sessions without it remain valid; imports preserve it as part of a session, and older readers already preserve safe unknown fields. It is not a completion score or a new outer backup version.

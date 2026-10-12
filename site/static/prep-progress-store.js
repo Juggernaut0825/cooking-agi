@@ -53,6 +53,11 @@
         if (key.startsWith('notice-') && (!['new', 'updated'].includes(record.kind) ||
             !['queued', 'available', 'dismissed', 'reviewed', 'scheduled'].includes(record.status))) throw Error('invalid');
         if ((key.startsWith('notice-') || key.startsWith('seen-')) && (!Number.isSafeInteger(record.revision) || record.revision < 1)) throw Error('invalid');
+        if (key.startsWith('reads-') && (!/^reads-\d{8}$/.test(key) || !plain(record.notes) || Object.keys(record.notes).length > 200 ||
+            Object.entries(record.notes).some(([note, count]) => !/^note-[a-f0-9]{16}$/.test(note) || !Number.isInteger(count) || count < 0 || count > 9999))) throw Error('invalid');
+        if (key === 'reader-settings' && ((record.history !== undefined && typeof record.history !== 'boolean') ||
+            (record.mascot !== undefined && !['open', 'collapsed', 'hidden'].includes(record.mascot)) ||
+            (record.starAskedOn !== undefined && record.starAskedOn !== '' && !civilDate(record.starAskedOn)))) throw Error('invalid');
       }
       if (value.workspace.history !== undefined && (!Array.isArray(value.workspace.history) || value.workspace.history.length > 100 ||
           value.workspace.history.some(event => !plain(event) || !timestamp(event.at) || typeof event.action !== 'string' ||
