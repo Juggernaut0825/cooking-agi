@@ -119,35 +119,52 @@ class TechnologyTreeTests(unittest.TestCase):
                         self.assertIn(f'rl-timeline{".en" if language == "en" else ""}.html', output)
                         self.assertNotIn('.html#robot-control', output)
 
-    def test_world_tree_draws_every_milestone_once_per_layout(self):
+    def test_world_tree_draws_every_milestone_once(self):
         data = json.loads((ROOT / "site/static/technology-tree-data.json").read_text())
         for language in ("zh", "en"):
-            for layout in world_tree.LAYOUTS:
-                output = world_tree.render(data, language, layout)
-                self.assertEqual(output, world_tree.render(data, language, layout))
-                markup = TreeMarkup(output)
-                stars = [link for link in markup.links if "data-node" in link]
-                self.assertEqual(sorted(link["href"] for link in stars), sorted(f'#event-{node["id"]}' for node in data["nodes"]))
-                fields = [link for link in markup.links if "data-field-link" in link]
-                self.assertEqual({link["data-field-link"] for link in fields}, {topic["id"] for topic in data["topics"]})
-                self.assertEqual(sum("id" in link for link in fields), len(data["topics"]) if layout == "wide" else 0)
-                self.assertEqual(output.count('class="wt-vine"'), len(data["connections"]))
-                self.assertEqual(output.count('class="wt-aerial"'), sum("root" in topic for topic in data["topics"]))
-                self.assertEqual(output.count('class="wt-strand"'), len(data["topics"]))
-                self.assertEqual(output.count('data-era-band="'), len(data["eras"]) - 1)
-                self.assertIn('aria-hidden="true"', output)
+            output = world_tree.render(data, language)
+            self.assertEqual(output, world_tree.render(data, language))
+            markup = TreeMarkup(output)
+            stars = [link for link in markup.links if "data-node" in link]
+            self.assertEqual(sorted(link["href"] for link in stars), sorted(f'#event-{node["id"]}' for node in data["nodes"]))
+            fields = [link for link in markup.links if "data-field-link" in link]
+            self.assertEqual({link["data-field-link"] for link in fields}, {topic["id"] for topic in data["topics"]})
+            self.assertEqual(sum("id" in link for link in fields), len(data["topics"]))
+            self.assertEqual(output.count('class="wt-vine"'), len(data["connections"]))
+            self.assertEqual(output.count('class="wt-aerial"'), sum("root" in topic for topic in data["topics"]))
+            self.assertIn('aria-hidden="true"', output)
 
-    def test_world_tree_height_follows_time(self):
+    def test_world_tree_grows_outward_in_time(self):
         data = json.loads((ROOT / "site/static/technology-tree-data.json").read_text())
-        output = world_tree.render(data, "zh", "wide")
-        heights = {name: float(y) for name, y in re.findall(r'data-node="([a-z0-9-]+)"[^>]*>(?:<circle class="wt-halo" cx="[0-9.]+" cy="([0-9.]+)")', output)}
-        era_of = {name: index for index, era in enumerate(data["eras"]) for branch in era["branches"] for name in branch["works"]}
-        for earlier, later in (("transistor-1947", "dartmouth"), ("alexnet", "transformer"), ("transformer", "chatgpt"), ("chatgpt", "deepseek-r1")):
-            self.assertGreater(heights[earlier], heights[later])
-        for era_index in range(1, len(data["eras"]) - 1):
-            lower = [heights[name] for name, index in era_of.items() if index == era_index]
-            upper = [heights[name] for name, index in era_of.items() if index == era_index + 1]
-            self.assertGreater(min(lower), max(upper))
+        tree = world_tree.layout(data)
+        self.assertEqual(set(tree["positions"]), {node["id"] for node in data["nodes"]})
+        era_of = tree["era_index"]
+        for route in tree["routes"].values():
+            carried = sorted(route["carried"], key=lambda name: tree["arc"][name])
+            self.assertEqual([era_of[name] for name in carried], sorted(era_of[name] for name in carried))
+            if route["parent"] is not None:
+                self.assertTrue(15 <= route["headings"][0] <= 165, route["key"])  # clamped heading plus a small wiggle
+        trunk = [name for name in tree["canonical"] if era_of[name] == 0]
+        self.assertTrue(all(tree["arc"][name] < world_tree.TRUNK for name in trunk))
+        self.assertTrue(all(tree["arc"][name] > world_tree.TRUNK for name in tree["canonical"] if era_of[name] > 0))
+
+    def test_tracks_are_declared_and_used(self):
+        original = json.loads(technology_chronicle.DATA.read_text())
+        for topic in original["topics"]:
+            tracks = {track["id"] for track in topic.get("tracks", [])}
+            for node in original["nodes"]:
+                if node["topic"] == topic["id"]:
+                    self.assertIn(node.get("track"), tracks)
+        for failure in ("unknown", "duplicate", "untranslated"):
+            data = json.loads(json.dumps(original))
+            if failure == "unknown":
+                data["nodes"][0]["track"] = "nowhere"
+            elif failure == "duplicate":
+                data["topics"][0]["tracks"].append(dict(data["topics"][0]["tracks"][0]))
+            else:
+                del data["topics"][0]["tracks"][0]["title"]["en"]
+            with self.assertRaises(ValueError):
+                technology_chronicle.validate(data)
 
     def test_atlas_data_has_bilingual_evidence_and_valid_routes(self):
         data = json.loads((ROOT / "site/static/technology-tree-data.json").read_text())

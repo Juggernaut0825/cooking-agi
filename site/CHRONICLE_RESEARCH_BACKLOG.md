@@ -22,7 +22,7 @@ These are editorial prompts, not automatic agents that add nodes from a news fee
 
 The [NeurIPS archive](https://proceedings.neurips.cc/paper/1988/hash/812b4ba287f5ee0bc9d43bbf5bbe87fb-Abstract.html) places the original ALVINN work in NIPS 1988. [CMU's publication record](https://publications.ri.cmu.edu/alvinn-an-autonomous-land-vehicle-in-a-neural-network) lists December 1989. The [1990 follow-up](https://proceedings.neurips.cc/paper/1990/hash/248e844336797ec98478f85e7626de4a-Abstract.html) describes learning from a driver's behavior; its paper explicitly refers back to the 1988 conference presentation.
 
-Before adding a node, label the date convention as conference presentation versus publication record. Keep the original simulated-image training setup separate from the later real-time demonstration. The reported road-following tests do not establish unrestricted autonomous driving. This is a useful candidate for a sensing/learning/control branch, but has **not been added in this pass**.
+Before adding a node, label the date convention as conference presentation versus publication record. Keep the original simulated-image training setup separate from the later real-time demonstration. The reported road-following tests do not establish unrestricted autonomous driving. Added on 2026-10-12 as `alvinn-1988`, dated by the NIPS 1988 paper with the CMU record noted.
 
 ## Speech evaluation: still an open reading task
 
@@ -32,7 +32,7 @@ Next: inspect an accessible original evaluation report, its task and scoring pro
 
 ## Recommendation: another branch to develop carefully
 
-The [2009 matrix-factorization article](https://ieeexplore.ieee.org/abstract/document/5197422/citations) is a candidate for explaining latent factors, implicit feedback and temporal effects in recommendation. The publisher metadata and abstract were checked, **not the complete article**. Do not turn its Netflix Prize framing into a claim that matrix factorization always beats neighborhood methods, or that recommendation began in 2009. Read the full permitted source and a deployed-system account before expanding this into a node.
+The [2009 matrix-factorization article](https://ieeexplore.ieee.org/abstract/document/5197422/citations) is a candidate for explaining latent factors, implicit feedback and temporal effects in recommendation. The publisher metadata and abstract were checked, **not the complete article**. Do not turn its Netflix Prize framing into a claim that matrix factorization always beats neighborhood methods, or that recommendation began in 2009. Added on 2026-10-12 as `netflix-prize-matrix-factorization-2009` after reading the full article; what Netflix put into production is still unverified.
 
 ## Review remains bounded
 

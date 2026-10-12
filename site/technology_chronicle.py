@@ -87,6 +87,13 @@ def validate(data):
     require(len(used) == len(set(used)) and set(used) == set(nodes), "each work needs one canonical branch")
     require(set(node["topic"] for node in nodes.values()) == topics, "each topic needs at least one work")
     for topic in data["topics"]:
+        tracks = topic.get("tracks", [])
+        require(isinstance(tracks, list) and all(isinstance(track, dict) and identifier(track.get("id")) and translated(track.get("title")) for track in tracks)
+                and len({track["id"] for track in tracks}) == len(tracks), f"invalid tracks: {topic['id']}")
+        known = {track["id"] for track in tracks}
+        for node in nodes.values():
+            if node["topic"] == topic["id"]:
+                require(node.get("track") in known if known else "track" not in node, f"unknown track: {node['id']}")
         if "root" in topic:
             root = topic["root"]
             require(isinstance(root, dict) and nodes.get(root.get("from"), {}).get("topic") == topic["id"], f"aerial root must start on its own field: {topic['id']}")
@@ -169,16 +176,10 @@ def render(data, language):
              f'<thead><tr><th scope="col" class="ch-corner">{say("领域 ／ 年代", "Field / period")}</th>{columns}</tr></thead>{"".join(bodies)}</table></div>'
              f'<p class="ch-table-note">{say("空着的格子只是这里还没收录，不代表那时没有进展。", "An empty cell means nothing is collected there yet, not that nothing happened.")}</p></details>')
     period = f'{data["eras"][0]["start"]}–{data["eras"][-1]["end"]}'
-    overview = (f'<section class="ch-overview" aria-labelledby="ch-overview-title">'
-                f'<header class="ch-overview-head"><p class="ch-kicker">{say("全景", "Overview")} · {period}</p>'
-                f'<h2 id="ch-overview-title">{say("同一个根，长出许多枝", "One root, many branches")}</h2>'
-                f'<blockquote class="ch-myth"><p>{say("「建木……百仞无枝，上有九欘，下有九枸。」", "“Jianmu … a hundred ren without a branch, nine bends above, nine tangled roots below.”")}</p>'
-                f'<cite>{say("《山海经·海内经》", "Classic of Mountains and Seas")}</cite></blockquote>'
-                f'<p>{say("古人想象天地中央有一棵通天的树，叫建木：主干高高的、不分枝，上面九道弯枝，下面九条盘根，《淮南子》说众帝就沿着它上下天地。这棵技术树借了它的样子：主干是电、计算和晶体管这些共同的起点，往上分出各个领域，往下扎进同一片地。", "Chinese myth imagined a tree at the centre of heaven and earth called Jianmu: a tall trunk without branches, nine bends above and nine roots below, the path by which, the Huainanzi says, the gods went up and down. This tree borrows its shape. The trunk holds the shared beginnings in power, computation, and the transistor; fields branch off above and root into the same ground below.")}</p>'
-                f'<p>{say("越往上年代越晚，同一高度属于同一个年代。枝和枝之间的细藤是有记录的联系；从枝上垂回地面的气根，表示这条线后来自成一片，并不是为 AI 而存在。", "Higher means later, and stars at the same height share a period. Fine vines between branches are recorded connections; an aerial root dropping back to the ground marks a line that later stood on its own rather than existing for AI.")}</p></header>'
-                f'<div class="wt-stage" data-world-tree>{world_tree.render(data, language, "wide")}{world_tree.render(data, language, "narrow")}</div>'
+    overview = (f'<section class="ch-overview" aria-label="{say("技术世界树", "Technology world tree")}">'
+                f'<div class="wt-stage" data-world-tree>{world_tree.render(data, language)}</div>'
                 f'<div class="ch-matrix-foot"><ul class="ch-legend">{"".join(legend)}</ul>'
-                f'<p>{say("大点是该年代的代表作；点名字跳到正文，点枝头的领域名，下面的年表只留这一条线。", "Large points are each period’s featured works. Select a point to read it, or a field name at a branch tip to follow only that line below.")}</p></div>'
+                f'<p>{say("离根越远，年代越晚。点星看正文；点枝头的名字，下面只留这一条线。", "Farther from the root means later. Select a star to read it, or a name at a branch tip to follow only that line below.")}</p></div>'
                 f'{table}</section>')
 
     navigation = ''.join(f'<a href="#era-{era["id"]}" data-era-link="{era["id"]}" title="{escape(era["title"][language], quote=True)}">{era["start"]}</a>' for era in data["eras"])
@@ -186,6 +187,12 @@ def render(data, language):
                f'<a class="ch-eras-home" href="#tree-map">{say("↑ 全景", "↑ Overview")}</a>{navigation}</nav>')
     banner = (f'<div class="ch-filter" data-filter-banner hidden><p data-filter-label></p>'
               f'<button type="button" data-filter-reset>{say("显示全部领域", "Show every field")}</button></div>')
+
+    track_names = {(topic["id"], track["id"]): track["title"][language] for topic in data["topics"] for track in topic.get("tracks", [])}
+
+    def track_label(node):
+        name = track_names.get((node["topic"], node.get("track")))
+        return f' · {escape(name)}' if name else ''
 
     def card(node):
         name = node["id"]
@@ -213,7 +220,7 @@ def render(data, language):
         subtitle = f'<span class="ch-sub"> · {escape(subtitle)}</span>' if subtitle else ''
         state = ' chronicle-work--open' if node["status"] == "evolving" else ''
         return (f'<article class="chronicle-work{state}" id="event-{name}" data-work-topic="{node["topic"]}" data-layer="{topic["layer"]}" aria-labelledby="event-{name}-title">{alias}'
-                f'<p class="ch-work-meta"><time>{node["year"]}</time><span class="ch-topic"><i aria-hidden="true"></i>{text(topic["title"])}</span>'
+                f'<p class="ch-work-meta"><time>{node["year"]}</time><span class="ch-topic"><i aria-hidden="true"></i>{text(topic["title"])}{track_label(node)}</span>'
                 f'<span>{kinds[node["kind"]]}</span>{status}</p>'
                 f'<h4 id="event-{name}-title" data-work-title><span class="ch-name">{escape(title)}</span>{subtitle}</h4>'
                 f'<p class="chronicle-lead">{text(node["body"])}</p>{quick}'

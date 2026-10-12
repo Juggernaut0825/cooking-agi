@@ -178,6 +178,10 @@ New connection: `distributed-mapreduce-paper-2004` → `software-linux-kernel-19
 
 `root` settings: `networks` from `networks-web-proposal-1989` and `software` from `software-linux-kernel-1991`. These are an editorial reading that the Web/internet and free and open-source software grew their own communities and industries; they are not historical claims about when those fields began. The owner may change or remove them.
 
-Jianmu (page framing, not a milestone): Chinese Wikisource 《山海經·海內經》 reads “名曰建木，百仭無枝，上有九欘…，下有九枸”, and 《淮南子·墬形訓》 reads “建木在都廣，眾帝所自上下，日中無景，呼而無響，蓋天地之中也。” The page quotes the first in simplified characters with an ellipsis and paraphrases the second. ctext.org refused automated access and was not used.
+Jianmu (design reference only; after owner feedback the page no longer quotes it, and only the nine roots remain in the drawing): Chinese Wikisource 《山海經·海內經》 reads “名曰建木，百仭無枝，上有九欘…，下有九枸”, and 《淮南子·墬形訓》 reads “建木在都廣，眾帝所自上下，日中無景，呼而無響，蓋天地之中也。” The page quotes the first in simplified characters with an ellipsis and paraphrases the second. ctext.org refused automated access and was not used.
 
 Validation for this pass: see the pull request description. Structural tests check IDs, translations, links and geometry, not historical truth.
+
+## Expansion to 143 nodes (2026-10-12)
+
+Sixty-six nodes were added across all eleven fields, with a `track` (direction within a field) on every node. The per-node evidence for that batch is in [CHRONICLE_EVIDENCE_EXPANSION_2026-10-12.md](CHRONICLE_EVIDENCE_EXPANSION_2026-10-12.md).

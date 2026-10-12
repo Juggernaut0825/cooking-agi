@@ -1,32 +1,29 @@
-"""The world tree, drawn as light.
+"""The world tree, drawn from the data.
 
-Every field is one luminous strand. All strands rise from the same root system,
-braid together through the trunk, and leave it at the height of the field's
-first milestone; the trunk therefore thins as fields branch off, and the
-learning strand continues to the top. Milestones are stars on their strand.
-Recorded connections are faint vines between stars; a field that later stood
-on its own drops an aerial root back to the ground.
+A tree grows outward: old wood near the root, new growth at the tips, so the
+distance from the root along the wood stands for time. The trunk is the first
+period, made of the four groups of fields twisted together. It opens into four
+limbs; a field either continues its group's limb (the field with the most
+milestones) or leaves it at its first milestone, and in the same way each
+direction within a field (`track`) continues the field or leaves it as a twig.
+Milestones hang on short stems; thickness follows how many milestones lie beyond
+a point. Vines come only from recorded connections; a field may drop an aerial
+root back to the ground (`root` in the data).
 
-Height stands for time. The trunk is the first period; each later period is one
-horizontal band, so stars from the same period sit at the same height. Band
-heights follow how many milestones a band holds, not elapsed years. Geometry and
-the background star dust are deterministic, so builds are reproducible and a new
-milestone needs no coordinates.
+Period lengths along the wood follow how many milestones a period holds, not
+elapsed years. Geometry and foliage are deterministic: the same data always
+draws the same tree, and a new milestone needs no coordinates.
 """
 import html
 import math
 
-LEFT = ("energy", "chips", "memory", "networks", "software", "distributed")
-CENTER = "models"
-RIGHT = ("algorithms", "data", "applications", "ecosystem")
-TINT = {"physical": "#5b9cf0", "software": "#f07a45", "knowledge": "#2fc08b", "people": "#e0a52a"}
-
-LAYOUTS = {
-    "wide": {"width": 1200, "gutter": 78, "top": 70, "trunk": 170, "below": 110, "left": (90, 520), "right": (730, 1105),
-             "band": 50, "row": 24, "lane": 13, "braid": 9, "field_font": 14, "node_font": 11.5, "labels": True, "dust": 260},
-    "narrow": {"width": 560, "gutter": 40, "top": 34, "trunk": 120, "below": 70, "left": (52, 240), "right": (322, 528),
-               "band": 36, "row": 18, "lane": 9, "braid": 6, "field_font": 0, "node_font": 0, "labels": False, "dust": 120},
+WIDTH = 1200
+TRUNK = 240
+TINT = {"physical": "#6aa6f2", "software": "#f08a55", "knowledge": "#3cc795", "people": "#e8b33c"}
+LIMBS = {  # heading at the fork and at the tip (degrees, 90 = up), sideways offset at the fork
+    "physical": (160, 124, -14), "software": (124, 103, -5), "knowledge": (90, 90, 3), "people": (26, 66, 14),
 }
+FIELD_TURN, TRACK_TURN = (34, 22), (44, 30)
 
 
 def _smooth(u):
@@ -47,6 +44,20 @@ def _path(points):
     return "".join(parts)
 
 
+def _ribbon(points, widths):
+    """A tapered shape around a centre line."""
+    left, right = [], []
+    for index, (x, y) in enumerate(points):
+        a, b = points[max(0, index - 1)], points[min(len(points) - 1, index + 1)]
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        length = math.hypot(dx, dy) or 1
+        nx, ny = -dy / length, dx / length
+        half = widths[index] / 2
+        left.append((x + nx * half, y + ny * half))
+        right.append((x - nx * half, y - ny * half))
+    return _path(left) + "L" + _path(list(reversed(right)))[1:] + "Z"
+
+
 def _random(seed):
     state = seed
     while True:
@@ -54,229 +65,382 @@ def _random(seed):
         yield state / 2147483648
 
 
-def render(data, language, layout="wide"):
-    shape = LAYOUTS[layout]
-    escape = html.escape
-    say = lambda zh, en: zh if language == "zh" else en
+def _gauss(rng):
+    u, v = max(1e-9, next(rng)), next(rng)
+    return math.sqrt(-2 * math.log(u)) * math.cos(2 * math.pi * v)
+
+
+def _walk(start, length, heading, wiggle, step=4.0):
+    x, y = start
+    points, headings = [(x, y)], [heading(0) + wiggle(0)]
+    for index in range(1, max(1, int(length / step)) + 1):
+        s = index * step
+        h = heading(s) + wiggle(s)
+        x, y = x + math.cos(math.radians(h)) * step, y - math.sin(math.radians(h)) * step
+        points.append((x, y))
+        headings.append(h)
+    return points, headings
+
+
+def layout(data):
+    """Positions, routes and widths (pure; shared by render and tests)."""
     eras, topics = data["eras"], data["topics"]
     nodes = {node["id"]: node for node in data["nodes"]}
     canonical = [name for era in eras for branch in era["branches"] for name in branch["works"]]
     era_index = {name: index for index, era in enumerate(eras) for branch in era["branches"] for name in branch["works"]}
-    featured = {name for era in eras for name in era["featured"]}
     layer_of = {topic["id"]: topic["layer"] for topic in topics}
+    order = [topic["id"] for topic in topics]
+    track_order = {topic["id"]: [track["id"] for track in topic.get("tracks", [])] for topic in topics}
+    track_of = {name: nodes[name].get("track") or "_" for name in canonical}
+
+    # Arc length from the root for every milestone.
+    clusters = {}
+    for name in canonical:
+        key = ("trunk",) if era_index[name] == 0 else (nodes[name]["topic"], track_of[name], era_index[name])
+        clusters.setdefault(key, []).append(name)
+    busiest = {}
+    for key, names in clusters.items():
+        if key[0] != "trunk":
+            busiest[key[2]] = max(busiest.get(key[2], 1), len(names))
+    per_field = {}
+    for name in canonical:
+        if era_index[name]:
+            key = (nodes[name]["topic"], era_index[name])
+            per_field[key] = per_field.get(key, 0) + 1
+    for (topic, index), count in per_field.items():
+        busiest[index] = max(busiest.get(index, 1), math.ceil(count / 2))
+    span = {index: 34 + 11 * busiest.get(index, 1) for index in range(1, len(eras))}
+    start = {1: TRUNK}
+    for index in range(2, len(eras)):
+        start[index] = start[index - 1] + span[index - 1]
+    arc = {}
+    for key, names in clusters.items():
+        for rank, name in enumerate(names):
+            if key[0] == "trunk":
+                arc[name] = TRUNK * (rank + 1) / (len(names) + 1)
+            else:
+                arc[name] = start[key[2]] + span[key[2]] * (rank + 1) / (len(names) + 1)
+
+    canopy = [name for name in canonical if era_index[name] > 0]
+    fields = {topic: [name for name in canopy if nodes[name]["topic"] == topic] for topic in order}
+    tracks = {}
+    for topic in order:
+        seen = [track for track in track_order[topic] if any(track_of[name] == track for name in fields[topic])]
+        seen += sorted({track_of[name] for name in fields[topic]} - set(seen))
+        tracks[topic] = {track: [name for name in fields[topic] if track_of[name] == track] for track in seen}
+
+    def busiest_of(groups):
+        return max(groups, key=lambda key: (len(groups[key]), -list(groups).index(key))) if groups else None
+
+    lead_field = {}
+    for topic in order:
+        if fields[topic] and (layer_of[topic] not in lead_field or len(fields[topic]) > len(fields[lead_field[layer_of[topic]]])):
+            lead_field[layer_of[topic]] = topic
+    lead_track = {topic: busiest_of(tracks[topic]) for topic in order}
+
+    def first(names):
+        return min(arc[name] for name in names)
+
+    def last(names):
+        return max(arc[name] for name in names)
+
+    cx, ground = WIDTH / 2, 0.0
+    fork_y = ground - TRUNK
+    routes = {}
+
+    def plan(key, carried, children, start_arc):
+        need = [last(carried) + 24] if carried else [start_arc + 30]
+        need += [depart + 10 for _, depart in children]
+        return max(need) - start_arc
+
+    def spawn(key, parent, depart_arc, turn, carried, children, phase):
+        index = max(0, min(len(parent["points"]) - 1, int(round((depart_arc - parent["start"]) / 4))))
+        base = parent["headings"][index]
+        hb = max(18.0, min(162.0, base + turn))  # branches grow upward, never droop
+        length = plan(key, carried, children, depart_arc)
+        heading = lambda s, hb=hb, length=length: hb + (90 - hb) * .55 * _smooth(s / length)
+        wiggle = lambda s, phase=phase: 2.4 * math.sin(s / 38 + phase)
+        points, headings = _walk(parent["points"][index], length, heading, wiggle)
+        routes[key] = {"points": points, "headings": headings, "start": depart_arc, "parent": parent["key"], "key": key,
+                       "carried": carried, "children": children}
+        return routes[key]
+
+    for rank, (layer, (h0, h1, offset)) in enumerate(LIMBS.items()):
+        if layer not in lead_field:
+            continue
+        lead = lead_field[layer]
+        others = [topic for topic in order if layer_of[topic] == layer and topic != lead and fields[topic]]
+        lead_tracks = [track for track in tracks[lead] if track != lead_track[lead]]
+        carried = tracks[lead][lead_track[lead]]
+        children = [(("field", topic), first(fields[topic]) - 22) for topic in others] + \
+                   [(("track", lead, track), first(tracks[lead][track]) - 14) for track in lead_tracks]
+        length = plan(("limb", layer), carried, children, TRUNK)
+        heading = lambda s, h0=h0, h1=h1, length=length: h0 + (h1 - h0) * _smooth(s / length)
+        wiggle = lambda s, phase=rank * 1.9: 3 * math.sin(s / 55 + phase)
+        points, headings = _walk((cx + offset, fork_y), length, heading, wiggle)
+        limb = {"points": points, "headings": headings, "start": TRUNK, "parent": None, "key": ("limb", layer),
+                "carried": carried, "children": children}
+        routes[("limb", layer)] = limb
+        lean = 1 if h0 > 92 else (-1 if h0 < 88 else 0)
+        # Fields leave the limb, alternating sides, bigger turn away from the centre.
+        field_children = sorted([child for child in children if child[0][0] == "field"], key=lambda child: child[1])
+        for order_index, (key, depart) in enumerate(field_children):
+            topic = key[1]
+            side = (lean or 1) * (1 if order_index % 2 == 0 else -1)
+            turn = side * (FIELD_TURN[0] if order_index % 2 == 0 else FIELD_TURN[1])
+            sub = [track for track in tracks[topic] if track != lead_track[topic]]
+            branch = spawn(key, limb, depart, turn, tracks[topic][lead_track[topic]],
+                           [(("track", topic, track), first(tracks[topic][track]) - 14) for track in sub], rank + order_index * 1.3)
+            for sub_index, (track_key, track_depart) in enumerate(sorted(branch["children"], key=lambda child: child[1])):
+                tside = (1 if branch["headings"][0] > 90 else -1) * (1 if sub_index % 2 == 0 else -1)
+                spawn(track_key, branch, track_depart, tside * (TRACK_TURN[0] if sub_index % 2 == 0 else TRACK_TURN[1]),
+                      tracks[topic][track_key[2]], [], rank + sub_index * .9 + 2)
+        for sub_index, (track_key, track_depart) in enumerate(sorted([child for child in children if child[0][0] == "track"], key=lambda child: child[1])):
+            tside = (lean or 1) * (-1 if sub_index % 2 == 0 else 1)
+            spawn(track_key, limb, track_depart, tside * (TRACK_TURN[0] if sub_index % 2 == 0 else TRACK_TURN[1]),
+                  tracks[lead][track_key[2]], [], rank + sub_index * .7 + 4)
+
+    def route_of(name):
+        topic, track = nodes[name]["topic"], track_of[name]
+        if ("track", topic, track) in routes:
+            return routes[("track", topic, track)]
+        if ("field", topic) in routes:
+            return routes[("field", topic)]
+        return routes[("limb", layer_of[topic])]
+
+    def field_route(topic):
+        return routes.get(("field", topic)) or routes[("limb", layer_of[topic])]
+
+    # Braided trunk.
+    trunk = {}
+    for rank, layer in enumerate([layer for layer in LIMBS if ("limb", layer) in routes]):
+        offset = LIMBS[layer][2]
+        trunk[layer] = [(cx + offset * (i / 55) + 7 * math.sin(2 * math.pi * TRUNK * (i / 55) / 160 + rank * math.pi / 2) * (1 - .35 * i / 55),
+                         ground - TRUNK * i / 55) for i in range(56)]
+
+    positions, stems = {}, {}
+    for name in canonical:
+        if era_index[name] == 0:
+            y = ground - arc[name]
+            strand = trunk[layer_of[nodes[name]["topic"]]]
+            bx = min(strand, key=lambda point: abs(point[1] - y))[0]
+            side = 1 if canonical.index(name) % 2 == 0 else -1
+            positions[name] = (bx + side * 32, y)
+            stems[name] = ((bx, y), positions[name])
+    for route in routes.values():
+        carried = sorted(route["carried"], key=lambda name: arc[name])
+        for rank, name in enumerate(carried):
+            index = max(0, min(len(route["points"]) - 1, int(round((arc[name] - route["start"]) / 4))))
+            (bx, by), heading = route["points"][index], route["headings"][index]
+            side = 1 if rank % 2 == 0 else -1
+            angle = math.radians(heading + side * 60)
+            reach = 11 + 6 * ((rank // 2) % 3)
+            positions[name] = (bx + math.cos(angle) * reach, by - math.sin(angle) * reach)
+            stems[name] = ((bx, by), positions[name])
+
+    widths = {}
+    for key, route in routes.items():
+        events = [(arc[name], 1) for name in route["carried"]]
+        for child_key, depart in route["children"]:
+            child = routes.get(child_key)
+            if child:
+                total = len(child["carried"]) + sum(len(routes[k]["carried"]) for k, _ in child["children"] if k in routes)
+                events.append((depart, total))
+        widths[key] = [1.0 + 2.5 * math.sqrt(sum(weight for at, weight in events if at >= route["start"] + 4 * i))
+                       for i in range(len(route["points"]))]
+    for layer in trunk:
+        total = sum(1 for name in canopy if layer_of[nodes[name]["topic"]] == layer)
+        widths[("trunk", layer)] = [1.2 + 2.5 * math.sqrt(total)] * 56
+
+    return {"positions": positions, "stems": stems, "arc": arc, "routes": routes, "trunk": trunk, "widths": widths,
+            "ground": ground, "cx": cx, "fork_y": fork_y, "route_of": route_of, "field_route": field_route,
+            "lead_field": lead_field, "lead_track": lead_track, "tracks": tracks, "fields": fields,
+            "canonical": canonical, "era_index": era_index, "layer_of": layer_of, "order": order, "track_of": track_of}
+
+
+def render(data, language):
+    escape = html.escape
+    say = lambda zh, en: zh if language == "zh" else en
+    tree = layout(data)
+    eras, topics = data["eras"], data["topics"]
+    nodes = {node["id"]: node for node in data["nodes"]}
+    positions, stems, routes = tree["positions"], tree["stems"], tree["routes"]
+    layer_of, order, canonical, era_index = tree["layer_of"], tree["order"], tree["canonical"], tree["era_index"]
+    cx, ground = tree["cx"], tree["ground"]
+    featured = {name for era in eras for name in era["featured"]}
     titles = {topic["id"]: topic["title"][language] for topic in topics}
+    track_titles = {(topic["id"], track["id"]): track["title"][language] for topic in topics for track in topic.get("tracks", [])}
     linked = {}
     for connection in data.get("connections", []):
         linked.setdefault(connection["from"], []).append(connection["to"])
         linked.setdefault(connection["to"], []).append(connection["from"])
+    rng = _random(20261012)
 
-    order = [topic["id"] for topic in topics]
-    extra = [name for name in order if name not in LEFT + RIGHT + (CENTER,)]
-    left_side = [name for name in LEFT if name in order] + [name for name in extra if layer_of[name] in ("physical", "software")]
-    right_side = [name for name in RIGHT if name in order] + [name for name in extra if name not in left_side]
-    width = shape["width"]
-    cx = (shape["left"][1] + shape["right"][0]) / 2
+    xs = [x for route in routes.values() for x, _ in route["points"]]
+    ys = [y for route in routes.values() for _, y in route["points"]]
+    top, bottom = min(ys) - 70, ground + 150
+    height = bottom - top
 
-    # Bands: one per period after the first, tall enough for its busiest field.
-    clusters = {}
-    for name in canonical:
-        clusters.setdefault((nodes[name]["topic"], era_index[name]), []).append(name)
-    rows = {}
-    for (topic, index), names in clusters.items():
-        rows[index] = max(rows.get(index, 1), math.ceil(len(names) / 2))
-    heights = {index: shape["band"] + shape["row"] * rows.get(index, 1) for index in range(1, len(eras))}
-    ground = shape["top"] + sum(heights.values()) + shape["trunk"]
-    total = ground + shape["below"]
-    fork = ground - shape["trunk"]
-    band_bottom, cursor = {}, fork
-    for index in range(1, len(eras)):
-        band_bottom[index] = cursor
-        cursor -= heights[index]
-
-    heights_of, lanes = {}, {}
-    for (topic, index), names in clusters.items():
-        if index == 0:
-            continue
-        bottom, height = band_bottom[index], heights[index]
-        count = math.ceil(len(names) / 2)
-        for rank, name in enumerate(names):
-            row, lane = divmod(rank, 2)
-            heights_of[name] = bottom - height * (row + 1) / (count + 1) if len(names) > 1 else bottom - height * .5
-            single = len(names) == 1 or (rank == len(names) - 1 and lane == 0)
-            lanes[name] = 0 if single else (-1 if lane == 0 else 1) * shape["lane"]
-    trunk_nodes = [name for name in canonical if era_index[name] == 0]
-    for rank, name in enumerate(trunk_nodes):
-        heights_of[name] = ground - shape["trunk"] * (rank + 1) / (len(trunk_nodes) + 1)
-        lanes[name] = 0
-
-    first_seen = {}
-    for name in canonical:
-        if era_index[name] > 0:
-            first_seen.setdefault(nodes[name]["topic"], heights_of[name])
-    # Earlier branches go farther out, so a late branch never sweeps across an early one.
-    left_side.sort(key=lambda name: -first_seen.get(name, fork))
-    right_side.sort(key=lambda name: first_seen.get(name, fork))
-    column = {CENTER: cx}
-    for side, (start, end) in ((left_side, shape["left"]), (right_side, shape["right"])):
-        step = (end - start) / max(1, len(side) - 1)
-        for index, name in enumerate(side):
-            column[name] = start + index * step
-
-    reach_of, spans = {}, {}
-    for topic in order:
-        ys = [heights_of[name] for name in canonical if nodes[name]["topic"] == topic and era_index[name] > 0]
-        reach_of[topic] = 46 + .32 * abs(column[topic] - cx)
-        depart = min(fork - 6, max(ys) + .55 * reach_of[topic]) if ys else fork - 6
-        tip = min(ys) - 24 if ys else fork - 40
-        spans[topic] = (depart, tip)
-    phase = {name: 2 * math.pi * index / len(order) for index, name in enumerate(order)}
-
-    def braid(topic, y):
-        return shape["braid"] * math.sin((ground - y) / 38 + phase[topic])
-
-    def x_at(topic, y):
-        depart, tip = spans[topic]
-        if topic == CENTER:
-            fade = _smooth((fork - y) / 260)
-            return cx + braid(topic, y) * (1 - .7 * fade)
-        u = _smooth((depart - y) / reach_of[topic])
-        sway = 5 * math.sin((depart - y) / 80 + phase[topic]) * u
-        return cx + braid(topic, y) * (1 - u) + (column[topic] - cx) * u + sway
-
-    positions = {name: (x_at(nodes[name]["topic"], heights_of[name]) + lanes[name], heights_of[name]) for name in canonical}
-
-    defs = (f'<defs><filter id="wt-glow-{layout}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.4"/></filter>'
-            f'<filter id="wt-haze-{layout}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7"/></filter>'
-            f'<radialGradient id="wt-nebula-{layout}" cx="50%" cy="38%" r="60%"><stop offset="0" stop-color="#2a3d6b" stop-opacity=".42"/>'
-            f'<stop offset=".55" stop-color="#101a33" stop-opacity=".22"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>'
-            f'<radialGradient id="wt-ember-{layout}" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#e9b36a" stop-opacity=".28"/><stop offset="1" stop-color="#e9b36a" stop-opacity="0"/></radialGradient>'
-            f'<linearGradient id="wt-horizon-{layout}" x1="0" x2="1"><stop offset="0" stop-color="#9fc4ff" stop-opacity="0"/><stop offset=".5" stop-color="#e8f1ff" stop-opacity=".75"/><stop offset="1" stop-color="#9fc4ff" stop-opacity="0"/></linearGradient>'
-            f'<radialGradient id="wt-disk-{layout}" cx="50%" cy="45%" r="55%"><stop offset="0" stop-color="#3a5a8c" stop-opacity=".34"/><stop offset=".7" stop-color="#14213b" stop-opacity=".22"/><stop offset="1" stop-color="#0a1020" stop-opacity="0"/></radialGradient>'
-            f'<radialGradient id="wt-crown-{layout}" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffffff" stop-opacity=".34"/><stop offset=".3" stop-color="#d9ecff" stop-opacity=".16"/>'
-            f'<stop offset=".6" stop-color="#5fb7d8" stop-opacity=".08"/><stop offset="1" stop-color="#5fb7d8" stop-opacity="0"/></radialGradient>'
-            f'<linearGradient id="wt-root-{layout}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0dcc0" stop-opacity=".75"/><stop offset="1" stop-color="#f0dcc0" stop-opacity="0"/></linearGradient>'
-            + "".join(f'<radialGradient id="wt-halo-{layout}-{layer}"><stop offset="0" stop-color="{tint}" stop-opacity=".85"/><stop offset=".35" stop-color="{tint}" stop-opacity=".32"/>'
+    defs = ('<defs><filter id="wt-glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3.4"/></filter>'
+            f'<linearGradient id="wt-bark" gradientUnits="userSpaceOnUse" x1="0" y1="{ground + 30:.0f}" x2="0" y2="{top + 60:.0f}">'
+            '<stop offset="0" stop-color="#f0cf98"/><stop offset=".3" stop-color="#f5e4c6"/><stop offset="1" stop-color="#e4eeff"/></linearGradient>'
+            f'<linearGradient id="wt-rootfade" gradientUnits="userSpaceOnUse" x1="0" y1="{ground:.0f}" x2="0" y2="{ground + 125:.0f}">'
+            '<stop offset="0" stop-color="#efcf9c" stop-opacity=".9"/><stop offset="1" stop-color="#efcf9c" stop-opacity="0"/></linearGradient>'
+            '<radialGradient id="wt-crown" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff4df" stop-opacity=".2"/>'
+            '<stop offset=".5" stop-color="#bcd6ff" stop-opacity=".07"/><stop offset="1" stop-color="#bcd6ff" stop-opacity="0"/></radialGradient>'
+            '<radialGradient id="wt-earth" cx="50%" cy="40%" r="60%"><stop offset="0" stop-color="#e9b873" stop-opacity=".2"/><stop offset="1" stop-color="#e9b873" stop-opacity="0"/></radialGradient>'
+            + "".join(f'<radialGradient id="wt-halo-{layer}"><stop offset="0" stop-color="{tint}" stop-opacity=".9"/><stop offset=".4" stop-color="{tint}" stop-opacity=".3"/>'
                       f'<stop offset="1" stop-color="{tint}" stop-opacity="0"/></radialGradient>' for layer, tint in TINT.items())
-            + "</defs>")
+            + '</defs>')
 
-    sky = [f'<rect class="wt-nebula" x="0" y="0" width="{width}" height="{total:.0f}" fill="url(#wt-nebula-{layout})"/>',
-           f'<ellipse cx="{cx:.1f}" cy="{ground:.1f}" rx="{width * .32:.1f}" ry="{shape["below"] * .9:.1f}" fill="url(#wt-ember-{layout})"/>']
-    rng = _random(20261012 + (7 if layout == "narrow" else 0))
+    paint = []
+    crown_y = (min(ys) + tree["fork_y"]) / 2
+    paint.append(f'<ellipse cx="{cx:.0f}" cy="{crown_y:.0f}" rx="{(max(xs) - min(xs)) * .6:.0f}" ry="{(tree["fork_y"] - min(ys)) * .75:.0f}" fill="url(#wt-crown)"/>')
+    paint.append(f'<ellipse cx="{cx:.0f}" cy="{ground:.0f}" rx="430" ry="70" fill="url(#wt-earth)"/>')
+    paint.append(f'<path class="wt-ground" d="M{cx - 480:.0f},{ground:.0f}Q{cx:.0f},{ground + 12:.0f} {cx + 480:.0f},{ground:.0f}"/>')
     dust = []
-    for index in range(shape["dust"]):
-        x, y = next(rng) * width, next(rng) * (ground - 10)
-        size = .35 + next(rng) ** 3 * 1.3
-        alpha = .12 + next(rng) ** 2 * .55
-        warm = next(rng)
-        color = "#ffe6c4" if warm > .86 else ("#cfe0ff" if warm > .55 else "#ffffff")
-        twinkle = ' class="wt-twinkle"' if index % 17 == 0 else ""
-        dust.append(f'<circle{twinkle} cx="{x:.1f}" cy="{y:.1f}" r="{size:.2f}" fill="{color}" fill-opacity="{alpha:.2f}"/>')
-    sky.append(f'<g class="wt-dust">{"".join(dust)}</g>')
-    crown_y = shape["top"] - 6
-    sky.append(f'<ellipse class="wt-crown" cx="{cx:.1f}" cy="{crown_y:.1f}" rx="{width * .3:.1f}" ry="{(fork - crown_y) * .34:.1f}" fill="url(#wt-crown-{layout})"/>')
+    for index in range(220):
+        x, y = next(rng) * WIDTH, top + next(rng) * (ground - top)
+        dust.append(f'<circle{" class=\"wt-twinkle\"" if index % 19 == 0 else ""} cx="{x:.1f}" cy="{y:.1f}" r="{.35 + next(rng) ** 3 * 1.2:.2f}" fill-opacity="{.1 + next(rng) ** 2 * .5:.2f}"/>')
+    paint.append(f'<g class="wt-dust">{"".join(dust)}</g>')
 
-    for index in range(1, len(eras)):
-        y = band_bottom[index]
-        sky.append(f'<line class="wt-band" data-era-band="{eras[index]["id"]}" x1="{shape["gutter"]}" y1="{y:.1f}" x2="{width - 16}" y2="{y:.1f}"/>')
-        sky.append(f'<text class="wt-band-label" x="{shape["gutter"] - 12}" y="{y + 4:.1f}" text-anchor="end">{eras[index]["start"]}</text>')
-    sky.append(f'<text class="wt-band-label" x="{shape["gutter"] - 12}" y="{ground + 4:.1f}" text-anchor="end">{eras[0]["start"]}</text>')
-    disk_rx, disk_ry = width * .4, shape["below"] * .26
-    sky.append(f'<ellipse class="wt-disk" cx="{cx:.1f}" cy="{ground:.1f}" rx="{disk_rx:.1f}" ry="{disk_ry:.1f}" fill="url(#wt-disk-{layout})"/>')
-    sky.append(f'<path class="wt-rim" d="M{cx - disk_rx:.1f},{ground:.1f}A{disk_rx:.1f},{disk_ry:.1f} 0 0 0 {cx + disk_rx:.1f},{ground:.1f}" stroke="url(#wt-horizon-{layout})"/>')
-    sky.append(f'<path class="wt-rim wt-rim--back" d="M{cx - disk_rx:.1f},{ground:.1f}A{disk_rx:.1f},{disk_ry:.1f} 0 0 1 {cx + disk_rx:.1f},{ground:.1f}" stroke="url(#wt-horizon-{layout})"/>')
-    # Nine roots below the trunk (下有九枸).
-    nine = []
+    roots = []
     for index in range(9):
         spread = (index - 4) / 4
-        depth = shape["below"] * (.62 + .3 * abs(math.sin(index * 2.1)))
-        end_x = cx + spread * width * .15
-        nine.append(f'M{cx + spread * shape["braid"] * 1.4:.1f},{ground - 1:.1f}C{cx + spread * shape["braid"] * 3:.1f},{ground + depth * .4:.1f} '
-                    f'{end_x - spread * 26:.1f},{ground + depth * .7:.1f} {end_x:.1f},{ground + depth:.1f}')
-    sky.append(f'<path class="wt-nine-roots" d="{"".join(nine)}" stroke="url(#wt-root-{layout})"/>')
+        depth = 72 + 46 * abs(math.sin(index * 2.3))
+        end = (cx + spread * 240 + (next(rng) - .5) * 30, ground + depth)
+        pts = [(cx + spread * 12, ground - 6), (cx + spread * 46, ground + depth * .3), (cx + spread * 130, ground + depth * .66), end]
+        roots.append(f'<path d="{_ribbon(pts, [10 - abs(spread) * 3, 5.4, 2.6, .5])}"/>')
+        mid = pts[2]
+        roots.append(f'<path class="wt-rootlet" d="M{mid[0]:.1f},{mid[1]:.1f}q{spread * 18 + 4:.1f},12 {spread * 30 + 8:.1f},26"/>')
+    paint.append(f'<g class="wt-roots">{"".join(roots)}</g>')
 
-    # Strands: one per field, from its root tendril through the braided trunk to its tip.
-    strands, roots = [], []
-    for index, topic in enumerate(order):
-        depart, tip = spans[topic]
-        ys = [ground - (ground - tip) * i / 90 for i in range(91)]
-        points = [(x_at(topic, y), y) for y in ys]
-        spread = (index - (len(order) - 1) / 2) / ((len(order) - 1) / 2)
-        depth = shape["below"] * (.45 + .4 * abs(math.sin(index * 1.3)))
-        tint = TINT[layer_of[topic]]
-        d = _path(points)
-        strands.append(f'<path class="wt-strand" data-topic="{topic}" data-layer="{layer_of[topic]}" style="--tint:{tint}" d="{d}"/>')
-    glow = "".join(strand.replace('class="wt-strand"', 'class="wt-strand-glow"') for strand in strands)
-
-    aerial = []
-    landings = []
     for topic in topics:
         root = topic.get("root")
         if not root or root.get("from") not in positions or era_index[root["from"]] == 0:
             continue
         x, y = positions[root["from"]]
         side = 1 if x > cx else -1
-        land = x + side * 26
-        level = sum(1 for other in landings if abs(other - land) < 170)
-        landings.append(land)
-        tint = TINT[layer_of[topic["id"]]]
-        mid = (y + ground) / 2
-        aerial.append(f'<g class="wt-aerial" data-topic="{topic["id"]}" style="--tint:{tint}">'
-                      f'<path d="M{x:.1f},{y:.1f}C{x + side * 4:.1f},{mid:.1f} {land - side * 6:.1f},{mid + 40:.1f} {land:.1f},{ground}'
-                      f'M{land:.1f},{ground}q-5,14 -18,24M{land:.1f},{ground}q2,16 -1,30M{land:.1f},{ground}q7,12 18,20"/>'
-                      + (f'<text x="{land:.1f}" y="{ground + 50 + 16 * level}" text-anchor="middle">{escape(root["label"][language])}</text>' if shape["labels"] else "")
-                      + "</g>")
+        land = x + side * 16
+        paint.append(f'<g class="wt-aerial" data-topic="{topic["id"]}"><title>{escape(root["label"][language])}</title>'
+                     f'<path d="M{x:.1f},{y:.1f}C{x + side * 3:.1f},{(y + ground) / 2:.1f} {land - side * 4:.1f},{ground - 60:.1f} {land:.1f},{ground:.1f}'
+                     f'M{land:.1f},{ground:.1f}q-6,10 -15,18M{land:.1f},{ground:.1f}q2,12 0,22M{land:.1f},{ground:.1f}q7,9 15,15"/></g>')
 
-    vines = []
+    wood = []
+    for layer, pts in tree["trunk"].items():
+        wood.append(f'<path class="wt-branch" data-layer="{layer}" d="{_ribbon(pts, [w * .9 for w in tree["widths"][("trunk", layer)]])}"/>')
+    for key, route in routes.items():
+        topic = (tree["lead_field"][key[1]] if key[0] == "limb" else key[1])
+        track = tree["lead_track"][topic] if key[0] != "track" else key[2]
+        wood.append(f'<path class="wt-branch" data-layer="{layer_of[topic]}" data-topic="{topic}" data-track="{track}" d="{_ribbon(route["points"], tree["widths"][key])}"/>')
+    sprigs = []
+    for route in routes.values():
+        pts, heads = route["points"], route["headings"]
+        for index in range(7, len(pts) - 2, 8):
+            side = 1 if (index // 8) % 2 else -1
+            angle = math.radians(heads[index] + side * (36 + 16 * next(rng)))
+            reach = 6 + 9 * next(rng)
+            x, y = pts[index]
+            sprigs.append(f"M{x:.1f},{y:.1f}l{math.cos(angle) * reach:.1f},{-math.sin(angle) * reach:.1f}")
+    stem_d = "".join(f"M{a[0]:.1f},{a[1]:.1f}L{b[0]:.1f},{b[1]:.1f}" for a, b in stems.values())
+    paint.append(f'<g class="wt-glow" filter="url(#wt-glow)">{"".join(wood)}</g><g class="wt-wood">{"".join(wood)}</g>')
+    paint.append(f'<path class="wt-sprigs" d="{"".join(sprigs)}"/><path class="wt-twigs" d="{stem_d}"/>')
+
+    leaves = []
+    for name in canonical:
+        if era_index[name] == 0:
+            continue
+        x, y = positions[name]
+        tint = TINT[layer_of[nodes[name]["topic"]]]
+        for _ in range(18):
+            color = tint if next(rng) < .45 else "#fff8ea"
+            leaves.append(f'<circle cx="{x + _gauss(rng) * 14:.1f}" cy="{y + _gauss(rng) * 12:.1f}" r="{.5 + next(rng) * 1.3:.2f}" fill="{color}" fill-opacity="{.18 + next(rng) * .5:.2f}"/>')
+    for route in routes.values():
+        pts = route["points"]
+        for index in range(int(len(pts) * .3), len(pts), 2):
+            x, y = pts[index]
+            reach = 10 + 16 * index / len(pts)
+            for _ in range(2):
+                leaves.append(f'<circle cx="{x + _gauss(rng) * reach:.1f}" cy="{y + _gauss(rng) * reach * .8:.1f}" r="{.4 + next(rng) * 1.1:.2f}" fill="#fff8ea" fill-opacity="{.08 + next(rng) * .34:.2f}"/>')
+    paint.append(f'<g class="wt-leaves">{"".join(leaves)}</g>')
+
     for connection in data.get("connections", []):
         (x1, y1), (x2, y2) = positions[connection["from"]], positions[connection["to"]]
-        lift = 34 + abs(x1 - x2) * .14
-        vines.append(f'<path class="wt-vine" data-from="{connection["from"]}" data-to="{connection["to"]}" '
-                     f'd="M{x1:.1f},{y1:.1f}C{x1:.1f},{y1 - lift:.1f} {x2:.1f},{y2 - lift:.1f} {x2:.1f},{y2:.1f}"/>')
+        mx, my = (x1 + x2) / 2, min(y1, y2) - 30 - abs(x1 - x2) * .1
+        paint.append(f'<path class="wt-vine" data-from="{connection["from"]}" data-to="{connection["to"]}" d="M{x1:.1f},{y1:.1f}Q{mx:.1f},{my:.1f} {x2:.1f},{y2:.1f}"/>')
 
-    twigs = "".join(f'M{x - lanes[name]:.1f},{y + 3:.1f}L{x:.1f},{y:.1f}' for name, (x, y) in positions.items() if lanes[name])
-
-    taken = []
+    taken = [(x - 5, y - 5, x + 5, y + 5) for x, y in positions.values()]
 
     def text_width(value, size):
         return sum(size * (1.0 if ord(char) > 0x2e80 else .56) for char in value)
 
     def free(box):
-        return all(box[2] < other[0] or box[0] > other[2] or box[3] < other[1] or box[1] > other[3] for other in taken)
+        return all(box[2] < o[0] or box[0] > o[2] or box[3] < o[1] or box[1] > o[3] for o in taken)
 
-    def place(x, y, side, value, size):
-        width_px = text_width(value, size)
-        for dy in (0, -14, 14, -28, 28, -42, 42):
-            for direction in (side, -side):
-                left_edge = x + direction * 14 if direction > 0 else x - 14 - width_px
-                box = (left_edge - 2, y + dy - size * .8, left_edge + width_px + 2, y + dy + size * .35)
+    def tip_label(route, label, size, extra=0):
+        (tx, ty), heading = route["points"][-1], route["headings"][-1]
+        width_px = text_width(label, size) + extra
+        anchor = "middle" if 72 <= heading <= 108 else ("end" if heading > 108 else "start")
+        for reach in (14, 28, 44):
+            lx, ly = tx + math.cos(math.radians(heading)) * reach, ty - math.sin(math.radians(heading)) * reach
+            for dy in (0, -14, 14, -28, 28):
+                left = lx - width_px / 2 if anchor == "middle" else (lx - width_px if anchor == "end" else lx)
+                box = (left - 3, ly + dy - size, left + width_px + 3, ly + dy + 4)
                 if free(box):
                     taken.append(box)
-                    return direction, dy
-        return side, 0
+                    return lx, ly + dy, anchor
+        return None
 
-    for name, (x, y) in positions.items():
-        taken.append((x - 4, y - 4, x + 4, y + 4))
-
-    fields, placed = [], []
+    # Field names sit in two columns beside the crown, joined to their tips by fine leader lines.
+    tips = {}
     for topic in order:
-        depart, tip = spans[topic]
-        x, y = x_at(topic, tip), tip - 12
+        if not any(nodes[name]["topic"] == topic for name in canonical):
+            continue
+        tips[topic] = tree["field_route"](topic)["points"][-1]
+    leader_topic = max(tips, key=lambda topic: len(tree["fields"][topic]))  # the main leader gets its name on top
+    sides = {"left": [], "right": []}
+    for topic, (tx, ty) in tips.items():
+        if topic != leader_topic:
+            sides["left" if tx < cx else "right"].append(topic)
+    outer_left = min(x for route in routes.values() for x, _ in route["points"])
+    outer_right = max(x for route in routes.values() for x, _ in route["points"])
+    columns = {"left": min([outer_left] + [tips[t][0] for t in sides["left"]]) - 34,
+               "right": max([outer_right] + [tips[t][0] for t in sides["right"]]) + 34}
+    columns["left"] = max(130.0, columns["left"])
+    columns["right"] = min(WIDTH - 130.0, columns["right"])
+    placed_y = {}
+    for side, items in sides.items():
+        items.sort(key=lambda topic: tips[topic][1])
+        ys = [tips[topic][1] for topic in items]
+        for i in range(1, len(ys)):
+            ys[i] = max(ys[i], ys[i - 1] + 26)
+        overflow = ys[-1] - (tree["fork_y"] - 10) if ys else 0
+        if overflow > 0:
+            ys = [y - overflow for y in ys]
+            for i in range(len(ys) - 2, -1, -1):
+                ys[i] = min(ys[i], ys[i + 1] - 26)
+        placed_y.update(zip(items, ys))
+    fields, leaders = [], []
+    for topic, (tx, ty) in tips.items():
         members = [name for name in canonical if nodes[name]["topic"] == topic]
-        if shape["labels"]:
-            half = text_width(titles[topic], shape["field_font"]) / 2 + 14
-            x = min(max(x, shape["gutter"] + half + 6), width - half - 6)
-            for _ in range(8):
-                if any(abs(px - x) < 112 and abs(py - y) < 19 for px, py in placed):
-                    y -= 19
-            placed.append((x, y))
-            span = text_width(titles[topic], shape["field_font"]) / 2 + 18
-            taken.append((x - span, y - shape["field_font"], x + span, y + 4))
-        anchor_id = f' id="field-{topic}"' if layout == "wide" else ""
-        label = escape(say(f"{titles[topic]}：{len(members)} 个节点", f"{titles[topic]}: {len(members)} milestone{'s' if len(members) != 1 else ''}"), quote=True)
-        body = (f'<text x="{x:.1f}" y="{y:.1f}" text-anchor="middle" style="font-size:{shape["field_font"]}px">{escape(titles[topic])}'
-                f'<tspan class="wt-count" dx="6">{len(members)}</tspan></text>') if shape["labels"] else f'<circle class="wt-tip" cx="{x:.1f}" cy="{tip:.1f}" r="3"/>'
-        fields.append(f'<a class="wt-field"{anchor_id} href="#event-{members[0]}" data-field-link="{topic}" data-layer="{layer_of[topic]}" aria-label="{label}">{body}</a>')
-
+        count = len(members)
+        size = 14
+        width_px = text_width(titles[topic], size) + 24
+        if topic == leader_topic:
+            lx, ly, anchor = tx, ty - 22, "middle"
+            taken.append((lx - width_px / 2 - 4, ly - size, lx + width_px / 2 + 4, ly + 5))
+        else:
+            side = "left" if tx < cx else "right"
+            lx, ly = columns[side], placed_y[topic]
+            anchor = "end" if side == "left" else "start"
+            end_x = lx + 8 if side == "left" else lx - 8
+            leaders.append(f'<path class="wt-leader" data-topic="{topic}" d="M{tx:.1f},{ty:.1f}L{end_x:.1f},{ly - 4:.1f}"/>'
+                           f'<circle class="wt-leader-dot" data-topic="{topic}" cx="{tx:.1f}" cy="{ty:.1f}" r="1.8"/>')
+            left_edge = lx - width_px if side == "left" else lx
+            taken.append((left_edge - 4, ly - size, left_edge + width_px + 4, ly + 5))
+        aria = escape(say(f"{titles[topic]}：{count} 个节点", f"{titles[topic]}: {count} milestone{'s' if count != 1 else ''}"), quote=True)
+        fields.append(f'<a class="wt-field" id="field-{topic}" href="#event-{members[0]}" data-field-link="{topic}" data-layer="{layer_of[topic]}" aria-label="{aria}">'
+                      f'<text x="{lx:.1f}" y="{ly:.1f}" text-anchor="{anchor}">{escape(titles[topic])}<tspan class="wt-count" dx="5">{count}</tspan></text></a>')
     marks = []
     for name in canonical:
         node = nodes[name]
@@ -284,34 +448,49 @@ def render(data, language, layout="wide"):
         topic = node["topic"]
         layer = layer_of[topic]
         big = name in featured
-        scale = 1 if layout == "wide" else .85
         classes = "wt-node" + (" is-featured" if big else "") + (" is-open" if node["status"] == "evolving" else "") + (" has-links" if name in linked else "")
         related = f' data-links="{" ".join(linked[name])}"' if name in linked else ""
-        flare = (f'<path class="wt-flare" d="M{x - 13 * scale:.1f},{y:.1f}H{x + 13 * scale:.1f}M{x:.1f},{y - 13 * scale:.1f}V{y + 13 * scale:.1f}"/>' if big else "")
+        flare = f'<path class="wt-flare" d="M{x - 12:.1f},{y:.1f}H{x + 12:.1f}M{x:.1f},{y - 12:.1f}V{y + 12:.1f}"/>' if big else ""
         caption = ""
-        if shape["labels"] and big:
+        if big:
             short = node["title"][language].split(" · ")[0].split("：")[0].split(": ")[0]
-            if era_index[name] == 0:
-                side = 1 if trunk_nodes.index(name) % 2 == 0 else -1
-            elif topic == CENTER:
-                side = -1 if lanes[name] < 0 else 1
-            else:
-                side = 1 if column[topic] > cx else -1
-            side, dy = place(x, y + 4, side, f'{node["year"]} {short}', shape["node_font"])
-            caption = (f'<text x="{x + side * 14:.1f}" y="{y + 4 + dy:.1f}" text-anchor="{"start" if side > 0 else "end"}" style="font-size:{shape["node_font"]}px">'
+            size = 11.5
+            width_px = text_width(f'{node["year"]} {short}', size)
+            (bx, _), _ = stems[name]
+            side = 1 if x >= bx else -1
+            chosen = None
+            for dy in (0, -13, 13, -26, 26):
+                for direction in (side, -side):
+                    left = x + 10 if direction > 0 else x - 10 - width_px
+                    box = (left - 2, y + 4 + dy - size * .85, left + width_px + 2, y + 4 + dy + size * .3)
+                    if free(box):
+                        chosen = (direction, dy)
+                        taken.append(box)
+                        break
+                if chosen:
+                    break
+            direction, dy = chosen or (side, 0)
+            caption = (f'<text x="{x + direction * 10:.1f}" y="{y + 4 + dy:.1f}" text-anchor="{"start" if direction > 0 else "end"}">'
                        f'<tspan class="wt-year">{node["year"]}</tspan> {escape(short)}</text>')
+        track = tree["track_of"][name]
         label = escape(f'{node["year"]} · {node["title"][language]}', quote=True)
-        marks.append(f'<a class="{classes}" href="#event-{name}" data-node="{name}" data-topic="{topic}" data-layer="{layer}" '
+        marks.append(f'<a class="{classes}" href="#event-{name}" data-node="{name}" data-topic="{topic}" data-track="{track}" data-layer="{layer}" '
                      f'data-era="{eras[era_index[name]]["id"]}"{related} aria-label="{label}">'
-                     f'<circle class="wt-halo" cx="{x:.1f}" cy="{y:.1f}" r="{(15 if big else 9) * scale:.1f}" fill="url(#wt-halo-{layout}-{layer})"/>{flare}'
-                     f'<circle class="wt-core" cx="{x:.1f}" cy="{y:.1f}" r="{(2.9 if big else 1.9) * scale:.1f}"/>{caption}</a>')
+                     f'<circle class="wt-halo" cx="{x:.1f}" cy="{y:.1f}" r="{14 if big else 8.5}" fill="url(#wt-halo-{layer})"/>{flare}'
+                     f'<circle class="wt-core" cx="{x:.1f}" cy="{y:.1f}" r="{2.8 if big else 1.8}"/>{caption}</a>')
 
-    root_label = ""
-    if shape["labels"]:
-        root_label = (f'<text class="wt-root-label" x="{cx:.1f}" y="{ground + shape["below"] - 14}" text-anchor="middle">'
-                      f'{escape(say(f"同一个根 · 电力、计算与晶体管 · {eras[0]["start"]}–{eras[0]["end"]}", f"One root · power, computation, the transistor · {eras[0]["start"]}–{eras[0]["end"]}"))}</text>')
+    track_labels = []
+    for key, route in routes.items():
+        if key[0] != "track":
+            continue
+        label = track_titles.get((key[1], key[2]))
+        if not label:
+            continue
+        placed = tip_label(route, label, 10.5)
+        if placed:
+            lx, ly, anchor = placed
+            track_labels.append(f'<text class="wt-track" data-topic="{key[1]}" x="{lx:.1f}" y="{ly:.1f}" text-anchor="{anchor}">{escape(label)}</text>')
+
     title = say("技术世界树", "Technology world tree")
-    return (f'<svg class="wt-svg wt-svg--{layout}" viewBox="0 0 {width} {total:.0f}" role="group" aria-label="{title}">{defs}'
-            f'<g aria-hidden="true">{"".join(sky)}<g class="wt-glow" filter="url(#wt-haze-{layout})">{glow}</g>'
-            f'{"".join(strands)}{"".join(aerial)}<path class="wt-twigs" d="{twigs}"/>{"".join(vines)}{root_label}</g>'
-            f'{"".join(marks)}{"".join(fields)}</svg>')
+    return (f'<svg class="wt-svg" viewBox="0 {top:.0f} {WIDTH} {height:.0f}" role="group" aria-label="{title}">{defs}'
+            f'<g aria-hidden="true">{"".join(paint)}{"".join(leaders)}{"".join(track_labels)}</g>{"".join(marks)}{"".join(fields)}</svg>')
