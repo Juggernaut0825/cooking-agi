@@ -62,43 +62,54 @@
 .reader-hub-status { min-height: 1.2em; margin: .4rem 0 0; color: var(--muted); font-size: .78rem; }
 .reader-hub-local { margin: auto 0 0; padding-top: .8rem; color: var(--muted); font-size: .7rem; line-height: 1.6; }
 
-/* 金乌 */
-.kinwu { position: fixed; z-index: 70; right: 18px; bottom: 18px; display: flex; flex-direction: column; align-items: flex-end; gap: .55rem; pointer-events: none; }
-.kinwu[hidden] { display: none; }
-.kinwu > * { pointer-events: auto; }
-.kinwu-bird { position: relative; width: 58px; height: 58px; padding: 6px; border: 0; border-radius: 50%; cursor: pointer;
-  background: radial-gradient(circle at 50% 55%, rgba(255,214,120,.28), rgba(245,150,40,.08) 55%, transparent 72%), color-mix(in srgb, var(--paper) 70%, transparent);
-  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
-  box-shadow: inset 0 0 0 1px rgba(245,184,61,.35), 0 10px 30px -10px rgba(245,150,40,.55); transition: transform .2s ease; }
-.kinwu-bird:hover { transform: translateY(-2px) scale(1.04); }
-.kinwu-bird:focus-visible { outline: 2px solid #f5b83d; outline-offset: 3px; }
-.kinwu-bird svg { display: block; width: 100%; height: 100%; overflow: visible; animation: kinwu-bob 3.2s ease-in-out infinite; }
-.kinwu-halo { fill: rgba(229,83,46,.32); stroke: rgba(255,196,110,.7); stroke-width: .3; }
-.kinwu-eye { animation: kinwu-blink 5.5s steps(1) infinite; transform-origin: 10.5px 4.9px; }
-.kinwu-wing { transform-origin: 6.5px 8.5px; }
-.kinwu-bird:hover .kinwu-wing { animation: kinwu-flap .5s ease-in-out 2; }
-@keyframes kinwu-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
-@keyframes kinwu-blink { 0%, 94%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.15); } }
-@keyframes kinwu-flap { 50% { transform: rotate(-14deg); } }
-.kinwu-bubble { position: relative; width: min(290px, calc(100vw - 36px)); padding: .9rem 1rem .85rem; border-radius: 18px 18px 6px 18px; color: var(--ink);
-  background: color-mix(in srgb, var(--paper) 84%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3);
-  box-shadow: inset 0 0 0 1px rgba(245,184,61,.28), 0 20px 50px -18px rgba(0,0,0,.6); animation: reader-in .25s ease; }
-.kinwu-bubble[hidden] { display: none; }
-.kinwu-message { margin: 0; font-size: .86rem; line-height: 1.65; }
-.kinwu-actions { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .75rem; }
-.kinwu-star { display: inline-flex; align-items: center; padding: .48rem .85rem; border-radius: 999px; background: linear-gradient(180deg, #ffd27a, #f5b83d); color: #1a1206; font: 600 .8rem/1 var(--body); text-decoration: none; box-shadow: 0 6px 18px -6px rgba(245,184,61,.7); }
-.kinwu-star:hover { filter: brightness(1.06); }
-.kinwu-later { padding: .45rem .8rem; border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent); border-radius: 999px; background: none; color: var(--ink); font: 500 .78rem/1 var(--body); cursor: pointer; }
-.kinwu-tuck { position: absolute; top: .55rem; right: .6rem; width: 24px; height: 24px; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink); line-height: 1; cursor: pointer; }
-.kinwu[data-state="collapsed"] .kinwu-bird { width: 46px; height: 46px; padding: 5px; }
+/* Corner star: a small glass star with a soft glow; hearts float up on hover. */
+.corner-star { position: fixed; z-index: 70; right: 20px; bottom: 20px; display: flex; flex-direction: column; align-items: flex-end; gap: .6rem; pointer-events: none; }
+.corner-star[hidden] { display: none; }
+.corner-star > * { pointer-events: auto; }
+.corner-star-button { position: relative; width: 56px; height: 56px; padding: 4px; border: 0; border-radius: 50%; cursor: pointer; background: none;
+  filter: drop-shadow(0 0 10px rgba(255, 206, 120, .45)) drop-shadow(0 6px 18px rgba(255, 170, 60, .25)); transition: transform .25s ease, filter .25s ease; }
+.corner-star-button svg { display: block; width: 100%; height: 100%; overflow: visible; animation: cs-breathe 4.2s ease-in-out infinite; }
+.corner-star-button:hover { transform: translateY(-2px) scale(1.08) rotate(-6deg); filter: drop-shadow(0 0 16px rgba(255, 214, 140, .7)) drop-shadow(0 8px 22px rgba(255, 170, 60, .35)); }
+.corner-star-button:focus-visible { outline: 2px solid #ffd98c; outline-offset: 4px; }
+.corner-star-aura { animation: cs-aura 4.2s ease-in-out infinite; transform-origin: 24px 25px; }
+.corner-star-rays { fill: none; stroke: #fff4d6; stroke-width: .8; stroke-linecap: round; opacity: .55; animation: cs-twinkle 3.1s ease-in-out infinite; }
+.corner-star-body { stroke-width: 1.1; stroke-linejoin: round; }
+.corner-star-gleam { fill: #ffffff; opacity: .75; filter: blur(.6px); }
+@keyframes cs-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+@keyframes cs-aura { 0%, 100% { opacity: .75; transform: scale(.94); } 50% { opacity: 1; transform: scale(1.06); } }
+@keyframes cs-twinkle { 0%, 100% { opacity: .25; } 50% { opacity: .8; } }
+.corner-star[data-state="collapsed"] .corner-star-button { width: 48px; height: 48px; }
+
+.corner-star-hearts { position: absolute; right: 14px; bottom: 30px; width: 28px; height: 0; pointer-events: none; }
+.corner-star-heart { position: absolute; left: 0; bottom: 0; width: var(--size, 12px); height: var(--size, 12px); opacity: 0; animation: cs-heart 1.35s cubic-bezier(.2, .7, .3, 1) forwards; }
+.corner-star-heart svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 0 4px rgba(255, 120, 160, .65)); }
+.corner-star-heart path { fill: #ff8fb3; stroke: rgba(255, 230, 238, .85); stroke-width: 1.2; }
+@keyframes cs-heart {
+  0% { opacity: 0; transform: translate(0, 0) scale(.4); }
+  18% { opacity: 1; transform: translate(calc(var(--drift) * .25), -12px) scale(1); }
+  100% { opacity: 0; transform: translate(var(--drift), calc(-1 * var(--rise))) scale(.8) rotate(12deg); }
+}
+
+.corner-star-bubble { position: relative; width: min(290px, calc(100vw - 36px)); padding: 1rem 1.05rem .9rem; border-radius: 18px 18px 6px 18px; color: var(--ink);
+  background: color-mix(in srgb, var(--paper) 82%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow: inset 0 0 0 1px rgba(255, 214, 140, .3), 0 20px 50px -18px rgba(0, 0, 0, .6); animation: reader-in .25s ease; }
+.corner-star-bubble[hidden] { display: none; }
+.corner-star-message { margin: 0 1.6rem 0 0; font-size: .88rem; line-height: 1.65; }
+.corner-star-actions { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .8rem; }
+.corner-star-cta { display: inline-flex; align-items: center; padding: .5rem .9rem; border-radius: 999px; background: linear-gradient(180deg, #ffe39e, #f5b83d); color: #1a1206; font: 600 .8rem/1 var(--body); text-decoration: none; box-shadow: 0 6px 18px -6px rgba(245, 184, 61, .75), inset 0 1px 0 rgba(255, 255, 255, .6); }
+.corner-star-cta:hover { filter: brightness(1.06); }
+.corner-star-choice { padding: .46rem .8rem; border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent); border-radius: 999px; background: none; color: var(--ink); font: 500 .78rem/1 var(--body); cursor: pointer; }
+.corner-star-choice:hover { border-color: color-mix(in srgb, var(--ink) 40%, transparent); }
+.corner-star-tuck { position: absolute; top: .6rem; right: .6rem; width: 24px; height: 24px; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink); line-height: 1; cursor: pointer; }
 
 @media (max-width: 760px) {
-  .kinwu { right: 12px; bottom: 76px; }
+  .corner-star { right: 12px; bottom: 76px; }
   .reader-hub { top: 56px; right: 8px; bottom: 8px; width: calc(100vw - 16px); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .reader-hub, .kinwu-bubble { animation: none; }
-  .kinwu-bird svg, .kinwu-eye, .kinwu-bird:hover .kinwu-wing { animation: none; }
-  .kinwu-bird, .reader-hub-switch, .reader-hub-switch::after { transition: none; }
+  .reader-hub, .corner-star-bubble { animation: none; }
+  .corner-star-button svg, .corner-star-aura, .corner-star-rays { animation: none; }
+  .corner-star-hearts { display: none; }
+  .corner-star-button, .reader-hub-switch, .reader-hub-switch::after { transition: none; }
 }
-@media print { .kinwu, .reader-hub, .reader-hub-toggle { display: none !important; } }
+@media print { .corner-star, .reader-hub, .reader-hub-toggle { display: none !important; } }

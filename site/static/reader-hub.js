@@ -343,7 +343,7 @@
     const row = (label, hint, control) => el('div', {class: 'reader-hub-setting'}, [el('div', {}, [el('strong', {text: label}), el('small', {text: hint})]), control]);
     const history = el('button', {type: 'button', role: 'switch', class: 'reader-hub-switch', 'aria-checked': String(config.history), 'aria-label': say('记录阅读次数', 'Count my reading')});
     history.addEventListener('click', () => { saveSettings({history: !config.history}); render(); });
-    const mascot = el('div', {class: 'reader-hub-segment', role: 'radiogroup', 'aria-label': say('角落的小鸟', 'Corner bird')});
+    const mascot = el('div', {class: 'reader-hub-segment', role: 'radiogroup', 'aria-label': say('角落的星星', 'Corner star')});
     for (const [value, label] of [['collapsed', say('显示', 'Show')], ['hidden', say('隐藏', 'Hide')]]) {
       const on = value === 'hidden' ? config.mascot === 'hidden' : config.mascot !== 'hidden';
       const option = el('button', {type: 'button', role: 'radio', 'aria-checked': String(on), text: label});
@@ -368,7 +368,7 @@
     const backup = el('a', {class: 'reader-hub-link', href: new URL(say('interview/dashboard.html#progress', 'interview/dashboard.en.html#progress'), base).href, text: say('去学习台导出 / 导入备份 →', 'Export or import a backup in the workspace →')});
     panel.append(
       row(say('记录阅读次数', 'Count my reading'), say('打开一篇笔记读满 15 秒记一次，只存在本机。', 'A note counts after 15 seconds; stored on this device only.'), history),
-      row(say('角落的小鸟', 'Corner bird'), say('右下角那只请你点 Star 的小鸟。', 'The little bird in the corner that asks for a star.'), mascot),
+      row(say('角落的星星', 'Corner star'), say('右下角那颗请你点 Star 的小星星。', 'The little star in the corner that asks for a GitHub star.'), mascot),
       row(say('主题', 'Theme'), say('和顶栏的切换按钮是同一个设置。', 'Same setting as the toggle in the top bar.'), theme),
       el('div', {class: 'reader-hub-actions'}, [wipe, backup]));
   }
@@ -387,49 +387,64 @@
     renderMascotMessage();
   }
 
-  /* ---------------------------------------------------- the little golden crow
-     金乌: the three-legged sun bird that rests in the Fusang tree. Pixel art,
-     drawn here; collapsible, and quiet unless invited (the star request shows
-     at most once a day). */
-  const SPRITE = [
-    '................',
-    '................',
-    '........bbbb....',
-    '.......bbbbbb...',
-    '.......bbbewbo..',
-    '.......bbbeeboo.',
-    '......bbbbbbbo..',
-    '.....sbbbbbbb...',
-    '...ddddbbbbbbs..',
-    '..dddddbbbbbss..',
-    '.dd.dddsbbbss...',
-    'd....ddssssss...',
-    '.......l.l.l....',
-    '.......l.l.l....',
-    '......ll.ll.ll..',
-    '................'
-  ];
-  const COLORS = {b: '#f5b83d', s: '#df922c', d: '#c2661a', c: '#e5532e', o: '#f08a24', l: '#b4561a', e: '#1a1206', w: '#fff7e6'};
-  const mascot = el('div', {class: 'kinwu', 'data-state': 'collapsed'});
-  const bird = el('button', {type: 'button', class: 'kinwu-bird', 'aria-label': say('打开小鸟的提示', 'Open the bird’s note'), 'aria-expanded': 'false'});
-  const sprite = svg('svg', {viewBox: '0 0 16 16', 'aria-hidden': 'true', 'shape-rendering': 'crispEdges'});
-  const halo = svg('circle', {cx: '8', cy: '8', r: '7.6', class: 'kinwu-halo'});
-  sprite.append(halo);
-  const groups = {wing: svg('g', {class: 'kinwu-wing'}), eye: svg('g', {class: 'kinwu-eye'}), body: svg('g', {class: 'kinwu-body'})};
-  SPRITE.forEach((line, y) => [...line].forEach((cell, x) => {
-    if (cell === '.') return;
-    const target = cell === 'd' ? groups.wing : (cell === 'e' || cell === 'w') ? groups.eye : groups.body;
-    target.append(svg('rect', {x: String(x), y: String(y), width: '1.02', height: '1.02', fill: COLORS[cell]}));
-  }));
-  sprite.append(groups.body, groups.wing, groups.eye);
-  bird.append(sprite);
-  const bubble = el('div', {class: 'kinwu-bubble', role: 'dialog', 'aria-label': say('小鸟的提示', 'Note from the bird'), hidden: true});
-  const message = el('p', {class: 'kinwu-message'});
-  const actions = el('div', {class: 'kinwu-actions'});
-  const tuck = el('button', {type: 'button', class: 'kinwu-tuck', 'aria-label': say('收起', 'Tuck away'), text: '–'});
+  /* ------------------------------------------------------- the corner star
+     A small glass star that glows; hovering it lets a few hearts float up.
+     Collapsible, and quiet unless invited (the star request shows at most
+     once a day, and never again once the reader stars or declines). */
+  const mascot = el('div', {class: 'corner-star', 'data-state': 'collapsed'});
+  const bird = el('button', {type: 'button', class: 'corner-star-button', 'aria-label': say('打开星星的提示', 'Open the star’s note'), 'aria-expanded': 'false'});
+  const glyph = svg('svg', {viewBox: '0 0 48 48', 'aria-hidden': 'true'});
+  const defs = svg('defs');
+  const core = svg('radialGradient', {id: 'cs-core', cx: '50%', cy: '44%', r: '62%'});
+  [['0', '#ffffff', '1'], ['.32', '#fff6dc', '.92'], ['.68', '#ffd98c', '.5'], ['1', '#ffbf5c', '.12']].forEach(([offset, color, opacity]) =>
+    core.append(svg('stop', {offset, 'stop-color': color, 'stop-opacity': opacity})));
+  const rim = svg('linearGradient', {id: 'cs-rim', x1: '0', y1: '0', x2: '1', y2: '1'});
+  [['0', '#ffffff', '.95'], ['1', '#ffcf7a', '.35']].forEach(([offset, color, opacity]) =>
+    rim.append(svg('stop', {offset, 'stop-color': color, 'stop-opacity': opacity})));
+  const aura = svg('radialGradient', {id: 'cs-aura'});
+  [['0', '#ffe2a3', '.55'], ['.5', '#ffc966', '.18'], ['1', '#ffc966', '0']].forEach(([offset, color, opacity]) =>
+    aura.append(svg('stop', {offset, 'stop-color': color, 'stop-opacity': opacity})));
+  defs.append(core, rim, aura);
+  const points = [];
+  for (let i = 0; i < 10; i++) {
+    const radius = i % 2 ? 7.6 : 16.5;
+    const angle = Math.PI / 2 + i * Math.PI / 5;
+    points.push(`${(24 + radius * Math.cos(angle)).toFixed(2)},${(25 - radius * Math.sin(angle)).toFixed(2)}`);
+  }
+  glyph.append(defs,
+    svg('circle', {class: 'corner-star-aura', cx: '24', cy: '25', r: '23', fill: 'url(#cs-aura)'}),
+    svg('path', {class: 'corner-star-rays', d: 'M24 2v7M24 41v5M3 25h6M39 25h6'}),
+    svg('polygon', {class: 'corner-star-body', points: points.join(' '), fill: 'url(#cs-core)', stroke: 'url(#cs-rim)'}),
+    svg('ellipse', {class: 'corner-star-gleam', cx: '20.5', cy: '20', rx: '3.6', ry: '2.2'}));
+  bird.append(glyph);
+  const hearts = el('div', {class: 'corner-star-hearts', 'aria-hidden': 'true'});
+  const bubble = el('div', {class: 'corner-star-bubble', role: 'dialog', 'aria-label': say('星星的提示', 'Note from the star'), hidden: true});
+  const message = el('p', {class: 'corner-star-message'});
+  const actions = el('div', {class: 'corner-star-actions'});
+  const tuck = el('button', {type: 'button', class: 'corner-star-tuck', 'aria-label': say('收起', 'Tuck away'), text: '–'});
   bubble.append(tuck, message, actions);
-  mascot.append(bubble, bird);
+  mascot.append(bubble, hearts, bird);
   document.body.append(mascot);
+
+  let lastHearts = 0;
+  function popHearts(count = 4) {
+    if (reduce() || Date.now() - lastHearts < 700) return;
+    lastHearts = Date.now();
+    for (let i = 0; i < count; i++) {
+      const heart = el('span', {class: 'corner-star-heart'});
+      heart.style.setProperty('--drift', `${Math.round((Math.random() - .5) * 46)}px`);
+      heart.style.setProperty('--rise', `${Math.round(54 + Math.random() * 30)}px`);
+      heart.style.setProperty('--size', `${(10 + Math.random() * 7).toFixed(1)}px`);
+      heart.style.animationDelay = `${i * 90}ms`;
+      const shape = svg('svg', {viewBox: '0 0 24 24'});
+      shape.append(svg('path', {d: 'M12 21s-7.2-4.6-9.6-8.8C.7 9 2.6 4.8 6.7 4.8c2.2 0 3.6 1.2 5.3 3.1 1.7-1.9 3.1-3.1 5.3-3.1 4.1 0 6 4.2 4.3 7.4C19.2 16.4 12 21 12 21z'}));
+      heart.append(shape);
+      heart.addEventListener('animationend', () => heart.remove());
+      hearts.append(heart);
+    }
+  }
+  bird.addEventListener('pointerenter', event => { if (event.pointerType !== 'touch') popHearts(4); });
+  bird.addEventListener('focus', () => popHearts(3));
 
   const snoozed = config => Boolean(config.snoozedUntil) && Date.parse(config.snoozedUntil) > Date.now();
   function renderMascotMessage() {
@@ -437,7 +452,7 @@
     const config = settings(state);
     const summary = summarize(state, new Date());
     actions.replaceChildren();
-    const button = (label, handler, className = 'kinwu-later') => {
+    const button = (label, handler, className = 'corner-star-choice') => {
       const node = el('button', {type: 'button', class: className, text: label});
       node.addEventListener('click', handler);
       return node;
@@ -445,8 +460,8 @@
     const never = button(say('不再显示', 'Don’t show again'), () => { saveSettings({mascot: 'hidden', starDone: true}); renderMascot(); });
     if (!config.starDone) {
       message.textContent = say('喜欢这些笔记的话，可以去 GitHub 点个 Star。', 'If you like these notes, you can star the repo on GitHub.');
-      const star = el('a', {class: 'kinwu-star', href: repo, target: '_blank', rel: 'noopener', text: say('★ 去点 Star', '★ Star on GitHub')});
-      star.addEventListener('click', () => { saveSettings({starDone: true, starAskedOn: todayKey(), mascot: 'collapsed'}); renderMascot(); });
+      const star = el('a', {class: 'corner-star-cta', href: repo, target: '_blank', rel: 'noopener', text: say('★ 去点 Star', '★ Star on GitHub')});
+      star.addEventListener('click', () => { popHearts(6); saveSettings({starDone: true, starAskedOn: todayKey(), mascot: 'collapsed'}); renderMascot(); });
       const later = button(say('这次先不显示', 'Not now'), () => {
         saveSettings({snoozedUntil: new Date(Date.now() + 12 * 3600 * 1000).toISOString(), starAskedOn: todayKey(), mascot: 'collapsed'});
         renderMascot();
@@ -476,7 +491,7 @@
   });
   tuck.addEventListener('click', () => { saveSettings({mascot: 'collapsed'}); renderMascot(); bird.focus(); });
   renderMascot();
-  // Once a day, the crow says hello by itself (never while reduced motion asks for calm).
+  // Once a day, the star says hello by itself (never while reduced motion asks for calm).
   const initial = settings(records());
   if (initial.mascot === 'collapsed' && !initial.starDone && !snoozed(initial) && initial.starAskedOn !== todayKey() && !reduce()) {
     scope.setTimeout(() => {
