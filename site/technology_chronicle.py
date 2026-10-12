@@ -48,6 +48,8 @@ def validate(data):
         require(node.get("status") in {"historical", "adopted", "evolving"}, f"invalid status: {name}")
         require(all(translated(node.get(field)) for field in ("title", "body", "limit")), f"missing translation: {name}")
         require("detail" not in node or translated(node["detail"]), f"missing detail translation: {name}")
+        require("detail" not in node or len(node["detail"]["zh"].split("\n\n")) == len(node["detail"]["en"].split("\n\n")),
+                f"detail paragraphs differ between languages: {name}")
         require(isinstance(node.get("sources"), list) and node["sources"], f"missing sources: {name}")
         for source in node["sources"]:
             require(isinstance(source, list) and len(source) == 2 and all(isinstance(part, str) and part.strip() for part in source), f"invalid source: {name}")
@@ -244,7 +246,8 @@ def render(data, language):
                         related.append(f'<li><span>{relations[connection["type"]]} · </span><a href="#event-{target["id"]}">{text(target["title"])}</a>'
                                        f'<p>{text(connection["description"])}</p></li>')
                 connections = f'<ul class="chronicle-connections">{"".join(related)}</ul>' if related else ''
-                detail = f'<p class="chronicle-explanation">{text(node["detail"])}</p>' if "detail" in node else ''
+                detail = ''.join(f'<p class="chronicle-explanation">{escape(paragraph)}</p>'
+                                 for paragraph in node["detail"][language].split("\n\n")) if "detail" in node else ''
                 background = (f'<details class="chronicle-more"><summary>{say("背景与后续", "Background & follow-up")}</summary>'
                               f'<div class="chronicle-more-body">{detail}<p class="chronicle-limit">{text(node["limit"])}</p>{connections}</div></details>')
                 references = (f'<details class="chronicle-references"><summary>{say("原始资料", "Sources")} '

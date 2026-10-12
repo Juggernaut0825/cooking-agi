@@ -182,32 +182,40 @@
       "year": 2012,
       "status": "historical",
       "title": {
-        "zh": "AlexNet · 视觉识别",
-        "en": "AlexNet · visual recognition"
+        "zh": "AlexNet · 图像特征改由网络自己学",
+        "en": "AlexNet · letting the network learn image features"
       },
       "body": {
-        "zh": "识别照片里的物体，过去常需要人工设计特征。AlexNet 从像素中学习多层特征，并结合大规模标注数据、ReLU、数据增强和 GPU 实现。论文报告的 ILSVRC-2012 参赛结果，top-5 错误率为 15.3%，第二名为 26.2%。",
-        "en": "AlexNet learned layered features from pixels rather than relying on a hand-designed feature pipeline. It combined labeled images, ReLUs, augmentation, and a GPU implementation. The paper reported a 15.3% top-5 error rate for its ILSVRC-2012 entry, versus 26.2% for the runner-up."
+        "zh": "2012 年以前，图像分类的常规做法分两步：先用人设计的方法提取特征（比如 SIFT），编码成 Fisher 向量这类表示，再交给分类器。卷积网络早就有，但要在上百万张高分辨率照片上训练，代价太大。AlexNet 把特征这一步交给网络自己学：5 个卷积层加 3 个全连接层，6000 万个参数，在 ImageNet 的 120 万张训练图上用两块 GTX 580 训练了五六天。ILSVRC-2012 上它的 top-5 错误率是 15.3%，用 SIFT 加 Fisher 向量的第二名是 26.2%。",
+        "en": "Before 2012, image classification usually ran in two stages: hand-designed features such as SIFT were encoded into representations like Fisher vectors, then passed to a classifier. Convolutional networks already existed, but training them on millions of high-resolution photos was too expensive. AlexNet let the network learn the features itself: five convolutional and three fully connected layers, 60 million parameters, trained for five to six days on two GTX 580 GPUs over ImageNet's 1.2 million training images. Its ILSVRC-2012 entry reached 15.3% top-5 error; the runner-up, built on SIFT and Fisher vectors, had 26.2%."
       },
       "limit": {
-        "zh": "图像分类的成功，不代表已经会理解或生成所有视觉内容。",
-        "en": "Image classification success is not general visual understanding or generation."
+        "zh": "它解决的是从 1000 个固定类别里挑一个答案，不是看懂整张图：物体在哪、彼此什么关系、类别表以外的东西，都不在这个任务里。作者对原因说得也很实在：结果主要来自更大的网络、更多的数据和更长的训练，他们预计只要等更快的 GPU 和更大的数据集出现，结果还能再好。2012 年也不是卷积网络的起点，1998 年的 LeNet-5 早已用它识别手写数字。",
+        "en": "The task was choosing one of 1,000 fixed labels, not understanding a whole scene: where objects are, how they relate, and anything outside the label set lay beyond it. The authors were plain about where the gains came from: a bigger network, more data, and longer training, and they expected faster GPUs and larger datasets to improve results further. Nor was 2012 the start of convolutional networks; LeNet-5 had read handwritten digits with one in 1998."
       },
       "sources": [
         [
-          "AlexNet · 2012",
+          "AlexNet · NeurIPS 2012 proceedings",
           "https://proceedings.neurips.cc/paper/2012/hash/c399862d3b9d6b76c8436e924a68c45b-Abstract.html"
         ],
         [
-          "AlexNet · original paper",
+          "AlexNet · original paper, §§1, 3.1–3.2, 4, 6–7",
           "https://papers.nips.cc/paper_files/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf"
+        ],
+        [
+          "ResNet · arXiv v1, 2015-12-10, abstract",
+          "https://arxiv.org/abs/1512.03385v1"
+        ],
+        [
+          "cuDNN · arXiv v1, 2014-10-03, abstract",
+          "https://arxiv.org/abs/1410.0759v1"
         ]
       ],
       "kind": "research",
       "topic": "models",
       "detail": {
-        "zh": "这里的 top-5 是看模型给出的五个类别里有没有正确答案。另一个值得留意的细节是显存：网络放不进一张 3GB GPU，作者把它分到两张卡上，并控制跨卡通信。模型结构、数据与工程在同一个结果里交汇。",
-        "en": "Top-5 asks whether the correct class appears among five predictions. Memory also shaped the implementation: the network did not fit on one 3GB GPU, so it was split across two, with limited cross-device communication. The result joined model design, data, and engineering."
+        "zh": "能训起来，靠的是几处具体的改动。激活函数用 ReLU 代替 tanh：论文里一个四层卷积网络在 CIFAR-10 上把训练误差降到 25%，ReLU 比 tanh 快六倍。参数太多、容易过拟合，就用 dropout，再从每张图里随机裁出 224×224 的小块、做水平翻转、调整颜色强度，多造出很多训练样本。显存也直接决定了结构：一块 GTX 580 只有 3GB，整个网络放不下，作者把它拆到两块卡上，只在部分层让两边交换数据。\n\n15.3% 这个数要看清楚：它是 7 个网络取平均的结果，其中两个先在更大的 ImageNet 2011 秋季版（1500 万张图、2.2 万个类别）上预训练过。单个网络在验证集上是 18.2%，同样远好于 26.2%。论文还发现深度本身有用：去掉中间任何一个卷积层，top-1 准确率大约掉 2%。\n\n之后几年，ImageNet 上继续往更深的网络走。2015 年的 ResNet 用残差连接把深度推到 152 层，集成模型在 ImageNet 测试集上的错误率是 3.57%。用 GPU 训练神经网络，也从这篇论文作者手写的 cuda-convnet，变成可以直接调用 2014 年 NVIDIA 推出的 cuDNN 这类现成的库。",
+        "en": "A few concrete changes made the training practical. ReLUs replaced tanh: in the paper, a four-layer convolutional network reached 25% training error on CIFAR-10 six times faster with ReLUs. To fight overfitting in such a large model, the authors used dropout and generated extra training examples by cropping random 224×224 patches, flipping them horizontally, and shifting color intensities. Memory shaped the architecture too. One GTX 580 had only 3GB, so the network was split across two GPUs that exchanged data only at certain layers.\n\nThe 15.3% figure deserves a closer look. It averages seven networks, two of which were first pretrained on the larger Fall 2011 ImageNet release (15 million images, 22,000 categories). A single network scored 18.2% on the validation set, still far ahead of 26.2%. The paper also found that depth itself mattered: removing any one of the middle convolutional layers cost about 2% in top-1 accuracy.\n\nIn the following years, ImageNet results kept moving toward deeper networks. ResNet, in 2015, used residual connections to reach 152 layers, and an ensemble scored 3.57% error on the ImageNet test set. GPU training also moved from the authors' hand-written cuda-convnet to ready-made libraries such as cuDNN, which NVIDIA presented in 2014."
       }
     },
     {
@@ -265,21 +273,29 @@
       "year": 2017,
       "status": "adopted",
       "title": {
-        "zh": "Transformer · Attention",
-        "en": "Transformer · attention"
+        "zh": "Transformer · 只用 attention 做翻译",
+        "en": "Transformer · translation with attention alone"
       },
       "body": {
-        "zh": "早期翻译模型常按顺序更新循环状态。Transformer 改用 attention，让一个位置按内容从其他位置汇集信息，减少对逐步循环的依赖。原论文研究的是带编码器和解码器的机器翻译模型。",
-        "en": "Earlier translation models commonly updated recurrent states in sequence. Transformer used attention to let a position gather information from other positions by content, reducing dependence on sequential recurrence. The original work studied an encoder–decoder translation model."
+        "zh": "2017 年以前，机器翻译的主流是循环网络（RNN、LSTM）组成的编码器—解码器，中间再接 attention。循环网络按位置一步步算，第 t 步要等第 t−1 步算完，句子越长，越难在句子内部并行训练。Transformer 去掉了循环和卷积，只用 attention：每个位置直接按内容去看句中所有其他位置，任意两个词之间只隔一层。在 WMT 2014 英德翻译上，它拿到 28.4 BLEU，比之前最好的结果（包括多模型集成）高出 2 BLEU 以上；大模型在一台 8 块 P100 的机器上训练了 3.5 天。",
+        "en": "Before 2017, the leading machine translation systems were encoder–decoders built from recurrent networks such as LSTMs, joined by attention. A recurrent network computes position by position: step t waits for step t−1, so longer sentences resist parallel training within a sentence. Transformer dropped recurrence and convolution and kept only attention. Each position looks directly at every other position by content, so any two words are one layer apart. On WMT 2014 English–German it reached 28.4 BLEU, more than 2 BLEU above the previous best results, ensembles included. The big model trained for 3.5 days on one machine with eight P100 GPUs."
       },
       "limit": {
-        "zh": "取消循环层不等于取消生成顺序：原文的自回归解码仍逐个生成输出。结构也不等于训练目标或能力等级。",
-        "en": "Removing recurrent layers does not remove generation order: the paper's autoregressive decoder still produces outputs sequentially. Architecture is not a training objective or capability ranking."
+        "zh": "attention 让训练时句子内部可以并行，但生成译文时，解码器仍然一个词一个词地输出，靠掩码挡住还没生成的部分；作者在结尾把“让生成不那么串行”列为下一个目标。计算量随长度平方增长的问题也留了下来，长文本、图像和音频怎么处理，原文只提了局部 attention 这个方向。日期：arXiv 初版是 2017 年 6 月 12 日，会议版收在 NIPS 2017；这里的数字取自初版。",
+        "en": "Attention made training parallel within a sentence, but the decoder still produced a translation one word at a time, with a mask hiding words not yet generated; the authors named less sequential generation as a next goal. Cost that grows with the square of length also remained, and for long text, images, and audio the paper only pointed toward local attention. Dates: the first arXiv version is June 12, 2017, and the conference paper appeared at NIPS 2017. Figures here come from the first version."
       },
       "sources": [
         [
-          "Attention Is All You Need · 2017",
-          "https://arxiv.org/abs/1706.03762"
+          "Attention Is All You Need · arXiv v1, 2017-06-12, §§1–2, 4–5, 7 and Figures 3–5",
+          "https://arxiv.org/pdf/1706.03762v1"
+        ],
+        [
+          "Attention Is All You Need · NIPS 2017 proceedings",
+          "https://papers.nips.cc/paper_files/paper/2017/hash/3f5ee243547dee91fbd053c1c4a845aa-Abstract.html"
+        ],
+        [
+          "BERT · arXiv v1, 2018-10-11, §3 on encoder and left-to-right Transformers",
+          "https://arxiv.org/pdf/1810.04805v1"
         ],
         [
           "ViT · 2020",
@@ -289,8 +305,8 @@
       "kind": "research",
       "topic": "models",
       "detail": {
-        "zh": "读一句话时，某个词的表示可以直接结合远处的词；在编码器中，这些位置能并行计算。生成译文则仍要逐步输出，解码器用 causal mask 避免看到未来答案。后来 BERT 和 GPT 对这套结构作了不同选择。",
-        "en": "A word's representation can draw directly on a distant word, with encoder positions computed in parallel. Producing a translation still proceeds step by step, and causal masking prevents the decoder from reading future answers. BERT and GPT later made different choices within this architectural family."
+        "zh": "差别可以拿一句 50 个词的话来算。循环层要串行走 50 步，第 1 个词的信息传到第 50 个词，路上也要经过 50 步；self-attention 一层就把所有位置两两连起来，串行步数是常数。代价是每层要算 50×50 个位置对，计算量随句长平方增长。论文的判断是：句长小于表示维度时（翻译里很常见，比如 50 对 512），self-attention 反而比循环层省；序列很长时，可以只看附近一段窗口，作者把这留作以后的工作。\n\n论文附录画出了模型实际学到的 attention。英文句子里的 making，好几个头都去看远处的 more difficult，把 making … more difficult 这个短语接了起来；另外两个头看起来在做指代消解，判断 its 指的是谁。作者认为，不同的头学会了做不同的事。\n\n后来的模型各取所需。BERT 只用编码器，每个词同时看左右两边，用来做大规模预训练；OpenAI 的 GPT 用带掩码的那一侧，每个词只看前面，适合生成文字；2020 年的 ViT 把图像切成小块，当作序列交给 Transformer。",
+        "en": "Take a 50-word sentence. A recurrent layer needs 50 sequential steps, and information from the first word passes through 50 steps to reach the last. One self-attention layer connects every pair of positions with a constant number of sequential steps. The price is 50×50 position pairs per layer, so cost grows with the square of sentence length. The paper argues that while a sentence is shorter than the representation size, as is common in translation (say 50 versus 512), self-attention is actually cheaper than recurrence. For very long sequences, attention could be restricted to a nearby window; the authors left that for future work.\n\nThe appendix shows attention the model actually learned. For the word “making”, several heads attend to the distant “more difficult”, completing the phrase “making … more difficult”. Two other heads appear to handle anaphora, working out what “its” refers to. The authors note that different heads learned different jobs.\n\nLater models took different parts. BERT used only the encoder, letting each word see both sides, for large-scale pretraining. OpenAI's GPT used the masked side, where each word sees only what comes before, which suits text generation. ViT, in 2020, cut images into patches and fed them to a Transformer as a sequence."
       }
     },
     {
@@ -830,28 +846,40 @@
       "kind": "system",
       "status": "historical",
       "title": {
-        "zh": "AlphaGo · 围棋成为公共事件",
-        "en": "AlphaGo · a public milestone"
+        "zh": "AlphaGo · 用神经网络给搜索减负",
+        "en": "AlphaGo · neural networks that narrow the search"
       },
       "body": {
-        "zh": "2016 年与李世石的比赛让更多人看到了 AI 的能力。AlphaGo 将策略网络、价值网络和树搜索结合起来；最初版本也使用了人类棋谱，并非完全从零自学。",
-        "en": "The 2016 match with Lee Sedol made AI progress visible to a much wider audience. AlphaGo combined policy and value networks with tree search; the original system also learned from human games."
+        "zh": "围棋难在两处：每步大约有 250 种走法、一盘约 150 步，没法穷举；局面好坏也很难写成公式。之前最强的程序用蒙特卡洛树搜索，靠大量随机模拟估计胜率，水平停在业余强手。AlphaGo 用两个神经网络给搜索减负：策略网络挑出值得考虑的几步，减少每层要展开的分支；价值网络直接估计局面胜率，不必每条线都模拟到终局。2015 年 10 月，它以 5:0 赢了欧洲冠军樊麾，这是程序第一次在全尺寸棋盘上赢职业棋手；2016 年 3 月又在首尔以 4:1 赢了李世石。",
+        "en": "Go is hard in two ways. With about 250 legal moves per turn and games of about 150 moves, exhaustive search is out of the question, and a position's value is hard to capture in a formula. The strongest earlier programs used Monte Carlo tree search, estimating win rates from many random playouts, and played at a strong amateur level. AlphaGo added two neural networks to lighten the search: a policy network proposes the moves worth considering, narrowing each level of the tree, and a value network estimates who is winning, so not every line has to be played out to the end. In October 2015 it beat European champion Fan Hui 5–0, the first win by a program over a professional on a full-sized board. In March 2016 it beat Lee Sedol 4–1 in Seoul."
       },
       "limit": {
-        "zh": "2015 年已击败樊麾；这里用 2016 年标记论文与李世石比赛。不要和后来的 AlphaGo Zero 混为一谈。",
-        "en": "It had beaten Fan Hui in 2015. This entry marks the 2016 paper and Lee Sedol match, not the later AlphaGo Zero."
+        "zh": "围棋规则完全已知、局面全部可见、可以无限次模拟，这是搜索能起作用的前提；现实中的大多数决策没有这样现成的模拟器。另外，最初的 AlphaGo 先学了人类棋谱，不是从零自学，别和后来的 AlphaGo Zero 混在一起。日期：樊麾对局在 2015 年 10 月 5–9 日，论文 2015 年 11 月投稿、2016 年 1 月接收，同年发表于 Nature，李世石比赛在 2016 年 3 月；这里按论文和李世石比赛标在 2016 年。",
+        "en": "Go has fully known rules, a fully visible board, and unlimited simulation, which is what makes search work; most real-world decisions come without such a simulator. The original AlphaGo also learned from human games first, so it should not be confused with the later AlphaGo Zero. Dates: the Fan Hui match ran October 5–9, 2015; the paper was received in November 2015, accepted in January 2016, and published in Nature that year; the Lee Sedol match was in March 2016. The entry uses 2016 for the paper and the match."
       },
       "sources": [
         [
-          "AlphaGo · Nature 2016",
+          "Silver et al. · Mastering the game of Go with deep neural networks and tree search, Nature, 2016",
           "https://www.nature.com/articles/nature16961"
         ],
         [
-          "2016 match · DeepMind",
-          "https://deepmind.google/blog/deep-reinforcement-learning/"
+          "Same paper · DeepMind-hosted PDF, introduction, value-network section and Methods",
+          "https://storage.googleapis.com/deepmind-media/alphago/AlphaGoNaturePaper.pdf"
+        ],
+        [
+          "DeepMind · AlphaGo overview, Lee Sedol match in Seoul, March 2016",
+          "https://deepmind.google/research/breakthroughs/alphago/"
+        ],
+        [
+          "DeepMind · AlphaGo Zero: Starting from scratch, 2017-10-18",
+          "https://deepmind.google/discover/blog/alphago-zero-starting-from-scratch/"
         ]
       ],
-      "topic": "applications"
+      "topic": "applications",
+      "detail": {
+        "zh": "训练分三步。先用 KGS 围棋服务器上的 3000 万个局面训练策略网络，模仿人类高手；它预测高手下一步的准确率是 57.0%，此前别的团队最好是 44.4%。再让策略网络和自己的旧版本对弈，用强化学习继续改进，这时不做任何搜索就能赢开源程序 Pachi 85% 的对局。最后用自我对弈生成 3000 万个局面训练价值网络，每盘棋只取一个：同一盘里相邻局面只差一颗子、结果却相同，直接拿整盘人类棋谱训练时，网络只是记住了胜负。\n\n价值网络省下的计算很具体：评估一个局面时，算一次价值网络，准确度接近用强化学习策略网络模拟到终局的蒙特卡洛估计，计算量却少 15,000 倍。即便如此，和樊麾对弈的分布式版本仍然用了 1,202 个 CPU 和 176 个 GPU。\n\n2017 年的 AlphaGo Zero 去掉了人类棋谱这一步，只靠规则和自我对弈学习，训练三天后，以 100:0 赢了战胜李世石的那个版本。DeepMind 后来的 AlphaZero、MuZero 也沿着这条线继续做。",
+        "en": "Training had three stages. A policy network first learned to imitate experts from 30 million positions on the KGS Go Server; it predicted the expert's next move 57.0% of the time, against 44.4% for the best other group. Reinforcement learning then improved it through games against earlier versions of itself; with no search at all, it won 85% of games against the open-source program Pachi. Finally, a value network was trained on 30 million self-play positions, one per game. Neighboring positions in a game differ by a single stone but share the same result, and when trained on whole human games the network simply memorized outcomes.\n\nThe value network's saving was concrete. One evaluation came close to the accuracy of Monte Carlo playouts with the reinforcement-learning policy network while using 15,000 times less computation. Even so, the distributed version that played Fan Hui used 1,202 CPUs and 176 GPUs.\n\nAlphaGo Zero, in 2017, dropped the human games and learned from the rules and self-play alone. After three days of training it beat the version that had defeated Lee Sedol 100–0. DeepMind's later AlphaZero and MuZero continued this line of work."
+      }
     },
     {
       "id": "alphafold2",
@@ -1159,26 +1187,42 @@
       "kind": "system",
       "status": "historical",
       "title": {
-        "zh": "Linux · 开放的内核源码",
-        "en": "Linux · shared kernel source"
+        "zh": "Linux · 一个谁都能改的内核",
+        "en": "Linux · a kernel anyone could change"
       },
       "body": {
-        "zh": "1991 年，Linus Torvalds 公开 Linux 内核 0.01 的源代码，探索在 386 电脑上运行类 Unix 软件。源代码让其他人可以研究和改动进程、内存与文件系统实现，也为后续协作留下了可运行的基础。",
-        "en": "In 1991, Linus Torvalds released Linux kernel 0.01 source to explore running Unix-like software on 386 computers. Available source let others study and modify process, memory, and filesystem implementations, providing a working basis for further collaboration."
+        "zh": "到 1990 年代初，GNU 计划已经写好了编译器、shell 等组成系统所需的大部分自由软件，唯独缺内核。1991 年，Linus Torvalds 公开了 Linux 0.01 的源代码，发布说明给它的定位是：一个给 386 电脑用的、类似 Minix 的免费内核。它很简陋，要借 Minix 来引导，shell 和编译器得另找，许可还禁止收费分发。变化在后面：源码谁都能看、能改，到 0.12 版又改用 GNU 的 copyleft 许可，Linux 和 GNU 的工具拼在一起，凑成了一套完整的自由操作系统。",
+        "en": "By the early 1990s, the GNU project had written most of the free software a system needs, including compilers and a shell, but still lacked a kernel. In 1991 Linus Torvalds released the source of Linux 0.01, which its release notes described as a free Minix-like kernel for 386 machines. It was rough: it needed Minix to bootstrap, shells and compilers had to be obtained separately, and its license forbade distribution for a fee. What changed came next. Anyone could read and modify the source, and with version 0.12 the license moved to GNU's copyleft, so Linux and the GNU tools could be combined into a complete free operating system."
       },
       "limit": {
-        "zh": "0.01 不是完整发行版；原始许可禁止收费分发，发布说明还要求借助 Minix 准备系统，并另备外壳和编译器。",
-        "en": "Version 0.01 was not a complete distribution: its original license prohibited fee-based redistribution, and its notes required Minix for bootstrapping plus separate shells and compilers."
+        "zh": "0.01 不是完整的系统，也不是第一个类 Unix 系统。这里引用的 GNU 文章代表 GNU 一方的立场，它也主张把整个系统称为 GNU/Linux。Linux 后来能用起来，靠的是 GNU 工具链和许多贡献者，不是一个人一次发布就完成的。日期：这里按 0.01 源码公开标在 1991 年；许可变更见 0.12 版发布说明，GNU 的文章把 Linux 成为自由软件记在 1992 年。",
+        "en": "Version 0.01 was neither a complete system nor the first Unix-like one. The GNU article cited here presents the GNU project's own position, including its case for calling the whole system GNU/Linux. A usable Linux system depended on the GNU toolchain and many contributors, not on one person's single release. Dates: the entry uses 1991 for the release of the 0.01 source; the license change appears in the 0.12 release notes, and the GNU article dates Linux becoming free software to 1992."
       },
       "sources": [
         [
           "Linus Torvalds: original Linux 0.01 release notes, 1991, kernel.org archive",
           "https://www.kernel.org/pub/linux/kernel/Historic/old-versions/RELNOTES-0.01"
+        ],
+        [
+          "Linus Torvalds: Linux 0.12 release notes, license change, kernel.org archive",
+          "https://www.kernel.org/pub/linux/kernel/Historic/old-versions/RELNOTES-0.12"
+        ],
+        [
+          "GNU Project · Linux and the GNU System (the GNU project's account)",
+          "https://www.gnu.org/gnu/linux-and-gnu.html"
+        ],
+        [
+          "Dean and Ghemawat · MapReduce, OSDI 2004, §3 execution environment",
+          "https://www.usenix.org/legacy/events/osdi04/tech/full_papers/dean/dean_html/index.html"
+        ],
+        [
+          "NVIDIA GeForce 8800 technical brief, 2006-11-08, p. 14 on the CUDA SDK",
+          "https://www.nvidia.com/content/PDF/Geforce_8800/GeForce_8800_GPU_Architecture_Technical_Brief.pdf"
         ]
       ],
       "detail": {
-        "zh": "内核负责进程、内存和设备等基础工作，外壳、编译器和应用则在它之上。Linux 的这个起点，适合用来区分“内核”“操作系统环境”和“发行版”：它们不是同一份东西。",
-        "en": "The kernel handles processes, memory, and devices; shells, compilers, and applications run above it. This early release helps distinguish a kernel from a working operating-system environment and from a distribution."
+        "zh": "这里要分清三样东西。内核管进程调度、内存和设备；shell、编译器、C 库在它上面；把内核和这些工具配好、能直接安装使用的，叫发行版。0.01 只是第一样，发布说明自己也写了：要得到一个能用的系统，还需要 shell、编译器和库，这些都不在发布包里。开发原则同样写得很直白：先让它跑起来。\n\n0.12 版的发布说明宣布，许可改为 GNU copyleft，去掉“不得收费分发”的条件，但要等参与写代码的人同意。可见这时已经有别人一起写，不再是一个人的项目。GNU 一方的说法是，Torvalds 在 1992 年把 Linux 变成自由软件，正好填上了 GNU 系统最后一块大缺口。\n\n后面几条历史线里都能看到它。2004 年的 MapReduce 论文描述 Google 的集群时写道，机器通常是运行 Linux 的双处理器 x86；2006 年公布的 CUDA 开发工具，也包含 Linux 和 Windows 两种驱动。",
+        "en": "Three things are worth separating here. The kernel handles process scheduling, memory, and devices. Shells, compilers, and the C library run on top of it. A distribution packages a kernel and these tools so they can be installed and used. Version 0.01 was only the first; its release notes say a working system also needs a shell, compilers, and a library, none of which were included. They state the guiding rule just as plainly: get it working fast.\n\nThe 0.12 release notes announced that the license would change to the GNU copyleft, dropping the ban on distribution for a fee, pending approval from the people who had helped write code. Others were already contributing; it was no longer a one-person project. In the GNU project's account, Torvalds made Linux free software in 1992, filling the last major gap in the GNU system.\n\nLinux shows up in several later histories. The 2004 MapReduce paper describes Google's cluster machines as typically dual-processor x86 machines running Linux, and the CUDA development tools announced in 2006 included drivers for Linux as well as Windows."
       }
     },
     {
@@ -1387,16 +1431,16 @@
       "kind": "system",
       "status": "adopted",
       "title": {
-        "zh": "CUDA：用 C 编程调用 GPU 并行计算",
-        "en": "CUDA: C programming for GPU parallel computation"
+        "zh": "CUDA · 不用假装画图，也能让 GPU 计算",
+        "en": "CUDA · GPU computing without pretending to draw"
       },
       "body": {
-        "zh": "CUDA 将 GPU 的并行计算能力通过 C 编程接口提供给开发者。大量线程可以协作和共享数据，让科学计算不必伪装成图形绘制任务。",
-        "en": "CUDA exposes GPU parallel computation through a C programming interface. Cooperating threads and shared data let developers express scientific computation without disguising it as graphics rendering."
+        "zh": "GPU 本来是用来画图的。2000 年代初，已经有人用它的可编程着色器做线性代数、物理模拟和光线追踪，但只能借道图形接口：数据要打包成纹理，计算写成着色程序，再靠“画”一组几何图形来触发。程序能从显存任意位置读数据，却不能往任意位置写，带宽也常常不够用，基本只有熟悉图形编程的人才用得起来。2006 年 11 月，NVIDIA 随 GeForce 8800 公布 CUDA：用扩展过的 C 语言直接写 GPU 程序，大量线程分组运行，同组线程能通过片上的共享内存交换数据，显存也能像在 CPU 上一样任意读写。",
+        "en": "GPUs were built to draw pictures. By the early 2000s, people were already using their programmable shaders for linear algebra, physics simulation, and ray tracing, but only by going through graphics interfaces. Data had to be packed into textures, computation written as shader programs, and work launched by “drawing” geometry. Programs could read from anywhere in GPU memory but could not write to arbitrary locations, bandwidth was often a bottleneck, and in practice only experienced graphics programmers could do it. In November 2006, NVIDIA announced CUDA alongside the GeForce 8800. GPU programs could be written in an extended C, large numbers of threads ran in groups, threads in a group shared data through on-chip shared memory, and GPU memory could be read and written anywhere, as on a CPU."
       },
       "limit": {
-        "zh": "2006 年 11 月 8 日是公布日期，当时 SDK 面向注册开发者；公开测试版公告为 2007 年 2 月 16 日。",
-        "en": "CUDA was unveiled on November 8, 2006 with registered-developer SDK access; the public-beta announcement is dated February 16, 2007."
+        "zh": "CUDA 当时只支持 NVIDIA 自家的 GeForce 8 系列、Quadro 和 Tesla 产品，写好的程序不能直接搬到别家的 GPU 上。发布材料里“比 CPU 快 100 倍”之类的说法是厂商宣传，实际快多少取决于问题和写法。日期：2006 年 11 月 8 日随 GeForce 8800 公布，SDK 先提供给注册开发者；公开测试版公告是 2007 年 2 月 16 日，1.0 版编程手册的日期是 2007 年 6 月 23 日。",
+        "en": "CUDA then ran only on NVIDIA's own GeForce 8 Series, Quadro, and Tesla products, so programs could not simply move to another vendor's GPUs. Launch claims such as “100× faster than CPUs” were marketing; real speedups depend on the problem and the code. Dates: CUDA was announced with the GeForce 8800 on November 8, 2006, with SDK access for registered developers; the public beta was announced on February 16, 2007, and the version 1.0 programming guide is dated June 23, 2007."
       },
       "sources": [
         [
@@ -1410,8 +1454,24 @@
         [
           "NVIDIA public-beta release, 2007-02-16; WebWire archive",
           "https://www.webwire.com/ViewPressRel.asp?aId=27584"
+        ],
+        [
+          "Buck et al. · Brook for GPUs, SIGGRAPH 2004, §§1–2 on programming through graphics APIs",
+          "https://graphics.stanford.edu/papers/brookgpu/brookgpu.pdf"
+        ],
+        [
+          "NVIDIA CUDA Programming Guide 1.0, 2007-06-23, §§1.1–1.2 and Appendix A",
+          "https://developer.download.nvidia.com/compute/cuda/1.0/NVIDIA_CUDA_Programming_Guide_1.0.pdf"
+        ],
+        [
+          "cuDNN · arXiv v1, 2014-10-03, abstract",
+          "https://arxiv.org/abs/1410.0759v1"
         ]
-      ]
+      ],
+      "detail": {
+        "zh": "拿最简单的向量相加 c = a + b 来比较。走图形接口时，要把 a 和 b 各装进一张纹理，写一个读两个纹素再相加的着色程序，设置一块和数组一样大的渲染目标，画一个铺满它的矩形，最后把结果从“画面”里读回来。用 CUDA 时，写一个核函数，让每个线程按自己的编号 i 算一次 c[i] = a[i] + b[i]，启动时告诉它要开多少个线程。算法没变，变的是程序员不用再把计算翻译成画图。\n\n第一版的共享内存每个多处理器只有 16KB。想跑得快，程序员得自己把数据分块搬进来、安排线程怎样访问内存，这些细节和具体硬件密切相关。CUDA 1.0 的工具包里还带了 CUBLAS 和 CUFFT 两个数学库。\n\n后来的深度学习训练也走上了这条路。2012 年 AlexNet 的作者自己写了 GPU 卷积代码 cuda-convnet；2014 年 NVIDIA 发表 cuDNN，理由是深度学习当时还没有像 BLAS 那样的标准运算库，把它接入 Caffe 后，一个标准模型快了 36%，内存也用得更少。",
+        "en": "Compare the simplest case, vector addition c = a + b. Through a graphics interface, you load a and b into two textures, write a shader that reads two texels and adds them, set up a render target the size of the array, draw a rectangle that covers it, and read the result back from the “image”. With CUDA, you write a kernel in which each thread uses its index i to compute c[i] = a[i] + b[i], then launch as many threads as there are elements. The algorithm is the same; the programmer no longer has to translate it into drawing.\n\nThe first version gave each multiprocessor only 16KB of shared memory. Fast code meant staging data in blocks and arranging how threads accessed memory, details tied closely to the hardware. The CUDA 1.0 toolkit also shipped two math libraries, CUBLAS and CUFFT.\n\nDeep learning training later took the same road. The AlexNet authors wrote their own GPU convolution code, cuda-convnet, in 2012. In 2014 NVIDIA presented cuDNN, arguing that deep learning still lacked a standard library like BLAS; plugged into Caffe, it made one standard model 36% faster while using less memory."
+      }
     },
     {
       "id": "amd-gcn-2011",
@@ -2166,8 +2226,8 @@
         "en": "Power, computation, and the transistor"
       },
       "summary": {
-        "zh": "这几条历史最初相距很远：电站给街区供电，图灵研究什么能被计算，贝尔实验室改进电子器件。后来，稳定的电力、可编程计算和半导体，才逐渐成为计算机共同依赖的基础。",
-        "en": "These histories began with different problems: supplying a city block, defining computation, and improving electronic devices. Electric power, programmable computation, and semiconductors would become foundations that computers depend on together."
+        "zh": "这一段的三件事，当时彼此没什么关系。1882 年珍珠街电站给曼哈顿下城的一片街区供电，要解决的是怎样把电稳定送进楼里；1936 年图灵用一台想象中的机器回答“什么叫可计算”；1947 年贝尔实验室为了电话系统需要更可靠的放大器件，做出了晶体管。几十年后，计算机同时依赖这三样：稳定的电、可编程的通用计算、越做越小的半导体开关。",
+        "en": "The three events here had little to do with each other at the time. In 1882 the Pearl Street station began supplying a block of lower Manhattan, solving how to deliver steady power into buildings. In 1936 Turing used an imagined machine to say what it means for something to be computable. In 1947 Bell Labs, looking for more reliable amplifiers for the telephone network, built the transistor. Decades later, computers would rely on all three at once: steady power, programmable general-purpose computation, and ever smaller semiconductor switches."
       },
       "featured": [
         "energy-pearl-street-1882",
@@ -2228,8 +2288,8 @@
         "en": "Connecting computers, encoding knowledge"
       },
       "summary": {
-        "zh": "计算机开始有更密集的内存、可交互的操作系统，也能和远处的机器通信。AI 的一条重要路线，是把人的知识写成规则，让程序搜索、推理或给出建议。",
-        "en": "Denser memory, interactive operating systems, and computer networks changed what machines could do. One important AI approach was to encode human knowledge as rules that a program could search, reason with, or use to make recommendations."
+        "zh": "计算机还是又大又贵、大家轮流用的机器。要让更多人用上，就得在存储（单晶体管 DRAM、硬件缓存）、操作系统（Unix）和网络（ARPANET、以太网、TCP/IP）上下功夫。1956 年的 Dartmouth 项目之后，AI 成了一个研究方向，这一时期的主要做法是把知识和推理步骤写成符号规则：Logic Theory Machine 搜索逻辑证明，MYCIN 把医学知识写成规则，还能解释自己的建议。这条路线依赖人把知识一条条写进去。",
+        "en": "Computers were still large, expensive machines that people took turns using. Getting them to more people meant work on memory (single-transistor DRAM, hardware caches), operating systems (Unix), and networks (ARPANET, Ethernet, TCP/IP). After the 1956 Dartmouth project, AI became a field of research, and its main approach in this period was to write knowledge and reasoning steps as symbolic rules: the Logic Theory Machine searched for proofs, and MYCIN encoded medical knowledge as rules and could explain its advice. This approach relied on people writing that knowledge in, one rule at a time."
       },
       "featured": [
         "dartmouth",
@@ -2352,8 +2412,8 @@
         "en": "Learning from examples and feedback"
       },
       "summary": {
-        "zh": "手写规则之外，研究者用样本训练分类器、用反向传播学习表示，也用奖励学习动作。与此同时，Web、Linux 和 MPI 分别让信息链接、软件协作和并行编程有了新的工具。",
-        "en": "Alongside hand-written rules, researchers trained classifiers from examples, learned representations with backpropagation, and learned actions from rewards. The Web, Linux, and MPI brought new tools for linking information, sharing software, and programming parallel machines."
+        "zh": "手写规则之外，另一种思路是让程序从数据里自己调参数。反向传播让多层网络用误差逐层调整权重；语音识别用 HMM 从一整段声音推测背后的状态序列；SVM 用间隔控制分类器的泛化；Q-learning 从奖励里学动作的价值。这几条路线用的数学不同，当时并没有谁取代谁。基础设施这边，Web 把文档连了起来，Linux 给了一个谁都能改的内核，MPI 统一了并行程序的通信接口；1997 年的火星车 Sojourner 则说明，自主行动也可以不靠学习，靠简单的避障行为和地面指挥配合。",
+        "en": "Besides hand-written rules, another idea was to let programs tune their own parameters from data. Backpropagation let multilayer networks adjust weights layer by layer from their errors. Speech recognition used HMMs to infer the hidden sequence of states behind a stretch of audio. SVMs used margins to control how well a classifier generalized, and Q-learning learned the value of actions from rewards. These approaches rested on different mathematics, and none replaced the others at the time. On the infrastructure side, the Web linked documents together, Linux offered a kernel anyone could change, and MPI gave parallel programs a common communication interface. The 1997 Sojourner rover showed that autonomy need not involve learning at all: simple hazard-avoidance behaviors worked together with commands from the ground."
       },
       "featured": [
         "backprop",
@@ -2472,8 +2532,8 @@
         "en": "Data and computing grow together"
       },
       "summary": {
-        "zh": "识别手写数字、从海量网页中找资料，是这一时期两类很具体的任务。LeNet-5 展示学习特征的做法，Google 原型把抓取、索引和排序接成系统。规模继续扩大后，集群、GPU、数据集以及机房的供电和散热，也越来越影响能做成什么。",
-        "en": "Reading handwritten digits and finding useful web pages were two concrete tasks of this period. LeNet-5 learned visual features; the Google prototype connected crawling, indexing, and ranking. As workloads grew, clusters, GPUs, datasets, power, and cooling increasingly shaped what could be built."
+        "zh": "互联网让数据量猛涨，问题从“怎么算”变成“怎么在很多台机器上算、怎么存”。Google 原型把抓取、索引和排序接成一个搜索系统；MapReduce 和 HDFS 让普通机器组成的集群能处理、保存海量数据，同时接受机器随时会坏。硬件上，处理器转向多核，Roofline 模型提醒大家程序常常卡在数据供给而不是计算；GPU 借 CUDA 从画图转向通用计算。机房的用电和散热也成了设计约束。学习这边，LeNet-5 用卷积网络读手写数字，ImageNet 开始大规模收集并人工核验标注图像。GPU、数据集和卷积网络，在 2012 年碰到了一起。",
+        "en": "The internet made data grow fast, and the question shifted from how to compute to how to compute and store across many machines. The Google prototype joined crawling, indexing, and ranking into one search system. MapReduce and HDFS let clusters of ordinary machines process and keep huge datasets while expecting machines to fail. In hardware, processors went multicore, the Roofline model showed that programs were often limited by data supply rather than arithmetic, and CUDA turned GPUs from drawing toward general computation. Facility power and cooling became design constraints too. On the learning side, LeNet-5 read handwritten digits with a convolutional network, and ImageNet began collecting and hand-verifying labeled images at scale. GPUs, datasets, and convolutional networks would meet in 2012."
       },
       "featured": [
         "nvidia-cuda-2006",
@@ -2605,8 +2665,8 @@
         "en": "Deep networks take on more tasks"
       },
       "summary": {
-        "zh": "AlexNet 在图像识别中取得突出结果，ResNet 让更深的网络更容易训练。相近时期，神经网络也被用于翻译和游戏决策。数据、训练方法和硬件共同影响了这些结果。",
-        "en": "AlexNet delivered a major image-recognition result, while ResNet made much deeper networks easier to optimize. Neural networks also took on translation and decisions from game screens. Data, training methods, and hardware all mattered."
+        "zh": "2012 年，AlexNet 用两块 GPU 在 ImageNet 上训练卷积网络，top-5 错误率 15.3%，第二名是 26.2%；图像识别从手工设计特征，转向让网络自己学。之后几年，类似的思路扩展到别处：word2vec 从大量文本里学词向量，Seq2Seq 用网络读入一句话再生成另一句，DQN 直接从 Atari 游戏画面学操作，ResNet 用残差连接把网络加深到 152 层仍能训练。同一时期，HBM 把堆叠的显存放进 GPU 封装，Kubernetes 把容器调度交给集群统一管理。",
+        "en": "In 2012 AlexNet trained a convolutional network on ImageNet with two GPUs and reached 15.3% top-5 error, against 26.2% for the runner-up; image recognition began moving from hand-designed features to features the network learned itself. Over the next few years similar ideas spread. word2vec learned word vectors from large amounts of text, Seq2Seq read one sentence and generated another, DQN learned to play Atari games from the screen, and ResNet used residual connections to train networks 152 layers deep. In the same period, HBM brought stacked memory into the GPU package, and Kubernetes handed container scheduling to the cluster."
       },
       "featured": [
         "alexnet",
@@ -2697,8 +2757,8 @@
         "en": "Several research paths branch out"
       },
       "summary": {
-        "zh": "AlphaGo 把学习与搜索组合起来；图网络学习节点之间的关系；Transformer 和 BERT 改变序列建模与预训练。计算硬件开始专门加速矩阵运算，数据和模型的使用说明也受到更多关注。",
-        "en": "AlphaGo combined learning with search. Graph networks modeled relationships, while Transformer and BERT changed sequence modeling and pretraining. Hardware added dedicated matrix operations, and researchers proposed better documentation for datasets and models."
+        "zh": "深度学习从图像扩展到更多类型的问题，路线开始分叉。下棋这边，AlphaGo 用神经网络给树搜索减负，2016 年赢了李世石；图这边，GCN、GraphSAGE、GAT 学习节点和邻居之间的关系；语言这边，Transformer 只用 attention 做翻译，BERT 用它的编码器做大规模预训练，再迁移到各种下游任务。强化学习有了 PPO、SAC 这类更好用的算法。硬件开始为矩阵乘法设计专门的单元（Volta 的 Tensor Core）；数据集和模型该附什么说明，也有了 Datasheets 和 Model Cards 这样的提议。",
+        "en": "Deep learning spread from images to other kinds of problems, and its paths began to branch. In games, AlphaGo used neural networks to lighten tree search and beat Lee Sedol in 2016. For graphs, GCN, GraphSAGE, and GAT learned from nodes and their neighbors. In language, Transformer translated with attention alone, and BERT used its encoder for large-scale pretraining that transferred to many downstream tasks. Reinforcement learning gained easier-to-use algorithms such as PPO and SAC. Hardware added units built for matrix multiplication (Volta's Tensor Cores), and Datasheets and Model Cards proposed what documentation should accompany datasets and models."
       },
       "featured": [
         "alphago",
@@ -2806,8 +2866,8 @@
         "en": "Larger pretrained models, new scientific results"
       },
       "summary": {
-        "zh": "GPT-3 展示了通过提示和示例完成不同任务的能力；ViT、CLIP 和扩散模型探索不同的视觉路线。AlphaFold 2 则在蛋白质结构预测上取得进展。它们共享一些工具，却在解决不同问题。",
-        "en": "GPT-3 explored doing tasks through prompts and examples. ViT, CLIP, and diffusion models pursued different visual-learning goals. AlphaFold 2 advanced protein-structure prediction. Shared tools did not make these the same problem."
+        "zh": "这几年的一个共同动作是放大：更多数据、更大模型、更多算力。GPT-3 显示，一个足够大的语言模型读几条示例就能尝试新任务，不必每次微调；为了训得动这么大的模型，ZeRO 把优化器状态、梯度和参数分摊到多张 GPU 上。视觉这边路线并不统一：ViT 把 Transformer 用在图像块上，CLIP 用图文配对学表示，扩散模型从噪声一步步生成图像。AlphaFold 2 在 CASP14 的蛋白质结构预测上取得重要进展，MMLU 用 57 个学科的题目检查模型学到的知识。GPU 也加入了 TF32、BF16 等精度，还能切分给多个任务共用。",
+        "en": "A common move in these years was scaling up: more data, larger models, more compute. GPT-3 showed that a large enough language model could attempt a new task from a few examples in its prompt, without fine-tuning each time, and ZeRO made such models trainable by spreading optimizer state, gradients, and parameters across GPUs. Vision did not settle on one path: ViT applied Transformers to image patches, CLIP learned from paired images and text, and diffusion models generated images step by step from noise. AlphaFold 2 made major progress on protein-structure prediction at CASP14, and MMLU tested what models had learned with questions from 57 subjects. GPUs added formats such as TF32 and BF16 and could be partitioned among several jobs."
       },
       "featured": [
         "gpt3",
@@ -2914,8 +2974,8 @@
         "en": "Generative models reach more people"
       },
       "summary": {
-        "zh": "ChatGPT 和 Stable Diffusion 让更多人直接用上生成模型。面对真实请求，问题从“模型能做什么”扩展到“回答是否有用、服务是否够快、成本能否承担”。后训练与推理系统因此值得放在一起读。",
-        "en": "ChatGPT and Stable Diffusion put generative models in more people's hands. Serving real requests raised questions beyond capability: are the outputs useful, how long do users wait, and what does it cost? Post-training and serving systems are worth reading together here."
+        "zh": "2022 年，生成模型从论文和接口变成普通人能直接用的工具：Stable Diffusion 公开了权重和代码，ChatGPT 以对话界面开放研究预览。真实用户一多，问题就变了。回答要符合人的要求：InstructGPT 用人类偏好和 PPO 调整模型，DPO 把这一步简化成直接在偏好对上训练。服务要够快、够便宜：FlashAttention 减少显存读写，vLLM 管好 KV cache 的内存。硬件也向 Transformer 和多卡互连倾斜，Hopper 加入了 FP8 和 Transformer Engine。机器人方向则在尝试把视觉语言模型接到动作上（RT-2）。",
+        "en": "In 2022, generative models went from papers and APIs to tools ordinary people could use directly: Stable Diffusion released its weights and code, and ChatGPT opened as a research preview with a chat interface. With real users, the questions changed. Answers had to match what people wanted: InstructGPT tuned models with human preferences and PPO, and DPO simplified this into training directly on preference pairs. Serving had to be fast and affordable: FlashAttention cut memory traffic, and vLLM managed KV-cache memory. Hardware leaned toward Transformers and multi-GPU interconnect, with Hopper adding FP8 and a Transformer Engine. In robotics, RT-2 tried connecting vision-language models to actions."
       },
       "featured": [
         "nvidia-hopper-2022",
@@ -3008,8 +3068,8 @@
         "en": "RL for language-model reasoning"
       },
       "summary": {
-        "zh": "DeepSeekMath 提出 GRPO，DeepSeek-R1 将它用于推理训练。后来研究和开源框架继续采用这一方法；但题目怎么选、奖励怎么写、一次采样是否值得，仍要按任务摸索。",
-        "en": "DeepSeekMath introduced GRPO, and DeepSeek-R1 used it for reasoning training. Later research and open-source frameworks adopted the method. Choosing suitable problems, rewards, and sampling budgets still takes task-specific work."
+        "zh": "预训练让模型学到很多知识，但多步推理（比如解数学题）未必能直接调出来。这两年的一条路线是用强化学习接着训练：给模型的回答打分，再按分数调整。DeepSeekMath 提出 GRPO，用同一道题的一组回答互相比较来估计优势，省掉单独的价值模型；DeepSeek-R1 的报告把它用在推理训练上，并比较了直接从基座做 RL 和先加冷启动数据两种做法。开源框架很快跟进。但题目怎么选、奖励怎么写、每道题采样几次才划算，目前仍没有通用答案。",
+        "en": "Pretraining gives models a great deal of knowledge, but multi-step reasoning, such as solving math problems, does not necessarily come out on its own. One path in these two years was further training with reinforcement learning: score the model's answers and adjust it by the scores. DeepSeekMath introduced GRPO, which compares a group of answers to the same problem to estimate advantages and drops the separate value model. The DeepSeek-R1 report applied it to reasoning training and compared RL directly on the base model with first adding cold-start data. Open-source frameworks followed quickly. How to choose problems, write rewards, and decide how many samples per problem are worth it still has no general answer."
       },
       "featured": [
         "grpo",
@@ -3340,6 +3400,16 @@
         "en": "One reports model uses and behavior; the other documents data provenance and limits. The Model Cards paper explicitly treats them as complementary."
       },
       "source": "https://arxiv.org/html/1810.03993v2"
+    },
+    {
+      "from": "distributed-mapreduce-paper-2004",
+      "to": "software-linux-kernel-1991",
+      "type": "uses",
+      "description": {
+        "zh": "论文描述的集群由运行 Linux 的双处理器 x86 机器组成，配本地 IDE 硬盘和普通网络。",
+        "en": "The paper's clusters are dual-processor x86 machines running Linux, with local IDE disks and commodity networking."
+      },
+      "source": "https://www.usenix.org/legacy/events/osdi04/tech/full_papers/dean/dean_html/index.html"
     }
   ]
 }

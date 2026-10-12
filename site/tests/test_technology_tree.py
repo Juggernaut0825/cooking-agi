@@ -232,13 +232,20 @@ class TechnologyTreeTests(unittest.TestCase):
         self.assertTrue(expanded)
         for language in ("zh", "en"):
             output = technology_chronicle.render(data, language)
-            self.assertEqual(output.count('class="chronicle-explanation"'), len(expanded))
-            for node in expanded:
-                self.assertIn(escape(node["detail"][language]), output)
+            paragraphs = [paragraph for node in expanded for paragraph in node["detail"][language].split("\n\n")]
+            self.assertEqual(output.count('class="chronicle-explanation"'), len(paragraphs))
+            for paragraph in paragraphs:
+                self.assertIn(f'<p class="chronicle-explanation">{escape(paragraph)}</p>', output)
         for detail in ({"zh": "只有中文"}, {"zh": "有内容", "en": ""}, "untranslated"):
             expanded[0]["detail"] = detail
             with self.assertRaisesRegex(ValueError, "detail translation"):
                 technology_chronicle.validate(data)
+        expanded[0]["detail"] = {"zh": "第一段\n\n第二段", "en": "One paragraph only"}
+        with self.assertRaisesRegex(ValueError, "detail paragraphs differ"):
+            technology_chronicle.validate(data)
+        expanded[0]["detail"] = {"zh": "第一段\n\n第二段", "en": "First\n\nSecond"}
+        self.assertIn('<p class="chronicle-explanation">第一段</p><p class="chronicle-explanation">第二段</p>',
+                      technology_chronicle.render(data, "zh"))
         expanded[0]["detail"] = {"zh": '<script>alert("test")</script>', "en": "Safe explanation"}
         output = technology_chronicle.render(data, "zh")
         self.assertIn("&lt;script&gt;", output)
