@@ -343,7 +343,7 @@
     const row = (label, hint, control) => el('div', {class: 'reader-hub-setting'}, [el('div', {}, [el('strong', {text: label}), el('small', {text: hint})]), control]);
     const history = el('button', {type: 'button', role: 'switch', class: 'reader-hub-switch', 'aria-checked': String(config.history), 'aria-label': say('记录阅读次数', 'Count my reading')});
     history.addEventListener('click', () => { saveSettings({history: !config.history}); render(); });
-    const mascot = el('div', {class: 'reader-hub-segment', role: 'radiogroup', 'aria-label': say('角落的星星', 'Corner star')});
+    const mascot = el('div', {class: 'reader-hub-segment', role: 'radiogroup', 'aria-label': say('Star 提示', 'Star notice')});
     for (const [value, label] of [['collapsed', say('显示', 'Show')], ['hidden', say('隐藏', 'Hide')]]) {
       const on = value === 'hidden' ? config.mascot === 'hidden' : config.mascot !== 'hidden';
       const option = el('button', {type: 'button', role: 'radio', 'aria-checked': String(on), text: label});
@@ -368,7 +368,7 @@
     const backup = el('a', {class: 'reader-hub-link', href: new URL(say('interview/dashboard.html#progress', 'interview/dashboard.en.html#progress'), base).href, text: say('去学习台导出 / 导入备份 →', 'Export or import a backup in the workspace →')});
     panel.append(
       row(say('记录阅读次数', 'Count my reading'), say('打开一篇笔记读满 15 秒记一次，只存在本机。', 'A note counts after 15 seconds; stored on this device only.'), history),
-      row(say('角落的星星', 'Corner star'), say('右下角那颗请你点 Star 的小星星。', 'The little star in the corner that asks for a GitHub star.'), mascot),
+      row(say('Star 提示', 'Star notice'), say('偶尔在右下角提醒一次，可以去 GitHub 点 Star。', 'An occasional notice in the corner about starring the repo.'), mascot),
       row(say('主题', 'Theme'), say('和顶栏的切换按钮是同一个设置。', 'Same setting as the toggle in the top bar.'), theme),
       el('div', {class: 'reader-hub-actions'}, [wipe, backup]));
   }
@@ -387,120 +387,76 @@
     renderMascotMessage();
   }
 
-  /* ------------------------------------------------------- the corner star
-     A small glass star that glows; hovering it lets a few hearts float up.
-     Collapsible, and quiet unless invited (the star request shows at most
-     once a day, and never again once the reader stars or declines). */
-  const mascot = el('div', {class: 'corner-star', 'data-state': 'collapsed'});
-  const bird = el('button', {type: 'button', class: 'corner-star-button', 'aria-label': say('打开星星的提示', 'Open the star’s note'), 'aria-expanded': 'false'});
-  const glyph = svg('svg', {viewBox: '0 0 48 48', 'aria-hidden': 'true'});
-  const defs = svg('defs');
-  const core = svg('radialGradient', {id: 'cs-core', cx: '50%', cy: '44%', r: '62%'});
-  [['0', '#ffffff', '1'], ['.32', '#fff6dc', '.92'], ['.68', '#ffd98c', '.5'], ['1', '#ffbf5c', '.12']].forEach(([offset, color, opacity]) =>
-    core.append(svg('stop', {offset, 'stop-color': color, 'stop-opacity': opacity})));
-  const rim = svg('linearGradient', {id: 'cs-rim', x1: '0', y1: '0', x2: '1', y2: '1'});
-  [['0', '#ffffff', '.95'], ['1', '#ffcf7a', '.35']].forEach(([offset, color, opacity]) =>
-    rim.append(svg('stop', {offset, 'stop-color': color, 'stop-opacity': opacity})));
-  const aura = svg('radialGradient', {id: 'cs-aura'});
-  [['0', '#ffe2a3', '.55'], ['.5', '#ffc966', '.18'], ['1', '#ffc966', '0']].forEach(([offset, color, opacity]) =>
-    aura.append(svg('stop', {offset, 'stop-color': color, 'stop-opacity': opacity})));
-  defs.append(core, rim, aura);
-  const points = [];
-  for (let i = 0; i < 10; i++) {
-    const radius = i % 2 ? 7.6 : 16.5;
-    const angle = Math.PI / 2 + i * Math.PI / 5;
-    points.push(`${(24 + radius * Math.cos(angle)).toFixed(2)},${(25 - radius * Math.sin(angle)).toFixed(2)}`);
-  }
-  glyph.append(defs,
-    svg('circle', {class: 'corner-star-aura', cx: '24', cy: '25', r: '23', fill: 'url(#cs-aura)'}),
-    svg('path', {class: 'corner-star-rays', d: 'M24 2v7M24 41v5M3 25h6M39 25h6'}),
-    svg('polygon', {class: 'corner-star-body', points: points.join(' '), fill: 'url(#cs-core)', stroke: 'url(#cs-rim)'}),
-    svg('ellipse', {class: 'corner-star-gleam', cx: '20.5', cy: '20', rx: '3.6', ry: '2.2'}));
-  bird.append(glyph);
-  const hearts = el('div', {class: 'corner-star-hearts', 'aria-hidden': 'true'});
-  const bubble = el('div', {class: 'corner-star-bubble', role: 'dialog', 'aria-label': say('星星的提示', 'Note from the star'), hidden: true});
-  const message = el('p', {class: 'corner-star-message'});
-  const actions = el('div', {class: 'corner-star-actions'});
-  const tuck = el('button', {type: 'button', class: 'corner-star-tuck', 'aria-label': say('收起', 'Tuck away'), text: '–'});
-  bubble.append(tuck, message, actions);
-  mascot.append(bubble, hearts, bird);
-  document.body.append(mascot);
-
-  let lastHearts = 0;
-  function popHearts(count = 4) {
-    if (reduce() || Date.now() - lastHearts < 700) return;
-    lastHearts = Date.now();
-    for (let i = 0; i < count; i++) {
-      const heart = el('span', {class: 'corner-star-heart'});
-      heart.style.setProperty('--drift', `${Math.round((Math.random() - .5) * 46)}px`);
-      heart.style.setProperty('--rise', `${Math.round(54 + Math.random() * 30)}px`);
-      heart.style.setProperty('--size', `${(10 + Math.random() * 7).toFixed(1)}px`);
-      heart.style.animationDelay = `${i * 90}ms`;
-      const shape = svg('svg', {viewBox: '0 0 24 24'});
-      shape.append(svg('path', {d: 'M12 21s-7.2-4.6-9.6-8.8C.7 9 2.6 4.8 6.7 4.8c2.2 0 3.6 1.2 5.3 3.1 1.7-1.9 3.1-3.1 5.3-3.1 4.1 0 6 4.2 4.3 7.4C19.2 16.4 12 21 12 21z'}));
-      heart.append(shape);
-      heart.addEventListener('animationend', () => heart.remove());
-      hearts.append(heart);
-    }
-  }
-  bird.addEventListener('pointerenter', event => { if (event.pointerType !== 'touch') popHearts(4); });
-  bird.addEventListener('focus', () => popHearts(3));
-
+  /* ------------------------------------------------------- asking for a star
+     The way most project sites do it: a quiet "Star" pill next to the GitHub
+     icon in the top bar, plus at most one small notice a day that the reader
+     can snooze or switch off. Hovering the pill lets a few tiny hearts rise. */
   const snoozed = config => Boolean(config.snoozedUntil) && Date.parse(config.snoozedUntil) > Date.now();
-  function renderMascotMessage() {
-    const state = records();
-    const config = settings(state);
-    const summary = summarize(state, new Date());
-    actions.replaceChildren();
-    const button = (label, handler, className = 'corner-star-choice') => {
-      const node = el('button', {type: 'button', class: className, text: label});
-      node.addEventListener('click', handler);
-      return node;
+  const STAR_ICON = 'M8 1.6l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.4l-3.8 2 .7-4.3-3.1-3 4.3-.6z';
+  const HEART = 'M12 21s-7.2-4.6-9.6-8.8C.7 9 2.6 4.8 6.7 4.8c2.2 0 3.6 1.2 5.3 3.1 1.7-1.9 3.1-3.1 5.3-3.1 4.1 0 6 4.2 4.3 7.4C19.2 16.4 12 21 12 21z';
+  let pill = null;
+  if (repoLink) {
+    pill = repoLink;
+    pill.classList.add('repo-pill');
+    pill.setAttribute('aria-label', say('在 GitHub 上给这个项目点 Star', 'Star this project on GitHub'));
+    const star = svg('svg', {class: 'repo-pill-star', viewBox: '0 0 16 16', width: '14', height: '14', 'aria-hidden': 'true'});
+    star.append(svg('path', {d: STAR_ICON}));
+    const hearts = el('span', {class: 'repo-pill-hearts', 'aria-hidden': 'true'});
+    pill.append(el('span', {class: 'repo-pill-divider', 'aria-hidden': 'true'}), star, el('span', {class: 'repo-pill-label', text: 'Star'}), hearts);
+    let last = 0;
+    const rise = () => {
+      if (reduce() || Date.now() - last < 900) return;
+      last = Date.now();
+      for (let i = 0; i < 3; i++) {
+        const heart = el('span', {class: 'repo-pill-heart'});
+        heart.style.setProperty('--drift', `${Math.round((Math.random() - .5) * 18)}px`);
+        heart.style.animationDelay = `${i * 110}ms`;
+        const shape = svg('svg', {viewBox: '0 0 24 24'});
+        shape.append(svg('path', {d: HEART}));
+        heart.append(shape);
+        heart.addEventListener('animationend', () => heart.remove());
+        hearts.append(heart);
+      }
     };
-    const never = button(say('不再显示', 'Don’t show again'), () => { saveSettings({mascot: 'hidden', starDone: true}); renderMascot(); });
-    if (!config.starDone) {
-      message.textContent = say('喜欢这些笔记的话，可以去 GitHub 点个 Star。', 'If you like these notes, you can star the repo on GitHub.');
-      const star = el('a', {class: 'corner-star-cta', href: repo, target: '_blank', rel: 'noopener', text: say('★ 去点 Star', '★ Star on GitHub')});
-      star.addEventListener('click', () => { popHearts(6); saveSettings({starDone: true, starAskedOn: todayKey(), mascot: 'collapsed'}); renderMascot(); });
-      const later = button(say('这次先不显示', 'Not now'), () => {
-        saveSettings({snoozedUntil: new Date(Date.now() + 12 * 3600 * 1000).toISOString(), starAskedOn: todayKey(), mascot: 'collapsed'});
-        renderMascot();
-      });
-      actions.append(star, later, never);
-      return;
-    }
-    message.textContent = config.history && summary.today.total
-      ? say(`今天读了 ${summary.today.notes.length} 篇，共 ${summary.today.total} 次。`,
-        `Today: ${summary.today.notes.length} note${summary.today.notes.length === 1 ? '' : 's'}, ${summary.today.total} read${summary.today.total === 1 ? '' : 's'}.`)
-      : say('今天还没有阅读记录。', 'No reading recorded today.');
-    actions.append(button(say('阅读记录', 'My reading'), () => open('reading')), never);
+    pill.addEventListener('pointerenter', event => { if (event.pointerType !== 'touch') rise(); });
+    pill.addEventListener('click', () => saveSettings({starDone: true, starAskedOn: todayKey()}));
   }
+
+  const mascot = el('aside', {class: 'star-toast', role: 'dialog', 'aria-labelledby': 'star-toast-text', hidden: true});
+  const github = svg('svg', {class: 'star-toast-mark', viewBox: '0 0 16 16', width: '20', height: '20', 'aria-hidden': 'true'});
+  github.append(svg('path', {d: 'M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.4 7.4 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z'}));
+  const message = el('p', {class: 'star-toast-text', id: 'star-toast-text', text: say('喜欢这些笔记的话，可以去 GitHub 点个 Star。', 'If you like these notes, you can star the repo on GitHub.')});
+  const actions = el('div', {class: 'star-toast-actions'});
+  const toastClose = el('button', {type: 'button', class: 'star-toast-close', 'aria-label': say('这次先不显示', 'Not now'), text: '×'});
+  mascot.append(github, el('div', {class: 'star-toast-body'}, [message, actions]), toastClose);
+  document.body.append(mascot);
+  function hideToast() { mascot.hidden = true; }
+  const later = () => { saveSettings({snoozedUntil: new Date(Date.now() + 12 * 3600 * 1000).toISOString(), starAskedOn: todayKey()}); hideToast(); };
+  const cta = el('a', {class: 'star-toast-cta', href: repo, target: '_blank', rel: 'noopener'});
+  const ctaStar = svg('svg', {viewBox: '0 0 16 16', width: '13', height: '13', 'aria-hidden': 'true'});
+  ctaStar.append(svg('path', {d: STAR_ICON}));
+  cta.append(ctaStar, document.createTextNode(say('去点 Star', 'Star on GitHub')));
+  cta.addEventListener('click', () => { saveSettings({starDone: true, starAskedOn: todayKey()}); hideToast(); });
+  const notNow = el('button', {type: 'button', class: 'star-toast-choice', text: say('这次先不显示', 'Not now')});
+  notNow.addEventListener('click', later);
+  const never = el('button', {type: 'button', class: 'star-toast-choice star-toast-quiet', text: say('不再显示', 'Don’t show again')});
+  never.addEventListener('click', () => { saveSettings({mascot: 'hidden', starDone: true}); hideToast(); });
+  actions.append(cta, notNow, never);
+  toastClose.addEventListener('click', later);
+  function renderMascotMessage() {}
   function renderMascot() {
     const config = settings(records());
-    mascot.hidden = config.mascot === 'hidden' || snoozed(config);
-    const opened = config.mascot === 'open';
-    mascot.dataset.state = opened ? 'open' : 'collapsed';
-    bubble.hidden = !opened;
-    bird.setAttribute('aria-expanded', String(opened));
-    renderMascotMessage();
+    if (config.mascot === 'hidden' || config.starDone || snoozed(config)) hideToast();
   }
-  bird.addEventListener('click', () => {
-    const opened = mascot.dataset.state === 'open';
-    saveSettings({mascot: opened ? 'collapsed' : 'open'});
-    renderMascot();
-  });
-  tuck.addEventListener('click', () => { saveSettings({mascot: 'collapsed'}); renderMascot(); bird.focus(); });
-  renderMascot();
-  // Once a day, the star says hello by itself (never while reduced motion asks for calm).
+  // At most once a day, after the reader has been on the page for a while.
   const initial = settings(records());
-  if (initial.mascot === 'collapsed' && !initial.starDone && !snoozed(initial) && initial.starAskedOn !== todayKey() && !reduce()) {
+  if (initial.mascot !== 'hidden' && !initial.starDone && !snoozed(initial) && initial.starAskedOn !== todayKey()) {
     scope.setTimeout(() => {
-      if (settings(records()).mascot !== 'collapsed') return;
-      mascot.dataset.state = 'open';
-      bubble.hidden = false;
-      bird.setAttribute('aria-expanded', 'true');
-      renderMascotMessage();
-    }, 6000);
+      const now = settings(records());
+      if (now.mascot === 'hidden' || now.starDone || snoozed(now) || document.visibilityState !== 'visible') return;
+      saveSettings({starAskedOn: todayKey()});
+      mascot.hidden = false;
+    }, 20000);
   }
 
   scope.addEventListener('notes:prep-storage', render);
