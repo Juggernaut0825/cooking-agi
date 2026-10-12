@@ -115,14 +115,14 @@ technology-tree-data.json
   nodes                            唯一正文、日期、双语、来源
   connections                      单独核实的跨领域联系
         ↓
-technology_chronicle.py → 可直接读的 HTML 年表
-world_grove.py          → 各领域 SVG 场景
+technology_chronicle.py → 世界树 + 表格视图 + 可直接读的 HTML 年表
+world_tree.py           → 建木式世界树 SVG（宽屏 / 窄屏）
         ↓
-筛选 / 缩放 / 年代导航 / 节点阅读器，全部复用同一份正文
+悬停联系 / 领域筛选 / 年代高亮（chronicle.js），全部复用同一份正文
 ```
 
 - 保留 version 3 和稳定 `event-*` / `field-*` ID；新增节点必须有一个按年份排列的规范入口。
-- `world-grove.js` 管平移缩放，`technology-atlas.js` 管领域筛选，`world-exhibit.js` 管年代和阅读器。
+- `chronicle.js` 管悬停说明、联系高亮、领域筛选和年代高亮；旧版画布与弹层模块已移除，见 TECHNOLOGY_TREE.md。
 - 语言切换、刷新、前进后退应保留正在读的节点；不开 JS 仍能看完整年表和来源。
 - 视觉连线、枝条长度、动效不表示技术影响力或历史因果。近期开放问题可用虚线区分，但正文不能变淡到难读。
 - 编年史页面不要放内部选材政策、agent 工作流、面试安排或长篇“我们为什么设计这个功能”。维护说明留在 `site/`。

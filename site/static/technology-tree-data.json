@@ -3217,6 +3217,17 @@
       "next": {
         "zh": "已含 ARPANET、Ethernet、TCP/IP、Web 与 RDMAP 标准，另有 RoCE 用例和 Hopper 的 NVLink；交换网络、InfiniBand、RoCE、PCIe 与 GPU 互连仍需独立展开。",
         "en": "ARPANET, Ethernet, TCP/IP, the Web, and the RDMAP specification are represented, alongside a RoCE example and NVLink under Hopper. Switched networks, InfiniBand, RoCE, PCIe, and GPU interconnects still need dedicated histories."
+      },
+      "root": {
+        "from": "networks-web-proposal-1989",
+        "label": {
+          "zh": "Web 与互联网",
+          "en": "The Web and the internet"
+        },
+        "note": {
+          "zh": "Web 和互联网后来有了自己的产业和社区，并不依附于 AI 而存在。",
+          "en": "The Web and the internet grew their own industry and communities; they do not exist for AI."
+        }
       }
     },
     {
@@ -3237,6 +3248,17 @@
       "next": {
         "zh": "已含 Unix、GNU、Linux、LLVM、CUDA 与 FlashAttention，并用 TVM 说明编译框架的后续用途；更早的编译器、虚拟化、ROCm 和 PyTorch / JAX 执行体系仍需独立展开。",
         "en": "Unix, GNU, Linux, LLVM, CUDA, and FlashAttention are represented, with TVM illustrating later compiler reuse. Earlier compilers, virtualization, ROCm, and PyTorch / JAX execution systems still need dedicated histories."
+      },
+      "root": {
+        "from": "software-linux-kernel-1991",
+        "label": {
+          "zh": "自由与开源软件",
+          "en": "Free and open-source software"
+        },
+        "note": {
+          "zh": "从 GNU 和 Linux 长出来的自由与开源软件，有自己的社区和规则，AI 只是它的用户之一。",
+          "en": "The free and open-source software that grew from GNU and Linux has its own communities and rules; AI is one of its users."
+        }
       }
     },
     {

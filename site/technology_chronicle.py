@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import re
 from urllib.parse import urlsplit
-import world_grove
+import world_tree
 
 
 DATA = Path(__file__).parent / "static/technology-tree-data.json"
@@ -86,6 +86,11 @@ def validate(data):
         used.extend(era_works)
     require(len(used) == len(set(used)) and set(used) == set(nodes), "each work needs one canonical branch")
     require(set(node["topic"] for node in nodes.values()) == topics, "each topic needs at least one work")
+    for topic in data["topics"]:
+        if "root" in topic:
+            root = topic["root"]
+            require(isinstance(root, dict) and nodes.get(root.get("from"), {}).get("topic") == topic["id"], f"aerial root must start on its own field: {topic['id']}")
+            require(translated(root.get("label")) and translated(root.get("note")), f"missing aerial root translation: {topic['id']}")
     connections = set()
     for connection in data.get("connections", []):
         endpoints = (connection.get("from"), connection.get("to"))
@@ -98,114 +103,15 @@ def validate(data):
     return nodes
 
 
-def overview(data, language):
-    chinese = language == "zh"
-    say = lambda zh, en: zh if chinese else en
-    text = lambda value: html.escape(value[language])
-    nodes = {node["id"]: node for node in data["nodes"]}
-    groups, panels, legend = [], [], []
-    for layer in data["layers"]:
-        buttons = []
-        members = [topic for topic in data["topics"] if topic["layer"] == layer["id"]]
-        legend.append(f'<span data-world-layer="{layer["id"]}"><i aria-hidden="true"></i>{text(layer["title"])}</span>')
-        for topic in members:
-            name = topic["id"]
-            milestones = sorted((node for node in data["nodes"] if node["topic"] == name), key=lambda node: node["year"])
-            count = len(milestones)
-            coverage = say(f"已收录 {count} 个代表节点。", f"{count} selected milestone{'s' if count != 1 else ''}. ")
-            buttons.append(f'<button type="button" id="field-{name}" class="world-topic" data-topic="{name}" data-world-layer="{layer["id"]}" aria-pressed="false" aria-controls="chronicle-content" disabled>'
-                           f'<strong>{text(topic["title"])}</strong><small>{text(topic["subtitle"])}</small><span aria-hidden="true">↗</span></button>')
-            selected = list(dict.fromkeys([0, len(milestones) // 2, len(milestones) - 1]))
-            previews = ''.join(f'<a href="#event-{milestones[index]["id"]}" data-world-peek><time>{milestones[index]["year"]}</time><span>{text(milestones[index]["title"])}</span><i aria-hidden="true">↗</i></a>' for index in selected)
-            panels.append(f'<div data-topic-panel="{name}" hidden><div class="world-panel-top"><p class="world-panel-kicker">{text(layer["title"])}</p>'
-                          f'<a href="#tree-map">{say("全部方向", "All fields")} ↗</a></div>'
-                          f'<h3>{text(topic["title"])}</h3><p>{text(topic["description"])}</p>'
-                          f'<div class="world-samples">{previews}</div>'
-                          f'<a class="world-read" href="#event-{milestones[0]["id"]}" data-world-peek>{say("从第一个节点读起", "Read from the first milestone")} <span aria-hidden="true">→</span></a>'
-                          f'<p class="world-coverage">{coverage}</p></div>')
-        groups.append(f'<div class="world-layer"><p class="world-layer-name">{text(layer["title"])}</p><div class="world-topics">{"".join(buttons)}</div></div>')
-
-    full_period = f'{data["eras"][0]["start"]}—{data["eras"][-1]["end"]}'
-    eras = [f'<div class="world-era-copy" data-world-era-copy="0"><p class="world-period">{full_period}</p>'
-            f'<h2>{say("AI 的背后，<br>不只有算法", "There is more to AI<br>than algorithms.")}</h2>'
-            f'<p class="world-era-summary">{say("模型的进展，也靠电力、芯片、软件和数据。沿年代看这些方向怎样发展；碰到感兴趣的节点，再点开了解当时的问题和做法。", "Progress in models also depends on power, chips, software, and data. Follow their histories through the eras, then open a milestone to see the problem and the approach.")}</p>'
-            f'<a class="world-era-read" href="#chronicle-content">{say("从头读起", "Start at the beginning")} <span aria-hidden="true">↓</span></a></div>']
-    controls = [f'<button type="button" class="world-all-eras" data-world-era="0" data-world-era-key="all" aria-pressed="true" aria-label="{say("查看全景", "Show all periods")}" disabled><span>{say("全景", "All")}</span></button>']
-    all_featured = [name for name in ("transistor-1947", "software-linux-kernel-1991", "transformer", "chatgpt") if name in nodes]
-    labels = []
-    for index, era in enumerate([{"featured": all_featured}, *data["eras"]]):
-        hidden = ' hidden' if index else ''
-        leaves = []
-        for leaf_index, name in enumerate(era["featured"]):
-            node = nodes[name]
-            title = node["title"][language].split(" · ")[0].split("：")[0].split(": ")[0]
-            layer = next(topic["layer"] for topic in data["topics"] if topic["id"] == node["topic"])
-            leaves.append(f'<a href="#event-{name}" class="world-landmark world-landmark--{leaf_index}" data-world-peek data-world-layer="{layer}">'
-                          f'<span class="world-leaf-dot" aria-hidden="true"></span><time>{node["year"]}</time><strong>{html.escape(title)}</strong><span class="world-leaf-arrow" aria-hidden="true">+</span></a>')
-        labels.append(f'<div class="world-era-leaves" data-world-era-leaves="{index}"{hidden}>{"".join(leaves)}</div>')
-        if not index:
-            continue
-        period = f'{era["start"]}—{era["end"]}'
-        eras.append(f'<div class="world-era-copy" data-world-era-copy="{index}"{hidden}>'
-                    f'<p class="world-period">{period}</p><h2>{text(era["title"])}</h2>'
-                    f'<p class="world-era-summary">{text(era["summary"])}</p>'
-                    f'<a class="world-era-read" href="#era-{era["id"]}">{say("读这一段历史", "Read this chapter")} <span aria-hidden="true">↗</span></a></div>')
-        label = html.escape(period + ': ' + era["title"][language], quote=True)
-        controls.append(f'<button type="button" data-world-era="{index}" data-world-era-key="{era["id"]}" data-era-start="{era["start"]}" data-era-end="{era["end"]}" aria-pressed="false" aria-label="{label}" title="{label}" disabled>'
-                        f'<span class="world-era-tick" aria-hidden="true"></span><time>{era["start"]}</time></button>')
-    return (f'<section class="world-overview" aria-label="{say("技术全景", "Technology overview")}">'
-            f'<div class="world-exhibit"><div class="world-exhibit-top"><span>{say("技术如何走到今天", "HOW WE GOT HERE")}</span>'
-            f'<button type="button" data-world-motion disabled>{say("暂停动效", "Pause motion")}</button></div>'
-            f'<div class="world-era-controls"><span class="world-era-instruction">{say("选一个年代", "CHOOSE A PERIOD")}</span>'
-            f'<div class="world-era-rail" role="group" aria-label="{say("预览年代", "Preview a period")}">{"".join(controls)}</div></div>'
-            f'{world_grove.render(data, language)}<div class="world-map world-map--narrative">'
-            f'<div class="world-history-copy">{"".join(eras)}'
-            f'<div class="world-era-steps" hidden><button type="button" data-world-era-step="-1" aria-label="{say("上一个年代", "Previous period")}">←</button>'
-            f'<span data-world-era-position></span><button type="button" data-world-era-step="1" aria-label="{say("下一个年代", "Next period")}">→</button></div></div>'
-            f'<div class="world-landmarks">{"".join(labels)}</div>'
-            '</div>'
-            f'<p class="world-announcement" role="status" data-world-era-status></p></div>'
-            f'<div class="world-explore-bar"><div class="world-legend">{"".join(legend)}</div>'
-            f'<a href="#chronicle-content">{say("从头读年表", "Read the full timeline")} ↓</a></div>'
-            f'<section class="world-directory" id="world-fields"><header><h3>{say("也可以只看一个领域", "Or follow one field")}</h3>'
-            f'<p>{say("选一个方向，从它最早收录的节点读起。", "Choose a field and follow its milestones in order.")}</p></header>'
-            f'<div class="world-directory-grid">{"".join(groups)}</div></section>'
-            f'<div class="world-insight" aria-label="{say("分支导览", "Branch guide")}"><div data-topic-panel="all"></div>{"".join(panels)}</div>'
-            '<dialog class="world-dialog" aria-labelledby="world-dialog-title"><div class="world-dialog-top">'
-            f'<span data-world-dialog-context>{say("节点笔记", "FIELD NOTE")}</span><div class="world-dialog-actions">'
-            f'<a data-language-switch="{ "en" if chinese else "zh" }" data-world-language hidden>{say("EN", "中文")}</a>'
-            f'<button type="button" data-world-close aria-label="{say("关闭节点", "Close milestone")}">×</button></div></div>'
-            f'<button type="button" class="world-reader-back" data-world-reader-back hidden></button>'
-            '<div class="world-reader-page"><p class="world-reader-year" data-world-year></p>'
-            '<h2 id="world-dialog-title" tabindex="-1"></h2><div data-world-dialog-body></div>'
-            f'<a class="world-dialog-read" href="#chronicle-content" data-world-dialog-read>{say("回到年表", "View in timeline")} <span aria-hidden="true">↗</span></a></div>'
-            f'<nav class="world-reader-nav" aria-label="{say("继续阅读节点", "Read more milestones")}">'
-            f'<button type="button" data-world-reader-step="-1"><small>{say("上一个", "Previous")}</small><span></span></button>'
-            f'<button type="button" data-world-reader-step="1"><small>{say("下一个", "Next")}</small><span></span></button></nav></dialog>'
-            '<p class="world-announcement" role="status" data-world-announcement></p>'
-            f'<noscript><p>{say("未启用 JavaScript：下方年表仍可展开阅读全部作品和来源。", "JavaScript is off. All works and sources remain readable in the timeline below.")}</p></noscript></section>')
+LEGACY_BRANCHES = {"transformer": "language", "alexnet": "vision", "qlearning": "rl", "sac": "robotics", "zero": "systems"}
 
 
-def connection_routes(data, language):
-    say = lambda zh, en: zh if language == "zh" else en
-    nodes = {node["id"]: node for node in data["nodes"]}
-    groups = {}
-    for connection in data.get("connections", []):
-        groups.setdefault(connection["from"], []).append(connection)
-    cards = []
-    for origin in sorted(groups, key=lambda name: nodes[name]['year']):
-        connections = groups[origin]
-        node = nodes[origin]
-        links = ''.join(f'<a href="#event-{connection["to"]}" data-world-peek>{html.escape(nodes[connection["to"]]["title"][language].split(" · ")[0])} +</a>' for connection in connections)
-        cards.append(f'<article class="world-crossing"><p>{node["year"]} · {say("联系", "CONNECTION")}</p>'
-                     f'<a class="world-crossing-title" href="#event-{origin}" data-world-peek>{html.escape(node["title"][language].split(" · ")[0])} +</a>'
-                     f'<div class="world-crossing-links">{links}</div>'
-                     f'<p class="world-crossing-description">{html.escape(connections[0]["description"][language])}</p></article>')
-    if not cards:
-        return ''
-    return (f'<section class="world-crossings" id="world-connections"><span id="connections"></span><header><h2>{say("一个成果，往往连着几条线", "One result, several histories")}</h2>'
-            f'<p>{say("AlexNet 用什么数据训练？ViT 借用了什么结构？从一个熟悉的名字出发，往回看它用到的工作。", "What data did AlexNet use? Which architecture did ViT adapt? Start with a familiar result and follow the work behind it.")}</p></header>'
-            f'<div class="world-crossing-grid">{"".join(cards)}</div></section>')
+def split_title(title):
+    for separator in (" · ", "：", ": "):
+        if separator in title:
+            name, rest = title.split(separator, 1)
+            return name, rest
+    return title, ""
 
 
 def render(data, language):
@@ -214,74 +120,125 @@ def render(data, language):
     chinese = language == "zh"
     say = lambda zh, en: zh if chinese else en
     text = lambda value: escape(value[language])
+    topics = {topic["id"]: topic for topic in data["topics"]}
     kinds = {"research": say("研究", "Research"), "system": say("系统", "System"),
              "product": say("产品 / 发布", "Product / release"), "open": say("开放问题", "Open question")}
-    legacy_branches = {"transformer": "language", "alexnet": "vision", "qlearning": "rl",
-                       "sac": "robotics", "zero": "systems"}
-    relations = {"uses": say("用到的数据或工具", "Data or tools used"), "adapts": say("借用的方法", "Method adapted"), "complements": say("互相补充", "Complementary work")}
-    navigation, sections = [], []
+    outgoing_label = {"uses": say("用到", "Uses"), "adapts": say("借用了", "Adapts"), "complements": say("和它互补", "Complements")}
+    incoming_label = {"uses": say("被用于", "Used by"), "adapts": say("被借用于", "Adapted by"), "complements": say("和它互补", "Complements")}
+    connections = data.get("connections", [])
+    canonical = [name for era in data["eras"] for branch in era["branches"] for name in branch["works"]]
+    position = {name: index for index, name in enumerate(canonical)}
+    era_of = {name: era["id"] for era in data["eras"] for branch in era["branches"] for name in branch["works"]}
+    featured = {name for era in data["eras"] for name in era["featured"]}
+    linked = {}
+    for connection in connections:
+        linked.setdefault(connection["from"], []).append(connection["to"])
+        linked.setdefault(connection["to"], []).append(connection["from"])
+    short = lambda node: escape(split_title(node["title"][language])[0])
+
+    def chip(node):
+        name = node["id"]
+        classes = "ch-chip" + (" is-featured" if name in featured else "") + (" is-open" if node["status"] == "evolving" else "")
+        related = ""
+        if name in linked:
+            classes += " has-links"
+            related = f' data-links="{" ".join(linked[name])}"'
+        label = escape(f'{node["year"]} · {node["title"][language]}', quote=True)
+        return f'<a class="{classes}" href="#event-{name}" data-node="{name}"{related} aria-label="{label}">{short(node)}</a>'
+
+    columns = ''.join(f'<th scope="col"><a href="#era-{era["id"]}" title="{escape(era["title"][language], quote=True)}">'
+                      f'<span>{era["start"]}</span><small>–{era["end"]}</small></a></th>' for era in data["eras"])
+    bodies, legend = [], []
+    for layer in data["layers"]:
+        legend.append(f'<li data-layer="{layer["id"]}">{text(layer["title"])}</li>')
+        rows = [f'<tr class="ch-layer-name"><th scope="colgroup" colspan="{len(data["eras"]) + 1}">{text(layer["title"])}</th></tr>']
+        for topic in (item for item in data["topics"] if item["layer"] == layer["id"]):
+            members = sorted((node for node in data["nodes"] if node["topic"] == topic["id"]),
+                             key=lambda node: (node["year"], position[node["id"]]))
+            cells = ''.join(f'<td>{"".join(chip(node) for node in members if era_of[node["id"]] == era["id"])}</td>' for era in data["eras"])
+            count = say(f"{len(members)} 个节点", f"{len(members)} milestone{'s' if len(members) != 1 else ''}")
+            rows.append(f'<tr data-topic="{topic["id"]}"><th scope="row">'
+                        f'<button type="button" class="ch-field" data-field="{topic["id"]}" aria-pressed="false" aria-controls="chronicle-content" disabled>'
+                        f'<strong>{text(topic["title"])}</strong><small>{count}</small></button></th>{cells}</tr>')
+        bodies.append(f'<tbody data-layer="{layer["id"]}">{"".join(rows)}</tbody>')
+    period = f'{data["eras"][0]["start"]}–{data["eras"][-1]["end"]}'
+    table = (f'<details class="ch-table-view"><summary>{say("用表格看：领域 × 年代", "Table view: field × period")}</summary>'
+             f'<div class="ch-matrix" role="region" tabindex="0" aria-label="{say("领域 × 年代表格", "Field × period table")}">'
+             f'<table><caption>{say("各领域在各年代收录的节点", "Milestones collected for each field and period")}</caption>'
+             f'<colgroup><col class="ch-col-field">{"<col>" * len(data["eras"])}</colgroup>'
+             f'<thead><tr><th scope="col" class="ch-corner">{say("领域 ／ 年代", "Field / period")}</th>{columns}</tr></thead>{"".join(bodies)}</table></div>'
+             f'<p class="ch-table-note">{say("空着的格子只是这里还没收录，不代表那时没有进展。", "An empty cell means nothing is collected there yet, not that nothing happened.")}</p></details>')
+    period = f'{data["eras"][0]["start"]}–{data["eras"][-1]["end"]}'
+    overview = (f'<section class="ch-overview" aria-labelledby="ch-overview-title">'
+                f'<header class="ch-overview-head"><p class="ch-kicker">{say("全景", "Overview")} · {period}</p>'
+                f'<h2 id="ch-overview-title">{say("同一个根，长出许多枝", "One root, many branches")}</h2>'
+                f'<blockquote class="ch-myth"><p>{say("「建木……百仞无枝，上有九欘，下有九枸。」", "“Jianmu … a hundred ren without a branch, nine bends above, nine tangled roots below.”")}</p>'
+                f'<cite>{say("《山海经·海内经》", "Classic of Mountains and Seas")}</cite></blockquote>'
+                f'<p>{say("古人想象天地中央有一棵通天的树，叫建木：主干高高的、不分枝，上面九道弯枝，下面九条盘根，《淮南子》说众帝就沿着它上下天地。这棵技术树借了它的样子：主干是电、计算和晶体管这些共同的起点，往上分出各个领域，往下扎进同一片地。", "Chinese myth imagined a tree at the centre of heaven and earth called Jianmu: a tall trunk without branches, nine bends above and nine roots below, the path by which, the Huainanzi says, the gods went up and down. This tree borrows its shape. The trunk holds the shared beginnings in power, computation, and the transistor; fields branch off above and root into the same ground below.")}</p>'
+                f'<p>{say("越往上年代越晚，同一高度属于同一个年代。枝和枝之间的细藤是有记录的联系；从枝上垂回地面的气根，表示这条线后来自成一片，并不是为 AI 而存在。", "Higher means later, and stars at the same height share a period. Fine vines between branches are recorded connections; an aerial root dropping back to the ground marks a line that later stood on its own rather than existing for AI.")}</p></header>'
+                f'<div class="wt-stage" data-world-tree>{world_tree.render(data, language, "wide")}{world_tree.render(data, language, "narrow")}</div>'
+                f'<div class="ch-matrix-foot"><ul class="ch-legend">{"".join(legend)}</ul>'
+                f'<p>{say("大点是该年代的代表作；点名字跳到正文，点枝头的领域名，下面的年表只留这一条线。", "Large points are each period’s featured works. Select a point to read it, or a field name at a branch tip to follow only that line below.")}</p></div>'
+                f'{table}</section>')
+
+    navigation = ''.join(f'<a href="#era-{era["id"]}" data-era-link="{era["id"]}" title="{escape(era["title"][language], quote=True)}">{era["start"]}</a>' for era in data["eras"])
+    era_nav = (f'<nav class="ch-eras" aria-label="{say("按年代浏览", "Browse by period")}">'
+               f'<a class="ch-eras-home" href="#tree-map">{say("↑ 全景", "↑ Overview")}</a>{navigation}</nav>')
+    banner = (f'<div class="ch-filter" data-filter-banner hidden><p data-filter-label></p>'
+              f'<button type="button" data-filter-reset>{say("显示全部领域", "Show every field")}</button></div>')
+
+    def card(node):
+        name = node["id"]
+        topic = topics[node["topic"]]
+        outgoing = [connection for connection in connections if connection["from"] == name]
+        incoming = [connection for connection in connections if connection["to"] == name]
+        groups = {}
+        for connection in outgoing:
+            groups.setdefault(outgoing_label[connection["type"]], []).append(nodes[connection["to"]])
+        for connection in incoming:
+            groups.setdefault(incoming_label[connection["type"]], []).append(nodes[connection["from"]])
+        quick = ''.join(f'<span><span class="ch-link-type">{label}</span> '
+                        + ' · '.join(f'<a href="#event-{other["id"]}">{short(other)}</a>' for other in others) + '</span>'
+                        for label, others in groups.items())
+        quick = f'<p class="ch-links">{quick}</p>' if quick else ''
+        detail = ''.join(f'<p class="chronicle-explanation">{escape(paragraph)}</p>'
+                         for paragraph in node["detail"][language].split("\n\n")) if "detail" in node else ''
+        evidence = ''.join(f'<li><span>{outgoing_label[connection["type"]]} · </span><a href="#event-{connection["to"]}">{text(nodes[connection["to"]]["title"])}</a>'
+                           f'<p>{text(connection["description"])}</p></li>' for connection in outgoing)
+        evidence = f'<ul class="chronicle-connections">{evidence}</ul>' if evidence else ''
+        sources = ''.join(f'<li><a href="{escape(url, quote=True)}"><span>{escape(label)}</span><span aria-hidden="true">↗</span></a></li>' for label, url in node["sources"])
+        status = f'<span class="ch-unsettled">{say("仍在探索", "Still evolving")}</span>' if node["status"] == "evolving" else ''
+        alias = f'<span id="branch-{LEGACY_BRANCHES[name]}"></span>' if name in LEGACY_BRANCHES else ''
+        title, subtitle = split_title(node["title"][language])
+        subtitle = f'<span class="ch-sub"> · {escape(subtitle)}</span>' if subtitle else ''
+        state = ' chronicle-work--open' if node["status"] == "evolving" else ''
+        return (f'<article class="chronicle-work{state}" id="event-{name}" data-work-topic="{node["topic"]}" data-layer="{topic["layer"]}" aria-labelledby="event-{name}-title">{alias}'
+                f'<p class="ch-work-meta"><time>{node["year"]}</time><span class="ch-topic"><i aria-hidden="true"></i>{text(topic["title"])}</span>'
+                f'<span>{kinds[node["kind"]]}</span>{status}</p>'
+                f'<h4 id="event-{name}-title" data-work-title><span class="ch-name">{escape(title)}</span>{subtitle}</h4>'
+                f'<p class="chronicle-lead">{text(node["body"])}</p>{quick}'
+                f'<details class="chronicle-more"><summary>{say("背景与后续", "Background & follow-up")}</summary>'
+                f'<div class="chronicle-more-body">{detail}<p class="ch-fold-label">{say("要注意的地方", "Keep in mind")}</p>'
+                f'<p class="chronicle-limit">{text(node["limit"])}</p>{evidence}</div></details>'
+                f'<details class="chronicle-references"><summary>{say("原始资料", "Sources")} <span class="chronicle-source-count">{len(node["sources"])}</span></summary>'
+                f'<ol class="chronicle-sources">{sources}</ol></details></article>')
+
+    sections = []
     for era in data["eras"]:
         era_id = f'era-{era["id"]}'
-        period = f'{era["start"]}–{era["end"]}'
-        navigation.append(f'<a href="#{era_id}">{period}</a>')
-        featured = []
-        for name in era["featured"]:
-            node = nodes[name]
-            short_title = node["title"][language].split(" · ")[0]
-            featured.append(f'<a href="#event-{name}" class="chronicle-feature" data-work-topic="{node["topic"]}">'
-                            f'<span>{node["year"]} · {kinds[node["kind"]]}</span>'
-                            f'<strong>{escape(short_title)}<i aria-hidden="true"> ↗</i></strong></a>')
-        branches = []
-        for branch in era["branches"]:
-            branch_id = f'twig-{era["id"]}-{branch["id"]}'
-            works = []
-            for name in branch["works"]:
-                node = nodes[name]
-                sources = ''.join(f'<li><a href="{escape(url, quote=True)}"><span>{escape(label)}</span><span aria-hidden="true">↗</span></a></li>' for label, url in node["sources"])
-                state = ' chronicle-work--open' if node["status"] == 'evolving' else ''
-                related = []
-                for connection in data.get("connections", []):
-                    if connection["from"] == name:
-                        target = nodes[connection["to"]]
-                        related.append(f'<li><span>{relations[connection["type"]]} · </span><a href="#event-{target["id"]}">{text(target["title"])}</a>'
-                                       f'<p>{text(connection["description"])}</p></li>')
-                connections = f'<ul class="chronicle-connections">{"".join(related)}</ul>' if related else ''
-                detail = ''.join(f'<p class="chronicle-explanation">{escape(paragraph)}</p>'
-                                 for paragraph in node["detail"][language].split("\n\n")) if "detail" in node else ''
-                background = (f'<details class="chronicle-more"><summary>{say("背景与后续", "Background & follow-up")}</summary>'
-                              f'<div class="chronicle-more-body">{detail}<p class="chronicle-limit">{text(node["limit"])}</p>{connections}</div></details>')
-                references = (f'<details class="chronicle-references"><summary>{say("原始资料", "Sources")} '
-                              f'<span class="chronicle-source-count">{len(node["sources"])}</span></summary>'
-                              f'<ol class="chronicle-sources">{sources}</ol></details>')
-                status = f'<p class="chronicle-unsettled">{say("仍在探索", "Still evolving")}</p>' if node["status"] == 'evolving' else ''
-                alias = f'<span id="branch-{legacy_branches[name]}"></span>' if name in legacy_branches else ''
-                works.append(f'<details class="chronicle-work{state}" id="event-{name}" data-work-topic="{node["topic"]}">'
-                             f'<summary><time>{alias}{node["year"]}</time><span data-work-title>{text(node["title"])}</span><i aria-hidden="true">+</i></summary>'
-                             f'<div class="chronicle-work-body">{status}<p class="chronicle-lead">{text(node["body"])}</p>'
-                             f'{background}{references}</div></details>')
-            evolving = all(nodes[name]["status"] == "evolving" for name in branch["works"])
-            state = ' chronicle-branch--open' if evolving else ''
-            names = ' · '.join(nodes[name]["title"][language].split(" · ")[0] for name in branch["works"])
-            branches.append(f'<details class="chronicle-branch{state}" id="{branch_id}">'
-                            f'<summary><span class="chronicle-sprout" aria-hidden="true">'
-                            '<svg viewBox="0 0 40 48" aria-hidden="true"><path d="M20 45V12M20 32Q4 30 4 14Q20 14 20 32M20 24Q36 22 36 6Q20 6 20 24"/></svg></span>'
-                            f'<span class="chronicle-branch-label"><strong>{text(branch["title"])}</strong><small>{escape(names)}</small></span>'
-                            '<i class="chronicle-expand" aria-hidden="true">+</i></summary>'
-                            f'<div class="chronicle-branch-body"><p data-branch-summary>{text(branch["summary"])}</p><div class="chronicle-works">{"".join(works)}</div></div></details>')
-        sections.append(f'<section class="chronicle-era" id="{era_id}" aria-labelledby="{era_id}-title">'
-                        f'<div class="chronicle-date"><span>{era["start"]}</span><span>— {era["end"]}</span></div>'
-                        '<div class="chronicle-branch-line" aria-hidden="true"><svg viewBox="0 0 250 90" preserveAspectRatio="none" aria-hidden="true"><path d="M0 90C90 90 95 8 250 8M110 60Q135 28 138 6"/></svg></div>'
-                        f'<div class="chronicle-era-content"><h2 id="{era_id}-title"><span data-era-title>{text(era["title"])}</span><span data-era-focus hidden></span></h2>'
-                        f'<p class="chronicle-summary">{text(era["summary"])}</p>'
-                        f'<div class="chronicle-featured" aria-label="{say("代表工作与产品", "Selected works and products")}">{"".join(featured)}</div>'
-                        f'<p class="chronicle-branch-hint">{say("选一个方向，看看具体的工作。", "Choose a field to explore its milestones.")}</p>'
-                        f'<div class="chronicle-branches">{"".join(branches)}</div></div></section>')
+        works = [name for branch in era["branches"] for name in branch["works"]]
+        fields = len({nodes[name]["topic"] for name in works})
+        stats = say(f"{len(works)} 个节点 · {fields} 个领域", f"{len(works)} milestone{'s' if len(works) != 1 else ''} · {fields} field{'s' if fields != 1 else ''}")
+        branches = ''.join(f'<div class="chronicle-branch" id="twig-{era["id"]}-{branch["id"]}"><h3>{text(branch["title"])}</h3>'
+                           f'<p class="ch-branch-summary" data-branch-summary>{text(branch["summary"])}</p>'
+                           f'{"".join(card(nodes[name]) for name in branch["works"])}</div>' for branch in era["branches"])
+        sections.append(f'<section class="chronicle-era" id="{era_id}" data-era="{era["id"]}" aria-labelledby="{era_id}-title">'
+                        f'<header class="ch-era-head"><p class="ch-era-years"><span>{era["start"]}</span> <span>– {era["end"]}</span></p>'
+                        f'<h2 id="{era_id}-title">{text(era["title"])}</h2><p class="ch-era-stats">{stats}</p></header>'
+                        f'<div class="ch-era-body"><p class="chronicle-summary">{text(era["summary"])}</p>{branches}</div></section>')
     return ('<section class="technology-chronicle" id="tree-map" data-chronicle>'
-            '<span id="branch-overview"></span><span id="selection"></span>'
-            f'{overview(data, language)}{connection_routes(data, language)}<div class="chronicle-toolbar"><p>{say("按年代，往下读", "Follow the timeline")}</p>'
-            f'<button type="button" data-topic-reset aria-controls="chronicle-content" disabled>{say("查看全部分支", "Show all branches")}</button></div>'
-            f'<nav class="chronicle-nav" aria-label="{say("按年代浏览", "Browse by period")}"><a class="chronicle-home" href="#tree-map">{say("↑ 回到全景", "↑ Back to tree")}</a>{"".join(navigation)}</nav>'
-            f'<p class="chronicle-guide">{say("先读每个年代的概括，就能了解大致变化。想多看一点，再展开领域和作品；不用把每个节点都读完。", "The short era summaries give you the broad changes. Open a field or milestone when you want more detail; there is no need to read every entry.")}</p>'
+            '<span id="branch-overview"></span><span id="selection"></span><span id="connections"></span>'
+            f'{overview}{era_nav}{banner}'
             f'<div class="chronicle-trunk" id="chronicle-content"><span id="turning-points"></span>{"".join(sections)}</div></section>')
 
 
