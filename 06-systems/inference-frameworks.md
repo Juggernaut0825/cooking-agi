@@ -2,7 +2,7 @@
 
 **中文** · [English](inference-frameworks.en.md)
 
-> 核对：2026-10-11 · 机制对照 vLLM V1 与 SGLang 的公开实现。下面的数字是教学算例，没有跑框架性能排名。
+> 核对：2026-10-12 · 对照 vLLM v0.31.0（2026-10-05）与 SGLang v0.5.21（2026-10-02）的文档；源码链接固定到 2026-10-10 的 main commit。下面的数字是教学算例，没有跑框架性能排名。
 
 一个模型用 `generate()` 能回答问题，为什么还需要 vLLM 或 SGLang？因为服务里不只有一个人在问：长短请求一起进来，有人中途关闭窗口，也有人反复问同一份文档。引擎要安排这些工作，而不是每来一条请求就从头独占 GPU。
 
@@ -19,9 +19,9 @@
 <figcaption>这是职责划分，不要求每一层对应一个独立进程，也不代表引擎承担完整的生产安全边界。</figcaption>
 </figure>
 
-[vLLM V1 的架构文档](https://docs.vllm.ai/en/v0.21.0/design/arch_overview/)区分 API server、engine core 与 GPU workers：前者处理输入输出，中间组织调度与缓存，后者执行模型。具体进程数量随部署而变。SGLang 也有自己的请求处理、调度与模型执行路径，不要把 vLLM 的类名原封不动套过去。
+[vLLM V1 的架构文档](https://docs.vllm.ai/en/v0.31.0/design/arch_overview/)区分 API server、engine core 与 GPU workers：前者处理输入输出，中间组织调度与缓存，后者执行模型；开数据并行时还会多一个 DP coordinator。具体进程数量随部署而变。SGLang 也有自己的请求处理、调度与模型执行路径，不要把 vLLM 的类名原封不动套过去。
 
-更具体地看，[SGLang 固定版本的 Engine](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/entrypoints/engine.py#L237)把 tokenization、调度与 detokenization 分开：
+更具体地看，[SGLang 固定版本的 Engine](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/entrypoints/engine.py#L238)把 tokenization、调度与 detokenization 分开：
 
 ```text
 请求 → TokenizerManager → Scheduler → 模型执行
@@ -33,7 +33,7 @@ TokenizerManager 管输入与请求结果，Scheduler 决定当前批次，执�
 
 ## 把两套实现放在同一张图里 {#engine-map}
 
-先沿左边读一次 vLLM，再沿右边看 SGLang。箭头旁写的是交接内容：不是把完整模型或整个 KV cache 在每层之间来回复制。图只画普通自回归文本生成的主要职责；多模态、推测解码、异步执行会有分支。
+先沿左边读一次 vLLM，再沿右边看 SGLang。箭头旁写的是交接内容：不是把完整模型或整个 KV cache 在每层之间来回复制。图只画普通自回归文本生成的主要职责；多模态和推测解码会有分支。图按一步一步画，但两边在兼容配置下默认让 CPU 排下一轮时 GPU 同时算这一轮（vLLM 叫 async scheduling，SGLang 叫 overlap scheduler）。
 
 <figure class="engine-map" lang="zh-CN">
 <div class="engine-map__lanes">
@@ -53,7 +53,7 @@ TokenizerManager 管输入与请求结果，Scheduler 决定当前批次，执�
 <figcaption>未结束的请求继续下一轮。两列是职责对照，不是一一对应的进程图；特别是 SGLang 的 ModelRunner 属于 scheduler 的执行路径，不能凭一个框就给它增加独立进程。</figcaption>
 </figure>
 
-vLLM 的进程边界可查[官方架构](https://docs.vllm.ai/en/v0.21.0/design/arch_overview/)，执行入口可跟 [EngineCore](https://github.com/vllm-project/vllm/blob/v0.21.0/vllm/v1/engine/core.py)。它把 `SchedulerOutput` 交给 executor；[GPUModelRunner](https://github.com/vllm-project/vllm/blob/v0.21.0/vllm/v1/worker/gpu_model_runner.py)再结合本地请求状态准备 token、位置与 attention 元数据，不是由调度器提前拼好全部模型输入张量。SGLang 这条路径核对到固定 commit：从 [Scheduler.run_batch](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/managers/scheduler.py#L4405)，到 [worker 的批次转换与 forward](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/managers/tp_worker.py#L598)，再到 [ModelRunner](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/model_executor/model_runner.py)。这些是阅读坐标，不是要求背下类名。
+vLLM 的进程边界可查[官方架构](https://docs.vllm.ai/en/v0.31.0/design/arch_overview/)，执行入口可跟 [EngineCore](https://github.com/vllm-project/vllm/blob/10cc2f6ae2c9ba7cc5841ece95e27d0562aef1bf/vllm/v1/engine/core.py)。它把 `SchedulerOutput` 交给 executor；worker 里的 model runner 再结合本地请求状态准备 token、位置与 attention 元数据，不是由调度器提前拼好全部模型输入张量。该固定 commit 在兼容配置下优先用 [Model Runner V2](https://github.com/vllm-project/vllm/blob/10cc2f6ae2c9ba7cc5841ece95e27d0562aef1bf/vllm/v1/worker/gpu/model_runner.py)，不支持的功能、缺少 Triton、部分 ROCm 模型默认设置，或显式配置，都可能改走旧的 [GPUModelRunner](https://github.com/vllm-project/vllm/blob/10cc2f6ae2c9ba7cc5841ece95e27d0562aef1bf/vllm/v1/worker/gpu_model_runner.py)。SGLang 这条路径核对到固定 commit：从 [Scheduler.run_batch](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/managers/scheduler.py#L4405)，到 [worker 的批次转换与 forward](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/managers/tp_worker.py#L598)，再到 [ModelRunner](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/model_executor/model_runner.py)。这些是阅读坐标，不是要求背下类名。
 
 假设 request R 有 6 个 prompt token，其中前 4 个对应可复用的完整缓存块。Scheduler 不能简单说“命中了就结束”：它还要确认复用有效、剩余 2 个 token 有位置可写、本轮有预算。算完后采样出第一个新 token X；**这不表示 X 的 KV 已经写好了**。下一轮把 X 作为输入，才会生成它自己的 KV，再预测下一个 token。全前缀命中时如何得到下一 token 的 logits，还要看具体实现是否需要计算末位置等路径，不能把缓存直接当答案。
 
@@ -102,24 +102,26 @@ SGLang 的上述执行选择可以在固定版本的 [ModelRunner](https://githu
 
 ## vLLM 和 SGLang 的缓存怎么理解 {#prefix}
 
-两者都能做前缀复用，不能简单说“vLLM 管显存，SGLang 才管 cache”。可以比较的是组织方式与具体配置：
+两者都能做前缀复用，而且默认都开着（vLLM 的 `--enable-prefix-caching`，SGLang 的 radix cache），不能简单说“vLLM 管显存，SGLang 才管 cache”。今天还能比较的是索引结构、默认粒度和回收策略：
 
-| 观察点 | vLLM V1 | SGLang 的 RadixCache 路径 |
+| 观察点 | vLLM V1 | SGLang 的 radix 树（默认 `UnifiedRadixCache`） |
 | --- | --- | --- |
-| 怎么组织可复用前缀 | 带前缀关系的块哈希与 block pool | 用树表示共同的 token 路径 |
-| 复用边界 | 对照版本按完整 KV blocks 缓存 | 与 page size 等配置有关，不总是单 token |
-| 生命周期 | 引用、空闲块、驱逐与重新分配 | 锁定、引用、节点拆分与驱逐等机制 |
+| 怎么组织可复用前缀 | 带前缀关系的块哈希与 block pool，按哈希查块 | 用树表示共同的 token 路径；v0.5.21 的树核心优先用 Rust，不兼容的平台或功能会回退到 Python |
+| 复用边界 | 基础默认值为每 16 个 token 一块；实际大小受模型、attention backend 与配置影响，只复用完整块 | 默认 page size 为 1，可以停在任意 token；部分后端或模型把 page 调到 64、128 等，就向下对齐到整页 |
+| 生命周期 | 引用计数、空闲队列按 LRU 驱逐、重新分配 | 锁定、引用、节点拆分；默认 LRU，也可选 LFU、SLRU、priority、T-LRU |
 | 不能直接推出什么 | 块组织不等于整个服务更快 | 树组织不等于任意 workload 都更快 |
+
+默认值不是通用承诺。实际选择可查 vLLM 的 [runner 与异步调度条件](https://github.com/vllm-project/vllm/blob/10cc2f6ae2c9ba7cc5841ece95e27d0562aef1bf/vllm/config/vllm.py#L709)、[cache 配置](https://github.com/vllm-project/vllm/blob/10cc2f6ae2c9ba7cc5841ece95e27d0562aef1bf/vllm/config/cache.py#L67)，以及 SGLang 的 [tree core 回退条件](https://github.com/sgl-project/sglang/blob/v0.5.21/python/sglang/srt/mem_cache/unified_cache/tree_core_registry.py#L44)。部署时再核对启动日志里的最终配置。
 
 实现细节可对照已有的[缓存生命周期与页对齐算例](../00-foundations/deep-dives/attention-kernels.md#cache-lifecycle)，其中固定了 vLLM 与 SGLang 源码版本。[SGLang 原论文](https://arxiv.org/abs/2312.07104)解释了 RadixAttention 的背景；不要把论文发表时的功能边界当成今天的完整产品对比。
 
 例如两个请求共享一份 2,000-token 说明，后面各有 100-token 问题。第二条请求可能少做共同前缀的 prefill，但生成新答案时依然需要使用前缀 KV。省的是重复计算，不是把历史从 attention 里删除。权重、adapter、token IDs、位置与多模态输入也必须兼容；“人看起来文字一样”不是充分条件。
 
-多租户还要设计隔离。共同前缀带来的时间差可能泄露缓存是否命中，不能把缓存机制当成权限机制。[vLLM 的 cache salt 说明](https://docs.vllm.ai/en/v0.21.0/design/prefix_caching/)提供了一种复用隔离手段；服务端仍要决定可信分组，不能任由客户端声称自己属于别人的组。
+多租户还要设计隔离。共同前缀带来的时间差可能泄露缓存是否命中，不能把缓存机制当成权限机制。[vLLM 的 cache salt 说明](https://docs.vllm.ai/en/v0.31.0/design/prefix_caching/)提供了一种复用隔离手段，SGLang 的 OpenAI 接口也接受 `cache_salt`；服务端仍要决定可信分组，不能任由客户端声称自己属于别人的组。
 
 ## HiCache：显存以外，也能存 KV {#hicache}
 
-[SGLang HiCache](https://docs.sglang.io/docs/advanced_features/hicache_design)把 KV 放在 GPU、主机内存及存储后端等层次。GPU / 主机层归推理实例使用；跨实例共享要看存储后端及 namespace 的实际配置，不能把两台机器的 RAM 当成天然共享池。
+[SGLang HiCache](https://docs.sglang.io/docs/advanced_features/hicache_design)把 KV 放在 GPU、主机内存及存储后端等层次。GPU / 主机层归推理实例使用；跨实例共享要看存储后端及 namespace 的实际配置，不能把两台机器的 RAM 当成天然共享池。vLLM 现在也能这样分层：[OffloadingConnector](https://docs.vllm.ai/en/v0.31.0/features/kv_offloading_usage/) 把算完的完整块先放进 CPU 内存，还可以再接文件、对象存储等二级层，也可以改接 LMCache 或 Mooncake Store。两边默认都不开。
 
 拿一笔假设成本判断：重算某段 prefill 需要 80 ms；把它的 KV 搬回 GPU 要 30 ms，查找与调度另需 5 ms，那复用有机会省约 45 ms。如果传输变成 100 ms，这次复用反而可能更慢。这里把各项按串行相加，只是解释取舍；实际异步重叠要用 trace 测。
 
@@ -135,7 +137,9 @@ SGLang 的上述执行选择可以在固定版本的 [ModelRunner](https://githu
 | JSON 常不合法 | 是否真的启用了输出约束 | 结构化解码与校验 | 格式合法仍不代表内容正确 |
 | 使用了推测解码却更慢 | 草拟成本、接受率、验证 batch | 改草拟方法或关闭 | 辅助状态和验证开销 |
 
-两套引擎的模型支持、量化、结构化输出、并行与 speculative decoding 都在变。比较的是**固定版本、模型、硬件和功能组合**，不是记住“Agent 选这个，高并发选那个”。FSDP 属于[训练状态分片](training-frameworks.md)，不是这张表里另一个生成引擎。
+在这次核对的版本中，两套引擎支持的机制有不少重合：分页管理 KV、默认开启的前缀复用、continuous batching 与 chunked prefill、CPU 调度与 GPU 执行重叠、CUDA Graph、EAGLE / MTP / n-gram 推测解码、xgrammar 等结构化输出、TP / PP / DP + EP、P/D 分离与 KV 分层存储，两边都有。但不能因此说两者只差默认参数。调度路径、缓存结构与功能兼容性也会影响取舍：前缀索引一个是块哈希、一个是 radix 树，基础默认粒度是 16 个 token 对 1 个 token，实际要看后端与模型；vLLM 每轮先排 decode，再把 prefill 分块塞进同一批，SGLang 默认有新 prefill 就先跑 prefill 批，要混合得开 `--enable-mixed-chunk`；vLLM 默认用 torch.compile，SGLang 默认不开；P/D 分离在 SGLang 是内置的 prefill / decode 角色加 router，在 vLLM 走 KV connector，文档仍标为实验性。
+
+比较的仍是**固定版本、模型、硬件和功能组合**，不是记住“Agent 选这个，高并发选那个”。FSDP 属于[训练状态分片](training-frameworks.md)，不是这张表里另一个生成引擎。
 
 ## 跑一个有意义的对照 {#benchmark}
 

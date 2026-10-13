@@ -190,7 +190,7 @@ Another route is [D-Loop](https://arxiv.org/abs/2610.06011), submitted 2026-10-0
 | DFlash 2 | Parallel proposals plus local mixing and path selection | Local modules and selection |
 | D-Loop | Shared-backbone suffix refinement after initial drafting | Second draft forward pass |
 
-Versions also affect usability. The [current official repository](https://github.com/z-lab/dflash) lists DFlash 2 and backend-specific support; the old project page still describes vLLM integration as in progress. Check the commit, target/draft checkpoints, and backend before running, rather than copying an old installation command.
+Versions also affect usability. The [current official repository](https://github.com/z-lab/dflash) lists DFlash 2 and backend-specific support. The old project page still describes vLLM integration as in progress, but as of 2026-10 both [vLLM v0.31.0](https://github.com/vllm-project/vllm/blob/v0.31.0/vllm/config/speculative.py) ( `method: dflash` in the speculative config) and [SGLang v0.5.21](https://github.com/sgl-project/sglang/blob/v0.5.21/python/sglang/srt/speculative/spec_info.py) ( `--speculative-algorithm DFLASH`) ship DFlash in their main code. Check the commit, target/draft checkpoints, and backend before running, rather than copying an old installation command.
 
 ## What evidence should precede deployment?
 

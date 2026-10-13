@@ -190,7 +190,7 @@ Block 更长不一定更好：后段可能更容易被拒绝，验证与缓存�
 | DFlash 2 | 并行草拟，加局部混合和路径选择 | 局部模块与选择开销 |
 | D-Loop | 草拟后复用主干修正后缀 | 第二次 draft 前向 |
 
-版本也影响可运行性。[当前官方仓库](https://github.com/z-lab/dflash)已列 DFlash 2 与不同 backend 的支持范围；旧项目页还写着 vLLM 集成进行中。运行前核对具体 commit、target/draft 权重和 backend，不直接复制某个旧网页的安装命令。
+版本也影响可运行性。[当前官方仓库](https://github.com/z-lab/dflash)已列 DFlash 2 与不同 backend 的支持范围；旧项目页还写着 vLLM 集成进行中，但到 2026-10，[vLLM v0.31.0](https://github.com/vllm-project/vllm/blob/v0.31.0/vllm/config/speculative.py)（speculative config 里写 `method: dflash`）和 [SGLang v0.5.21](https://github.com/sgl-project/sglang/blob/v0.5.21/python/sglang/srt/speculative/spec_info.py)（`--speculative-algorithm DFLASH`）都已在主线内置 DFlash。运行前核对具体 commit、target/draft 权重和 backend，不直接复制某个旧网页的安装命令。
 
 ## 真正部署前，要交出什么证据？
 

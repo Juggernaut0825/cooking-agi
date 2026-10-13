@@ -2,7 +2,7 @@
 
 [中文](inference-frameworks.md) · **English**
 
-> Checked 2026-10-11 against public vLLM V1 and SGLang materials. Numbers below are teaching examples, not framework benchmark results.
+> Checked 2026-10-12 against vLLM v0.31.0 (2026-10-05) and SGLang v0.5.21 (2026-10-02) documentation; source links are pinned to main-branch commits from 2026-10-10. Numbers below are teaching examples, not framework benchmark results.
 
 If `generate()` can answer a question, why add an engine? A service has many users: short and long requests arrive together, clients disconnect, and several questions may share the same document. An engine organizes that work rather than giving each request exclusive use of the GPU from scratch.
 
@@ -19,9 +19,9 @@ Start with [prefill, decode, and KV caching](../00-foundations/deep-dives/kv-cac
 <figcaption>These are responsibilities, not a required process layout. The engine is not the entire production security boundary.</figcaption>
 </figure>
 
-[vLLM V1 architecture](https://docs.vllm.ai/en/v0.21.0/design/arch_overview/) separates input/output handling in API servers, scheduling and cache management in engine cores, and model execution in GPU workers. Process counts depend on deployment. SGLang has its own request, scheduling, and execution paths; vLLM class names are not universal terminology.
+[vLLM V1 architecture](https://docs.vllm.ai/en/v0.31.0/design/arch_overview/) separates input/output handling in API servers, scheduling and cache management in engine cores, and model execution in GPU workers; data-parallel deployments add a DP coordinator. Process counts depend on deployment. SGLang has its own request, scheduling, and execution paths; vLLM class names are not universal terminology.
 
-More concretely, the [pinned SGLang Engine](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/entrypoints/engine.py#L237) separates tokenization, scheduling, and detokenization:
+More concretely, the [pinned SGLang Engine](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/entrypoints/engine.py#L238) separates tokenization, scheduling, and detokenization:
 
 ```text
 request → TokenizerManager → Scheduler → model execution
@@ -33,7 +33,7 @@ TokenizerManager handles inputs and request results; Scheduler selects batches; 
 
 ## Trace both implementations side by side {#engine-map}
 
-Follow vLLM down the left column, then SGLang down the right. Arrows label what crosses an interface; they do not mean copying the whole model or KV cache at every step. This diagram covers ordinary autoregressive text generation. Multimodal input, speculation, and asynchronous execution add branches.
+Follow vLLM down the left column, then SGLang down the right. Arrows label what crosses an interface; they do not mean copying the whole model or KV cache at every step. This diagram covers ordinary autoregressive text generation; multimodal input and speculation add branches. It is drawn one step at a time, but with compatible configurations both engines default to letting the CPU schedule the next step while the GPU runs the current one (vLLM calls this async scheduling, SGLang the overlap scheduler).
 
 <figure class="engine-map" lang="en">
 <div class="engine-map__lanes">
@@ -53,7 +53,7 @@ Follow vLLM down the left column, then SGLang down the right. Arrows label what 
 <figcaption>Unfinished requests continue into the next iteration. These are responsibility maps, not matching process diagrams. SGLang's ModelRunner belongs to the scheduler's execution path; a box does not imply a separate process.</figcaption>
 </figure>
 
-For vLLM process boundaries, see the [architecture documentation](https://docs.vllm.ai/en/v0.21.0/design/arch_overview/), then follow [EngineCore](https://github.com/vllm-project/vllm/blob/v0.21.0/vllm/v1/engine/core.py). It passes `SchedulerOutput` to the executor; [GPUModelRunner](https://github.com/vllm-project/vllm/blob/v0.21.0/vllm/v1/worker/gpu_model_runner.py) combines it with local request state to prepare tokens, positions, and attention metadata. The scheduler does not assemble all model-input tensors beforehand. The SGLang path is checked against a fixed commit: [Scheduler.run_batch](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/managers/scheduler.py#L4405), the [worker's batch conversion and forward call](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/managers/tp_worker.py#L598), and [ModelRunner](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/model_executor/model_runner.py). These are reading coordinates, not names to memorize.
+For vLLM process boundaries, see the [architecture documentation](https://docs.vllm.ai/en/v0.31.0/design/arch_overview/), then follow [EngineCore](https://github.com/vllm-project/vllm/blob/10cc2f6ae2c9ba7cc5841ece95e27d0562aef1bf/vllm/v1/engine/core.py). It passes `SchedulerOutput` to the executor; the worker's model runner combines it with local request state to prepare tokens, positions, and attention metadata. The scheduler does not assemble all model-input tensors beforehand. The pinned commit prefers [Model Runner V2](https://github.com/vllm-project/vllm/blob/10cc2f6ae2c9ba7cc5841ece95e27d0562aef1bf/vllm/v1/worker/gpu/model_runner.py) for compatible configurations; unsupported features, missing Triton, some ROCm model defaults, or explicit settings can instead select the older [GPUModelRunner](https://github.com/vllm-project/vllm/blob/10cc2f6ae2c9ba7cc5841ece95e27d0562aef1bf/vllm/v1/worker/gpu_model_runner.py). The SGLang path is checked against a fixed commit: [Scheduler.run_batch](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/managers/scheduler.py#L4405), the [worker's batch conversion and forward call](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/managers/tp_worker.py#L598), and [ModelRunner](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/model_executor/model_runner.py). These are reading coordinates, not names to memorize.
 
 Suppose request R has six prompt tokens and the first four belong to reusable complete cache blocks. A hit does not finish the request: the scheduler must validate reuse, allocate writable space for two remaining tokens, and find iteration budget. After computation, sampling produces the first new token X. **X's KV does not exist merely because X was sampled.** Feeding X into the next iteration creates its KV and predicts the next token. For a fully cached prompt, obtaining next-token logits still depends on the implementation, such as recomputing the last position. A cache is not a stored answer.
 
@@ -102,24 +102,26 @@ Eight rounds versus five is a scheduling result under these assumptions, not a m
 
 ## Two ways to organize prefix reuse {#prefix}
 
-Both engines support prefix reuse. “vLLM manages memory; SGLang does caching” is not a useful distinction.
+Both engines support prefix reuse, and both turn it on by default (vLLM's `--enable-prefix-caching`, SGLang's radix cache). “vLLM manages memory; SGLang does caching” is not a useful distinction. What still differs is the index structure, the default granularity, and the eviction policy.
 
-| Question | vLLM V1 | SGLang RadixCache path |
+| Question | vLLM V1 | SGLang radix tree (default `UnifiedRadixCache`) |
 | --- | --- | --- |
-| How is reusable state organized? | Prefix-dependent block hashes and a block pool | A tree of shared token paths |
-| What is the reuse boundary? | Full KV blocks in the referenced version | Depends on page size; not always single tokens |
-| How is state managed? | References, free blocks, eviction, allocation | Locking, references, node splitting, eviction |
+| How is reusable state organized? | Prefix-dependent block hashes and a block pool, looked up by hash | A tree of shared token paths; v0.5.21 prefers a Rust tree core, with Python fallbacks for incompatible platforms or features |
+| What is the reuse boundary? | Base default: 16-token blocks; the model, attention backend, and configuration can change the size. Only full blocks are reused | Page size 1 by default, so a match can stop at any token; some backends or models raise the page to 64, 128, and so on, and matches then align down to whole pages |
+| How is state managed? | Reference counts, an LRU free queue for eviction, reallocation | Locking, references, node splitting; LRU by default, with LFU, SLRU, priority, and T-LRU as options |
 | What cannot be inferred? | Blocks do not prove better service performance | Trees do not prove better performance for every workload |
+
+Defaults are not universal guarantees. Check vLLM's [runner and async-scheduling conditions](https://github.com/vllm-project/vllm/blob/10cc2f6ae2c9ba7cc5841ece95e27d0562aef1bf/vllm/config/vllm.py#L709), its [cache configuration](https://github.com/vllm-project/vllm/blob/10cc2f6ae2c9ba7cc5841ece95e27d0562aef1bf/vllm/config/cache.py#L67), and SGLang's [tree-core fallback conditions](https://github.com/sgl-project/sglang/blob/v0.5.21/python/sglang/srt/mem_cache/unified_cache/tree_core_registry.py#L44). Confirm the resolved configuration in startup logs before benchmarking.
 
 See the pinned implementations and page-alignment example in [cache lifecycle](../00-foundations/deep-dives/attention-kernels.en.md#cache-lifecycle). The [original SGLang paper](https://arxiv.org/abs/2312.07104) explains RadixAttention's context, not the complete feature boundary of today's products.
 
 Suppose two requests share a 2,000-token document and each appends a 100-token question. The second may avoid recomputing shared prefill. Its new answer still attends to prefix KV. Reuse saves computation; it does not remove history. Weights, adapters, token IDs, positions, and multimodal inputs must be compatible too. Visually identical text is not sufficient.
 
-Multi-tenant reuse also needs isolation. Cache-dependent timing can reveal whether content was present; caching is not authorization. [vLLM cache salting](https://docs.vllm.ai/en/v0.21.0/design/prefix_caching/) provides one reuse-isolation mechanism. The service must still assign trusted groups rather than letting clients claim another tenant's group.
+Multi-tenant reuse also needs isolation. Cache-dependent timing can reveal whether content was present; caching is not authorization. [vLLM cache salting](https://docs.vllm.ai/en/v0.31.0/design/prefix_caching/) provides one reuse-isolation mechanism, and SGLang's OpenAI-compatible API also accepts `cache_salt`. The service must still assign trusted groups rather than letting clients claim another tenant's group.
 
 ## HiCache moves beyond GPU memory {#hicache}
 
-[SGLang HiCache](https://docs.sglang.io/docs/advanced_features/hicache_design) extends KV storage across GPU memory, host memory, and storage backends. GPU and host tiers belong to inference instances; cross-instance reuse depends on the storage backend and namespace configuration. Two machines' RAM is not automatically one shared cache.
+[SGLang HiCache](https://docs.sglang.io/docs/advanced_features/hicache_design) extends KV storage across GPU memory, host memory, and storage backends. GPU and host tiers belong to inference instances; cross-instance reuse depends on the storage backend and namespace configuration. Two machines' RAM is not automatically one shared cache. vLLM now offers the same kind of tiering: the [OffloadingConnector](https://docs.vllm.ai/en/v0.31.0/features/kv_offloading_usage/) copies finished full blocks into CPU memory and can add secondary tiers such as files or object storage, or you can plug in LMCache or Mooncake Store instead. Neither engine turns this on by default.
 
 Consider hypothetical serial costs: recomputing a prefix takes 80 ms; restoring its KV takes 30 ms plus 5 ms for lookup and scheduling. Reuse could save about 45 ms. If transfer takes 100 ms instead, this reuse can lose. Real overlap needs a trace; this arithmetic only explains the decision.
 
@@ -135,7 +137,9 @@ Measure reused tokens, transferred bytes, restore time, and miss overhead alongs
 | Invalid JSON | Whether output constraints are enabled | Constrained decoding and validation | Valid syntax still permits false content |
 | Speculative decoding is slower | Draft cost, acceptance, verification batch | Change or disable the draft method | Extra state and verification work |
 
-Both engines evolve in model support, quantization, structured output, parallelism, and speculative decoding. Compare a **versioned model/hardware/feature combination**, not slogans about which engine is for agents or concurrency. FSDP handles [training state](training-frameworks.en.md); it is not another generation engine in this comparison.
+As of 2026-10 (vLLM v0.31.0, SGLang v0.5.21), most mechanisms exist in both engines: paged KV management, prefix reuse on by default, continuous batching and chunked prefill, CPU scheduling overlapped with GPU execution, CUDA graphs, EAGLE / MTP / n-gram speculative decoding, structured output through xgrammar and others, TP / PP / DP + EP, prefill/decode disaggregation, and tiered KV storage. Shared features do not make the engines interchangeable: scheduling paths, cache structures, and feature compatibility still matter. The prefix index is a block-hash table in vLLM and a radix tree in SGLang, with base defaults of 16 versus 1 token; actual granularity depends on the backend and model. vLLM schedules decode tokens first and fills the rest of the same batch with prefill chunks, while SGLang by default runs a prefill batch whenever new prefill work is ready and mixes the two only with `--enable-mixed-chunk`. vLLM uses torch.compile by default and SGLang does not. SGLang builds prefill/decode roles and a router into the engine, while vLLM disaggregates through KV connectors that its docs still mark experimental.
+
+Compare a **versioned model/hardware/feature combination**, not slogans about which engine is for agents or concurrency. FSDP handles [training state](training-frameworks.en.md); it is not another generation engine in this comparison.
 
 ## Design a meaningful comparison {#benchmark}
 
