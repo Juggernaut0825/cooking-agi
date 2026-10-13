@@ -34,11 +34,18 @@
   var note = tools.dataset.readingNote;
   var lang = document.documentElement.lang.startsWith("zh") ? "zh" : "en";
   var storageKey = "cooking-agi:positions:v1";
+  var library = window.PreparationProgress?.library;
+  var identifier = tools.dataset.progressId;
+  var identifiers = library && identifier ? Object.fromEntries(Array.from(document.querySelectorAll('a[data-note][data-progress-id]')).map(function (link) { return [link.dataset.note, link.dataset.progressId]; })) : {};
+  if (identifier) identifiers[note] = identifier;
   var timer = null;
   var moved = false;
   var lastAnchor = null;
 
   function load() {
+    if (library && identifier) {
+      try { return cleanPositions(library.positions(identifiers)); } catch (error) { return []; }
+    }
     try { return cleanPositions(JSON.parse(localStorage.getItem(storageKey) || "[]")); }
     catch (error) { return []; }
   }
@@ -65,7 +72,8 @@
     var heading = passed[passed.length - 1];
     if (!heading || heading.id === lastAnchor) return;
     try {
-      localStorage.setItem(storageKey, JSON.stringify(rememberPosition(load(), {note: note, lang: lang, anchor: heading.id})));
+      if (library && identifier) library.remember(identifier, lang, heading.id);
+      else localStorage.setItem(storageKey, JSON.stringify(rememberPosition(load(), {note: note, lang: lang, anchor: heading.id})));
       lastAnchor = heading.id;
     } catch (error) {}
   }
@@ -86,7 +94,7 @@
     showResume();
   });
   window.addEventListener("storage", function (event) {
-    if (event.key === storageKey || event.key === null) {
+    if (event.key === storageKey || event.key === window.PreparationProgress?.storageKey || event.key === null) {
       clearTimeout(timer);
       moved = false;
       lastAnchor = null;

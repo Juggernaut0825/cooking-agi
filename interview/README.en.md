@@ -1,49 +1,42 @@
-# Interview preparation
+# Interview preparation {#interview-prep}
 
 <span id="code-exercises-turn-understanding-into-practice"></span>
 
 [中文](README.md) · **English**
 
-Unsure what to prioritize? Start with the [interview route](../learn/choose-your-path.en.md#interviews). For preparation methods and interview reflections, see the [career notes](../career/README.en.md).
-
-Recognizing a concept, explaining it, and implementing it are different skills. This section separates preparation into three routes: ML / LLM fundamentals, ML coding, and Python with algorithm patterns. Pick the skill you need rather than treating everything as a checklist.
-
-The material uses public knowledge and original exercises, not confidential company questions. It is also useful for checking your understanding outside interview season.
-
-## Choose what to practice {#prep-routes}
-
-<nav class="study-route prep-route" aria-label="Interview preparation routes">
-<a href="basics/README.en.md"><small>01 / EXPLAIN</small><strong>ML / LLM fundamentals</strong><span>Probability, optimization, mechanisms, and tradeoffs</span></a>
-<a href="../learn/ml-exercises/README.en.md"><small>02 / IMPLEMENT</small><strong>ML coding</strong><span>PyTorch, training loops, attention, and losses</span></a>
-<a href="leetcode.en.md"><small>03 / SOLVE</small><strong>Python & LeetCode</strong><span>Containers, complexity, and reusable patterns</span></a>
+<div class="prep-hub" data-prep-hub>
+<p class="prep-intro">Brush up on what you know, or build a foundation over time. Start with the kind of preparation you need—not the whole library.</p>
+<section class="prep-dashboard-entry" id="schedule"><div><span id="progress"></span><strong>Make the plan fit your time.</strong><p>Your schedule, check-ins, and note progress now have their own dashboard. Your existing records are still there.</p></div><a class="prep-action" href="dashboard.en.md">Open my dashboard →</a></section>
+<nav class="prep-modes" data-prep-modes aria-label="Preparation mode">
+<a id="prep-tab-review" href="#review" data-prep-tab="review"><strong>Quick review</strong><span>Speedrun · Focus on the gaps</span></a>
+<a id="prep-tab-plan" href="#plan" data-prep-tab="plan"><strong>Study at your pace</strong><span>A sequence of small, practical sessions</span></a>
 </nav>
-
-| Where you get stuck | Start here | What to check |
-| --- | --- | --- |
-| Familiar terms, difficult follow-up questions | [Fundamentals review](basics/README.en.md): explain one concept with a small example | Assumptions, and whether the conclusion survives a changed condition |
-| Correct formula, wrong tensor shapes | [ML coding](../learn/ml-exercises/README.en.md): start with a small implementation | Outputs, gradients, masks, and numerical stability |
-| Solutions make sense, but finding one is hard | [Algorithm patterns](leetcode.en.md): practice methods rather than memorizing answers | Why a method applies, and its time and space costs |
-
-## ML questions & implementations
-
-Practice these together, but distinguish the gaps. Explaining why attention scales a dot product belongs in [fundamentals review](basics/README.en.md). Implementing its causal mask and checking the softmax dimension belongs in [ML coding](../learn/ml-exercises/README.en.md). Return to [Foundations](../learn/README.en.md) for an unfamiliar step.
-
-## Python & algorithms
-
-If syntax slows you down, start with [Useful Python](python.en.md) and run the examples. For algorithms, work from complexity, hash maps, pointers, binary search, and DFS / BFS toward backtracking and DP. The emphasis is on transferable Easy / Medium methods, not completing a list of Hard problems.
-
-If a copy changes the original, or a function reuses data from an earlier call, try [names, copies, and function calls](python-objects.en.md). Following which objects are shared is more useful than memorizing a separate gotcha for every symptom.
-
-For [DFS / BFS](algorithms/traversal.en.md), trace a small graph with both a stack and a queue. Check when visited nodes are marked and which traversal guarantees shortest paths in an unweighted graph instead of just memorizing the templates.
-
-## System design
-
-System design lives in [Engineering practice](../practice/README.en.md), alongside project walkthroughs. For interview preparation, go directly to the [feed, RAG, and memory exercises](../learn/system-design/README.en.md): clarify requirements, compare alternatives, and explain failure handling. A diagram or a list of frameworks alone is not a design.
-
-## How to review
-
-1. Explain or implement it yourself, then read the relevant passage when you get stuck.
-2. Check a small input. Write down assumptions, edge cases, and complexity.
-3. Change one condition. Does the method still work with padding, or with data that no longer fits in memory?
-
-For a first encounter with a topic, the sequential explanations in [Foundations](../learn/README.en.md) are often easier than a question list. Personal experiences, mindset, and preparation habits remain in [Career](../career/README.en.md).
+<section id="review" class="prep-panel" data-prep-panel aria-labelledby="review-title">
+<div class="prep-panel-heading"><div><p class="prep-eyebrow">Quick review</p><h2 id="review-title">Start with what you know.</h2></div><p>Choose by familiarity with the topic, not years of experience. A new field can be new to anyone.</p></div>
+<div class="prep-starts">
+<section class="prep-start"><span class="prep-route-mark" aria-hidden="true">01</span><h3>I've learned this before</h3><p>Try explaining or implementing it first. Follow the notes where you get stuck, and skip what you can already do.</p><a class="prep-action" href="speedrun.en.md#two-hours">Start reviewing →</a><nav class="prep-budgets" aria-label="Choose review scope"><a href="speedrun.en.md#two-hours">2 hours</a><a href="speedrun.en.md#six-hours">6 hours</a><a href="speedrun.en.md#twelve-hours">12 hours</a></nav></section>
+<section class="prep-start"><span class="prep-route-mark" aria-hidden="true">02</span><h3>I need the basics explained</h3><p>Start with a little Python and one prediction. Then work through what a loss, gradient, and training update do.</p><a class="prep-action" href="speedrun-start.en.md#first-two">Start with an example →</a><p class="prep-detail">Skip Python you already know. You don't need to begin by writing a Transformer.</p></section>
+</div>
+<p class="prep-time-note">2 / 6 / 12 hours means focused learning time, spread across as many sessions as you need. Half an hour is a fine place to start—not a test of how fast you should learn.</p>
+</section>
+<section id="plan" class="prep-panel" data-prep-panel aria-labelledby="plan-title">
+<span id="how-to-review"></span>
+<div class="prep-panel-heading"><div><p class="prep-eyebrow">Study at your pace</p><h2 id="plan-title">Make the next step smaller.</h2></div><p>Follow the prerequisites, one exercise at a time. Come back to the part you haven't worked out yet.</p></div>
+<ol class="prep-sequence"><li><span>01</span><strong>Find a starting point</strong><p>Try a small example. Is the gap in syntax, the idea, or the implementation?</p></li><li><span>02</span><strong>Build the foundation</strong><p>Connect inputs, predictions, losses, and updates.</p></li><li><span>03</span><strong>Practice for your role</strong><p>Choose algorithms, ML coding, or system design as needed.</p></li><li><span>04</span><strong>Explain and revise</strong><p>Test your code and talk through the decisions in a project.</p></li></ol>
+<div class="prep-plan-links"><a class="prep-action" href="study-plan.en.md#build">Build from the basics →</a><a class="prep-action prep-action--quiet" href="study-plan.en.md#refresh">Find gaps in what I know →</a></div>
+<p class="prep-time-note">Set aside half an hour or an hour when it fits, or split a session further. Each step gives you a reading, an exercise, and somewhere to return when stuck. No daily schedule required.</p>
+</section>
+<div class="prep-directory">
+<div class="prep-directory-heading"><h2 id="prep-routes">Here for one thing?</h2><a href="ai-roles-prep.en.md">Find priorities for your role ↗</a></div>
+<nav class="prep-library" aria-label="Practice and resources">
+<a id="ml-questions-implementations" href="basics/README.en.md"><small>01 / CONCEPTS</small><strong>ML / LLM fundamentals</strong><span>Explain mechanisms, assumptions, and tradeoffs</span></a>
+<a href="../learn/ml-exercises/README.en.md"><small>02 / IMPLEMENTATION</small><strong>ML coding</strong><span>Tensors, training loops, attention, and tests</span></a>
+<a id="python-algorithms" href="leetcode.en.md"><small>03 / ALGORITHMS</small><strong>Python & LeetCode</strong><span>Language basics, complexity, and reusable patterns</span></a>
+<a href="code-comprehension.en.md"><small>04 / DEBUGGING</small><strong>Code comprehension</strong><span>Read an implementation, find a problem, verify a fix</span></a>
+<a id="system-design" href="../learn/system-design/README.en.md"><small>05 / DESIGN</small><strong>System design</strong><span>Clarify requirements, compare options, handle failure</span></a>
+<a href="../career/prepare.en.md"><small>06 / PROJECTS</small><strong>Projects & experience</strong><span>Your contribution, the evidence, and what didn't work</span></a>
+</nav>
+<p class="prep-footnote">These are public concepts and original exercises, not confidential company questions—or a checklist everyone has to finish.</p>
+<nav class="prep-other" aria-label="Other reading routes"><a href="../learn/README.en.md">Full library</a><a href="../learn/choose-your-path.en.md#interviews">All learning routes</a><a href="../practice/README.en.md">Engineering practice</a><a href="../career/README.en.md">Career reflections</a></nav>
+</div>
+</div>

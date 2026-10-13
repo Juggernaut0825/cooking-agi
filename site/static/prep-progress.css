@@ -1,0 +1,38 @@
+.prep-note, .prep-progress { border: 1px solid var(--rule); border-radius: 9px; background: var(--panel); }
+.prep-note[hidden], .prep-note [hidden], .prep-progress[hidden], .prep-progress [hidden] { display: none; }
+.prose details.prep-note { margin: 1rem 0 0; font-size: .82rem; max-width: 42rem; }
+.prep-note label { display: block; margin-top: .9rem; }
+.prep-note :is(select, textarea) { display: block; width: 100%; margin-top: .4rem; padding: .55rem; color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 5px; font: inherit; }
+.prep-note textarea { resize: vertical; min-height: 5rem; }
+.prep-note-actions { display: flex; flex-wrap: wrap; gap: .5rem 1.2rem; }
+.prep-note-actions a { display: inline-flex; align-items: center; min-height: 44px; }
+.prep-update-banner { border-left: 3px solid var(--ember); background: var(--ember-bg); border-radius: 7px; padding: 1rem; margin-top: 1rem; font-size: .82rem; }
+.prep-update-banner[hidden] { display: none; }
+.prep-update-banner button, .prep-recovery-panel button { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: 5px; min-height: 44px; padding: .5rem .8rem; cursor: pointer; }
+.prep-update-banner p { font-size: .8rem; }
+.prep-recovery-panel { margin-top: 1.4rem; border-top: 1px solid var(--rule); padding-top: 1rem; }
+.prep-recovery-panel h3 { font-size: .9rem; }
+.prep-recovery-panel li { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; font-size: .76rem; }
+.prose .prep-note p { font-size: .77rem; line-height: 1.75; margin: .8rem 0; }
+.prep-progress { margin: 0 0 1.5rem; padding: .9rem 1rem; }
+.prep-progress-heading { display: flex; flex-wrap: wrap; gap: .6rem 1.4rem; align-items: baseline; }
+.prep-progress-heading strong { font-size: .88rem; }
+.prep-progress-heading a { font-size: .8rem; overflow-wrap: anywhere; }
+.prose .prep-progress details { background: none; border: 0; border-radius: 0; margin: .3rem 0 0; }
+.prose .prep-progress details > summary { padding: .6rem 0; color: var(--muted); font-size: .8rem; }
+.prose .prep-progress details > :not(summary) { margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
+.prose .prep-progress p { font-size: .81rem; line-height: 1.8; margin: .75rem 0; overflow-wrap: anywhere; }
+.prep-progress .prep-storage-hint { color: var(--muted); }
+.prep-backup-actions { display: flex; flex-wrap: wrap; gap: .65rem; margin: .85rem 0; }
+.prep-progress button, .prep-note button { min-height: 44px; padding: .55rem .85rem; border: 1px solid var(--rule); border-radius: 6px; font: 500 .8rem/1.5 var(--body); background: var(--paper); color: var(--ink); cursor: pointer; }
+.prep-progress button:hover { background: var(--ember-bg); }
+.prose .prep-progress details > button { padding: .55rem .85rem; }
+.prose .prep-progress .prep-drop { padding: .8rem 1rem; border: 1px dashed var(--muted); border-radius: 6px; color: var(--muted); }
+.prep-drop.is-dragging { background: var(--ember-bg); border-style: solid; }
+.prep-progress label { display: flex; align-items: start; flex-direction: column; gap: .6rem; font-size: .82rem; }
+.prep-progress select { max-width: 100%; padding: .5rem; min-height: 44px; font: inherit; background: var(--paper); color: var(--ink); border: 1px solid var(--rule); border-radius: 5px; }
+.prose .prep-progress ul { padding: 0; list-style: none; margin: .6rem 0 1rem; }
+.prose .prep-progress li { padding: .8rem 0; border-bottom: 1px solid var(--rule); font-size: .86rem; }
+.prep-progress li small { margin-left: .8rem; color: var(--muted); }
+.prose .prep-progress li p { color: var(--ink-soft); white-space: pre-wrap; max-height: 9rem; overflow-y: auto; }
+.prep-import-preview { border-top: 1px solid var(--rule); margin-top: 1rem; }

@@ -59,9 +59,13 @@ Review with three questions: without the derivation, can readers explain the pro
 
 Split long topics by question, not word count. Guides explain the reading order; lessons develop the subject. Reuse examples and terminology across adjacent notes instead of introducing the whole system again. Career reflections and section landing pages do not need to follow a technical-lesson template.
 
+Section introductions should explain what is here and where to start. Name interface actions directly, such as “Schedule” or “Notes and backups,” rather than using slogans. Keep usage instructions, contribution procedures, and release plans in their own places; do not repeat pacing reassurances at every entry point. Remove redundant guidance, not technical assumptions or reasoning. Chinese sentences and headings need not follow the length or phrasing of their English counterparts.
+
 ## Keep practice close to the explanation
 
 Where practice helps, place it beside the relevant explanation: calculate a small example, change a line of code, or test whether a conclusion survives a different assumption. Not every note needs exercises, and pages do not get an automatic deck of cards, mastery scores, or check-in controls.
+
+Short routes use **focused learning hours**, not calendar-day countdowns. A 2 / 6 / 12-hour budget guides the scope; readers can spread it across sessions or choose only one item. It is not a promise of interview readiness. A starter route adds prerequisite explanations; a review route lets readers skip familiar material. Choose by current knowledge, not years of employment or a proficiency ranking. Give each session a concrete exercise and a place to resume, without daily streaks, catch-up debt, or falling-behind warnings.
 
 Explain the assumptions and reasoning in a worked answer. For open questions, offer decision criteria rather than a single supposedly correct answer. Point out a specific misconception instead of saying “watch the details.”
 

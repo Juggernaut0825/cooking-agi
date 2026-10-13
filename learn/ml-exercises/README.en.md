@@ -6,6 +6,8 @@
 
 There are two routes here: use PyTorch to connect data, gradients, and a training loop, or implement attention, losses, and sampling as small functions. Run them, then inspect each step rather than relying on whiteboard recall alone.
 
+For role-specific practice, see the [RE / MLE guide](../../interview/ai-roles-prep.en.md#implement). For small CPU-only functions, start with [kNN, broadcasting, and task dependencies](../../interview/coding-checks.en.md).
+
 ## Pick the skill you want to practice
 
 | Practice | Entry | What to check |

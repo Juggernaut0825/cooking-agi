@@ -17,6 +17,7 @@ Are both languages updated? If not, what is the follow-up? Who helped write or r
 
 - [ ] 我已亲自检查内容，未包含内部资料、凭据或个人隐私。 / I checked the work and excluded internal material, credentials, and personal data.
 - [ ] 引用与素材有来源，结论区分已验证、假设和计划。 / Sources and assets are credited; verified claims, hypotheses, and plans are distinct.
+- [ ] 我有权按仓库对应许可提交原创内容，第三方材料已单独标明。 / I can contribute original work under the repository's applicable licenses; third-party exceptions are identified.
 - [ ] 已说明实际运行的检查与未验证部分。 / I listed actual checks and limitations.
 
 AI 辅助（如有）：用在哪里、自己验证了什么？ / AI assistance, if any: where and how was it verified?

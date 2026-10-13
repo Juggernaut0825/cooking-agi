@@ -18,6 +18,7 @@
 /career/ @tianyi-zhang-02 @2pir2
 /papers/ @tianyi-zhang-02 @2pir2
 /templates/ @tianyi-zhang-02 @2pir2
+/learn/history/ @tianyi-zhang-02 @2pir2
 /00-foundations/core/ @tianyi-zhang-02 @2pir2
 /learn/input-and-sequences/ @tianyi-zhang-02 @2pir2
 /00-foundations/code/ @tianyi-zhang-02 @2pir2
@@ -49,6 +50,10 @@
 /05-post-training/deep-rl/basics/ @tianyi-zhang-02 @2pir2
 /05-post-training/deep-rl/algorithms/ @tianyi-zhang-02 @2pir2
 /05-post-training/deep-rl/extensions/ @tianyi-zhang-02 @2pir2
+/learn/technology-timeline.md @tianyi-zhang-02 @2pir2
+/learn/technology-timeline.en.md @tianyi-zhang-02 @2pir2
+/learn/rl-timeline.md @tianyi-zhang-02 @2pir2
+/learn/rl-timeline.en.md @tianyi-zhang-02 @2pir2
 /00-foundations/from-linear-to-neural.md @tianyi-zhang-02 @2pir2
 /00-foundations/from-linear-to-neural.en.md @tianyi-zhang-02 @2pir2
 /00-foundations/core/tokenization.md @tianyi-zhang-02 @2pir2
@@ -133,6 +138,8 @@
 /05-post-training/same-base-different-posttraining.en.md @tianyi-zhang-02 @2pir2
 /05-post-training/alignment-tax.md @tianyi-zhang-02 @2pir2
 /05-post-training/alignment-tax.en.md @tianyi-zhang-02 @2pir2
+/05-post-training/deep-rl/methods-map.md @tianyi-zhang-02 @2pir2
+/05-post-training/deep-rl/methods-map.en.md @tianyi-zhang-02 @2pir2
 /00-foundations/interview-basics.md @tianyi-zhang-02 @2pir2
 /00-foundations/interview-basics.en.md @tianyi-zhang-02 @2pir2
 /00-foundations/ml-math-interview.md @tianyi-zhang-02 @2pir2
@@ -179,6 +186,8 @@
 /05-post-training/deep-rl/experiments.en.md @tianyi-zhang-02 @2pir2
 /05-post-training/deep-rl/llm-bridge.md @tianyi-zhang-02 @2pir2
 /05-post-training/deep-rl/llm-bridge.en.md @tianyi-zhang-02 @2pir2
+/05-post-training/deep-rl/why-rl-is-hard.md @tianyi-zhang-02 @2pir2
+/05-post-training/deep-rl/why-rl-is-hard.en.md @tianyi-zhang-02 @2pir2
 /.github/ @tianyi-zhang-02
 /site/ @tianyi-zhang-02
 /community/ @tianyi-zhang-02

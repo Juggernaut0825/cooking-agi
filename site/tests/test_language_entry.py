@@ -61,7 +61,7 @@ class LanguageEntryTests(unittest.TestCase):
                                      'class': 'lang-' + language}), elements)
             switches = [attrs for tag, attrs in elements if tag == 'a' and attrs.get('class') == 'lang-btn']
             self.assertEqual([attrs['href'] for attrs in switches], [target])
-            self.assertIn('ML and LLM notes' if language == 'en' else '学 AI 时', output)
+            self.assertIn('ML and LLM notes' if language == 'en' else '这里整理了中英文的', output)
             self.assertIn('class="hero"', output)
             self.assertNotIn('{{', output)
 
@@ -142,7 +142,7 @@ class LanguageEntryTests(unittest.TestCase):
         for language, filename in [('en', 'README.md'), ('zh', 'README.zh.md')]:
             text = (build.ROOT / filename).read_text()
             route_section = re.split(r'(?m)^## ', text)[1]
-            self.assertEqual(len(re.findall(r'(?m)^- \*\*\[', route_section)), 4)
+            self.assertEqual(len(re.findall(r'(?m)^- \*\*\[', route_section)), 5)
             local = {target.split('#')[0] for target in re.findall(r'\]\(([^)]+)\)', text)
                      if not target.startswith(('https:', 'http:'))}
             for target in local:
@@ -151,7 +151,7 @@ class LanguageEntryTests(unittest.TestCase):
                                 if target not in {'README.md', 'README.zh.md'}}
             self.assertTrue({'learn/README.md', 'interview/README.md',
                              'practice/README.md', 'career/README.md',
-                             'learn/coverage.md'} <= routes[language])
+                             'learn/coverage.md', 'learn/technology-timeline.md'} <= routes[language])
         self.assertEqual(routes['en'], routes['zh'])
 
     def test_readme_site_links_resolve_to_each_language(self):
@@ -185,6 +185,15 @@ class LanguageEntryTests(unittest.TestCase):
         anchors = {attrs['id'] for tag, attrs in Elements(page.body).elements if 'id' in attrs}
         self.assertTrue({f'_{number}' for number in range(1, 6)} <= anchors)
         self.assertIn('start-here', anchors)
+
+    def test_new_home_details_do_not_shift_legacy_chinese_anchors(self):
+        page = self.home['zh']
+        build.build_page(page, [], self.nav['site']['repo'], self.known)
+        expected = [('_1', '从哪里开始'), ('_2', '内容地图'), ('_3', '加入我们！'),
+                    ('_4', '本地阅读与检查'), ('_5', '为什么整理这些')]
+        self.assertEqual([(heading['id'], heading['name']) for heading in page.toc], expected)
+        self.assertIn('id="how-to-use-the-notes"', page.body)
+        self.assertIn('id="whats-in-each-section"', page.body)
 
     def test_guide_is_hidden_without_javascript_and_is_not_a_modal(self):
         template = (build.SITE / 'template.html').read_text()

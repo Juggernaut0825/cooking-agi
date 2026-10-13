@@ -80,6 +80,24 @@ Two sequences of lengths 3 and 5 require 10 padded slots, with 8 real tokens: 80
 
 Resetting position IDs alone does not guarantee isolation in every attention backend. TRL packing depends on strategy and backend; verify the pinned combination. The code below **implements inspectable padding, not an efficient packing kernel**.
 
+## Once the environment runs, check the training path {#supervision-smoke-test}
+
+Installed dependencies and a loaded model are the start of debugging, not the end. Keep a few fixed samples and pass them through the actual training pipeline, rather than a separate temporary template or collator.
+
+| Check | What to inspect | What passing establishes |
+| --- | --- | --- |
+| One complete demonstration | Decode inputs and valid labels; inspect roles, evidence, answer, EOS | The template and supervised positions match expectations, not that the answer is correct |
+| One long and one short demonstration | Truncation, ignored added padding, retained genuine EOS | These examples survive length handling as intended |
+| One training step | Finite loss and gradients, nonzero target count, updated trainable parameters | This path produces an update, not evidence of generalization |
+| One batch split into microbatches | Same examples and order; disable dropout, compare accumulated gradients within a tolerance | Accumulation and normalization agree; actual multi-GPU behavior needs its own test |
+| Interrupt and resume | Next sample IDs, optimizer state, learning rate, RNG, data revision | More than weights were restored; not a cross-device bitwise guarantee |
+
+An early debugging check is to try overfitting a tiny fixed dataset. If even these demonstrations cannot be learned, inspect templates, masks, learning rate, frozen parameters, and data loading. Memorizing a few examples is a diagnostic signal, not evidence that the data recipe works.
+
+For RL, add an environment check: start from a fixed state, replay known actions or tool calls, and verify reset behavior and reward rules. Distinguish task failure from tool errors and timeouts. For stochastic environments, check reproducible conditions or statistical ranges rather than requiring identical text every time.
+
+The site's [teaching tests](../../site/tests/test_training_contracts.py) cover padding, normalization, and simplified checkpoint recovery; the gradient check uses optional CPU PyTorch. These do not validate your model's tokenization, distributed GPU execution, or RL environment. Run the remaining checks with your actual versions. [Data and environment choices](../../01-data-and-feedback/data-as-supervision.en.md#environment) explains why these details affect the learning signal.
+
 ## Run it, then break the inputs
 
 The [standard-library implementation](code/training_contracts.py) includes record validation and a teaching collator. From the repository root:

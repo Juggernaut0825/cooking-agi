@@ -106,7 +106,9 @@ def page_panel(page, config, repo, root=ROOT):
     area = area_for(config, page.section["group"])
     zh = page.lang == "zh"
     source = page.src.relative_to(root).as_posix()
-    if source.endswith(".en.md"):
+    if source in {"README.zh.md", "README.en.md"}:
+        source = "README.md"
+    elif source.endswith(".en.md"):
         source = source[:-6] + ".md"
     label = area["zh" if zh else "en"]
     reviewer_label = ("审核联系" if area["reviewers"] else "临时接审") if zh else (

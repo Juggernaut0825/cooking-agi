@@ -67,7 +67,7 @@ def can_jump(jumps):
 - [Jump Game](https://leetcode.com/problems/jump-game/)：只存可达前沿，解释为什么足够。
 - [Best Time to Buy and Sell Stock](https://leetcode.com/problems/best-time-to-buy-and-sell-stock/)：维护此前最小价格，算今天卖出的最好利润；不能先卖后买。
 
-这一轮先把常见扫描、查找、遍历、状态方法练熟。Trie、Union-Find、topological sort 以后可单独补，暂时不把它们挤进这一页，也不需要为了“覆盖完整”直接跳去 Hard。
+这一轮先把常见扫描、查找、遍历、状态方法练熟。[任务依赖练习](../coding-checks.md#dependencies)补了拓扑排序与并行执行的区别；Trie 和 Union-Find 可按需要另读，不必为了“覆盖完整”直接跳去 Hard。
 
 <details class="interview" markdown="1">
 <summary>为什么按起点排序适合合并，按终点排序适合最多活动数？</summary>

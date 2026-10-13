@@ -114,11 +114,13 @@ class CurriculumTests(unittest.TestCase):
                 self.assertEqual(markup.count('<details'), markup.count(' open>'))
 
     def test_worked_diagram_keeps_labels_clean_and_prose_annotated(self):
-        diagram = '<figure class="worked-update"><ol><li>梯度</li></ol></figure>'
-        rendered, used = build.annotate(diagram + '<p>梯度</p>', [('梯度', 'gradient', '变化方向')])
-        self.assertTrue(rendered.startswith(diagram))
-        self.assertEqual(rendered.count('class="term"'), 1)
-        self.assertEqual(len(used), 1)
+        for diagram_class in ('worked-update', 'engine-map'):
+            with self.subTest(diagram_class=diagram_class):
+                diagram = f'<figure class="{diagram_class}"><ol><li>梯度</li></ol></figure>'
+                rendered, used = build.annotate(diagram + '<p>梯度</p>', [('梯度', 'gradient', '变化方向')])
+                self.assertTrue(rendered.startswith(diagram))
+                self.assertEqual(rendered.count('class="term"'), 1)
+                self.assertEqual(len(used), 1)
 
     def test_moved_notes_return_to_their_new_overview(self):
         pairs = [('00-foundations/deep-dives/precision-and-memory.md', 'learn/pretraining/README.md'),

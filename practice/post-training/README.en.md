@@ -8,6 +8,8 @@ The assistant retrieves the right policy and gets the date right, but often omit
 
 We keep the knowledge-assistant setting but focus on training. Daily-changing rules are poor candidates for repeated memorization through fine-tuning. More stable behaviors—citing evidence and acknowledging conflicting documents—are better candidates for learning from demonstrations.
 
+If post-training feels like endless data cleaning and environment setup, start with [Why post-training keeps coming back to data](../../01-data-and-feedback/data-as-supervision.en.md). It connects those decisions to the behavior a model learns; this project then covers implementation.
+
 ## Start with an observable failure
 
 Give the model the current policy and explicitly request an answer with citations. Collect inputs where citations are missing and test clearer prompts or output constraints. If those work reliably across varied questions, stop there. If failures persist, prepare targeted demonstrations.

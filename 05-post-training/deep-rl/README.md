@@ -8,6 +8,8 @@
 
 每篇先用例子把问题讲清楚，再看公式和代码。第一次读可以跟着例子走，复习时再用表格对照算法、检查实现。算例都是自拟的小环境，不依赖课程作业，也不转载课件。
 
+算法名字容易混在一起，先看[Q-learning、PPO 与 DPO 的区别](methods-map.md)。想知道为什么现在仍难训，再看[信号、成本与稳定性](why-rl-is-hard.md)；想按来路梳理，可以打开[技术树里的 RL 编年史](../../learn/rl-timeline.md)。
+
 ## 怎么读，才不容易绕晕
 
 | 路线 | 读什么 | 读完应该能做什么 |
@@ -19,7 +21,7 @@
 | 数据与奖励从哪里来 | [Offline RL 与 OPE](offline-and-ope.md) · [探索与层级](exploration-and-hierarchy.md) · [模仿与奖励](imitation-and-rewards.md) | 说出各自增加的假设，而不只是记名字 |
 | 真正跑一个实验 | [实验与排错](experiments.md) → [接到 LLM](llm-bridge.md) | 检查实现，再判断 reward 是否代表任务进步 |
 
-这 16 篇不只介绍算法名字。我们会一起算 Bellman 残差界、TD target、梯度方向、PPO 裁剪和控制轨迹，再看 CQL、IQL 与 FQE 如何处理离线数据。层级、IRL 和多智能体目前只作引入，还不是完整的理论综述。
+这些章节不只介绍算法名字。我们会一起算 Bellman 残差界、TD target、梯度方向、PPO 裁剪和控制轨迹，再看 CQL、IQL 与 FQE 如何处理离线数据。层级、IRL 和多智能体目前只作引入，还不是完整的理论综述。
 
 ## 不同读法，不需要不同一套笔记
 

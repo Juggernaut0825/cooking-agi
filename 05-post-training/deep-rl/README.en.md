@@ -8,6 +8,8 @@ You can take 2 points now, or wait one step for a possible 4. Which should you c
 
 Each chapter starts with an example before introducing equations and code. On a first read, follow the examples; when reviewing, use the tables to compare algorithms and check implementations. The examples are original toy environments, not course assignments or reproduced slides.
 
+If the names blur together, start with [Q-learning, PPO, and DPO](methods-map.en.md). For current difficulties, read [signal, cost, and stability](why-rl-is-hard.en.md). For their origins, follow the technology tree into the [RL timeline](../../learn/rl-timeline.en.md).
+
 ## A route through the material
 
 | Route | Read | What you should be able to do |
@@ -19,7 +21,7 @@ Each chapter starts with an example before introducing equations and code. On a 
 | Understand data and rewards | [Offline RL and OPE](offline-and-ope.en.md) · [Exploration and hierarchy](exploration-and-hierarchy.en.md) · [Imitation and rewards](imitation-and-rewards.en.md) | State the added assumptions, not just the algorithm names |
 | Run a meaningful experiment | [Experiments and debugging](experiments.en.md) → [The LLM bridge](llm-bridge.en.md) | Check the implementation before interpreting reward as progress |
 
-These 16 lessons go beyond algorithm names. We work through Bellman residual bounds, TD targets, gradient directions, PPO clipping, and control trajectories, then examine how CQL, IQL, and FQE handle offline data. Hierarchy, IRL, and multi-agent learning are introductions for now, not comprehensive theoretical treatments.
+These lessons go beyond algorithm names. We work through Bellman residual bounds, TD targets, gradient directions, PPO clipping, and control trajectories, then examine how CQL, IQL, and FQE handle offline data. Hierarchy, IRL, and multi-agent learning are introductions for now, not comprehensive theoretical treatments.
 
 ## Different reading goals, not separate sets of notes
 

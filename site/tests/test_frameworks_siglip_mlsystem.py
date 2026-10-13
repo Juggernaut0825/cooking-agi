@@ -93,7 +93,7 @@ class FrameworksSiglipSystemTests(unittest.TestCase):
                         self.assertNotRegex(figure, r"[\u4e00-\u9fff]")
                     else:
                         self.assertRegex(figure, r"[\u4e00-\u9fff]")
-        self.assertEqual(count, 10)
+        self.assertEqual(count, 14)
 
     def test_siglip_normalizes_by_batch_not_pairs(self):
         calculate = self.siglip["siglip_loss"]

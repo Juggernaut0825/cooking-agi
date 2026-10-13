@@ -6,6 +6,8 @@
 
 这里有两条线：一条用 PyTorch 把数据、梯度和训练循环接起来；另一条把 attention、loss 和采样写成小函数。可以先跑通，再拆开核对，不必只靠白板记忆。
 
+想按面试方向选练习，看 [RE / MLE 准备路线](../../interview/ai-roles-prep.md#implement)。想先写不用 GPU 的小函数，可以从 [kNN、广播与任务依赖](../../interview/coding-checks.md)开始。
+
 ## 想练哪一块？
 
 | 练什么 | 入口 | 做完检查什么 |

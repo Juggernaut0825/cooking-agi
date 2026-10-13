@@ -4,6 +4,8 @@
 
 Start here for the limits of behavioral logs, then read [feedback to objectives](feedback-to-objectives.en.md): missingness versus negatives, multi-signal supervision, and how to test whether a signal helps.
 
+For the training perspective, start with [Why post-training keeps coming back to data](data-as-supervision.en.md). One question with clear, conflicting, or missing evidence connects data selection to SFT, RL, environment checks, and evaluation.
+
 ## Logs record behavior, not complete intent
 
 Training logs record **what users did with the choices, interface, and exposure available at the time**. They provide clues, not a complete record of intent or preferences.

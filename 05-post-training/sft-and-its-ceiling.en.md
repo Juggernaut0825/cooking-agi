@@ -10,6 +10,8 @@ Give a model support conversations that demonstrate citing a return policy and a
 
 The question is not only how many examples SFT sees, but what they demonstrate. SFT can generalize and learn new knowledge; demonstration quality is not a strict capability ceiling. Those gains still need testing in unseen situations.
 
+For why training keeps sending us back to the dataset, read [What data teaches the model](../01-data-and-feedback/data-as-supervision.en.md): how filtering, sampling, and labels change the learning signal, starting from a single demonstration.
+
 First follow one conversation through training, then consider what the data can teach. If you already run experiments, jump to [checking loss masks](#mask-example) or [deciding whether to try RL](#rl-readiness).
 
 ## What it does {#what-it-does}
@@ -272,7 +274,7 @@ That is a chain-rule difference, not a precision issue. The [tests](../site/test
 1. Which situations do my demonstrations cover? For the ones they don't, how does the model behave — have I tested it?
 2. Is the correctness I care about "does it look right overall" or "are these few pivotal tokens right"? For the latter, test the decision separately from mean loss.
 3. Does my SFT set contain context-appropriate abstention or clarification? Test what happens when essential evidence is missing.
-4. Can the model recall the correct facts under different phrasings, rather than just sound confident?
+4. Does the base model already know the facts I want to teach? Can it give correct facts and supporting evidence under different phrasings, rather than just sound confident?
 5. Does this task really need RL? When useful demonstrations are available, start with an SFT baseline and compare equal-budget task quality. A fixed output format alone does not decide which method is more cost-effective.
 
 ## Where to read next {#where-to-read-next}
@@ -291,7 +293,7 @@ That is a chain-rule difference, not a precision issue. The [tests](../site/test
 
 **Interview answer**
 
-> In a common assistant-only setup, SFT serializes the conversation and uses the system and user messages as context to learn the assistant answer and its end token. Demonstrations can teach format, tone, tool calls, and solutions. Their coverage and quality matter, and teacher-forced token loss still needs to be checked against complete generated answers.
+> In a common assistant-only setup, SFT serializes the conversation and uses the system and user messages as context to learn the assistant answer and its end token. Demonstrations can teach format, tone, tool calls, and solutions. Their coverage and quality matter; teacher-forced token loss does not directly measure task success, so complete generated answers still need checking.
 
 <details markdown="1">
 <summary><b>Deep dive</b>: why does low token CE not imply a better complete answer?</summary>

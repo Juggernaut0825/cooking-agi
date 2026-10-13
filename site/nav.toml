@@ -45,8 +45,8 @@ id = "interview"
 zh = "面试准备"
 en = "Interview prep"
 home = "interview/README.md"
-blurb_zh = "ML / LLM 基础问答、ML Coding、Python 与 LeetCode，按需要选一条复习路线。"
-blurb_en = "Review ML / LLM concepts, practice ML coding, and work through Python and algorithm patterns."
+blurb_zh = "快速复习，或按计划慢慢学；根据起点和岗位选择练习。"
+blurb_en = "Review what you know or build a foundation over time, with practice for your starting point and role."
 
 [[category]]
 id = "practice"
@@ -55,6 +55,14 @@ en = "Engineering practice"
 home = "practice/README.md"
 blurb_zh = "从需求出发做系统设计，再用推荐、RAG 和后训练项目看实现与取舍。"
 blurb_en = "Work through system-design choices and implementations in recommendation, RAG, and post-training."
+
+[[category]]
+id = "history"
+zh = "编年史"
+en = "Tech history"
+home = "learn/technology-timeline.md"
+blurb_zh = "从电力、芯片、软件和数据，到 AI 的方法与应用，沿感兴趣的分支看它们怎样发展。"
+blurb_en = "Explore the histories of power, chips, software, data, and AI, with sources and connections between fields."
 
 [[category]]
 id = "career"
@@ -213,8 +221,8 @@ summary_en = "Put a request back in its product context: observability, human ov
 [[group]]
 id = "coding"
 category = "interview"
-zh = "复习导读与 Python"
-en = "Start here & Python"
+zh = "开始准备"
+en = "Start here"
 home = "interview/README.md"
 summary_zh = "先把容器、复杂度和常用写法用顺，再把公式写成可检查的小函数。"
 summary_en = "Get comfortable with containers and complexity, then turn formulas into testable functions."
@@ -302,6 +310,13 @@ en = "Post-training experiments"
 home = "practice/post-training/README.md"
 
 [[group]]
+id = "history"
+category = "history"
+zh = "技术发展"
+en = "How the field developed"
+home = "learn/technology-timeline.md"
+
+[[group]]
 id = "career"
 category = "career"
 zh = "求职与规划"
@@ -325,7 +340,7 @@ dir = "community"
 group = "start"
 zh = "一起参与"
 en = "Contributing together"
-order = ["README.md", "next-stop.md", "next-stop-guide.md"]
+order = ["README.md", "roadmap.md", "updates.md", "next-stop.md", "next-stop-guide.md"]
 
 [[section]]
 dir = "learn"
@@ -333,6 +348,14 @@ group = "study"
 zh = "学习导航"
 en = "Study map"
 order = ["README.md", "choose-your-path.md", "coverage.md"]
+
+[[section]]
+dir = "learn/history"
+group = "history"
+zh = "技术世界树"
+en = "Tech history"
+include = ["learn/technology-timeline.md", "learn/rl-timeline.md"]
+order = ["technology-timeline.md", "rl-timeline.md"]
 
 [[section]]
 dir   = "00-foundations"
@@ -472,7 +495,7 @@ order = ["README.md", "why-loops-reason.md", "adaptive-depth.md", "models.md", "
 
 [[section]]
 dir = "01-data-and-feedback"
-order = ["README.md", "feedback-to-objectives.md"]
+order = ["README.md", "data-as-supervision.md", "feedback-to-objectives.md"]
 group = "data-retrieval"
 zh  = "数据与反馈"
 en  = "Data & feedback"
@@ -537,7 +560,8 @@ dir = "05-post-training/deep-rl"
 group = "deep-rl"
 zh = "学习路线"
 en = "Learning route"
-order = ["README.md"]
+include = ["05-post-training/deep-rl/methods-map.md"]
+order = ["README.md", "methods-map.md"]
 
 [[section]]
 dir = "05-post-training/deep-rl/basics"
@@ -560,8 +584,8 @@ dir = "05-post-training/deep-rl/extensions"
 group = "deep-rl"
 zh = "03 · 数据与实验"
 en = "03 · Data & experiments"
-include = ["05-post-training/deep-rl/imitation-and-rewards.md", "05-post-training/deep-rl/offline-and-ope.md", "05-post-training/deep-rl/exploration-and-hierarchy.md", "05-post-training/deep-rl/experiments.md", "05-post-training/deep-rl/llm-bridge.md"]
-order = ["imitation-and-rewards.md", "offline-and-ope.md", "exploration-and-hierarchy.md", "experiments.md", "llm-bridge.md"]
+include = ["05-post-training/deep-rl/imitation-and-rewards.md", "05-post-training/deep-rl/offline-and-ope.md", "05-post-training/deep-rl/exploration-and-hierarchy.md", "05-post-training/deep-rl/experiments.md", "05-post-training/deep-rl/llm-bridge.md", "05-post-training/deep-rl/why-rl-is-hard.md"]
+order = ["imitation-and-rewards.md", "offline-and-ope.md", "exploration-and-hierarchy.md", "experiments.md", "llm-bridge.md", "why-rl-is-hard.md"]
 
 [[section]]
 dir   = "05-post-training/rlhf"
@@ -636,7 +660,7 @@ dir     = "interview"
 group   = "coding"
 zh      = "复习入口"
 en      = "Preparation guide"
-order   = ["README.md", "python.md", "python-objects.md"]
+order   = ["README.md", "dashboard.md", "speedrun.md", "speedrun-start.md", "study-plan.md", "ai-roles-prep.md", "code-comprehension.md", "coding-checks.md", "python.md", "python-objects.md"]
 
 [[section]]
 dir = "interview/basics"
@@ -755,6 +779,8 @@ en  = "Templates"
 # without a label falls back to its title up to the first colon.
 [label]
 "learn/coverage.md" = ["覆盖与待补", "Coverage & gaps"]
+"learn/technology-timeline.md" = ["技术树 · 全景", "Technology tree"]
+"learn/rl-timeline.md" = ["技术编年史 · RL", "RL timeline"]
 "learn/pretraining/README.md" = ["训练路线导读", "Training route"]
 "learn/inference/README.md" = ["推理路线导读", "Inference route"]
 "00-foundations/core/ffn-and-gates.md" = ["FFN 与 SwiGLU", "FFN & SwiGLU"]
@@ -795,6 +821,7 @@ en  = "Templates"
 "00-foundations/model-families/how-to-read.md" = ["带着问题读模型", "Reading a model report"]
 "00-foundations/model-families/deepseek-v4.md" = ["DeepSeek-V4：压缩与训练", "DeepSeek-V4: compression & training"]
 "01-data-and-feedback/feedback-to-objectives.md" = ["反馈怎么变成目标", "Feedback to objectives"]
+"01-data-and-feedback/data-as-supervision.md" = ["数据在教什么", "What data teaches"]
 "02-memory/memory-lifecycle.md" = ["写入、更新与遗忘", "Memory lifecycle"]
 "07-evaluation/ablation-and-slices.md" = ["对照实验与切片", "Comparisons & slices"]
 "practice/README.md"                                   = ["从这里开始", "Overview"]
@@ -829,6 +856,8 @@ en  = "Templates"
 "04-search/rag-evidence.md" = ["RAG：证据与评估", "RAG: evidence & evaluation"]
 "05-post-training/README.md"                            = ["总览", "Overview"]
 "05-post-training/deep-rl/README.md" = ["从这里开始", "Start here"]
+"05-post-training/deep-rl/methods-map.md" = ["Q-learning、PPO 与 DPO", "Q-learning, PPO & DPO"]
+"05-post-training/deep-rl/why-rl-is-hard.md" = ["为什么 RL 还是难训", "Why RL remains difficult"]
 "05-post-training/deep-rl/mdp-bellman.md" = ["MDP 与 Bellman", "MDPs & Bellman"]
 "05-post-training/deep-rl/returns-and-td.md" = ["MC、TD 与边界", "MC, TD & boundaries"]
 "05-post-training/deep-rl/policy-gradients.md" = ["Policy Gradient", "Policy gradients"]
@@ -888,7 +917,10 @@ en  = "Templates"
 "10-agents/prompting.md" = ["Prompt、ICL 与 CoT", "Prompting, ICL & CoT"]
 "10-agents/deep-research.md" = ["Deep Research：问题与证据", "Deep Research: questions & evidence"]
 "contributors.md"                                      = ["幕后", "Behind the notes"]
-"interview/README.md"                                   = ["面试准备导读", "Interview prep guide"]
+"community/roadmap.md" = ["接下来一起做什么", "Roadmap"]
+"community/updates.md" = ["版本与更新", "Releases & updates"]
+"interview/README.md"                                   = ["准备首页", "Preparation home"]
+"interview/dashboard.md"                                = ["我的学习台", "Study dashboard"]
 "interview/basics/README.md"                            = ["基础问答导读", "Fundamentals review guide"]
 "interview/leetcode.md"  = ["LeetCode 方法地图", "LeetCode pattern map"]
 "interview/algorithms/complexity-and-tools.md" = ["复杂度与工具", "Complexity & tools"]

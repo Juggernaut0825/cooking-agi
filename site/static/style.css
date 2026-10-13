@@ -1673,7 +1673,7 @@ html.sky-back::after {
 
 /* reading rhythm */
 body { line-height: 1.85; }
-html.lang-zh body { letter-spacing: .012em; }
+html.lang-zh body { letter-spacing: 0; }
 .shell { gap: 0 3.25rem; }
 main { padding: 2.6rem 0 6rem; }
 .prose { max-width: 42rem; }
@@ -1685,6 +1685,16 @@ main { padding: 2.6rem 0 6rem; }
 .prose ul, .prose ol { margin: 0 0 1.4rem; padding-left: 1.5rem; }
 .prose li { margin-bottom: .55rem; }
 .prose li > ul, .prose li > ol { margin: .5rem 0 .3rem; }
+html.lang-zh :is(.prose, .article-body) > :is(p, ul, ol, blockquote) { line-height: 1.95; line-break: strict; word-break: normal; }
+html.lang-zh :is(.article-head h1, .prose h1, .prose h2, .prose h3, .prose h4) { letter-spacing: 0; line-height: 1.5; line-break: strict; word-break: normal; }
+html.lang-zh .article-head h1 { max-width: 100%; text-wrap: pretty; }
+html.lang-zh .page-home .article-body td a { white-space: nowrap; }
+@media (max-width: 620px) {
+  html.lang-zh .page-home .article-body table { width: 100%; min-width: 0; table-layout: fixed; }
+  html.lang-zh .page-home .article-body :is(th, td) { padding: .65rem .55rem; font-size: .82rem; line-height: 1.8; overflow-wrap: anywhere; }
+  html.lang-zh .page-home .article-body th:nth-child(1) { width: 27%; }
+  html.lang-zh .page-home .article-body th:nth-child(2) { width: 29%; }
+}
 .prose blockquote { margin: 1.7rem 0; padding: .25rem 0 .25rem 1.2rem; border-left: 2px solid color-mix(in srgb, var(--ember) 60%, transparent); }
 .prose hr { margin: 3.2rem 0; }
 .prose pre { padding: 1.1rem 1.2rem; margin: 1.7rem 0; font-size: .84rem; line-height: 1.7; }
@@ -1799,6 +1809,9 @@ main { padding: 2.6rem 0 6rem; }
 @media (max-width: 720px) {
   .prose table { min-width: 32rem; }          /* the wrapper scrolls; cells stay readable */
   .prose td { padding: .62rem .7rem; }
+  .prose .compact-table table { min-width: 0; table-layout: fixed; }
+  .prose .compact-table :is(th, td) { padding: .6rem .4rem; }
+  .prose .compact-table th { white-space: normal; letter-spacing: 0; overflow-wrap: anywhere; }
 }
 
 /* ======================================================================
