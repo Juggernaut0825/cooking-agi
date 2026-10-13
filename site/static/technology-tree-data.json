@@ -330,8 +330,8 @@
         "en": "Transformer · Translation with attention alone"
       },
       "hook": {
-        "zh": "去掉循环，让每个词直接看到整句话。",
-        "en": "It dropped recurrence so every word could look at the whole sentence at once."
+        "zh": "不用循环，通过 attention 连接序列中的位置。",
+        "en": "It connects positions through attention rather than recurrence."
       },
       "body": {
         "zh": "当时常见的循环翻译模型要沿序列逐步计算，也有卷积模型在尝试并行化。Transformer 不用循环和卷积，改用 attention 交换位置信息，训练时可以并行处理多个位置。论文在英德翻译上比此前最好成绩高出 2 BLEU 以上；英法实验在八块 GPU 上训练了三天半。后来的 BERT 和 GPT 分别发展了 encoder-only 和 decoder-only 路线。",
@@ -1078,7 +1078,7 @@
         "en": "ChatGPT · Language models move into a chat window"
       },
       "hook": {
-        "zh": "普通人第一次能直接和语言模型聊天、追问、改要求。",
+        "zh": "打开网页就能聊天、追问，让更多人接触到语言模型。",
         "en": "Ordinary people could now chat with a language model directly, ask follow-ups, and change requests."
       },
       "body": {
@@ -2832,12 +2832,12 @@
         "en": "WaveNet · Generating audio one sample at a time"
       },
       "hook": {
-        "zh": "直接生成声音波形，每个采样点都看着前面所有的点来算。",
-        "en": "It generates the raw waveform directly, predicting each sample from all the samples before it."
+        "zh": "直接生成声音波形，用感受野内的历史预测下一个采样点。",
+        "en": "It predicts each waveform sample from earlier samples within its receptive field."
       },
       "body": {
-        "zh": "2016 年的语音合成，要么拼接录音片段，要么先预测声码器参数再合成，后者常常发闷、有杂音。WaveNet 直接生成原始波形：每秒至少 16000 个采样点，每个点都以前面所有点为条件。在谷歌的英语和普通话数据上，听众给它的自然度打分明显高于这两种做法。",
-        "en": "In 2016, speech synthesis either stitched together recorded snippets or predicted vocoder parameters and let a vocoder make the sound, which often came out muffled. WaveNet generated the raw waveform itself: at least 16,000 samples per second, each predicted from all the samples before it. On Google's English and Mandarin data, listeners rated it clearly more natural than both approaches."
+        "zh": "当时常见的语音合成方法会拼接录音片段，或先预测参数，再交给声码器合成。WaveNet 直接生成原始波形：先根据历史预测下一个采样点，再把它接回输入。概率分解写的是全部历史，实际网络只能看到感受野内的部分。在论文的英语和普通话测试中，听众给它的自然度打分高于所比较的参数式与拼接式系统。",
+        "en": "Common speech synthesis systems stitched together recordings or predicted parameters for a vocoder. WaveNet generated the waveform directly, predicting one sample and feeding it back before the next. The probability factorization conditions on the full history; the actual network sees only its receptive field. In the paper's English and Mandarin tests, listeners rated it more natural than the parametric and concatenative baselines."
       },
       "detail": {
         "zh": "为了看得够远，它用“空洞因果卷积”：每层只看前面的点，间隔逐层翻倍，从 1 一直到 512。这样一组层能看到 1024 个采样点。训练时可以并行算；生成时只能算完一个点，喂回网络，再算下一个。\n\n自然度按 5 分制打分。美式英语里 WaveNet 得 4.21，真人录音是 4.55。逐点生成难以用上并行硬件，很难做到实时。后来的 Parallel WaveNet 从 WaveNet 教出一个能并行生成的网络，比实时快 20 倍以上。",
@@ -5090,11 +5090,11 @@
       "topic": "energy",
       "track": "facilities",
       "title": {
-        "zh": "TPU v3 液冷 · 用液体带走风扇带不走的热",
-        "en": "TPU v3 liquid cooling · Carrying off heat that fans could not"
+        "zh": "TPU v3 液冷 · 更密集的芯片，换一种散热方式",
+        "en": "TPU v3 liquid cooling · A different way to cool denser chips"
       },
       "hook": {
-        "zh": "每颗芯片 450 W，风扇带不走，Google 改用液冷。",
+        "zh": "每颗芯片 450 W，Google 为这代 TPU 改用液冷。",
         "en": "At 450 W per chip, TPU v3 moved Google from fans to liquid cooling."
       },
       "body": {
