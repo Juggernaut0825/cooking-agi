@@ -80,10 +80,12 @@ class LanguageEntryTests(unittest.TestCase):
                 r'<!-- repository-only -->(.*?)<!-- /repository-only -->',
                 source, re.S).group(1)
             self.assertIn('badge.svg', repository_block)
+            self.assertIn(f'.github/media/promo.{language}.webp', repository_block)
             self.assertIn('https://tianyi-zhang-02.github.io/cooking-agi/', repository_block)
             build.build_page(page, [], self.nav['site']['repo'], self.known)
             self.assertNotIn('repository-only', page.body)
             self.assertNotIn('badge.svg', page.body)
+            self.assertNotIn('.github/media/', page.body)
             intro = page.body.split('<h2', 1)[0]
             self.assertNotIn('<a ', intro)
             self.assertIn('English or 中文' if language == 'en' else '中文或 English', intro)

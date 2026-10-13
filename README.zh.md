@@ -8,6 +8,8 @@
 
 [![Build](https://github.com/tianyi-zhang-02/cooking-agi/actions/workflows/site.yml/badge.svg?branch=main)](https://github.com/tianyi-zhang-02/cooking-agi/actions/workflows/site.yml)
 
+<a href="https://tianyi-zhang-02.github.io/cooking-agi/index.zh.html"><img src=".github/media/promo.zh.webp" width="100%" alt="29 秒看一遍网站：可交互的图、中英切换、250+ 篇笔记、编年史之树和阅读记录"></a>
+
 <!-- /repository-only -->
 
 刚开始准备找工时，我的资料散在课程、论文、文档和一堆收藏里。找一份讲得清楚的材料要花时间，看完之后该接着学什么，也经常没头绪。这个站，就是从整理这些资料开始的。

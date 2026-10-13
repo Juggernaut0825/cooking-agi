@@ -8,6 +8,8 @@
 
 [![Build](https://github.com/tianyi-zhang-02/cooking-agi/actions/workflows/site.yml/badge.svg?branch=main)](https://github.com/tianyi-zhang-02/cooking-agi/actions/workflows/site.yml)
 
+<a href="https://tianyi-zhang-02.github.io/cooking-agi/"><img src=".github/media/promo.en.webp" width="100%" alt="A 29-second tour of the site: an interactive figure, the English and Chinese switch, 250+ notes, the chronicle tree, and reading history"></a>
+
 <!-- /repository-only -->
 
 When I started preparing for industry roles, my materials were scattered across lectures, papers, documentation, and bookmarks. Finding a good explanation took time. Working out what to read next took more. These notes grew out of trying to bring that material together.
