@@ -8,6 +8,13 @@
 
 范围：现有学习内容、参考清单的 82 个主题、参考附录的补充内容，以及影响这些主题理解与实现的 2026 年更新。不重新上线已下架的 Quant 与“聊聊”，不复制参考资料的全文或代码。当前工作区还包含先前与其他工具的改动，发布前必须复核完整 diff，不能只看本批文件。
 
+## vLLM 与 SGLang 对照更新（2026-10-12，Claude Code）
+
+- 对照 vLLM v0.31.0（2026-10-05）与 SGLang v0.5.21（2026-10-02）的源码和文档重新核对引擎对照：分页 KV、默认开启的前缀复用、chunked prefill、CPU / GPU 重叠调度、推测解码、结构化输出、DP + EP、P/D 分离与 KV 分层存储两边都有，不再写成某一方独有。
+- 保留仍成立的差别并写具体：前缀索引是块哈希（默认 16 token 一块、固定 LRU）对 radix 树（默认 `UnifiedRadixCache`、page size 1、可选 LRU / LFU / SLRU / priority / T-LRU）；vLLM 先排 decode 再混入 prefill 分块，SGLang 默认先跑 prefill 批；torch.compile 默认开 / 关；P/D 分离是 KV connector（文档标实验性）对内置角色加 router。
+- `inference-frameworks` 的 vLLM 文档链接从 v0.21.0 换到 v0.31.0，源码链接与 `llm-serving`、`attention-kernels` 统一固定到 `10cc2f6`；补充 Model Runner V2 已是默认、vLLM OffloadingConnector 的分层 KV、SGLang 也接受 `cache_salt`；`attention-kernels` 的 SGLang 链接改指默认的 `UnifiedRadixCache`；`dflash` 补两边都已内置 DFlash；修正 `engine.py` 的行号锚点。
+- 默认值读自源码，没有运行引擎或做性能测试；部分默认会随 GPU、后端或模型改变，正文已注明。
+
 ## 交接快照与草稿 PR（2026-10-12）
 
 - 用户明确要求把目前所有站点改进整理为 PR，便于 Claude Code 继续开发。本批仅保存和交接现有进度，不合并、不部署、不创建正式 Release；下方各批“暂不推送”是历史记录，不覆盖这次授权。

@@ -191,7 +191,7 @@ A 再把 3 个新 tokens 送入模型、形成它们的 K/V 后，可填满已�
 
 ## vLLM 和 SGLang，不是“谁更细就谁更快”
 
-vLLM 用带前缀信息的块哈希；SGLang 的 RadixAttention 用树组织共享路径。但树节点能拆分，不代表所有配置都按单 token 复用。本次核对 [SGLang `436d73d` 的 RadixCache](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/mem_cache/radix_cache.py#L358)，`page_size > 1` 的匹配路径会做页对齐。仍用共同前缀 7 个 token 的例子：普通 page size=1 的匹配可以保留 7；page size=4 则向下对齐到 4。它说明配置会改变复用粒度，不说明哪个系统更快。
+vLLM 用带前缀信息的块哈希；SGLang 的 RadixAttention 用树组织共享路径。但树节点能拆分，不代表所有配置都按单 token 复用。本次核对 SGLang `436d73d`：普通模型默认走 [UnifiedRadixCache](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/mem_cache/registry.py#L142)，page size [默认是 1](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/arg_groups/overrides.py#L1282)，只有部分后端或模型会调大；`page_size > 1` 时，[匹配前先做页对齐](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/mem_cache/unified_cache/unified_tree_core.py#L840)。仍用共同前缀 7 个 token 的例子：page size=1 时可以保留 7；page size=4 则向下对齐到 4。vLLM 默认块大小是 16，同一个例子凑不满一个完整块，命中为 0。它说明配置会改变复用粒度，不说明哪个系统更快。
 
 | 同一批请求，要检查什么？ | 为什么 |
 | --- | --- |
