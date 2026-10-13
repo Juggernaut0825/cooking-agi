@@ -126,12 +126,14 @@
     DPR = Math.min(2, window.devicePixelRatio || 1);
     canvas.width = Math.round(window.innerWidth * DPR); canvas.height = Math.round(window.innerHeight * DPR);
     W = canvas.width; H = canvas.height;
+    if (!W || !H) return;                    // a hidden or zero-sized window: draw once it has a size
     build();
     draw(performance.now());
   }
 
   var ROT = 0.00046 / 1000;   // rad per ms: about a degree every 38 s
   function draw(now) {
+    if (!layer) return;
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, W, H);
     var rot = reduced ? 0 : now * ROT;
