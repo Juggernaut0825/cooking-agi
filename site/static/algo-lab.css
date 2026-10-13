@@ -1,0 +1,62 @@
+/* Algorithm lab figures (static/algo-lab.js). Shares the figure chrome and colour
+   roles of tx-lab.css: blue = what we are looking at, ember = what changes,
+   green = done / kept. */
+.algo-lab .algo-controls{gap:6px}
+.algo-lab .algo-btn{min-width:40px;font:650 13px/1 var(--mono)}
+.algo-lab .algo-btn:disabled{opacity:.35;cursor:default}
+.algo-lab .algo-count{margin-left:6px;font:600 12px/1 var(--mono);color:var(--muted)}
+.algo-lab .algo-scroll>svg{min-width:560px}
+.algo-lab .algo-caption{min-height:3.2em}
+.algo-lab svg text{font-family:var(--mono)}
+.algo-lab .algo-cell{fill:var(--panel);stroke:var(--tx-line-strong);stroke-width:1.2;transition:fill .3s ease,stroke .3s ease,opacity .3s ease}
+.algo-lab .algo-val{font:600 15px var(--mono);fill:var(--ink)}
+.algo-lab .algo-idx{font:500 10.5px var(--mono);fill:var(--faint)}
+.algo-lab .algo-note{font:500 12px var(--mono);fill:var(--muted)}
+.algo-lab .algo-strong{font:650 13px var(--mono);fill:var(--ink)}
+.algo-lab .algo-head{font:650 12px var(--sans),var(--cjk);fill:var(--muted)}
+.algo-lab .is-look{fill:var(--c-q-soft);stroke:var(--c-q);stroke-width:2}
+.algo-lab .is-change{fill:var(--c-k-soft);stroke:var(--c-k);stroke-width:2}
+.algo-lab .is-keep{fill:var(--c-v-soft);stroke:var(--c-v);stroke-width:2}
+.algo-lab .is-out{opacity:.35}
+.algo-lab .is-cross{fill:var(--code-bg);stroke:var(--rule)}
+.algo-lab .algo-pointer{transition:transform .45s cubic-bezier(.3,.7,.2,1),opacity .3s ease}
+.algo-lab .algo-pointer.is-hidden{opacity:0}
+.algo-lab .algo-arrow{fill:var(--c-k)}
+.algo-lab .algo-pointer.p-blue .algo-arrow{fill:var(--c-q)}
+.algo-lab .algo-pointer.p-green .algo-arrow{fill:var(--c-v)}
+.algo-lab .algo-plabel{font:650 12px var(--mono);fill:var(--ink)}
+.algo-lab .algo-band{fill:var(--c-q-soft);stroke:var(--c-q);stroke-width:1.5;transition:x .45s cubic-bezier(.3,.7,.2,1),width .45s cubic-bezier(.3,.7,.2,1)}
+.algo-lab .algo-edge{stroke:var(--tx-line-strong);stroke-width:1.4;fill:none}
+.algo-lab .algo-edge.is-change{stroke:var(--c-k);stroke-width:2.2}
+.algo-lab .algo-edge.is-keep{stroke:var(--c-v);stroke-width:2.2}
+.algo-lab .is-written{fill:var(--c-k-soft);stroke:var(--tx-line-strong)}
+.algo-lab .is-bad{fill:rgba(214,69,90,.16);stroke:#d6455a;stroke-width:2}
+.algo-lab .algo-edge.is-bad{stroke:#d6455a;fill:none}
+.algo-lab .algo-arrowhead.is-bad-head{fill:#d6455a}
+.algo-lab .algo-arrowhead.is-blue{fill:var(--c-q)}
+.algo-lab .algo-arrowhead{fill:var(--c-k)}
+.algo-lab .algo-arc{transition:opacity .3s ease}
+.algo-lab .is-hidden{opacity:0}
+.algo-lab .algo-warn{font:650 11.5px var(--sans),var(--cjk);fill:#d6455a;transition:opacity .3s ease}
+.algo-lab .algo-strike{stroke:var(--muted);stroke-width:1.6;stroke-linecap:round;opacity:0;transition:opacity .3s ease}
+.algo-lab .algo-strike.is-on{opacity:.75}
+.algo-lab .algo-val.is-dim{fill:var(--faint)}
+.algo-lab .algo-ghost{fill:none;stroke-dasharray:4 4;stroke:var(--tx-line-strong)}
+.algo-lab .is-hidden-layer{display:none}
+.algo-lab .algo-small{font-size:12.5px}
+.algo-lab .algo-edge.is-look-line{stroke:var(--c-q);stroke-width:1.8}
+.algo-lab .algo-edge.is-out{opacity:.25}
+.algo-lab .algo-hit{fill:var(--c-v);font-weight:650}
+.algo-lab .algo-dash{stroke-dasharray:5 5}
+.algo-lab .algo-none{font:500 20px var(--mono);fill:var(--faint)}
+.algo-lab .algo-link{transition:d .45s ease}
+.algo-lab .algo-slide{transition:transform .5s cubic-bezier(.3,.7,.2,1)}
+.algo-lab .algo-reach{fill:var(--c-v-soft);stroke:var(--c-v)}
+.algo-lab .algo-reach.is-bad-band{fill:rgba(214,69,90,.08);stroke:#d6455a}
+.algo-lab .algo-bar{fill:var(--c-q);opacity:.5;transition:y .4s ease,height .4s ease,opacity .3s ease}
+.algo-lab .algo-bar.is-tall{fill:var(--c-k);opacity:.75}
+.algo-lab .algo-bar.is-now{opacity:1}
+@media (prefers-reduced-motion: reduce){
+  .algo-lab .algo-slide{transition:none}
+  .algo-lab .algo-pointer,.algo-lab .algo-cell,.algo-lab .algo-band{transition:none}
+}

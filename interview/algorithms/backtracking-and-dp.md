@@ -75,6 +75,8 @@ best(0)
 
 图里 `best(2)` 出现了两次。虽然前面选法不同，但接下来都是在问：`[9, 3, 1]` 这一段最多能拿多少？它的答案不会因为之前选了什么而改变，所以可以只算一次，存下来复用。这就是记忆化搜索（memoization）。
 
+<!-- widget:algo-rob -->
+
 ```python
 from functools import cache
 

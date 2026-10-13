@@ -50,6 +50,8 @@ def is_prime(number):
 
 最后留下 `2, 3, 5, 7, 11, 13, 17, 19, 23, 29`。可以跟着表在纸上划一遍，看看每一步新排除了哪些数。
 
+<!-- widget:algo-sieve -->
+
 ```python
 def prime_flags(limit):
     if type(limit) is not int:

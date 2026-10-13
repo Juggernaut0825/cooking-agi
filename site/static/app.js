@@ -652,6 +652,23 @@
     document.body.appendChild(txJs);
   }
 
+  /* ---- Algorithm lab ---------------------------------------------------------
+     Step-by-step figures for the LeetCode notes (static/algo-lab.js). They reuse the
+     Transformer lab's figure chrome, so tx-lab.css comes along. */
+  if ($('[data-widget^="algo-"]')) {
+    var algoBase = ((window.SITE && window.SITE.prefix) || "") + "static/";
+    var algoVer = "?v=" + ((window.SITE && window.SITE.built) || "");
+    ["tx-lab.css", "algo-lab.css"].forEach(function (file) {
+      if (document.querySelector('link[href^="' + algoBase + file + '"]')) return;
+      var link = document.createElement("link");
+      link.rel = "stylesheet"; link.href = algoBase + file + algoVer;
+      document.head.appendChild(link);
+    });
+    var algoJs = document.createElement("script");
+    algoJs.src = algoBase + "algo-lab.js" + algoVer;
+    document.body.appendChild(algoJs);
+  }
+
   $$('[data-widget="xor"]').forEach(function (root) {
     var cv = $(".xor-canvas", root), ctx = cv.getContext("2d");
     var actBox = $(".xor-act", root), hidRange = $(".xor-hidden", root);

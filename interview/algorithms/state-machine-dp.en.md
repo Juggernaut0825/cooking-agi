@@ -59,6 +59,8 @@ Prices: `[1,2,3,0,2]`.
 | Day 4, price 0 | 1 | −1 | 2 |
 | Day 5, price 2 | 1 | 3 | 2 |
 
+<!-- widget:algo-cooldown -->
+
 The answer is `max(sold,resting)=3`. One path buys at 1, sells at 2, rests at 3, buys at 0, and sells at 2. The positive holding state on day 4 is net profit after purchasing a current position, not a final result with no position.
 
 ```python

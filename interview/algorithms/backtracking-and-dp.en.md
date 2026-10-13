@@ -75,6 +75,8 @@ best(0)
 
 `best(2)` appears twice. Despite different earlier choices, both calls ask exactly the same remaining question: what is the best selection from `[9, 3, 1]`? Its answer doesn't depend on how we reached it, so compute it once and reuse it. This is memoization.
 
+<!-- widget:algo-rob -->
+
 ```python
 from functools import cache
 

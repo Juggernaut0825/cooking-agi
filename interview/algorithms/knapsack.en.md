@@ -50,6 +50,8 @@ Items are `(positive integer weight, numeric value)` pairs; capacity is a nonneg
 
 With only `(2,5)` and capacity 4, the answer is 5. Updating upward writes `best[2]=5` and then reads that new value for `best[4]`, producing 10: it reused the same item. Updating downward leaves `best[c-weight]` untouched in the current pass, preserving the previous-row dependency.
 
+<!-- widget:algo-knapsack -->
+
 For $n$ items and integer capacity $C$, time is $O(nC)$ and auxiliary space $O(C)$. This is pseudopolynomial: the numeric value of $C$ may greatly exceed the number of bits needed to encode it. A small item count alone doesn't make a huge-capacity DP cheap. [MIT pseudopolynomial algorithms notes](https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/resources/mit6_006s20_lec18/)
 
 ## Why repetition reverses the direction

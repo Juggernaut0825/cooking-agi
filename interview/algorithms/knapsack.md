@@ -50,6 +50,8 @@ def knapsack_once(items, capacity):
 
 只给一件 `(2,5)`、容量 4，正确答案是 5。若从小到大更新，先把 `best[2]` 写成 5，随后 `best[4]` 又读这个新值，得到 10：同一件物品被拿了两次。倒着遍历时，`best[c-weight]` 还没被本轮修改，读到的才是上一行。
 
+<!-- widget:algo-knapsack -->
+
 $n$ 件、整数容量 $C$：时间 $O(nC)$、辅助空间 $O(C)$。这是伪多项式复杂度：$C$ 的数字值可能远大于输入里表示它需要的位数。容量特别大，不能只看物品数量说“DP 很快”。[MIT 伪多项式讲义](https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/resources/mit6_006s20_lec18/)
 
 ## 可以重复拿时，顺序为什么反过来

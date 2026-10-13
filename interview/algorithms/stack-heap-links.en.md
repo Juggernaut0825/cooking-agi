@@ -87,6 +87,8 @@ def reverse_list(head):
 
 For `1 → 2 → 3`, save the old next link before rewiring, or lose the remaining list. At each loop entry, previous heads the reversed prefix and current heads the unprocessed suffix. O(n) time, O(1) auxiliary space; **mutates the list** and assumes no cycle. Recursive reversal instead uses O(n) call-stack space.
 
+<!-- widget:algo-reverse-list -->
+
 A dummy node simplifies deleting the head or merging lists. Deleting a known node often still needs its predecessor. Finding that predecessor from the head is O(n), so “linked-list deletion is O(1)” needs qualifications.
 
 ## 5. Slow and fast pointers: detecting a cycle

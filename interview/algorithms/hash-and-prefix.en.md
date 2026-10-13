@@ -74,6 +74,8 @@ def count_subarrays(values, target):
 | −1 | 0 | −1 | 0 |
 | 1 | 1 | 0 | 2 |
 
+<!-- widget:algo-prefix-count -->
+
 Total: 3, the two individual 1s and the entire array. Store **counts**, not just an index or a set. `{0: 1}` represents the empty prefix before the input. Query before inserting to avoid counting an empty subarray when target is zero.
 
 Average O(n) time, O(n) space. It handles negative values without relying on sums growing with window size. Prefix sums suit static range queries; updates to the original array invalidate later prefixes.

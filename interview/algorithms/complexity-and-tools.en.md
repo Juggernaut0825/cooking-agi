@@ -40,6 +40,8 @@ Consider a toy dynamic array that doubles its capacity when full: 1, 2, 4, 8. Co
 
 </div>
 
+<!-- widget:algo-append -->
+
 The fifth append is expensive, but all eight together cost just 15 operations. As the array grows, copying costs $1+2+4+\cdots$; including new writes, the total remains O(n). **Amortized analysis needs no random-input assumption and isn't an average of benchmark timings.** Doubling is our teaching model, not CPython's actual growth schedule.
 
 <details markdown="1">

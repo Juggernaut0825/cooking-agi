@@ -31,6 +31,8 @@ Store indices, not just values, to detect expiry. Indices increase from front to
 | 4: 2 | 3(5), 4(2) | 5 |
 | 5: 5 | 5(5) | 5 |
 
+<!-- widget:algo-window-max -->
+
 The last 5 removes the older 5 too. The newer copy is sufficient for the maximum value. To return the earliest tied position, remove only strictly smaller values and check the tie-breaking contract again.
 
 ## Python implementation
