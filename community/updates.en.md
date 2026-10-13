@@ -17,7 +17,9 @@ This version addresses a practical problem: a growing library still doesn't tell
 - **Your own schedule:** nonconsecutive dates, different durations, rescheduling, and optional records of actual study time. No daily check-in requirement.
 - **Portable progress:** study records, sessions, bookmarks, reading positions and settings in one JSON backup, with an import preview and up to three browser recovery copies.
 - **Content updates:** new notes in followed topics join an undated queue by default, with an opt-out. Only substantive revisions trigger notices; presentation edits do not change your schedule or study status.
-- **Connected reading:** additions on data and supervision, RL methods and costs, inference framework internals, and a technology-history map. These are scoped learning materials, not a complete technical history or measured GPU benchmarks.
+- **Technology world tree:** how power, chips, software, data and models each developed and where they met, with 143 milestones and 59 sourced connections arranged by period. Hover to see connections, or select a field to follow one line. It is a scoped selection, not a complete history.
+- **Reading history and saved notes:** the "Mine" panel in the top bar shows which notes you read today and how often, alongside saved notes and settings. Records stay in this browser and travel with the progress backup.
+- **New notes:** data and supervision, RL methods and costs, and inference framework internals. These are scoped learning materials, not measured GPU benchmarks.
 - **A way to contribute:** bilingual usage guides, a public roadmap, categorized feedback, contribution and licensing guidance. Optional AI review assistance does not approve or publish changes.
 
 [Open the dashboard](../interview/dashboard.en.md) · [Choose a preparation route](../interview/README.en.md) · [Find a contribution](roadmap.en.md#contribute)
