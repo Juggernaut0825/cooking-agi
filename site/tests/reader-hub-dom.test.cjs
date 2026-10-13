@@ -14,7 +14,9 @@ class Element {
     this.events = {};
     this.hidden = false;
     this.textContent = '';
+    this.style = {};
   }
+  get isConnected() { return this.tag === 'body' || Boolean(this.parent?.isConnected); }
   setAttribute(key, value) {
     this.attributes[key] = String(value);
     if (key.startsWith('data-')) this.dataset[key.slice(5)] = String(value);
@@ -35,7 +37,7 @@ class Element {
   click() { this.events.click?.({target: this}); }
 }
 
-function environment(initialSettings = {}, language = 'en') {
+function environment(initialSettings = {}, language = 'en', noteId = '') {
   const values = new Map();
   const storage = {getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value)};
   const progress = store.createStore(storage);
@@ -45,30 +47,61 @@ function environment(initialSettings = {}, language = 'en') {
   right.insertBefore = child => right.append(child);
   body.append(right);
   const timers = [];
+  const intervals = [];
+  let elapsed = 0;
+  class Clock extends Date {
+    static now() { return Date.now() + elapsed; }
+  }
   const dispatched = [];
   const document = {
-    body, documentElement: {lang: language, dataset: {}}, visibilityState: 'visible',
+    body, documentElement: {lang: language, dataset: {}}, visibilityState: 'visible', title: 'A note',
     createElement: tag => new Element(tag), createElementNS: (namespace, tag) => new Element(tag),
     createTextNode: text => Object.assign(new Element('text'), {textContent: text}),
-    querySelector: selector => selector === '.topbar-right' ? right : null,
+    querySelector: selector => selector === '.topbar-right' ? right : selector === '[data-prep-note]' && noteId ? {dataset: {prepNote: noteId}} : null,
     addEventListener() {}
   };
   const window = {
     SITE: {prefix: '/'},
     PreparationProgress: {getState: () => progress.read(), updateWorkspace: (...args) => progress.updateWorkspace(...args), getCatalog: () => ({notes: {}})},
     addEventListener() {}, setTimeout: callback => { timers.push(callback); return timers.length; },
+    setInterval: callback => { intervals.push(callback); return intervals.length; },
     dispatchEvent: event => { dispatched.push(event); return true; },
     matchMedia: () => ({matches: false})
   };
-  vm.runInNewContext(source, {window, document, URL, Date, Event, CustomEvent, location: {href: 'https://example.com/note.html'}});
+  vm.runInNewContext(source, {window, document, URL, Date: Clock, Event, CustomEvent, location: {href: 'https://example.com/note.html'}});
   const selectSettings = () => {
     body.querySelector('.reader-hub-toggle').click();
     const tab = body.querySelector('[data-tab="settings"]');
     body.querySelector('.reader-hub-tabs').events.click({target: tab});
   };
   const radio = label => body.querySelector('[id="reader-panel-settings"]').querySelectorAll('[role="radio"]').find(item => item.textContent === label);
-  return {body, progress, storage, window, timers, dispatched, selectSettings, radio, toast: body.querySelector('.star-toast')};
+  const advance = milliseconds => { elapsed += milliseconds; intervals.forEach(callback => callback()); };
+  return {body, progress, storage, window, timers, dispatched, selectSettings, radio, advance, toast: body.querySelector('.star-toast')};
 }
+
+test('a failed read write is not presented as a saved visit or retried every second', () => {
+  const context = environment({}, 'en', 'note-0123456789abcdef');
+  context.body.querySelector('.reader-hub-toggle').click();
+  let attempts = 0;
+  context.window.PreparationProgress.updateWorkspace = () => { attempts++; return {persisted: false}; };
+  context.advance(16000);
+  assert.match(context.body.querySelector('.reader-hub-live-line').textContent, /not saved/);
+  context.advance(1000);
+  assert.equal(attempts, 1);
+});
+
+test('turning history on after fifteen seconds still counts this visit only once', () => {
+  const context = environment({history: false}, 'en', 'note-0123456789abcdef');
+  context.advance(16000);
+  assert.equal(context.progress.read().workspace.records['reading-total'], undefined);
+  context.body.querySelector('.reader-hub-toggle').click();
+  context.body.querySelector('.reader-hub-button').click();
+  context.advance(1000);
+  assert.equal(context.progress.read().workspace.records['reading-total'].total, 1);
+  context.advance(1000);
+  assert.equal(context.progress.read().workspace.records['reading-total'].total, 1);
+  assert.match(context.body.querySelector('.reader-hub-live-line').textContent, /Counted/);
+});
 
 test('only successful manual bookmark changes emit public-count actions', () => {
   const noteId = 'note-0123456789abcdef';

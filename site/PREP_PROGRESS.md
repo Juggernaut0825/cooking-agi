@@ -28,14 +28,17 @@ First use quietly records the current edition; it does not label the entire arch
 
 ### Reading history and reader settings (workspace records)
 
-The reader hub (`static/reader-hub.js`, loaded on every page after the progress controller) adds two kinds of workspace records. They use the same envelope, merge, backup and recovery rules as other workspace records; no new storage key is created.
+The reader hub (`static/reader-hub.js`, loaded on every page after the progress controller) adds three kinds of workspace records. They use the same envelope, merge, backup and recovery rules as other workspace records; no new storage key is created.
 
 | Key | Fields | Meaning |
 | --- | --- | --- |
 | `reads-YYYYMMDD` | `notes`: up to 200 `note-…` IDs mapped to integers 0–9999; `updatedAt` | How many times each note was read on that local calendar day. A page counts once per load after 15 seconds of visible time; reading a page is not marking it learned. |
+| `reading-total` | `total`: integer 0–9,999,999; `since`: `YYYY-MM-DD` or empty; `updatedAt` | Every counted read since `since`, kept past the 90-day window. The panel never shows it below the sum of the day records still kept, and a missing record is seeded from them. |
 | `reader-settings` | optional `history` (boolean, default on), `mascot` (`open`, `collapsed`, `hidden`; default `collapsed`), `starAskedOn` (`YYYY-MM-DD` or empty), `starDone` (boolean), `snoozedUntil` (UTC timestamp or empty); `updatedAt` | Whether reading is counted, and the star notice: a small toast that appears at most once a day (after 20 seconds on a page) until the reader stars, chooses "Don't show again" (`starDone`, `mascot: hidden`), or snoozes it for 12 hours ("Not now" or ×). The Star pill in the top bar is always there; clicking it also counts as starred. Choosing Show in settings clears a snooze. |
 
-Days older than 90 are emptied rather than deleted, so a later import cannot resurrect them by default and merges stay timestamp-based. Clearing reading history empties every day record and leaves bookmarks, notes and sessions untouched. Each day merges as one record, so the same day edited on two devices keeps the newer copy under the usual policies; counts are approximate, not an audit log. One record per active day accumulates against the 3,000-record workspace limit, which leaves years of daily use but is not unlimited. Turning counting off stops new counts without erasing old ones.
+Days older than 90 are emptied rather than deleted, so a later import cannot resurrect them by default and merges stay timestamp-based. Clearing reading history empties every day record, resets `reading-total` to zero from that day, and leaves bookmarks, notes and sessions untouched. `reading-total` merges like any other record (the newer copy wins), so the all-time figure is per browser, not a sum across devices. Each day merges as one record, so the same day edited on two devices keeps the newer copy under the usual policies; counts are approximate, not an audit log. One record per active day accumulates against the 3,000-record workspace limit, which leaves years of daily use but is not unlimited. Turning counting off stops new counts without erasing old ones.
+
+The Reading tab shows today, this week (Monday to Sunday) with last week's total, the all-time total, a week of daily bars, and a 13-week grid with the current streak, all computed from these records. On a note page a small card shows the 15-second count filling up and then that note's count for today; the numbers update in place when a read is counted, including from another tab, and roll over at local midnight.
 
 The hub's "Saved" tab reads and writes the existing `bookmark-…` records; it is the same list as the sidebar. Theme stays in its separate `theme` key; the settings tab only presses the existing toggle.
 

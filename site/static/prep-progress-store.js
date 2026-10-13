@@ -55,6 +55,8 @@
         if ((key.startsWith('notice-') || key.startsWith('seen-')) && (!Number.isSafeInteger(record.revision) || record.revision < 1)) throw Error('invalid');
         if (key.startsWith('reads-') && (!/^reads-\d{8}$/.test(key) || !plain(record.notes) || Object.keys(record.notes).length > 200 ||
             Object.entries(record.notes).some(([note, count]) => !/^note-[a-f0-9]{16}$/.test(note) || !Number.isInteger(count) || count < 0 || count > 9999))) throw Error('invalid');
+        if (key === 'reading-total' && (!Number.isSafeInteger(record.total) || record.total < 0 || record.total > 9999999 ||
+            typeof record.since !== 'string' || (record.since !== '' && !civilDate(record.since)))) throw Error('invalid');
         if (key === 'reader-settings' && ((record.history !== undefined && typeof record.history !== 'boolean') ||
             (record.mascot !== undefined && !['open', 'collapsed', 'hidden'].includes(record.mascot)) ||
             (record.starAskedOn !== undefined && record.starAskedOn !== '' && !civilDate(record.starAskedOn)) ||
