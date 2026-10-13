@@ -175,7 +175,8 @@
         remove.setAttribute("aria-label", (zh ? "取消收藏：" : "Unsave: ") + entry.title);
         remove.addEventListener("click", function () {
           state.saved = state.saved.filter(function (saved) { return saved !== note; });
-          persist(readingKey, state);
+          var stored = persist(readingKey, state);
+          if (stored && identifiers[note]) window.dispatchEvent(new CustomEvent('notes:bookmark-action', {detail: {noteId: identifiers[note], saved: false}}));
           renderReading();
           save.focus();
           status.textContent = zh ? "已取消收藏。" : "Note removed from saved.";
@@ -189,6 +190,7 @@
   function renderReading() {
     var saved = state.saved.includes(current);
     saveButtons.forEach(function (button) {
+      button.hidden = false;
       button.disabled = !current;
       button.setAttribute("aria-pressed", String(saved));
       button.textContent = !current
@@ -211,6 +213,7 @@
     }
     state.saved = saved ? state.saved.filter(function (note) { return note !== current; }) : [current].concat(state.saved);
     var stored = persist(readingKey, state);
+    if (stored && identifiers[current]) window.dispatchEvent(new CustomEvent('notes:bookmark-action', {detail: {noteId: identifiers[current], saved: !saved}}));
     renderReading();
     announce(!stored ? (zh ? "本页已更新，但浏览器无法保存。离开前可以导出收藏。" : "Updated for this page, but browser storage is unavailable. Export before leaving.")
       : saved ? (zh ? "已取消收藏。" : "Note unsaved.") : (zh ? "已加入收藏。" : "Note saved."));

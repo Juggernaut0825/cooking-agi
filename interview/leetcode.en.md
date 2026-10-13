@@ -2,15 +2,15 @@
 
 [中文](leetcode.md) · **English**
 
-> Reading time: ~4 min · Last reviewed: 2026-09
+> Reading time: ~5 min · Last reviewed: 2026-10
 
-A solution can look obvious while you're reading it and disappear from memory a week later. This is a notebook to come back to: **recognize the structure, choose a tool, explain why it works, then write it yourself.**
+A solution can look obvious while you're reading it, yet a week later you may not know where to start. These notes focus on that missing step: why a method fits, what its variables remember, and whether it still works when a condition changes.
 
-The common patterns in [Top Interview 150](https://leetcode.com/studyplan/top-interview-150/) are a starting point, not a list of 150 solutions to copy. We focus on transferable Easy / Medium techniques, not Hard puzzles. Links are public practice problems, not company interview reports or claims about anyone's completed problems.
+The common patterns in [Top Interview 150](https://leetcode.com/studyplan/top-interview-150/) are a starting point. We focus on reusable Easy / Medium techniques, not 150 individual solutions or Hard puzzles. The links are public practice problems, not a collection of company interview questions.
 
 ## 1. Follow patterns, not problem numbers
 
-Each note has small sections: when to use it → a hand-worked example → Python → complexity → where it fails → self-checks.
+If you're new to practice, start with the first two notes: get comfortable with Python's tools, then learn to store information you've already seen. Otherwise, jump to the pattern you're stuck on. Each note starts with a small worked example; continue to the code and complexity analysis when you need them.
 
 | Order | Note | What to take away |
 | --- | --- | --- |
@@ -55,7 +55,7 @@ For syntax, start with our contributor's [Python notes](python.en.md). These pag
 | Many paths lead to the same subproblem | DP / memoization | Does the state capture everything affecting the future? |
 | Only the largest few values matter | Min-heap | Is a full sort necessary? |
 
-This isn't a keyword classifier. “Shortest” could mean BFS or DP; structure and constraints decide.
+These signals narrow the choices; they don't decide for you. “Shortest” doesn't automatically imply BFS: fewest graph steps and fewest coins for an amount lead to different reasoning. Check the actual constraints.
 
 ## 3. A review session
 
@@ -65,6 +65,8 @@ This isn't a keyword classifier. “Shortest” could mean BFS or DP; structure 
 - **Change a condition a few days later:** sorted to unsorted, positive to signed, tree to cyclic graph. Explaining what breaks matters more than remembering an ID.
 
 Don't worry about hitting a problem count. Being able to rewrite a solution days later and explain what changes under a different constraint matters more than remembering its number.
+
+If your interviews are in English but you study in Chinese, practice explaining a little in English too. The Chinese pages label key terms in English. After an example, put the notes aside and explain what the state stores, how the algorithm moves, why it is correct, and what it costs. A few notes include short spoken explanations to adapt, not memorize. Use the language link for the full Chinese or English page.
 
 ## 4. Run the examples
 
@@ -85,4 +87,17 @@ Tests compare templates against small exhaustive examples, and check that note t
 - Mixing up DFS and BFS: open the [traversal lab](algorithms/traversal.en.md), predict the next node, then step forward.
 - Memorizing without transferring: try each note's changed-condition question before adding more problems.
 
-Aim to explain it, rewrite it, and adapt it. Coding practice is one part of preparation; leave time for projects and life outside it.
+You don't need a new problem every session. Resolving something you couldn't explain in an old problem is useful practice too. Leave time for projects and life outside coding.
+
+## 6. Other explanations to compare
+
+Sometimes a different explanation makes an idea click. The resources below are primarily in Chinese; Hello Algo also offers an English edition. Choose by the question you're trying to answer, rather than treating all four as required reading.
+
+| What you want to understand | Another resource |
+| --- | --- |
+| How a stack, queue, or tree changes step by step | [Hello Algo](https://www.hello-algo.com/): follow the diagrams before returning to the code |
+| Why a familiar template works | [EndlessCheng's foundational algorithm lessons](https://github.com/EndlessCheng/codeforces-go/blob/master/leetcode/README.md): work through a two-pointer, binary-search, or DP lesson; the accompanying lists also contain advanced problems |
+| How related problems use the same technique differently | [labuladong's explanations](https://labuladong.online/zh/algo/intro/core-intro/): compare adaptations of a pattern; some material and tools have paid access |
+| Where to start debugging a DP solution | [代码随想录's DP foundations](https://github.com/youngyangyang04/leetcode-master/blob/master/problems/动态规划理论基础.md): check state meaning, initialization, recurrence, and iteration order against a small hand-computed example |
+
+We work through and test our own examples and code, with links to the references. Variable names, interval conventions, and state definitions differ between sources; borrow the reasoning without splicing incompatible templates together. If something here still doesn't make sense, tell us which step lost you.

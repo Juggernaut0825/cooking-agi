@@ -49,6 +49,14 @@ class AlgorithmPatternTests(unittest.TestCase):
                                 for right in range(left, size + 1)
                                 if len(set(text[left:right])) == right - left), default=0)
                 self.assertEqual(PATTERNS.longest_unique(text), expected)
+                self.assertEqual(PATTERNS.longest_unique_window(text), expected)
+
+    def test_worked_pointer_and_window_examples(self):
+        self.assertEqual(PATTERNS.sorted_pair([1, 3, 5, 8, 12], 11), [1, 3])
+        self.assertEqual(PATTERNS.lower_bound([1, 3, 3, 7, 9], 3), 1)
+        for text, expected in (("abba", 2), ("你好你好啊", 3), ("aaaa", 1), ("", 0)):
+            self.assertEqual(PATTERNS.longest_unique(text), expected)
+            self.assertEqual(PATTERNS.longest_unique_window(text), expected)
 
     def test_traversal_cycles_and_order(self):
         graph = {"A": ["B", "C"], "B": ["C", "D"], "C": ["A"], "D": ["D"]}
@@ -99,7 +107,18 @@ class AlgorithmPatternTests(unittest.TestCase):
                 expected = max((sum(value for index, value in enumerate(values) if mask >> index & 1)
                                 for mask in range(1 << size) if not mask & (mask << 1)), default=0)
                 self.assertEqual(PATTERNS.rob_memo(values), expected)
+                self.assertEqual(PATTERNS.rob_table(values), expected)
                 self.assertEqual(PATTERNS.rob_iterative(values), expected)
+
+    def test_worked_dp_suffixes_and_deep_input(self):
+        values = [2, 7, 9, 3, 1]
+        for index, expected in enumerate((12, 10, 10, 3, 1, 0, 0)):
+            self.assertEqual(PATTERNS.rob_memo(values[index:]), expected)
+            self.assertEqual(PATTERNS.rob_table(values[index:]), expected)
+            self.assertEqual(PATTERNS.rob_iterative(values[index:]), expected)
+        self.assertEqual(values, [2, 7, 9, 3, 1])
+        self.assertEqual(PATTERNS.rob_table([1] * 3001), 1501)
+        self.assertEqual(PATTERNS.rob_iterative([1] * 3001), 1501)
 
     def test_intervals_preserve_input(self):
         intervals = [[2, 4], [1, 3], [6, 6], [6, 8]]

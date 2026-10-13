@@ -45,6 +45,7 @@ function environment(initialSettings = {}, language = 'en') {
   right.insertBefore = child => right.append(child);
   body.append(right);
   const timers = [];
+  const dispatched = [];
   const document = {
     body, documentElement: {lang: language, dataset: {}}, visibilityState: 'visible',
     createElement: tag => new Element(tag), createElementNS: (namespace, tag) => new Element(tag),
@@ -56,17 +57,38 @@ function environment(initialSettings = {}, language = 'en') {
     SITE: {prefix: '/'},
     PreparationProgress: {getState: () => progress.read(), updateWorkspace: (...args) => progress.updateWorkspace(...args), getCatalog: () => ({notes: {}})},
     addEventListener() {}, setTimeout: callback => { timers.push(callback); return timers.length; },
+    dispatchEvent: event => { dispatched.push(event); return true; },
     matchMedia: () => ({matches: false})
   };
-  vm.runInNewContext(source, {window, document, URL, Date, location: {href: 'https://example.com/note.html'}});
+  vm.runInNewContext(source, {window, document, URL, Date, Event, CustomEvent, location: {href: 'https://example.com/note.html'}});
   const selectSettings = () => {
     body.querySelector('.reader-hub-toggle').click();
     const tab = body.querySelector('[data-tab="settings"]');
     body.querySelector('.reader-hub-tabs').events.click({target: tab});
   };
   const radio = label => body.querySelector('[id="reader-panel-settings"]').querySelectorAll('[role="radio"]').find(item => item.textContent === label);
-  return {body, progress, storage, window, timers, selectSettings, radio, toast: body.querySelector('.star-toast')};
+  return {body, progress, storage, window, timers, dispatched, selectSettings, radio, toast: body.querySelector('.star-toast')};
 }
+
+test('only successful manual bookmark changes emit public-count actions', () => {
+  const noteId = 'note-0123456789abcdef';
+  for (const persisted of [true, false]) {
+    const context = environment();
+    context.progress.updateWorkspace({['bookmark-' + noteId]: {saved: true, updatedAt: new Date().toISOString()}});
+    assert.equal(context.dispatched.length, 0);
+    context.body.querySelector('.reader-hub-toggle').click();
+    const tab = context.body.querySelector('[data-tab="saved"]');
+    context.body.querySelector('.reader-hub-tabs').events.click({target: tab});
+    if (!persisted) context.window.PreparationProgress.updateWorkspace = () => ({persisted: false});
+    context.body.querySelector('.reader-hub-remove').click();
+    const actions = context.dispatched.filter(event => event.type === 'notes:bookmark-action');
+    assert.equal(actions.length, persisted ? 1 : 0);
+    if (persisted) {
+      assert.equal(actions[0].detail.noteId, noteId);
+      assert.equal(actions[0].detail.saved, false);
+    }
+  }
+});
 
 test('Show restores legacy permanent hiding immediately and after a page reload', () => {
   for (const [language, show, hide] of [['en', 'Show', 'Hide'], ['zh', '显示', '隐藏']]) {

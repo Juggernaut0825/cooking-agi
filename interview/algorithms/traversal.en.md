@@ -2,23 +2,38 @@
 
 [中文](traversal.md) · **English** · [Pattern map](../leetcode.en.md)
 
-> Reading time: ~9 min · Last reviewed: 2026-09
+> Reading time: ~11 min · Last reviewed: 2026-10
 
-Think of rooms and corridors. DFS follows one route before returning; BFS checks rooms one step away, then two steps away. **DFS / BFS describe exploration order. Recursive / iterative describe implementation. These are different choices.**
+Tree and graph problems often begin with a simple question: which node should we visit next? Depth-first search (DFS) follows one branch before returning; breadth-first search (BFS) visits nodes one step from the start, then two steps away.
+
+Recursion versus iteration is a separate choice. DFS can use recursion or an explicit stack; BFS usually uses a queue. “DFS means recursion, BFS means loops” isn't the definition.
 
 ## 1. Walk the same graph first
 
-Neighbors are visited left to right. Predict the next node before stepping. “Discovered” means registered; “processing” means examining its neighbors.
+Start with this small tree, visiting each node's children from left to right:
+
+```text
+        A
+       / \
+      B   C
+     / \   \
+    D   E   F
+```
+
+- DFS: A → B → D. D has no children, so return to B for E. Only after finishing B's branch do we visit C and F. The order is **A B D E C F**.
+- BFS: visit A, then B and C on the next level, then D, E, and F. The order is **A B C D E F**.
+
+The first difference comes after B: DFS continues down to D; BFS visits C on B's level first. You can step through the trace below, but the two routes above show the distinction without interacting. “Discovered” means a node has been registered; “processing” means examining its neighbors.
 
 <div class="traversal-lab" data-traversal-lab data-language="en">
 <p>Without JavaScript: A connects to B, C; B to D, E; C to F. DFS discovery order is A B D E C F; BFS order is A B C D E F.</p>
 </div>
 
-This is a teaching trace, not a benchmark. Try the cycle to see visited prevent rediscovery, then the chain and wide tree to compare the queue with the DFS path.
+Try the cycle to see `visited` prevent repeated exploration when an edge leads back to a known node. The chain and wide tree compare how much work a stack or queue holds; this is a teaching trace, not a benchmark.
 
 ## 2. Recursive DFS: the call stack remembers where to return
 
-Use an adjacency list with integer or string nodes. Missing keys have no outgoing edges; start is a valid vertex. These functions explore only the part reachable from start.
+An adjacency list maps each node to its neighbors. For the tree above, `graph["A"]` is `["B", "C"]`. Use integer or string nodes; a missing key means no outgoing edges. Each function starts from a valid vertex `start` and explores only the part reachable from it.
 
 ```python
 def dfs_recursive(graph, start):
@@ -36,17 +51,43 @@ def dfs_recursive(graph, start):
     return order
 ```
 
-Register on entry to stop cycles. Calling `visit(B)` doesn't discard A's frame: it waits to continue with its next neighbor after B returns.
+Calling `visit("B")` pauses A's unfinished call. Only after B, D, and E have been processed does execution return to A and continue with C. The call stack remembers where to resume.
+
+Register a node in `seen` on entry. If B has an edge back to A, it can then skip another call to `visit("A")`. Waiting until an entire branch finishes before marking nodes could allow a cycle to recurse indefinitely.
 
 - **Strength:** tree recursion, postorder aggregation, and backtracking map naturally to function inputs and outputs.
 - **Cost:** calls have overhead and Python limits recursion depth. For deep chains, iteration is usually safer than just raising that limit.
 - **Tree example:** maximum depth is `1 + max(left depth, right depth)`; an empty tree returns 0. Define the return value before coding.
 
+### Explaining this DFS aloud
+
+Describe what the code does rather than stopping at “I use recursion”:
+
+> I mark a node as visited when I enter it, then recursively visit each unvisited neighbor. The call stack remembers where to resume after each recursive call returns. Marking nodes on entry prevents cycles from causing repeated visits.
+
+For a follow-up about recursion versus iteration:
+
+> I can replace the recursive calls with an explicit stack. That avoids Python's recursion-depth limit, but it doesn't eliminate the memory needed to keep track of pending work.
+
+An **explicit stack** is one you manage yourself; the **call stack** holds function calls. Explain which one remembers where execution paused, rather than only saying that one version uses functions and the other uses a loop.
+
 ## 3. Iterative DFS: manage the pending work yourself
 
-For a tree without cycles or shared children, a simple version pops from a list's end and appends the right child before the left, so the left is processed first.
+For the same tree, use a list as a stack: pop the last node, process it, and push its children. To visit the left child first, push the right child first and the left child second. A stack is last in, first out.
 
-General graphs have repeated paths. A simple stack with mark-on-push works for reachability, but its order need not match recursive DFS exactly. To simulate recursion faithfully, store **the node and its remaining neighbors** in each frame:
+| Just processed | Stack, with the next item on the right | Next action |
+| --- | --- | --- |
+| A | `[C, B]` | Pop B |
+| B | `[C, E, D]` | Pop D |
+| D | `[C, E]` | Pop E |
+| E | `[C]` | B's branch is complete; move to C |
+
+This suffices for a tree without cycles or shared children. General graphs need duplicate handling. A simple stack that marks nodes on push finds all reachable nodes, but doesn't necessarily produce the same search tree as recursive DFS. Don't substitute it blindly when ancestry or entry/exit timing matters.
+
+<details class="interview" markdown="1">
+<summary>Further detail: how can iteration match recursive DFS on a general graph?</summary>
+
+Each stack frame must remember both its node and how far through its neighbors it has reached. That reproduces the pause-and-return behavior of recursion:
 
 ```python
 def dfs_iterative(graph, start):
@@ -65,9 +106,23 @@ def dfs_iterative(graph, start):
     return order
 ```
 
-`iter` creates a cursor; `next(neighbors, None)` returns None at exhaustion. None is not a node in this example. Popping an exhausted frame mirrors returning from a function. More bookkeeping than a simple stack, but entry/exit semantics are preserved. Avoiding Python recursion limits does **not** eliminate stack memory.
+`iter` lets us consume neighbors one at a time; `next(neighbors, None)` returns None when exhausted, so None cannot be a node here. Popping a finished frame returns to the previous level, just like returning from a function.
+
+With the same neighbor order, this preserves recursive DFS discovery order and provides places to add entry/exit operations. It avoids Python's recursion-depth limit, but still needs an explicit stack. Replacing calls with a loop doesn't eliminate that memory.
+
+</details>
 
 ## 4. BFS: a queue processes increasing distances
+
+A queue is first in, first out. After A adds B and C, any new nodes B discovers must wait behind C.
+
+| Just processed | Queue, with the next item on the left | Newly discovered distances |
+| --- | --- | --- |
+| A | `[B, C]` | B and C are 1 step away |
+| B | `[C, D, E]` | D and E are 2 steps away |
+| C | `[D, E, F]` | F is 2 steps away |
+
+Every node at distance 1 is processed before any node at distance 2. In Python, use `deque.popleft()` for the queue front; repeated list `pop(0)` calls shift the remaining elements.
 
 ```python
 from collections import deque
@@ -84,9 +139,9 @@ def bfs_distances(graph, start):
     return distances
 ```
 
-`distances` doubles as visited. **Register on enqueue**, not only on dequeue, so multiple parents don't queue the same child repeatedly. To return a path, store `parent[neighbor] = node` and reconstruct backward from the goal.
+`distances` records both distance and discovery. **Register on enqueue**: if B and C both point to D, B's registration prevents C from enqueuing D again. To return a path rather than just a distance, also store `parent[neighbor] = node` and reconstruct backward from the goal.
 
-BFS finds a minimum-edge path because FIFO processes closer nodes first. With unequal edge weights, fewer edges need not mean lower cost. This isn't a general weighted shortest-path algorithm. [DFS, BFS, and shortest paths](https://algs4.cs.princeton.edu/41graph/)
+BFS finds minimum-edge paths because, at first discovery, no shorter route can remain unexplored. But fewer edges need not mean lower cost: A → C might cost 10, while A → B → C costs 1 per edge, totaling 2. Unequal edge weights require an appropriate weighted shortest-path algorithm. [Princeton's explanation of DFS, BFS, and shortest paths](https://algs4.cs.princeton.edu/41graph/)
 
 ## 5. Complexity and tradeoffs
 
@@ -120,3 +175,7 @@ DFS may reach the goal through a long branch before checking a one-edge alternat
 Reachability needs each node processed once. Enumerating all simple paths needs path-local membership with backtracking because distinct paths can be distinct answers. If a state includes keys or remaining budget, visited must include those too.
 
 </details>
+
+## 7. Further explanations
+
+[Hello Algo: graph traversal](https://www.hello-algo.com/chapter_graph/graph_traversal/) (Chinese, with an English edition available) illustrates how nodes, queues, and visited records change. When reviewing, first explain where pending nodes are stored, which is taken next, and when it is marked. The code follows from those choices.

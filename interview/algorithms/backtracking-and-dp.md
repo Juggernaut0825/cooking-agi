@@ -2,13 +2,22 @@
 
 **中文** · [English](backtracking-and-dp.en.md) · [方法地图](../leetcode.md)
 
-> 阅读时间：约 8 分钟 · 最近审阅：2026-09
+> 阅读时间：约 12 分钟 · 最近审阅：2026-10
 
-这两类题都可能画出递归树，但关注点不一样。回溯要把合法选择走出来；DP 要把重复子问题的结果存下来。它们可以结合，不能只靠“有没有递归”来区分。
+看到一道题能用递归，不代表接下来就知道该写回溯还是 DP。可以先想输出：题目是要你列出每一种选法，还是只要一个最优值？如果两条不同的选择路线，最后都在问同一个问题，这个问题的答案能不能只算一次？下面分别用子集和“不选相邻元素”来说明。
 
 ## 1. 回溯：选择、往下走、撤销
 
-枚举 `[1, 2]` 的子集，结果是 `[]、[1]、[1,2]、[2]`。路径 path 只表示当前选择；start 保证只往后选，不把 `[1,2]` 和 `[2,1]` 都算成一个子集的不同答案。
+先列出 `[1, 2]` 的所有子集。空集也算，所以结果是 `[]、[1]、[1, 2]、[2]`。我们用 `path` 放目前选了哪些数，用 `start` 指明接下来从哪个位置开始选。
+
+```text
+[]
+├─ 选 1 → [1]
+│          └─ 再选 2 → [1, 2]
+└─ 选 2 → [2]
+```
+
+每到一个节点，就已经得到一个子集，不必等到最底下才记答案。选了 1 后，只往后选 2，不再回头选 1；这样也不会把 `[2, 1]` 再算一次。
 
 ```python
 def subsets(values):
@@ -26,7 +35,12 @@ def subsets(values):
     return result
 ```
 
-假设输入元素互不相同。存答案必须 copy，不然所有答案都指向同一个会继续变化的 path。辅助空间 O(n)，输出空间和时间 O(n·2ⁿ)；输出每一个子集本身就不便宜。存在重复元素时，需要额外去重规则，这个模板不自动处理。
+这几行最容易混的是 `copy` 和 `pop`。它们不是一回事：
+
+- `copy` 是给答案留一份当前选择的副本。否则所有答案都指向同一个列表，后面改 `path`，前面存的答案也跟着变。
+- `pop` 是撤销刚才的选择。走完 `[1, 2]`，先退回 `[1]`；这一支走完再退回 `[]`，才能从空集开始选 2。不撤销，下一支就会带着上一支的东西。
+
+这里假设输入元素互不相同。有重复值时，要另加去重规则。n 个元素有 2ⁿ 个子集，所有子集总共要保存 n·2ⁿ⁻¹ 个元素（n≥1），所以输出空间与时间是 O(n·2ⁿ)。不算输出，当前路径和递归栈只需要 O(n)。
 
 ## 2. 3 种题，3 种“下一步”
 
@@ -36,11 +50,30 @@ def subsets(values):
 | 元素可重复使用的组合 | 可继续用当前 index | 仍保持选择顺序；剪枝需满足数值前提 |
 | 排列 | 每层尝试所有尚未使用的下标 | used 记录当前路径使用情况，回退时撤销 |
 
-**剪枝不是想当然地跳过。** 若都是正数，剩余目标已经小于 0，可以停；有负数时，这个理由不成立。全局 visited 也不能随便加，因为不同路径可能是不同输出。
+剪枝就是提前判断“这条路走下去也不会有答案”，然后不再往下试。比如用正数凑目标和，已经超了，就没必要再加；但允许负数时，后面可能把和减回来，这样剪就会漏解。类似地，不能一看见重复节点就加全局 `visited`：两条不同路径，可能正是题目要的两个答案。
 
 ## 3. DP：先把状态说成一句人话
 
-House Robber 的简化模型：一排非负收益，不能取相邻两项。`best(index)` 表示“从 index 开始，最多还能拿多少”。两种选择：跳过当前，或拿当前并跳过下一项。
+动态规划怎么从递归里来？用 House Robber 看一遍。先不想题目里的故事：给一排非负数 `[2, 7, 9, 3, 1]`，选一些数，不能相邻，希望总和最大。例如选 2、9、1 得到 12。
+
+先定义 `best(index)`：**只看从 index 开始的这一段，最多还能选出多少收益。** 前面的选择已经处理完，不计入这个返回值。
+
+面对当前位置，只有两种情况：
+
+- 不选它：剩下的问题是 `best(index + 1)`。
+- 选它：拿到 `values[index]`，下一项不能选，剩下是 `best(index + 2)`。
+
+两边取较大值，就得到递推式。这里不是先猜一个公式，再想它是什么意思，而是把题目允许的选择逐项写出来。
+
+```text
+best(0)
+├─ 不选位置 0 → best(1)
+│                ├─ 不选位置 1 → best(2)
+│                └─ 选位置 1   → 7 + best(3)
+└─ 选位置 0   → 2 + best(2)
+```
+
+图里 `best(2)` 出现了两次。虽然前面选法不同，但接下来都是在问：`[9, 3, 1]` 这一段最多能拿多少？它的答案不会因为之前选了什么而改变，所以可以只算一次，存下来复用。这就是记忆化搜索（memoization）。
 
 ```python
 from functools import cache
@@ -55,39 +88,82 @@ def rob_memo(values):
     return best(0)
 ```
 
-没有缓存时，很多 index 被反复计算；加 [cache](https://docs.python.org/3/library/functools.html#functools.cache) 后，每个状态只解一次。时间 O(n)，缓存与调用栈 O(n)。输入在计算中不能改变；这里 cache 放在函数内部，每次调用重新创建，避免串到另一组输入。
+走到数组外，已经没有东西可选，返回 0；这就是递归终止条件。加上 [cache](https://docs.python.org/3/library/functools.html#functools.cache) 后，每个位置只计算一次，每次比较两个选择，时间 O(n)，缓存和调用栈各占 O(n)。输入不能在计算中改变；缓存放在外层函数内部，每次处理新输入时也会重新创建。
+
+为什么这里只记一个下标就够？因为“不能选相邻项”已经体现在跳过下一项这个动作里。如果规则改成“最多选两项”，同一段数组还会受剩余名额影响，就得把名额也放进状态。**能不能复用，要看余下的问题是否真的相同，不是看函数参数长得像不像。**
 
 ## 4. 同一个递推，换成迭代
 
-从左往右：one_back 是已经处理的前缀最优值，two_back 是再少一项的前缀最优值。新值只有“跳过”或“拿了加上 two_back”两种选择。
+写迭代版时，先不急着压缩成两个变量，把刚才的结果填进一张表。`best[index]` 仍表示“从这里开始的最大收益”，含义没有换。它依赖右边两个位置，所以**从右往左填**：
+
+<div class="algorithm-trace" markdown="1">
+
+| 位置 | 当前值 | 不选 | 选当前 | 最多收益 |
+| --- | --- | --- | --- | --- |
+| 5、6 | 已越界 | — | — | 0 |
+| 4 | 1 | 0 | 1 + 0 | 1 |
+| 3 | 3 | 1 | 3 + 0 | 3 |
+| 2 | 9 | 3 | 9 + 1 | 10 |
+| 1 | 7 | 10 | 7 + 3 | 10 |
+| 0 | 2 | 10 | 2 + 10 | 12 |
+
+</div>
+
+```python
+def rob_table(values):
+    best = [0] * (len(values) + 2)
+    for index in range(len(values) - 1, -1, -1):
+        best[index] = max(best[index + 1], values[index] + best[index + 2])
+    return best[0]
+```
+
+多留的两个 0 对应递归里的越界返回。先把这张表算对，出错时也容易定位：如果位置 2 没算出 10，就看它是否正确读到了位置 3 和 4。
+
+### 最后再省空间
+
+算每一格时，其实只读右边两格，其他结果之后都用不到。用 `one_ahead` 和 `two_ahead` 保存它们，仍然从右往左走：
 
 ```python
 def rob_iterative(values):
-    two_back = one_back = 0
-    for value in values:
-        current = max(one_back, two_back + value)
-        two_back, one_back = one_back, current
-    return one_back
+    one_ahead = two_ahead = 0
+    for value in reversed(values):
+        current = max(one_ahead, value + two_ahead)
+        one_ahead, two_ahead = current, one_ahead
+    return one_ahead
 ```
 
-`[2, 7, 9, 3, 1]` 的前缀最优值依次是 `2, 7, 11, 11, 12`。时间 O(n)，辅助空间 O(1)。压缩状态后只返回最优值；如果要还原具体选了哪些位置，通常要保留更多信息或重新计算。
+比如处理 9 之前，两个变量分别是 3 和 1；这一轮算出 `max(3, 9 + 1) = 10`，再把它们换成 10 和 3，供下一轮使用。Python 的这次同时赋值先计算右侧，再写到左侧，不会提前覆盖旧的 `one_ahead`。
+
+表格版时间和辅助空间都是 O(n)，滚动变量版时间仍是 O(n)，辅助空间降到 O(1)；`reversed` 也不会复制整个列表。两版只是保存结果的方式不同。如果还要知道具体选了哪些位置，保留表格往往更省事，不能只拿一个最优值就还原完整选择。
 
 ## 5. recursive / iterative 的取舍
 
 | 写法 | 优势 | 代价 |
 | --- | --- | --- |
-| 递归 + memoization | 接近问题定义，只访问需要的状态 | 函数调用、cache、递归深度限制 |
-| 表格 bottom-up | 顺序明确，方便检查所有状态 | 可能计算用不到的状态，要排好依赖顺序 |
+| 递归 + 记忆化 | 接近问题定义，只访问需要的状态 | 函数调用、缓存、递归深度限制 |
+| 从已知结果逐步填表 | 顺序明确，方便检查所有状态 | 可能计算用不到的状态，要排好依赖顺序 |
 | 滚动变量 | 内存小、实现简短 | 只适合有限历史依赖，还原路径更麻烦 |
 
 分析 DP 时用“**状态数 × 每个状态的转移成本**”，再加 key 构造和输出成本。不是所有 DP 都 O(n)。例如二维表可能 O(nm)，每个状态还遍历 k 种选择，就可能 O(nmk)。
 
+### 用英语讲一遍这个解法
+
+英语里，**recursion** 和 **iteration** 是名词；描述写法时，用 **a recursive solution** 或 **an iterative solution**。不必翻译整段笔记，先把状态、选择和停止条件讲清楚：
+
+> I define `best(index)` as the maximum sum I can get from that index onward without taking adjacent elements. I either skip the current element, or take it and skip the next one. The base case is zero once the index reaches the end.
+
+接着说为什么要缓存，以及它的成本：
+
+> Different choices can lead to the same subproblem, so I cache each result. There are O(n) states, and each takes O(1) work. That gives O(n) time and O(n) auxiliary space, including the recursion stack.
+
+如果被问到能不能省空间，再解释从右往左填表，以及只保留后两个状态。不用一开口就报最优复杂度，却说不清它从哪里来。
+
 ## 6. 少量例题与自测
 
-- [Subsets](https://leetcode.com/problems/subsets/)：练 path 的复制和撤销。
-- [Permutations](https://leetcode.com/problems/permutations/)：区分“顺序不同算不算不同答案”。
-- [House Robber](https://leetcode.com/problems/house-robber/)：递归 → cache → 表格 → 滚动变量。
-- [Coin Change](https://leetcode.com/problems/coin-change/)：把状态写成“凑到某金额的最少硬币数”，再算状态与转移。
+- [子集](https://leetcode.com/problems/subsets/)：练当前选择的复制和撤销。
+- [全排列](https://leetcode.com/problems/permutations/)：区分“顺序不同算不算不同答案”。
+- [打家劫舍](https://leetcode.com/problems/house-robber/)：递归 → 记忆化 → 表格 → 滚动变量。
+- [零钱兑换](https://leetcode.com/problems/coin-change/)：先说明“凑到这个金额，最少要几枚硬币”，再写状态和转移。
 
 <details class="interview" markdown="1">
 <summary>为什么不能给所有回溯直接加 cache，就变成多项式时间？</summary>
@@ -102,3 +178,10 @@ def rob_iterative(values):
 不能。`[4, 5, 4]` 取中间 5 不如取两端得到 8。DP 保留互斥选择的最优结果，而不是只看当前最大。
 
 </details>
+
+## 7. 换一种讲法再看
+
+- [Hello 算法：初探动态规划](https://www.hello-algo.com/chapter_dynamic_programming/intro_to_dynamic_programming/)：用爬楼梯把搜索、记忆化、填表和空间优化连起来，可以和本页的例子对照。
+- [代码随想录：动态规划理论基础](https://github.com/youngyangyang04/leetcode-master/blob/master/problems/动态规划理论基础.md)：写完以后，可以按状态含义、递推、初值和遍历顺序检查，尤其别省掉手算一张小表。
+
+不同资料可能从前往后定义状态，也可能像本页这样从后往前。两种都可以；改写代码时先确认每个变量的含义，不要只照着换循环方向。

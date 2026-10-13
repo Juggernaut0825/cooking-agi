@@ -122,7 +122,15 @@
 
   function write(changes, action) {
     if (!Object.keys(changes).length && !action) return true;
-    try { return progress.updateWorkspace(changes, action)?.persisted !== false; } catch { return false; }
+    let persisted;
+    try { persisted = progress.updateWorkspace(changes, action)?.persisted !== false; } catch { return false; }
+    if (persisted) {
+      for (const [key, record] of Object.entries(changes)) {
+        if (/^bookmark-note-[a-f0-9]{16}$/.test(key) && typeof record.saved === 'boolean')
+          scope.dispatchEvent(new CustomEvent('notes:bookmark-action', {detail: {noteId: key.slice(9), saved: record.saved}}));
+      }
+    }
+    return persisted;
   }
   function saveSettings(patch) {
     const current = settings(records());
@@ -205,8 +213,8 @@
   const status = el('p', {class: 'reader-hub-status', role: 'status', 'aria-live': 'polite'});
   drawer.append(el('header', {class: 'reader-hub-head'}, [el('h2', {id: 'reader-hub-title', text: say('我的', 'Mine')}), close]),
     tabList, ...Object.values(panels), status,
-    el('p', {class: 'reader-hub-local', text: say('这些记录只存在这个浏览器里，不会上传；换设备时到学习台导出、导入备份。',
-      'These records stay in this browser and are never uploaded. To move devices, export and import a backup in the study workspace.')}));
+    el('p', {class: 'reader-hub-local', text: say('个人记录保存在这个浏览器里；换设备时可在学习台导出、导入。公开计数另行开启，只统计后续操作，不上传已有记录。',
+      'Personal records stay in this browser; use the study workspace to export or import them. Public counting is a separate opt-in for subsequent activity, not an upload of existing records.')}));
   document.body.append(drawer);
 
   let active = 'reading';

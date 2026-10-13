@@ -37,6 +37,18 @@ def sorted_pair(values, target):
     return None
 
 
+def longest_unique_window(text):
+    window = set()
+    left = best = 0
+    for right, character in enumerate(text):
+        while character in window:
+            window.remove(text[left])
+            left += 1
+        window.add(character)
+        best = max(best, right - left + 1)
+    return best
+
+
 def longest_unique(text):
     last_seen = {}
     left = best = 0
@@ -176,12 +188,19 @@ def rob_memo(values):
     return best(0)
 
 
+def rob_table(values):
+    best = [0] * (len(values) + 2)
+    for index in range(len(values) - 1, -1, -1):
+        best[index] = max(best[index + 1], values[index] + best[index + 2])
+    return best[0]
+
+
 def rob_iterative(values):
-    two_back = one_back = 0
-    for value in values:
-        current = max(one_back, two_back + value)
-        two_back, one_back = one_back, current
-    return one_back
+    one_ahead = two_ahead = 0
+    for value in reversed(values):
+        current = max(one_ahead, value + two_ahead)
+        one_ahead, two_ahead = current, one_ahead
+    return one_ahead
 
 
 def merge_intervals(intervals):

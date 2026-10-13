@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "edition": 1,
+  "edition": 2,
   "notes": {
     "note-0036b48fb865c7ea": {
       "introduced": 1,
@@ -192,7 +192,11 @@
     },
     "note-2e88d0afb864e41d": {
       "introduced": 1,
-      "revision": 1
+      "revision": 2,
+      "summary": {
+        "zh": "补充双指针和二分的逐步示例、窗口逐个收缩的实现，以及最长与最短窗口的区别。",
+        "en": "Added pointer and binary-search traces, a shrink-by-shrink window implementation, and the distinction between longest and shortest windows."
+      }
     },
     "note-2eeed7964718782f": {
       "introduced": 1,
@@ -424,7 +428,11 @@
     },
     "note-78153ce088c6824e": {
       "introduced": 1,
-      "revision": 1
+      "revision": 2,
+      "summary": {
+        "zh": "补充回溯路径图和 DP 重复子问题，新增填表实现；递归、填表和滚动变量沿用同一状态定义。",
+        "en": "Added backtracking and subproblem traces plus a table implementation; recursion, tabulation, and rolling variables now share one state definition."
+      }
     },
     "note-7828eed06fb01d74": {
       "introduced": 1,
@@ -940,7 +948,11 @@
     },
     "note-ea346593f09ce0ae": {
       "introduced": 1,
-      "revision": 1
+      "revision": 2,
+      "summary": {
+        "zh": "补充不操作也能读懂的树、栈和队列示例，并用带权反例说明 BFS 最短路的适用条件。",
+        "en": "Added static tree, stack, and queue traces, plus a weighted counterexample explaining when BFS gives a shortest path."
+      }
     },
     "note-eac9af3810165227": {
       "introduced": 1,

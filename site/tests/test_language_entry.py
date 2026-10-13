@@ -72,6 +72,36 @@ class LanguageEntryTests(unittest.TestCase):
             self.assertIn(f'href="../{home}"', build.tabs_html(page))
             self.assertEqual(build.page_category(self.home[language]), 'home')
 
+    def test_home_hides_repository_only_links_but_keeps_them_in_readmes(self):
+        for language in ['en', 'zh']:
+            page = self.home[language]
+            source = page.src.read_text()
+            repository_block = re.search(
+                r'<!-- repository-only -->(.*?)<!-- /repository-only -->',
+                source, re.S).group(1)
+            self.assertIn('badge.svg', repository_block)
+            self.assertIn('https://tianyi-zhang-02.github.io/cooking-agi/', repository_block)
+            build.build_page(page, [], self.nav['site']['repo'], self.known)
+            self.assertNotIn('repository-only', page.body)
+            self.assertNotIn('badge.svg', page.body)
+            intro = page.body.split('<h2', 1)[0]
+            self.assertNotIn('<a ', intro)
+            self.assertIn('English or 中文' if language == 'en' else '中文或 English', intro)
+
+    def test_home_routes_precede_release_details_and_fit_two_columns(self):
+        for language in ['en', 'zh']:
+            page = self.home[language]
+            build.build_page(page, [], self.nav['site']['repo'], self.known)
+            table = re.search(r'<table>.*?</table>', page.body, re.S).group(0)
+            rows = re.findall(r'<tr>(.*?)</tr>', table, re.S)
+            self.assertEqual(len(rows), 6)
+            for row in rows:
+                self.assertEqual(len(re.findall(r'<t[hd]>', row)), 2)
+            self.assertLess(page.body.index('</table>'), page.body.index('v1.0'))
+            disclosures = re.findall(r'<details[^>]*>(.*?)</details>', page.body, re.S)
+            self.assertTrue(any('CODEOWNER' in content and 'AI' in content
+                                for content in disclosures))
+
     def test_existing_articles_keep_their_urls(self):
         for language, suffix in [('zh', ''), ('en', '.en')]:
             self.assertEqual(build.BY_SRC['career/journey.md'][language].url, f'career/journey{suffix}.html')

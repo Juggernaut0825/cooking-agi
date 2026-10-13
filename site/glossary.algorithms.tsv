@@ -1,0 +1,31 @@
+递归	recursion	函数直接或间接调用自身，把问题交给更小的子问题；要能走到终止条件
+迭代	iteration	通过循环反复更新状态；需要自己保存下一轮会用到的信息
+回溯	backtracking	尝试一个选择，继续搜索，返回后撤销选择，再试其他分支
+动态规划	dynamic programming, DP	用状态描述子问题，保存并复用结果，避免重复求解
+记忆化搜索	memoization	缓存递归子问题的结果，再遇到相同状态时直接复用
+递归终止条件	base case	不再递归、可以直接给出结果的情况；也要保证递归能到达这里
+递推式	recurrence relation	说明一个子问题的答案怎样由其他子问题的答案得到
+状态转移	state transition	按问题允许的选择，把当前状态和其他状态联系起来
+重复子问题	overlapping subproblems	不同求解路径会遇到相同的子问题，答案可以复用
+调用栈	call stack	保存尚未返回的函数调用，以及返回后继续执行所需的信息
+递归栈	recursion stack	递归过程中尚未返回的调用所占的栈空间
+栈帧	stack frame	一次函数调用需要保留的局部信息与返回位置；也可以用显式数据结构模拟
+剪枝	pruning	确认某个分支不可能产生所需答案后，提前停止搜索
+双指针	two pointers	维护两个位置，利用输入条件决定怎样移动并排除候选
+滑动窗口	sliding window	移动一个连续区间的边界，并维护区间里的信息
+二分查找	binary search	利用有序性或单调判定，每次排除约一半候选范围
+前缀和	prefix sum	预先记录从起点累加的结果，用两个前缀之差求区间和
+不变量	invariant	在约定的执行位置始终成立的条件，例如每轮更新后窗口里没有重复字符
+辅助空间	auxiliary space	除输入和输出外，算法执行时额外使用的空间，包括调用栈
+时间复杂度	time complexity	输入规模变大时，操作次数如何增长；需要说明平均、最坏等分析条件
+空间复杂度	space complexity	输入规模变大时，所需空间如何增长；要说明是否包含输入与输出
+哈希表	hash table	用键的哈希值定位存储位置，冲突还需处理；查找并非每次都保证常数时间
+邻接表	adjacency list	为每个节点保存它相邻节点的列表
+深度优先搜索	depth-first search, DFS	沿一条分支继续探索，走完再返回处理其他分支
+广度优先搜索	breadth-first search, BFS	按距离起点的边数逐层探索；普通 BFS 不适用于任意边权的最短路
+后进先出	last in, first out, LIFO	最后放进去的元素最先取出，是栈的访问顺序
+先进先出	first in, first out, FIFO	最早放进去的元素最先取出，是队列的访问顺序
+摊还分析	amortized analysis	把一串操作的总成本分摊到各次操作，不是对随机输入取平均
+二叉搜索树	binary search tree, BST	左、右子树的键按约定分别小于和大于当前键；重复键需要另定规则
+单调队列	monotonic queue	保留按值单调排列的候选；配合过期规则维护窗口中的极值
+贪心	greedy	每步选当前认为最有利的方案；需要证明局部选择不会失去全局最优解

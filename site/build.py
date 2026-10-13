@@ -41,6 +41,7 @@ import curriculum
 import prep_progress
 import prep_schedule
 import prep_workspace
+import note_metrics
 import next_stop
 import technology_chronicle
 from markdown.extensions.toc import TocExtension, slugify
@@ -101,9 +102,13 @@ def load_glossary(filename="glossary.tsv"):
 
 
 def glossary_for_page(page, terms):
-    if page.section.get("group") != "deep-rl":
+    filename = {
+        "deep-rl": "glossary.deep-rl.tsv",
+        "algorithms": "glossary.algorithms.tsv",
+    }.get(page.section.get("group"))
+    if filename is None:
         return terms
-    scoped = load_glossary("glossary.deep-rl.tsv")
+    scoped = load_glossary(filename)
     names = {term[0] for term in scoped}
     return sorted(scoped + [term for term in terms if term[0] not in names],
                   key=lambda term: -len(term[0]))
@@ -1298,6 +1303,8 @@ def build_page(page: Page, terms, repo: str, known: set):
     anchor = f'<span id="{html.escape(heading_id, quote=True)}"></span>' if heading_id else ""
     raw = re.sub(r"^#\s+.+$", lambda match: anchor, raw, count=1, flags=re.M)
     if page.kind == "home":
+        raw = re.sub(r"<!-- repository-only -->.*?<!-- /repository-only -->",
+                     "", raw, flags=re.S)
         # Useful on GitHub, but redundant (and oddly circular) on the site itself.
         raw = re.sub(
             r"^###\s+[^\n]*(?:阅读请到|Read online|Read it at)[^\n]*\n(?:\n)?",
@@ -2070,6 +2077,7 @@ def assemble(page, sections, people, nav, built, template):
             .replace("{{content}}", content)
             .replace("{{page_header}}", page_header_html(page))
             .replace("{{page_nav}}", "" if is_community_scene or is_prep_hub else page_nav_html(page))
+            .replace("{{note_metrics}}", note_metrics.panel(page, ROOT))
             .replace("{{glossary}}", glossary_html(page))
             .replace("{{footer}}", footer_html(page, people, site["repo"], built))
             .replace("{{built}}", built))
