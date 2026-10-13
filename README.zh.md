@@ -6,6 +6,8 @@
 
 [![Build](https://github.com/tianyi-zhang-02/cooking-agi/actions/workflows/site.yml/badge.svg?branch=main)](https://github.com/tianyi-zhang-02/cooking-agi/actions/workflows/site.yml)
 
+<a href="https://tianyi-zhang-02.github.io/cooking-agi/index.zh.html"><img src=".github/media/promo.zh.webp" width="100%" alt="29 秒看一遍网站：可交互的图、中英切换、250+ 篇笔记、编年史之树和阅读记录"></a>
+
 这里整理了中英文的 ML / LLM 学习笔记、代码练习和项目拆解，免费开放。刚入门，可以跟着例子补基础；准备面试，可以按岗位集中复习；只对某个方向感兴趣，也可以直接选读。
 
 最初整理这些，是因为我自己准备面试时，资料散在课程、论文和一堆收藏里。希望把它们串起来，让没有相关背景的人也能找到起点，不必先花很久搜资料。

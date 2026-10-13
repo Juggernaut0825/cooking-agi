@@ -6,6 +6,8 @@
 
 [![Build](https://github.com/tianyi-zhang-02/cooking-agi/actions/workflows/site.yml/badge.svg?branch=main)](https://github.com/tianyi-zhang-02/cooking-agi/actions/workflows/site.yml)
 
+<a href="https://tianyi-zhang-02.github.io/cooking-agi/"><img src=".github/media/promo.en.webp" width="100%" alt="A 29-second tour of the site: an interactive figure, the English and Chinese switch, 250+ notes, the chronicle tree, and reading history"></a>
+
 **Working toward v1.0: the study workspace.** Choose a route, plan sessions around your week, and keep your notes and backups. See [release scope](community/updates.en.md) and the [roadmap](community/roadmap.en.md). Future CV, autonomous-driving, edge, simulation, and robotics topics are open for proposals, not completed courses.
 
 ML and LLM notes in English and Chinese, free to read, with examples, diagrams, and code. I started collecting them because preparing for interviews meant opening a lot of tabs and still not knowing where to begin.
