@@ -1,216 +1,353 @@
-/* Technology chronicle: world-tree highlighting, field filter, tooltips, period
-   highlighting and compatibility for older share links. Everything stays
-   readable without it. No storage, no network. */
+/* Technology chronicle: a tree that grows behind the page on entry and then
+   steps back, a vertical timeline that opens one period at a time, field
+   filters, a reading panel, and links that survive switching language.
+   Without this script the timeline simply shows everything. No storage, no
+   network. */
 (() => {
   const root = document.querySelector('[data-chronicle]');
   if (!root) return;
   const zh = (document.documentElement.lang || '').startsWith('zh');
-  const smooth = () => (matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
+  const reduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const $$ = selector => [...root.querySelectorAll(selector)];
-  const stage = root.querySelector('[data-world-tree]');
-  const works = $$('.chronicle-work');
-  const branches = $$('.chronicle-branch');
-  const eras = $$('.chronicle-era');
-  const tableFields = $$('[data-field]');
-  const treeFields = $$('[data-field-link]');
-  const rows = $$('tr[data-topic]');
-  const matrix = root.querySelector('.ch-matrix');
-  const points = $$('.ch-chip, .wt-node');
-  const banner = root.querySelector('[data-filter-banner]');
-  const bannerLabel = root.querySelector('[data-filter-label]');
-  const nav = root.querySelector('.ch-eras');
-  const eraLinks = new Map($$('[data-era-link]').map(link => [link.dataset.eraLink, link]));
-  const topicNames = new Map(tableFields.map(button => [button.dataset.field, button.querySelector('strong')?.textContent || button.dataset.field]));
+  const eras = $$('.ch-era');
+  const items = $$('.ch-spine > li');
+  const eraItems = new Map(eras.map(era => [era.dataset.era, [...era.querySelectorAll('.ch-spine > li')]]));
+  const chips = $$('[data-field]');
+  const reset = root.querySelector('[data-filter-reset]');
+  const empty = root.querySelector('[data-filter-empty]');
+  const articles = new Map($$('.chronicle-work').map(article => [article.id.replace(/^event-/, ''), article]));
+  const topics = new Set(chips.map(chip => chip.dataset.field));
   const languageLinks = [...document.querySelectorAll('[data-language-switch]')];
-  let active = null;
+  const opened = new Set();
+  let field = null;
+  let current = null;
 
+  root.classList.add('is-enhanced');
+  chips.forEach(chip => { chip.disabled = false; });
+  if (reset) reset.disabled = false;
+
+  /* ------------------------------------------------------------ address */
   function syncLanguageLinks() {
     languageLinks.forEach(link => {
       const target = new URL(link.href, location.href);
       target.search = location.search;
-      if (active) target.searchParams.set('field', active); else target.searchParams.delete('field');
+      if (field) target.searchParams.set('field', field); else target.searchParams.delete('field');
       target.hash = location.hash;
       link.href = target.href;
     });
   }
-
-  // Highlight one field across the tree (hover preview or the active filter).
-  function markField(name) {
-    if (!stage) return;
-    stage.classList.toggle('is-field', Boolean(name));
-    stage.querySelectorAll('[data-topic], [data-field-link]').forEach(element => {
-      const topic = element.dataset.topic || element.dataset.fieldLink;
-      element.classList.toggle('is-active', Boolean(name) && topic === name);
-    });
-  }
-
-  function setFilter(name, {remember = true} = {}) {
-    active = topicNames.has(name) ? name : null;
-    works.forEach(work => { work.hidden = Boolean(active) && work.dataset.workTopic !== active; });
-    branches.forEach(branch => { branch.hidden = !branch.querySelector('.chronicle-work:not([hidden])'); });
-    eras.forEach(era => {
-      era.hidden = !era.querySelector('.chronicle-work:not([hidden])');
-      eraLinks.get(era.dataset.era)?.classList.toggle('is-empty', era.hidden);
-    });
-    tableFields.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.field === active)));
-    treeFields.forEach(link => link.setAttribute('aria-current', String(link.dataset.fieldLink === active)));
-    rows.forEach(row => row.classList.toggle('is-active', row.dataset.topic === active));
-    markField(active);
-    banner.hidden = !active;
-    if (active) {
-      const count = works.filter(work => !work.hidden).length;
-      const layer = rows.find(row => row.dataset.topic === active)?.closest('tbody')?.dataset.layer;
-      if (layer) banner.dataset.layer = layer;
-      bannerLabel.textContent = zh
-        ? `只看「${topicNames.get(active)}」：${count} 个节点，按年代排列。`
-        : `Showing ${topicNames.get(active)} only: ${count} milestone${count === 1 ? '' : 's'} in period order.`;
-    }
-    if (remember) {
-      const url = new URL(location.href);
-      if (active) url.searchParams.set('field', active); else url.searchParams.delete('field');
-      url.hash = '';
-      history.replaceState(history.state, '', url);
-    }
+  function writeAddress(hash) {
+    const url = new URL(location.href);
+    if (field) url.searchParams.set('field', field); else url.searchParams.delete('field');
+    url.hash = hash;
+    history.replaceState(history.state, '', url);
     syncLanguageLinks();
   }
 
-  function choose(name) {
-    const next = name === active ? null : name;
-    setFilter(next);
-    if (next) banner.scrollIntoView({behavior: smooth(), block: 'start'});
-  }
-  tableFields.forEach(button => {
-    button.disabled = false;
-    button.addEventListener('click', () => choose(button.dataset.field));
-  });
-  treeFields.forEach(link => {
-    link.addEventListener('click', event => {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      event.preventDefault();
-      choose(link.dataset.fieldLink);
-    });
-    link.addEventListener('pointerenter', () => { if (!active) markField(link.dataset.fieldLink); });
-    link.addEventListener('pointerleave', () => markField(active));
-    link.addEventListener('focus', () => { if (!active) markField(link.dataset.fieldLink); });
-    link.addEventListener('blur', () => markField(active));
-  });
-  root.querySelector('[data-filter-reset]')?.addEventListener('click', () => {
-    setFilter(null);
-    stage?.scrollIntoView({behavior: smooth(), block: 'center'});
-  });
-
-  // Tooltip and recorded connections for stars and table chips.
-  const tip = document.createElement('div');
-  tip.className = 'ch-tip';
-  tip.setAttribute('role', 'tooltip');
-  tip.hidden = true;
-  document.body.append(tip);
-  function show(point) {
-    const label = point.getAttribute('aria-label') || point.textContent;
-    const [year, ...rest] = label.split(' · ');
-    const topic = point.dataset.topic || point.closest('tr')?.dataset.topic;
-    tip.replaceChildren();
-    const time = document.createElement('time');
-    time.textContent = topic ? `${year} · ${topicNames.get(topic) || ''}` : year;
-    const title = document.createElement('span');
-    title.textContent = rest.join(' · ');
-    tip.append(time, title);
-    const linked = (point.dataset.links || '').split(' ').filter(Boolean);
-    if (linked.length) {
-      const note = document.createElement('small');
-      note.textContent = zh ? `有记录的联系：${linked.length} 条` : `${linked.length} recorded connection${linked.length === 1 ? '' : 's'}`;
-      tip.append(note);
-    }
-    tip.hidden = false;
-    const box = point.getBoundingClientRect();
-    const width = tip.offsetWidth, height = tip.offsetHeight;
-    tip.style.left = `${Math.min(Math.max(8, box.left + box.width / 2 - width / 2), innerWidth - width - 8)}px`;
-    tip.style.top = `${box.top - height - 10 < 60 ? box.bottom + 10 : box.top - height - 10}px`;
-    const name = point.dataset.node;
-    root.querySelectorAll(`[data-node="${name}"]`).forEach(element => element.classList.add('is-current'));
-    if (linked.length) {
-      matrix?.classList.add('is-tracing');
-      stage?.classList.add('is-tracing');
-      linked.forEach(other => root.querySelectorAll(`[data-node="${other}"]`).forEach(element => element.classList.add('is-linked')));
-      root.querySelectorAll(`.wt-vine[data-from="${name}"], .wt-vine[data-to="${name}"]`).forEach(vine => vine.classList.add('is-linked'));
-    }
-  }
-  function hide() {
-    tip.hidden = true;
-    matrix?.classList.remove('is-tracing');
-    stage?.classList.remove('is-tracing');
-    root.querySelectorAll('.is-current, .is-linked').forEach(element => element.classList.remove('is-current', 'is-linked'));
-  }
-  points.forEach(point => {
-    point.addEventListener('pointerenter', event => { if (event.pointerType !== 'touch') show(point); });
-    point.addEventListener('pointerleave', hide);
-    point.addEventListener('focus', () => show(point));
-    point.addEventListener('blur', hide);
-  });
-  addEventListener('scroll', hide, {passive: true});
-
-  // Period bar: hovering a period lights its stars and band on the tree.
-  function markEra(name) {
-    if (!stage) return;
-    stage.classList.toggle('is-era', Boolean(name));
-    stage.querySelectorAll('.wt-node').forEach(node => node.classList.toggle('is-era', node.dataset.era === name));
-    stage.querySelectorAll('[data-era-band]').forEach(band => band.classList.toggle('is-focus', band.dataset.eraBand === name));
-  }
-  eraLinks.forEach((link, name) => {
-    link.addEventListener('pointerenter', () => markEra(name));
-    link.addEventListener('pointerleave', () => markEra(null));
-    link.addEventListener('focus', () => markEra(name));
-    link.addEventListener('blur', () => markEra(null));
-  });
-
-  // Reveal a target that the current filter hides.
-  function reveal() {
-    const id = decodeURIComponent(location.hash.slice(1));
-    if (id.startsWith('field-')) {
-      setFilter(id.slice(6), {remember: false});
-      return;
-    }
-    const target = id && document.getElementById(id);
-    if (target && active && target.closest('[hidden]')) {
-      setFilter(null, {remember: false});
-      target.scrollIntoView({block: 'start'});
-    }
-  }
-  addEventListener('hashchange', () => { reveal(); syncLanguageLinks(); });
-
-  // Highlight the period being read.
-  if ('IntersectionObserver' in window && nav) {
-    const observer = new IntersectionObserver(entries => {
-      entries.filter(entry => entry.isIntersecting).forEach(entry => {
-        eraLinks.forEach(link => link.removeAttribute('aria-current'));
-        const link = eraLinks.get(entry.target.dataset.era);
-        if (!link) return;
-        link.setAttribute('aria-current', 'true');
-        nav.scrollTo({left: link.offsetLeft - nav.clientWidth / 2 + link.offsetWidth / 2, behavior: smooth()});
+  /* ------------------------------------------------------------ the timeline */
+  const linkOf = item => (item.querySelector ? item.querySelector('[data-node]') : null);
+  function refresh() {
+    eras.forEach(era => {
+      const name = era.dataset.era;
+      const list = eraItems.get(name) || [];
+      const expanded = opened.has(name) || Boolean(field);
+      let shown = 0, folded = 0;
+      list.forEach(item => {
+        const match = !field || item.dataset.workTopic === field;
+        const visible = match && (expanded || 'key' in item.dataset);
+        item.hidden = !visible;
+        if (visible) shown++; else if (match) folded++;
       });
-    }, {rootMargin: '-40% 0px -55% 0px'});
-    eras.forEach(era => observer.observe(era));
+      era.hidden = Boolean(field) && shown === 0;
+      const more = era.querySelector('[data-more]');
+      if (more) {
+        more.hidden = Boolean(field) || (!folded && !opened.has(name));
+        more.textContent = opened.has(name) ? more.dataset.lessLabel : more.dataset.moreLabel;
+        more.setAttribute('aria-expanded', String(opened.has(name)));
+      }
+    });
+    if (empty) empty.hidden = !field || items.some(item => !item.hidden);
   }
+  function setField(name, remember = true) {
+    field = topics.has(name) ? name : null;
+    chips.forEach(chip => chip.setAttribute('aria-pressed', String(chip.dataset.field === field)));
+    if (reset) reset.setAttribute('aria-pressed', String(!field));
+    refresh();
+    if (remember) writeAddress(current ? `#event-${current}` : ''); else syncLanguageLinks();
+  }
+  chips.forEach(chip => chip.addEventListener('click', () => setField(chip.dataset.field === field ? null : chip.dataset.field)));
+  if (reset) reset.addEventListener('click', () => setField(null));
+  eras.forEach(era => {
+    const more = era.querySelector('[data-more]');
+    if (!more) return;
+    more.addEventListener('click', () => {
+      const name = era.dataset.era;
+      if (opened.has(name)) {
+        opened.delete(name);
+        refresh();
+        const box = era.getBoundingClientRect ? era.getBoundingClientRect() : null;
+        if (box && box.top < 0) era.scrollIntoView({block: 'start'});
+      } else {
+        opened.add(name);
+        refresh();
+      }
+    });
+  });
 
-  // Older share links: ?milestone=, ?era=, ?field=.
-  function restoreLocation() {
+  /* ------------------------------------------------------------ the reading panel */
+  const panel = document.createElement('aside');
+  panel.className = 'ch-panel';
+  panel.hidden = true;
+  panel.setAttribute('aria-label', zh ? '节点详情' : 'Milestone details');
+  const button = (name, label, glyph) => {
+    const element = document.createElement('button');
+    element.type = 'button';
+    element.className = name;
+    element.setAttribute('aria-label', label);
+    element.textContent = glyph;
+    return element;
+  };
+  const prev = button('ch-panel-step', zh ? '上一个' : 'Previous', '←');
+  const next = button('ch-panel-step', zh ? '下一个' : 'Next', '→');
+  const count = document.createElement('span');
+  count.className = 'ch-panel-count';
+  const close = button('ch-panel-close', zh ? '关闭' : 'Close', '×');
+  const bar = document.createElement('div');
+  bar.className = 'ch-panel-bar';
+  bar.append(prev, next, count, close);
+  const body = document.createElement('div');
+  body.className = 'ch-panel-body';
+  panel.append(bar, body);
+  if (document.body) document.body.append(panel);
+  let slot = null, opener = null;
+
+  // Steps go through the whole period (folded milestones included), within the field filter.
+  const order = era => (eraItems.get(era) || []).filter(item => !field || item.dataset.workTopic === field).map(linkOf).filter(Boolean).map(link => link.dataset.node);
+  function openNode(id, {write = true, focus = true} = {}) {
+    const article = articles.get(id);
+    if (!article) return false;
+    closePanel({write: false, refocus: false});
+    if (field && article.dataset.workTopic !== field) setField(null, false);
+    opened.add(article.dataset.era);
+    refresh();
+    if (article.replaceWith && document.createComment) {
+      slot = document.createComment('milestone');
+      article.replaceWith(slot);
+      body.append(article);
+    }
+    panel.hidden = false;
+    current = id;
+    root.querySelectorAll('[data-node]').forEach(element => element.classList.toggle('is-current', element.dataset.node === id));
+    const ids = order(article.dataset.era), index = ids.indexOf(id);
+    prev.disabled = index <= 0;
+    next.disabled = index < 0 || index >= ids.length - 1;
+    count.textContent = index >= 0 ? `${index + 1} / ${ids.length}` : '';
+    body.scrollTop = 0;
+    if (write) writeAddress(`#event-${id}`);
+    const title = article.querySelector && article.querySelector('[data-work-title]');
+    if (focus && title) { title.setAttribute('tabindex', '-1'); title.focus({preventScroll: true}); }
+    return true;
+  }
+  function closePanel({write = true, refocus = true} = {}) {
+    if (!current) return;
+    const article = articles.get(current);
+    if (slot && article) slot.replaceWith(article);
+    slot = null;
+    panel.hidden = true;
+    root.querySelectorAll('.is-current').forEach(element => element.classList.remove('is-current'));
+    current = null;
+    if (write) writeAddress('');
+    if (refocus && opener && opener.focus) opener.focus();
+  }
+  const step = delta => {
+    const article = articles.get(current);
+    if (!article) return;
+    const ids = order(article.dataset.era), index = ids.indexOf(current);
+    if (index >= 0 && ids[index + delta]) openNode(ids[index + delta]);
+  };
+  prev.addEventListener('click', () => step(-1));
+  next.addEventListener('click', () => step(1));
+  close.addEventListener('click', () => closePanel());
+  addEventListener('keydown', event => {
+    if (!current) return;
+    if (event.key === 'Escape') closePanel();
+    if (event.key === 'ArrowLeft') step(-1);
+    if (event.key === 'ArrowRight') step(1);
+  });
+  if (document.addEventListener) document.addEventListener('click', event => {
+    if (event.defaultPrevented || event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const link = event.target.closest && event.target.closest('a[href^="#event-"]');
+    if (!link || !(root.contains(link) || panel.contains(link))) return;
+    const id = link.getAttribute('href').slice(7);
+    if (!articles.has(id)) return;
+    event.preventDefault();
+    if (!panel.contains(link)) opener = link;
+    openNode(id);
+  });
+
+  /* ------------------------------------------------------------ routes, old links included */
+  function route() {
     const params = new URLSearchParams(location.search);
-    setFilter(params.get('field'), {remember: false});
-    const legacy = params.get('milestone') ? `event-${params.get('milestone')}` : params.get('era') ? `era-${params.get('era')}` : '';
-    const legacyTarget = legacy && document.getElementById(legacy);
-    if (legacyTarget && !location.hash) {
-      if (active && legacyTarget.closest('[hidden]')) setFilter(null, {remember: false});
+    const legacy = params.get('milestone') ? `#event-${params.get('milestone')}` : params.get('era') ? `#era-${params.get('era')}` : '';
+    if (legacy && !location.hash) {
       const url = new URL(location.href);
       url.searchParams.delete('milestone');
       url.searchParams.delete('era');
+      const target = articles.get(legacy.slice(7));
+      if (legacy.startsWith('#event-') && target && params.get('field') && target.dataset.workTopic !== params.get('field')) url.searchParams.delete('field');
       url.hash = legacy;
       history.replaceState(history.state, '', url);
-      requestAnimationFrame(() => legacyTarget.scrollIntoView({block: 'start'}));
-    } else if (location.hash) {
-      reveal();
+    }
+    setField(new URLSearchParams(location.search).get('field'), false);
+    const hash = decodeURIComponent(location.hash.slice(1));
+    if (hash.startsWith('field-')) {
+      closePanel({write: false, refocus: false});
+      setField(hash.slice(6), false);
+    } else if (hash.startsWith('event-') && articles.has(hash.slice(6))) {
+      openNode(hash.slice(6), {write: false, focus: false});
+    } else {
+      closePanel({write: false, refocus: false});
     }
     syncLanguageLinks();
   }
-  addEventListener('popstate', restoreLocation);
-  restoreLocation();
+  addEventListener('hashchange', route);
+  addEventListener('popstate', route);
+  refresh();
+  route();
+
+  /* ------------------------------------------------------------ the tree behind the page */
+  function tree() {
+    const stage = root.querySelector('[data-tree-stage]');
+    const label = root.querySelector('[data-year]');
+    if (!stage || !document.body || typeof window.innerWidth !== 'number') return;
+    const canvas = document.createElement('canvas');
+    if (!canvas.getContext) return;
+    canvas.className = 'ch-tree';
+    canvas.setAttribute('aria-hidden', 'true');
+    document.body.prepend(canvas);
+    const g = canvas.getContext('2d');
+    const first = Number(stage.dataset.first) || 1882, last = Number(stage.dataset.last) || 2025;
+    let seed = 11, branches = [], nodes = [], W = 0, H = 0, dpr = 1, unit = 1, base = [0, 0];
+    const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+    const qpoint = (b, u) => [(1 - u) * (1 - u) * b.x + 2 * (1 - u) * u * b.cx + u * u * b.x1, (1 - u) * (1 - u) * b.y + 2 * (1 - u) * u * b.cy + u * u * b.y1];
+
+    // The opening space ends where the first screen ends, so the filter bar sits on the bottom edge
+    // and the tree grows from just above it.
+    function fitStage() {
+      const bar = root.querySelector('.ch-bar');
+      const top = stage.getBoundingClientRect().top + scrollY;
+      stage.style.height = `${Math.max(220, innerHeight - top - (bar ? bar.offsetHeight : 64))}px`;
+      return stage.getBoundingClientRect().bottom + scrollY;
+    }
+    function build() {
+      dpr = Math.min(2, window.devicePixelRatio || 1);
+      W = innerWidth; H = innerHeight;
+      canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+      const ground = Math.min(H * .98, fitStage() - 6);
+      // Keep the crown below the title and intro: shorter trees, pushed right on wide screens.
+      unit = Math.max(.35, Math.min((ground - (W >= 900 ? 190 : 230)) / 640, W / 800));
+      base = [W >= 900 ? W * .7 : W * .5, ground];
+      seed = 11; branches = []; nodes = [];
+      const grow = (x, y, angle, len, width, depth, t0) => {
+        const x1 = x + Math.cos(angle) * len, y1 = y + Math.sin(angle) * len, bend = (rnd() - .5) * .5;
+        const cx = (x + x1) / 2 + Math.cos(angle + Math.PI / 2) * len * bend, cy = (y + y1) / 2 + Math.sin(angle + Math.PI / 2) * len * bend;
+        branches.push({x, y, cx, cy, x1, y1, w: width, depth, t0, t1: t0 + len, len});
+        if (!depth) return;
+        const n = depth >= 5 ? 2 : rnd() < .55 ? 2 : 3, spread = depth >= 5 ? .5 : .62;
+        for (let i = 0; i < n; i++) {
+          const off = (i / (n - 1) - .5) * spread * 2, lean = (-Math.PI / 2 - angle) * .18;
+          grow(x1, y1, angle + off + lean + (rnd() - .5) * .22, len * (.74 + rnd() * .1), width * .68, depth - 1, t0 + len);
+        }
+      };
+      grow(base[0], base[1], -Math.PI / 2, 165 * unit, 24 * unit, 6, 0);
+      const maxT = Math.max(...branches.map(b => b.t1));
+      branches.forEach(b => { b.t0 /= maxT; b.t1 /= maxT; });
+      const weights = branches.map(b => (b.depth < 6 ? b.len : 0)), total = weights.reduce((a, b) => a + b, 0);
+      for (let i = 0; i < 143; i++) {
+        let pick = rnd() * total, k = 0;
+        while (pick > weights[k]) pick -= weights[k++];
+        const b = branches[k], u = .3 + rnd() * .7, [x, y] = qpoint(b, u), roll = rnd();
+        nodes.push({x, y, t: b.t0 + u * (b.t1 - b.t0), kind: roll < .62 ? 0 : roll < .86 ? 1 : 2, r: (2.2 + rnd() * 2) * Math.max(.7, unit), p: rnd() * 6.28});
+      }
+    }
+    const dark = () => document.documentElement.dataset.theme !== 'light';
+    const mix = (a, b, u) => `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * u)).join(',')})`;
+    const wood = depth => mix([122, 112, 98], [243, 232, 210], .35 + .65 * depth / 6);
+    const woodLight = depth => mix([226, 212, 190], [158, 116, 66], .3 + .7 * depth / 6);
+    function draw(G, time) {
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g.clearRect(0, 0, W, H);
+      const night = dark();
+      if (night) {
+        const halo = g.createRadialGradient(base[0], H * .45, 0, base[0], H * .45, H * .62);
+        halo.addColorStop(0, `rgba(255,206,140,${.1 * G})`); halo.addColorStop(1, 'rgba(255,206,140,0)');
+        g.fillStyle = halo; g.fillRect(0, 0, W, H);
+      }
+      g.lineCap = 'round';
+      g.shadowColor = night ? 'rgba(255,214,160,.55)' : 'transparent';
+      g.shadowBlur = night ? 10 * unit : 0;
+      for (const b of branches) {
+        const f = Math.min(1, Math.max(0, (G - b.t0) / (b.t1 - b.t0)));
+        if (f <= 0) continue;
+        for (let i = 0; i < 8; i++) {
+          const [ax, ay] = qpoint(b, i / 8 * f), [bx, by] = qpoint(b, (i + 1) / 8 * f);
+          g.lineWidth = Math.max(.6, b.w * (1 - .3 * i / 8));
+          g.strokeStyle = night ? wood(b.depth) : woodLight(b.depth);
+          g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke();
+        }
+      }
+      const colors = night ? ['#f5b83d', '#5ad1c0', '#fff6df'] : ['#c88a12', '#2a9c8c', '#8a6a3a'];
+      for (const n of nodes) {
+        if (G < n.t) continue;
+        const pop = Math.min(1, (G - n.t) * 14), tw = .7 + .3 * Math.sin(time * 1.6 + n.p);
+        g.shadowColor = night ? colors[n.kind] : 'transparent';
+        g.shadowBlur = night ? 12 * unit : 0;
+        g.globalAlpha = (night ? tw : .55) * pop;
+        g.fillStyle = colors[n.kind];
+        g.beginPath(); g.arc(n.x, n.y, n.r * (.6 + .4 * pop), 0, 6.283); g.fill();
+      }
+      g.globalAlpha = 1;
+    }
+
+    const ease = u => (u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2);
+    let start = null, grown = false, running = false, lastDraw = 0, fade = 1;
+    const settle = () => {
+      if (!label) return;
+      label.textContent = `${first} — ${last}`;
+      label.classList.add('is-done');
+    };
+    function frame(now) {
+      if (start === null) start = now;
+      const u = Math.min(1, (now - start) / 3200);
+      if (!grown && u >= 1) { grown = true; settle(); }
+      if (!grown || now - lastDraw > 50) {
+        lastDraw = now;
+        draw(ease(u), now / 1000);
+        if (!grown && label) label.textContent = String(Math.round(first + (last - first) * ease(u)));
+      }
+      // Keep twinkling only while the tree is clearly on screen.
+      running = !grown || (fade > .3 && document.visibilityState !== 'hidden');
+      if (running) requestAnimationFrame(frame);
+    }
+    function onScroll() {
+      fade = Math.max(.16, 1 - Math.max(0, scrollY) / (innerHeight * .9) * .84);
+      canvas.style.opacity = (fade * (dark() ? 1 : .7)).toFixed(3);
+      canvas.style.transform = `translateY(${(-Math.min(scrollY, innerHeight) * .12).toFixed(1)}px)`;
+      if (!running && grown && fade > .3 && !reduce()) { running = true; requestAnimationFrame(frame); }
+    }
+    build();
+    if (reduce()) { grown = true; draw(1, 0); settle(); }
+    else { running = true; requestAnimationFrame(frame); }
+    onScroll();
+    addEventListener('scroll', onScroll, {passive: true});
+    let resizing = 0;
+    addEventListener('resize', () => {
+      clearTimeout(resizing);
+      resizing = setTimeout(() => { build(); draw(grown ? 1 : 0, 0); onScroll(); }, 150);
+    });
+    if (typeof MutationObserver !== 'undefined') {
+      new MutationObserver(() => draw(grown ? 1 : 0, 0)).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+    }
+  }
+  tree();
 })();
