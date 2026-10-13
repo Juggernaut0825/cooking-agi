@@ -41,7 +41,7 @@ test('clear survives the real store, reload and export without clearing unrelate
   assert.deepEqual(after.entries, before.entries);
   assert.deepEqual(after.workspace.records['bookmark-' + NOTE_A], before.workspace.records['bookmark-' + NOTE_A]);
   assert.deepEqual(after.workspace.records['reader-settings'], before.workspace.records['reader-settings']);
-  assert.equal(hub.summarize(after.workspace.records, day(2026, 10, 12)).window, 0);
+  assert.equal(hub.summarize(after.workspace.records, day(2026, 10, 12)).span, 0);
   reloaded.updateWorkspace(hub.increment(after.workspace.records, NOTE_A, day(2026, 10, 12), AT));
   assert.deepEqual(reloaded.read().workspace.records['reads-20261012'].notes, {[NOTE_A]: 1});
 });
@@ -117,6 +117,23 @@ test('a read lands in the local day record and counts up', () => {
   Object.assign(records, hub.increment(records, NOTE_B, day(2026, 10, 12), AT));
   assert.deepEqual(records['reads-20261012'].notes, {[NOTE_A]: 3, [NOTE_B]: 1});
   assert.equal(records['reads-20261012'].updatedAt, AT);
+  assert.deepEqual(records['reading-total'], {total: 4, since: '2026-10-12', updatedAt: AT});
+});
+
+test('the all-time total keeps counting after old days are emptied', () => {
+  let records = {'reads-20260601': {notes: {[NOTE_A]: 2}, updatedAt: AT}, 'reading-total': {total: 40, since: '2026-03-01', updatedAt: AT}};
+  Object.assign(records, hub.increment(records, NOTE_B, day(2026, 10, 12), AT));
+  assert.deepEqual(records['reads-20260601'].notes, {});
+  assert.deepEqual(records['reading-total'], {total: 41, since: '2026-03-01', updatedAt: AT});
+  assert.deepEqual(hub.lifetime(records, day(2026, 10, 12)), {total: 41, since: '2026-03-01'});
+});
+
+test('without a stored total, the days on record seed it', () => {
+  const records = {'reads-20261010': {notes: {[NOTE_A]: 2}, updatedAt: AT}, 'reads-20261012': {notes: {[NOTE_B]: 1}, updatedAt: AT}};
+  assert.deepEqual(hub.lifetime(records, day(2026, 10, 12)), {total: 3, since: '2026-10-10'});
+  assert.deepEqual(hub.lifetime({}, day(2026, 10, 12)), {total: 0, since: '2026-10-12'});
+  // A stale total never reads lower than the days still kept.
+  assert.equal(hub.lifetime(Object.assign({'reading-total': {total: 1, since: '2026-10-12', updatedAt: AT}}, records), day(2026, 10, 12)).total, 3);
 });
 
 test('invalid note IDs are ignored', () => {
@@ -130,31 +147,53 @@ test('days past the 90-day window are emptied, not deleted', () => {
   assert.equal(changes['reads-20261001'], undefined);
 });
 
-test('summary covers today, the last 14 days, and recent notes', () => {
+test('summary covers today, this week, 13 weeks, the streak and recent notes', () => {
+  // 2026-10-14 is a Wednesday, so the week runs Monday 12th to Sunday 18th.
   const records = {
-    'reads-20261012': {notes: {[NOTE_A]: 2}, updatedAt: AT},
-    'reads-20261011': {notes: {[NOTE_B]: 1, [NOTE_A]: 1}, updatedAt: AT},
+    'reads-20261014': {notes: {[NOTE_A]: 2}, updatedAt: AT},
+    'reads-20261013': {notes: {[NOTE_B]: 1, [NOTE_A]: 1}, updatedAt: AT},
+    'reads-20261011': {notes: {[NOTE_B]: 4}, updatedAt: AT},
+    'reads-20261007': {notes: {[NOTE_A]: 3}, updatedAt: AT},
     'reads-20260901': {notes: {[NOTE_B]: 5}, updatedAt: AT},
     'reader-settings': {history: true, updatedAt: AT}
   };
-  const summary = hub.summarize(records, day(2026, 10, 12));
+  const summary = hub.summarize(records, day(2026, 10, 14));
   assert.equal(summary.today.total, 2);
   assert.deepEqual(summary.today.notes, [[NOTE_A, 2]]);
-  assert.equal(summary.series.length, 14);
-  assert.equal(summary.series[13].total, 2);
-  assert.equal(summary.series[12].total, 2);
-  assert.equal(summary.window, 4);
+  assert.deepEqual(summary.week.days.map(item => item.total), [0, 2, 2, 0, 0, 0, 0]);
+  assert.deepEqual(summary.week.days.map(item => item.future), [false, false, false, true, true, true, true]);
+  assert.equal(summary.week.days[0].date.getDate(), 12);
+  assert.equal(summary.week.total, 4);
+  assert.equal(summary.week.notes, 2);
+  assert.equal(summary.week.last, 7);
+  assert.equal(summary.heat.length, hub.WEEKS);
+  assert.ok(summary.heat.every(column => column.length === 7 && column[0].date.getDay() === 1));
+  assert.equal(summary.heat[hub.WEEKS - 1][2].total, 2);
+  assert.equal(summary.span, 16);
+  assert.equal(summary.streak, 2);
+  assert.deepEqual(summary.lifetime, {total: 16, since: '2026-09-01'});
   const b = summary.recent.find(item => item.id === NOTE_B);
   assert.equal(b.lastAge, 1);
-  assert.equal(b.total, 6);
+  assert.equal(b.total, 10);
+});
+
+test('a streak survives a day with no reads yet, and Sunday closes the week', () => {
+  const records = {'reads-20261017': {notes: {[NOTE_A]: 1}, updatedAt: AT}, 'reads-20261016': {notes: {[NOTE_A]: 1}, updatedAt: AT}};
+  assert.equal(hub.summarize(records, day(2026, 10, 18)).streak, 2);
+  const sunday = hub.summarize(records, day(2026, 10, 18));
+  assert.ok(sunday.week.days.every(item => !item.future));
+  assert.equal(sunday.week.total, 2);
 });
 
 test('clearing empties every reading day and leaves other records alone', () => {
   const records = {'reads-20261012': {notes: {[NOTE_A]: 2}, updatedAt: AT}, 'bookmark-x': {saved: true, updatedAt: AT}};
-  assert.deepEqual(hub.clear(records, AT), {'reads-20261012': {notes: {}, updatedAt: AT}});
+  assert.deepEqual(hub.clear(records, AT, day(2026, 10, 12)), {
+    'reads-20261012': {notes: {}, updatedAt: AT},
+    'reading-total': {total: 0, since: '2026-10-12', updatedAt: AT}
+  });
 });
 
-test('settings default to counting on and a tucked-away crow', () => {
+test('settings default to counting on and the Star notice allowed', () => {
   assert.deepEqual(hub.settings({}), {history: true, mascot: 'collapsed', starAskedOn: '', starDone: false, snoozedUntil: ''});
   assert.equal(hub.settings({'reader-settings': {history: false, mascot: 'hidden', updatedAt: AT}}).mascot, 'hidden');
   assert.equal(hub.settings({'reader-settings': {mascot: 'dancing', updatedAt: AT}}).mascot, 'collapsed');
@@ -164,12 +203,17 @@ test('the shared store accepts these records and rejects malformed ones', () => 
   const base = {format: 'cooking-agi-prep-progress', version: 1, site: 'cooking-agi', entries: {}, mode: {value: 'review', updatedAt: AT}};
   const ok = Object.assign({}, base, {workspace: {version: 1, records: {
     'reads-20261012': {notes: {[NOTE_A]: 2}, updatedAt: AT},
+    'reading-total': {total: 12, since: '2026-10-01', updatedAt: AT},
     'reader-settings': {history: false, mascot: 'open', starAskedOn: '2026-10-12', starDone: true, snoozedUntil: AT, updatedAt: AT}}, history: []}});
   assert.doesNotThrow(() => store.parse(JSON.stringify(ok)));
   for (const bad of [
     {'reads-2026-10-12': {notes: {}, updatedAt: AT}},
     {'reads-20261012': {notes: {[NOTE_A]: -1}, updatedAt: AT}},
     {'reads-20261012': {notes: {'not-a-note': 1}, updatedAt: AT}},
+    {'reading-total': {total: -1, since: '', updatedAt: AT}},
+    {'reading-total': {total: 1.5, since: '', updatedAt: AT}},
+    {'reading-total': {total: 3, since: '2026-02-30', updatedAt: AT}},
+    {'reading-total': {total: 3, updatedAt: AT}},
     {'reader-settings': {mascot: 'dancing', updatedAt: AT}},
     {'reader-settings': {starAskedOn: 'tomorrow', updatedAt: AT}},
     {'reader-settings': {starDone: 'yes', updatedAt: AT}},
