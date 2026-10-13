@@ -21,7 +21,18 @@
   const nav = root.querySelector('.ch-eras');
   const eraLinks = new Map($$('[data-era-link]').map(link => [link.dataset.eraLink, link]));
   const topicNames = new Map(tableFields.map(button => [button.dataset.field, button.querySelector('strong')?.textContent || button.dataset.field]));
+  const languageLinks = [...document.querySelectorAll('[data-language-switch]')];
   let active = null;
+
+  function syncLanguageLinks() {
+    languageLinks.forEach(link => {
+      const target = new URL(link.href, location.href);
+      target.search = location.search;
+      if (active) target.searchParams.set('field', active); else target.searchParams.delete('field');
+      target.hash = location.hash;
+      link.href = target.href;
+    });
+  }
 
   // Highlight one field across the tree (hover preview or the active filter).
   function markField(name) {
@@ -60,6 +71,7 @@
       url.hash = '';
       history.replaceState(history.state, '', url);
     }
+    syncLanguageLinks();
   }
 
   function choose(name) {
@@ -164,7 +176,7 @@
       target.scrollIntoView({block: 'start'});
     }
   }
-  addEventListener('hashchange', reveal);
+  addEventListener('hashchange', () => { reveal(); syncLanguageLinks(); });
 
   // Highlight the period being read.
   if ('IntersectionObserver' in window && nav) {
@@ -181,19 +193,24 @@
   }
 
   // Older share links: ?milestone=, ?era=, ?field=.
-  const params = new URLSearchParams(location.search);
-  if (params.get('field')) setFilter(params.get('field'), {remember: false});
-  const legacy = params.get('milestone') ? `event-${params.get('milestone')}` : params.get('era') ? `era-${params.get('era')}` : '';
-  const legacyTarget = legacy && document.getElementById(legacy);
-  if (legacyTarget && !location.hash) {
-    if (active && legacyTarget.closest('[hidden]')) setFilter(null, {remember: false});
-    const url = new URL(location.href);
-    url.searchParams.delete('milestone');
-    url.searchParams.delete('era');
-    url.hash = legacy;
-    history.replaceState(history.state, '', url);
-    requestAnimationFrame(() => legacyTarget.scrollIntoView({block: 'start'}));
-  } else if (location.hash) {
-    reveal();
+  function restoreLocation() {
+    const params = new URLSearchParams(location.search);
+    setFilter(params.get('field'), {remember: false});
+    const legacy = params.get('milestone') ? `event-${params.get('milestone')}` : params.get('era') ? `era-${params.get('era')}` : '';
+    const legacyTarget = legacy && document.getElementById(legacy);
+    if (legacyTarget && !location.hash) {
+      if (active && legacyTarget.closest('[hidden]')) setFilter(null, {remember: false});
+      const url = new URL(location.href);
+      url.searchParams.delete('milestone');
+      url.searchParams.delete('era');
+      url.hash = legacy;
+      history.replaceState(history.state, '', url);
+      requestAnimationFrame(() => legacyTarget.scrollIntoView({block: 'start'}));
+    } else if (location.hash) {
+      reveal();
+    }
+    syncLanguageLinks();
   }
+  addEventListener('popstate', restoreLocation);
+  restoreLocation();
 })();

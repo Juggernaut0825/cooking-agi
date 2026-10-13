@@ -9,6 +9,108 @@ const NOTE_B = 'note-fedcba9876543210';
 const AT = '2026-10-12T08:00:00.000Z';
 const day = (y, m, d) => new Date(y, m - 1, d);
 
+function memoryStorage() {
+  const values = new Map();
+  return {getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value)};
+}
+
+function readingState(notes, updatedAt = AT) {
+  return {...store.empty(), workspace: {version: 1, records: {
+    'reads-20261012': {notes, updatedAt}
+  }, history: []}};
+}
+
+test('clear survives the real store, reload and export without clearing unrelated work', () => {
+  const disk = memoryStorage();
+  const progress = store.createStore(disk);
+  progress.updateEntry(NOTE_A, {title: 'A note', note: 'Try a different mask', status: 'learning', updatedAt: AT});
+  progress.updateWorkspace({
+    'reads-20261012': {notes: {[NOTE_A]: 2, [NOTE_B]: 1}, updatedAt: AT, future: {keep: true}},
+    'reads-20261011': {notes: {[NOTE_B]: 1}, updatedAt: AT},
+    ['bookmark-' + NOTE_A]: {saved: true, updatedAt: AT},
+    'reader-settings': {history: true, updatedAt: AT}
+  });
+  const before = progress.read();
+  const result = progress.updateWorkspace(hub.clear(before.workspace.records, '2026-10-12T09:00:00.000Z'));
+  assert.equal(result.persisted, true);
+  const reloaded = store.createStore(disk);
+  const after = store.parse(reloaded.serialize());
+  assert.deepEqual(after.workspace.records['reads-20261012'].notes, {});
+  assert.deepEqual(after.workspace.records['reads-20261011'].notes, {});
+  assert.deepEqual(after.workspace.records['reads-20261012'].future, {keep: true});
+  assert.deepEqual(after.entries, before.entries);
+  assert.deepEqual(after.workspace.records['bookmark-' + NOTE_A], before.workspace.records['bookmark-' + NOTE_A]);
+  assert.deepEqual(after.workspace.records['reader-settings'], before.workspace.records['reader-settings']);
+  assert.equal(hub.summarize(after.workspace.records, day(2026, 10, 12)).window, 0);
+  reloaded.updateWorkspace(hub.increment(after.workspace.records, NOTE_A, day(2026, 10, 12), AT));
+  assert.deepEqual(reloaded.read().workspace.records['reads-20261012'].notes, {[NOTE_A]: 1});
+});
+
+test('90-day retention clears persisted counts rather than only hiding them', () => {
+  const disk = memoryStorage();
+  const progress = store.createStore(disk);
+  progress.updateWorkspace({
+    'reads-20260601': {notes: {[NOTE_A]: 3}, updatedAt: AT},
+    'reads-20261011': {notes: {[NOTE_B]: 1}, updatedAt: AT}
+  });
+  progress.updateWorkspace(hub.increment(progress.read().workspace.records, NOTE_A, day(2026, 10, 12), AT));
+  const records = store.createStore(disk).read().workspace.records;
+  assert.deepEqual(records['reads-20260601'].notes, {});
+  assert.deepEqual(records['reads-20261011'].notes, {[NOTE_B]: 1});
+});
+
+test('backup merge chooses a whole reading snapshot, including an empty one', () => {
+  const earlier = readingState({[NOTE_A]: 3});
+  const cleared = readingState({}, '2026-10-12T09:00:00.000Z');
+  for (const policy of ['keep-local', 'newer']) {
+    assert.deepEqual(store.merge(cleared, earlier, policy).state.workspace.records['reads-20261012'].notes, {});
+  }
+  for (const policy of ['newer', 'prefer-backup']) {
+    assert.deepEqual(store.merge(earlier, cleared, policy).state.workspace.records['reads-20261012'].notes, {});
+  }
+  assert.deepEqual(store.merge(earlier, cleared, 'keep-local').state.workspace.records['reads-20261012'].notes, {[NOTE_A]: 3});
+  assert.deepEqual(store.merge(cleared, earlier, 'prefer-backup').state.workspace.records['reads-20261012'].notes, {[NOTE_A]: 3});
+  const replacement = readingState({[NOTE_B]: 1}, '2026-10-12T10:00:00.000Z');
+  assert.deepEqual(store.merge(earlier, replacement, 'newer').state.workspace.records['reads-20261012'].notes, {[NOTE_B]: 1});
+  const progress = store.createStore(memoryStorage());
+  progress.applyImport(earlier, 'newer');
+  progress.applyImport(cleared, 'newer');
+  assert.deepEqual(store.parse(progress.serialize()).workspace.records['reads-20261012'].notes, {});
+});
+
+test('a failed clear stays cleared in memory and persists when storage recovers', () => {
+  const disk = memoryStorage();
+  const progress = store.createStore(disk);
+  progress.applyImport(readingState({[NOTE_A]: 3}), 'newer');
+  const persist = disk.setItem;
+  disk.setItem = () => { throw Error('quota'); };
+  const cleared = progress.updateWorkspace(hub.clear(progress.read().workspace.records, '2026-10-12T09:00:00.000Z'));
+  assert.equal(cleared.persisted, false);
+  assert.deepEqual(progress.read().workspace.records['reads-20261012'].notes, {});
+  assert.deepEqual(store.parse(progress.serialize()).workspace.records['reads-20261012'].notes, {});
+  assert.deepEqual(store.parse(disk.getItem(store.KEY)).workspace.records['reads-20261012'].notes, {[NOTE_A]: 3});
+  disk.setItem = persist;
+  const anotherTab = store.createStore(disk);
+  anotherTab.updateWorkspace({['bookmark-' + NOTE_B]: {saved: true, updatedAt: AT}});
+  progress.updateWorkspace({'reader-settings': {history: false, updatedAt: AT}});
+  const reloaded = store.createStore(disk).read().workspace.records;
+  assert.deepEqual(reloaded['reads-20261012'].notes, {});
+  assert.equal(reloaded['bookmark-' + NOTE_B].saved, true);
+});
+
+test('new offline reading days keep complete snapshots when writes are retried', () => {
+  const disk = memoryStorage();
+  const persist = disk.setItem;
+  disk.setItem = () => { throw Error('quota'); };
+  const progress = store.createStore(disk);
+  progress.updateWorkspace(hub.increment({}, NOTE_A, day(2026, 10, 12), AT));
+  progress.updateWorkspace(hub.clear(progress.read().workspace.records, '2026-10-12T09:00:00.000Z'));
+  assert.deepEqual(progress.read().workspace.records['reads-20261012'].notes, {});
+  disk.setItem = persist;
+  progress.updateWorkspace({'reader-settings': {history: false, updatedAt: AT}});
+  assert.deepEqual(store.createStore(disk).read().workspace.records['reads-20261012'].notes, {});
+});
+
 test('a read lands in the local day record and counts up', () => {
   let records = {};
   for (let i = 0; i < 3; i++) Object.assign(records, hub.increment(records, NOTE_A, day(2026, 10, 12), AT));

@@ -121,7 +121,7 @@
   let catalogLoading = null;
 
   function write(changes, action) {
-    if (!Object.keys(changes).length) return true;
+    if (!Object.keys(changes).length && !action) return true;
     try { return progress.updateWorkspace(changes, action)?.persisted !== false; } catch { return false; }
   }
   function saveSettings(patch) {
@@ -347,7 +347,11 @@
     for (const [value, label] of [['collapsed', say('显示', 'Show')], ['hidden', say('隐藏', 'Hide')]]) {
       const on = value === 'hidden' ? config.mascot === 'hidden' : config.mascot !== 'hidden';
       const option = el('button', {type: 'button', role: 'radio', 'aria-checked': String(on), text: label});
-      option.addEventListener('click', () => { saveSettings({mascot: value, snoozedUntil: ''}); renderMascot(); render(); });
+      option.addEventListener('click', () => {
+        saveSettings({mascot: value, snoozedUntil: '', ...(value === 'collapsed' ? {starDone: false} : {})});
+        renderMascot({show: value === 'collapsed'});
+        render();
+      });
       mascot.append(option);
     }
     const theme = el('div', {class: 'reader-hub-segment', role: 'radiogroup', 'aria-label': say('主题', 'Theme')});
@@ -361,8 +365,10 @@
     const wipe = el('button', {type: 'button', class: 'reader-hub-danger', text: say('清空阅读记录', 'Clear reading history')});
     wipe.addEventListener('click', () => {
       if (!armed) { armed = true; wipe.textContent = say('再点一次确认清空', 'Select again to confirm'); return; }
-      write(clear(records(), now()), say('清空阅读记录', 'Cleared reading history'));
-      status.textContent = say('阅读记录已清空，收藏和学习进度没有变。', 'Reading history cleared. Saved notes and study progress are unchanged.');
+      const saved = write(clear(records(), now()), say('清空阅读记录', 'Cleared reading history'));
+      status.textContent = saved
+        ? say('阅读记录已清空，收藏和学习进度没有变。', 'Reading history cleared. Saved notes and study progress are unchanged.')
+        : say('没能保存清空操作。浏览器存储可能不可用或已满，请检查后重试。', 'Could not save the cleared history. Browser storage may be unavailable or full; please check and try again.');
       render();
     });
     const backup = el('a', {class: 'reader-hub-link', href: new URL(say('interview/dashboard.html#progress', 'interview/dashboard.en.html#progress'), base).href, text: say('去学习台导出 / 导入备份 →', 'Export or import a backup in the workspace →')});
@@ -440,13 +446,17 @@
   const notNow = el('button', {type: 'button', class: 'star-toast-choice', text: say('这次先不显示', 'Not now')});
   notNow.addEventListener('click', later);
   const never = el('button', {type: 'button', class: 'star-toast-choice star-toast-quiet', text: say('不再显示', 'Don’t show again')});
-  never.addEventListener('click', () => { saveSettings({mascot: 'hidden', starDone: true}); hideToast(); });
+  never.addEventListener('click', () => { saveSettings({mascot: 'hidden'}); hideToast(); });
   actions.append(cta, notNow, never);
   toastClose.addEventListener('click', later);
   function renderMascotMessage() {}
-  function renderMascot() {
+  function renderMascot({show = false} = {}) {
     const config = settings(records());
     if (config.mascot === 'hidden' || config.starDone || snoozed(config)) hideToast();
+    else if (show) {
+      saveSettings({starAskedOn: todayKey()});
+      mascot.hidden = false;
+    }
   }
   // At most once a day, after the reader has been on the page for a while.
   const initial = settings(records());

@@ -114,21 +114,22 @@
     return JSON.stringify(validate(state));
   }
 
-  function overlay(base, preferred) {
+  function overlay(base, preferred, recordKey = '') {
     const result = {...base};
     for (const [key, value] of Object.entries(preferred)) {
       if (['__proto__', 'constructor', 'prototype'].includes(key)) throw Error('invalid');
-      result[key] = plain(base[key]) && plain(value) ? overlay(base[key], value) : value;
+      const readingNotes = key === 'notes' && /^reads-\d{8}$/.test(recordKey);
+      result[key] = !readingNotes && plain(base[key]) && plain(value) ? overlay(base[key], value, key) : value;
     }
     return result;
   }
 
-  function difference(base, next) {
+  function difference(base, next, recordKey = '') {
     const changes = {};
     for (const key of new Set([...Object.keys(base), ...Object.keys(next)])) {
       if (!own(next, key)) changes[key] = undefined;
-      else if (plain(base[key]) && plain(next[key])) {
-        const nested = difference(base[key], next[key]);
+      else if (plain(base[key]) && plain(next[key]) && !(key === 'notes' && /^reads-\d{8}$/.test(recordKey))) {
+        const nested = difference(base[key], next[key], key);
         if (Object.keys(nested).length) changes[key] = nested;
       } else if (JSON.stringify(base[key]) !== JSON.stringify(next[key])) changes[key] = next[key];
     }
@@ -177,7 +178,7 @@
       if (current && JSON.stringify(current) !== JSON.stringify(record)) {
         workspaceConflicts++;
         if (policy === 'prefer-backup' || (policy === 'newer' && record.updatedAt > current.updatedAt)) {
-          state.workspace.records[key] = overlay(current, record);
+          state.workspace.records[key] = overlay(current, record, key);
         }
       }
     }
@@ -267,7 +268,7 @@
         if (dirty.workspace) {
           if (!snapshot.workspace) pending.workspace = overlay(memory.workspace, pending.workspace);
           for (const key of Object.keys(dirty.workspace.records || {})) {
-            if (!own(snapshot.workspace?.records || {}, key)) pending.workspace.records[key] = overlay(memory.workspace.records[key], pending.workspace.records[key]);
+            if (!own(snapshot.workspace?.records || {}, key)) pending.workspace.records[key] = overlay(memory.workspace.records[key], pending.workspace.records[key], key);
           }
         }
         const rebased = validate(pending);

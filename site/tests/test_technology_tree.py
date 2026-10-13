@@ -367,6 +367,12 @@ class TechnologyTreeTests(unittest.TestCase):
             self.skipTest("Node.js unavailable")
         subprocess.run([node, "--check", str(ROOT / "site/static/chronicle.js")], check=True)
 
+    def test_chronicle_language_and_history_navigation(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js unavailable")
+        subprocess.run([node, "--test", str(ROOT / "site/tests/chronicle-behavior.test.cjs")], check=True, capture_output=True)
+
     def test_external_reading_routes_have_canonical_targets_and_scroll_offset(self):
         data = json.loads(technology_chronicle.DATA.read_text())
         for language in ("zh", "en"):
