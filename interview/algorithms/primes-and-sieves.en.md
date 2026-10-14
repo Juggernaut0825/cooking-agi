@@ -50,6 +50,8 @@ Calling `is_prime` separately for every integer from 2 through 30 repeatedly dis
 
 The remaining numbers are `2, 3, 5, 7, 11, 13, 17, 19, 23, 29`. Trace the table on paper and notice which numbers each step eliminates for the first time.
 
+<!-- widget:algo-sieve -->
+
 ```python
 def prime_flags(limit):
     if type(limit) is not int:

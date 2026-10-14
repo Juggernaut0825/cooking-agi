@@ -545,6 +545,36 @@ for _name, _zh, _en in TX_LAB:
 </figure>
 """
 
+# Algorithm lab (static/algo-lab.js): small steppers for the LeetCode method notes.
+# Same shell and chrome as the Transformer lab; the frames are built in the browser.
+ALGO_LAB = [
+    ("algo-sieve", "筛法：遇到质数，就从它的平方开始划", "Sieve: each prime crosses out from its square"),
+    ("algo-window-max", "单调队列：谁还有机会接班", "Monotonic queue: who can still take over"),
+    ("algo-two-pointers", "双指针：每一步排除一个不可能的端点", "Two pointers: each step rules out an endpoint"),
+    ("algo-sliding-window", "滑动窗口：从左边移走，直到不再重复", "Sliding window: shrink from the left until it fits"),
+    ("algo-binary-search", "二分：right = middle，left = middle + 1", "Binary search: right = middle, left = middle + 1"),
+    ("algo-prefix-count", "前缀和：先查旧前缀，再存当前前缀", "Prefix sums: look up old prefixes, then store"),
+    ("algo-rob", "同一个子问题：算一次，存下来", "The same subproblem: compute once, reuse"),
+    ("algo-bst-bounds", "BST：只看父子会漏，范围要一路带下去", "BST: parent–child checks miss; carry the bounds"),
+    ("algo-reverse-list", "反转链表：先存下一个，再掉头", "Reversing a list: save next, then turn around"),
+    ("algo-kmp", "KMP：对上以后不归零，模式往右滑", "KMP: after a match, slide instead of resetting"),
+    ("algo-lcs", "LCS：相同就斜着加一，不同就取上方或左方", "LCS: equal steps diagonally, else take above or left"),
+    ("algo-cooldown", "三个状态，每天只读昨天", "Three states, each day reads only yesterday"),
+    ("algo-jump", "Jump Game：只记最远能到哪", "Jump Game: remember only the farthest reach"),
+    ("algo-append", "摊还：偶尔很贵，平均很便宜", "Amortized: occasionally expensive, cheap on average"),
+    ("algo-knapsack", "背包：更新顺序决定能拿几次", "Knapsack: update order decides how many copies"),
+]
+for _name, _zh, _en in ALGO_LAB:
+    WIDGETS[_name] = f"""
+<figure class="widget tx-lab algo-lab" id="{_name}" data-widget="{_name}">
+  <figcaption class="widget-head">
+    <span class="widget-kicker" data-zh="动画" data-en="Step by step"></span>
+    <span class="widget-title" data-zh="{_zh}" data-en="{_en}"></span>
+  </figcaption>
+  <div class="widget-body"><p class="tx-fallback" data-zh="这张动画需要启用 JavaScript。" data-en="This step-by-step figure needs JavaScript."></p></div>
+</figure>
+"""
+
 
 
 # Filled by discover(): "00-foundations/transformer.md" -> {"zh": Page, "en": Page | None}

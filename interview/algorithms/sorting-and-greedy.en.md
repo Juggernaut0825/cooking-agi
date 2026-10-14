@@ -51,6 +51,8 @@ def can_jump(jumps):
 
 For `[2,3,1,1,4]`, position 0 reaches 2; reachable position 1 extends the frontier to 4. For `[3,2,1,0,4]`, the frontier stays at 3, leaving position 4 unreachable.
 
+<!-- widget:algo-jump -->
+
 **Invariant:** processed reachable positions cover the entire interval from 0 to farthest. Jumps are “up to” a length, so no holes appear between. O(n) time, O(1) space. Exact-length jumps, backward moves, or complex obstacles break this argument.
 
 ## 4. Make a greedy argument convincing

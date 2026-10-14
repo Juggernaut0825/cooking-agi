@@ -20,6 +20,8 @@ The code assumes an actual tree without cycles or shared children and with compa
 
 The root starts without bounds. Going left tightens the upper bound; going right tightens the lower one. The misplaced 6 inherits $(8,10)$ and fails immediately.
 
+<!-- widget:algo-bst-bounds -->
+
 `None` represents an absent bound; no guessed “large enough” integer is required.
 
 ```python

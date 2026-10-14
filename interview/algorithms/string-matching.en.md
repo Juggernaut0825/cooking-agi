@@ -75,6 +75,8 @@ Trace `ababab` / `abab`:
 | 4 | The retained ab is followed by a | 3 |
 | 5 | Full match again; record start 2 | 2 |
 
+<!-- widget:algo-kmp -->
+
 Not resetting to zero preserves overlaps. `matched` is a **length**, and therefore the next pattern index to compare, not the index of the last matched character.
 
 ## Why a while loop inside a for loop is still linear

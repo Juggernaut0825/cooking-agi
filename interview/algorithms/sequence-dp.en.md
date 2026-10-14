@@ -24,6 +24,8 @@ Why is the diagonal enough when the final characters match? If an optimal matchi
 | CA | 0 | 1 | 1 | 1 |
 | CAB | 0 | 1 | 1 | 2 |
 
+<!-- widget:algo-lcs -->
+
 The bottom-right answer is 2. Cells containing 1 need not describe the same common subsequence; each retains only its own best length.
 
 ## Two rows are enough for the length

@@ -16,6 +16,8 @@ Find two values in the sorted array `[1, 3, 5, 8, 12]` that sum to 11. Trying ev
 | 1 and 8 | 9, too small | 8 is the largest remaining value. Every other partner makes the sum smaller, so discard 1 |
 | 3 and 8 | 11 | Return their positions |
 
+<!-- widget:algo-two-pointers -->
+
 Each move eliminates an endpoint that **cannot belong to a remaining solution**. Sorted order is what makes that argument work.
 
 ```python
@@ -46,6 +48,8 @@ A substring must be contiguous: we cannot skip a character in the middle. To fin
 | b at index 1 | Still unique; extend | `ab` | 2 |
 | b at index 2 | Remove a; b still repeats. Remove the old b too | `b` | 2 |
 | a at index 3 | No a in the current window; add it | `ba` | 2 |
+
+<!-- widget:algo-sliding-window -->
 
 We don't clear the whole window when a duplicate appears. Remove characters from the left only until the new character can be added safely. What remains is the **longest valid substring ending at this position**.
 
@@ -116,6 +120,8 @@ Find the first position at least 3 in `[1, 3, 3, 7, 9]`:
 | 0 / 5 | Index 2, value 3 | It qualifies, but an earlier position may qualify too. Set `right = 2` |
 | 0 / 2 | Index 1, value 3 | Keep looking left: `right = 1` |
 | 0 / 1 | Index 0, value 1 | Too small. Exclude it: `left = 1` |
+
+<!-- widget:algo-binary-search -->
 
 The boundaries meet at 1. The updates are intentionally asymmetric: `middle` may be the answer when its value qualifies, but is definitely too early when its value is too small.
 
