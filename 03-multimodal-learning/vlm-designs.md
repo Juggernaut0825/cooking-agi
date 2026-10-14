@@ -20,7 +20,7 @@
 | --- | --- | --- |
 | 原始 LLaVA | 线性投影，把视觉特征接给 LLM | 不是训练一个新的图像分类器 |
 | LLaVA-1.5 | 336 分辨率视觉编码器、两层 MLP，以及数据配方调整 | MLP 本身不会减少 token 数 |
-| LLaVA-NeXT（2024-01） | AnyRes：全局缩略图加局部切块 | 不把 NeXT 的 AnyRes 默认配置倒写成全部 1.5 的配置 |
+| LLaVA-NeXT（2024-01） | AnyRes：全局缩略图加局部切块 | 不要把 NeXT 的 AnyRes 默认配置当成所有 1.5 变体的配置 |
 
 版本依据：[LLaVA-1.5 报告](https://arxiv.org/abs/2310.03744)、[NeXT 发布说明](https://llava-vl.github.io/blog/2024-01-30-llava-next/)。1.5 报告也研究高分辨率扩展，比较时要写具体变体。
 
@@ -92,7 +92,7 @@ assert vl2_sequence_length(1, 1) == 421
 
 “对齐阶段”不等于一定只训练 projector。VL2 第一阶段同时更新视觉编码器和适配器，冻结 LLM；后续预训练和 SFT 更新全部模块。模型想适应动态高分辨率，视觉分支也需要调整。[VL2 §4](https://arxiv.org/html/2412.10302v1)
 
-实际复现实验时，记录 trainable parameter names，而不是只写“做了 SFT”。还要保存处理后 token 数、训练数据配比、loss mask 和分辨率限制。否则换一次 processor，就可能不是原来的实验了。
+实际复现实验时，记录实际可训练的参数名，而不是只写“做了 SFT”。还要保存处理后 token 数、训练数据配比、loss mask 和分辨率限制。否则换一次 processor，就可能不是原来的实验了。
 
 ## 怎么知道增加的细节真的有用
 

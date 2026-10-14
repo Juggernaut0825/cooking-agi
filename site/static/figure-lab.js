@@ -105,9 +105,9 @@
     const shown = n => ['hit', 'precision', 'recall', 'rr'].slice(0, n);
     return frames([
       {...base, stage: 0, metrics: [], zh: '一个查询，完整标注的相关文档是 {A, C, E}；系统返回的前 3 篇是 [B, C, D]。',
-        en: 'For one query, the fully labelled relevant set is {A, C, E}; the system returns [B, C, D] as its top 3.'},
+        en: 'For one query, the fully labeled relevant set is {A, C, E}; the system returns [B, C, D] as its top 3.'},
       {...base, stage: 1, metrics: [], hits: ['C'], zh: '只有排第 2 的 C 是相关的；B、D 不在标注集合里。',
-        en: 'Only C, at rank 2, is relevant; B and D are not in the labelled set.'},
+        en: 'Only C, at rank 2, is relevant; B and D are not in the labeled set.'},
       {...base, stage: 2, metrics: shown(1), hits: ['C'], zh: 'Hit@3 = 1：前 3 篇里至少命中了一篇。',
         en: 'Hit@3 = 1: at least one of the top 3 is relevant.'},
       {...base, stage: 3, metrics: shown(2), hits: ['C'], zh: 'Precision@3 = 1/3：返回的 3 篇里有 1 篇相关。',
@@ -142,8 +142,8 @@
         en: `Code [1, 1] stands for the reconstruction [1, 1, 3, 3]. No need to rebuild it: look up and add, ${lookup([1, 1]).join(' + ')} = ${sum([1, 1])}.`},
       {...base, stage: 4, code: [2, 1], picks: lookup([2, 1]), total: sum([2, 1]), zh: `编码 [2, 1]：${lookup([2, 1]).join(' + ')} = ${sum([2, 1])}。`,
         en: `Code [2, 1]: ${lookup([2, 1]).join(' + ')} = ${sum([2, 1])}.`},
-      {...base, stage: 5, done: true, results: [[[1, 1], sum([1, 1])], [[2, 1], sum([2, 1])]], zh: '每条向量只存两个编号；扫描时每条只做两次查表和一次加法，所以 [1, 1] 这条更近（2 < 14）。',
-        en: 'Each stored vector is just two indices; scanning costs two lookups and one addition per vector, so [1, 1] is the nearer one (2 < 14).'}
+      {...base, stage: 5, done: true, results: [[[1, 1], sum([1, 1])], [[2, 1], sum([2, 1])]], zh: '每条向量只存两个编号；扫描时每条只做两次查表和一次加法。比较两个和，[1, 1] 这条更近（2 < 14）。',
+        en: 'Each stored vector is just two indices; scanning costs two lookups and one addition per vector. Comparing the sums, [1, 1] is the nearer one (2 < 14).'}
     ]);
   };
 
@@ -167,8 +167,8 @@
         en: `Flatten the top-left patch row by row: ${vec(patches[0])}.`},
       {...base, stage: 2, flat: 4, zh: `从左上到右下依次展平，得到 4 个 token、每个 4 个数：${patches.map(vec).join('、')}。`,
         en: `Flatten all four from top-left to bottom-right: 4 tokens of 4 numbers each, ${patches.map(vec).join(', ')}.`},
-      {...base, stage: 3, flat: 4, current: 0, projected: 1, zh: `人为选两个投影：块内均值、右列减左列。左上块变成 ${vec(embeddings[0])}。真实模型会自己学权重。`,
-        en: `Choose two projections by hand: the patch mean, and right column minus left column. The top-left patch becomes ${vec(embeddings[0])}. A real model learns its weights.`},
+      {...base, stage: 3, flat: 4, current: 0, projected: 1, zh: `人为选两个投影：块内均值、右列均值减左列均值。左上块变成 ${vec(embeddings[0])}。真实模型会自己学权重。`,
+        en: `Choose two projections by hand: the patch mean, and the right-column mean minus the left-column mean. The top-left patch becomes ${vec(embeddings[0])}. A real model learns its weights.`},
       {...base, stage: 4, flat: 4, projected: 4, zh: `同一组权重用在每一块上：${embeddings.map(vec).join('、')}。`,
         en: `The same weights apply to every patch: ${embeddings.map(vec).join(', ')}.`},
       {...base, stage: 5, flat: 4, projected: 4, done: true, other, otherEmbedding: project(other), zh: `限制也在这里：${vec(other)} 也输出 ${vec(project(other))}，和左上块一样。后面的注意力没法从这两个数里找回被丢掉的差异。`,
@@ -186,7 +186,7 @@
       {...base, stage: 1, zh: `按 14 像素切块：${ph} × ${pw} = ${ph * pw} 个 patch。`,
         en: `Cut into 14-pixel patches: ${ph} × ${pw} = ${ph * pw} patches.`},
       {...base, stage: 2, zh: `相邻 2×2 个 patch 合成一个视觉位置：${mh} × ${mw} = ${mh * mw}。`,
-        en: `Merge each 2×2 group of neighbouring patches into one visual position: ${mh} × ${mw} = ${mh * mw}.`},
+        en: `Merge each 2×2 group of neighboring patches into one visual position: ${mh} × ${mw} = ${mh * mw}.`},
       {...base, stage: 3, done: true, zh: `所以 N = H/28 · W/28 = ${mh * mw}。长度随图片尺寸变化；公式不含文字、边界标记和视频的时间维，以 processor 实际输出为准。`,
         en: `So N = H/28 · W/28 = ${mh * mw}. The length follows the image size; the formula leaves out text, boundary markers and video time, so check what the processor actually outputs.`}
     ]);
@@ -505,15 +505,15 @@
     const base = {groups, query, centroids, order, one, two};
     return frames([
       {...base, stage: 0, zh: '库里的向量先被分成几个簇，每个簇有一个中心（×），各自保存自己的列表。',
-        en: 'The stored vectors are first split into clusters, each with a centre (×) and its own list.'},
+        en: 'The stored vectors are first split into clusters, each with a center (×) and its own list.'},
       {...base, stage: 1, zh: '查询 q 来了：先比较它到各个簇中心的距离，A 的中心最近。',
-        en: 'A query q arrives: compare it with each cluster centre first; A’s centre is the nearest.'},
+        en: 'A query q arrives: compare it with each cluster center first; A’s center is the nearest.'},
       {...base, stage: 2, probe: 1, zh: 'nprobe = 1：只扫描簇 A，在里面找到的最近点并不是全库最近的那个。',
         en: 'nprobe = 1: scan only cluster A. The nearest point found there is not the nearest in the whole collection.'},
       {...base, stage: 3, probe: 2, zh: 'nprobe = 2：再扫描簇 B，找到更近的点；它就在 B 靠近 q 的边上。',
         en: 'nprobe = 2: also scan cluster B and find a closer point, sitting on B’s edge near q.'},
       {...base, stage: 4, probe: 2, done: true, zh: '簇中心最近，不代表簇内一定有最近的点。多查几个簇能减少遗漏，但更慢。100 万条分 1000 个簇、查 10 个，约扫 1 万条；这只是粗略比例，不是加速倍数。',
-        en: 'The closest centre need not own the closest point. Probing more clusters misses less but costs more. With 1,000,000 vectors in 1000 clusters, probing 10 scans about 10,000: a rough ratio, not a speedup.'}
+        en: 'The closest center need not own the closest point. Probing more clusters misses less but costs more. With 1,000,000 vectors in 1000 clusters, probing 10 scans about 10,000: a rough ratio, not a speedup.'}
     ]);
   };
 
@@ -635,7 +635,7 @@
   }});
 
   FIGURES['step-retrieval-metrics'] = name => stepper(name, F.retrievalMetrics(), {height: 230, setup(svg) {
-    V.text(svg, 30, 36, t('标注的相关文档', 'labelled relevant'), 'algo-head');
+    V.text(svg, 30, 36, t('标注的相关文档', 'labeled relevant'), 'algo-head');
     V.text(svg, 30, 126, t('返回的前 3 篇', 'returned top 3'), 'algo-head');
     const relevant = [0, 1, 2].map(i => cell(svg, 30 + i * 56, 46, 46, 34));
     const returned = [0, 1, 2].map(i => cell(svg, 30 + i * 56, 136, 46, 34));

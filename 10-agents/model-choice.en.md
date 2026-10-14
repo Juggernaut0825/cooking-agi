@@ -138,7 +138,7 @@ This replays supplied outcomes; it neither trains nor calls a router. Real exper
 <details markdown="1">
 <summary>Explore cost and quality with sliders</summary>
 
-This figure uses different assumptions, not measurements extending the four requests. It fixes success rates for two request types and makes the cascade's check more accurate than the pre-generation classifier by construction. Checking and routing overhead are omitted. Explore assumptions here, not vendor selection.
+This figure uses different assumptions, not measurements extending the four requests. It fixes success rates for two request types and makes the cascade's check more accurate than the pre-generation classifier by construction. Checking overhead is omitted; routing adds a fixed toy overhead (0.05 cost units, 0.1 latency units). Explore assumptions here, not vendor selection.
 
 <!-- widget:tx-model-router -->
 

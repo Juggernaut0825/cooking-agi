@@ -83,7 +83,7 @@ Check the spatial arithmetic: a 1024 × 1024 image compressed by 8 along each ax
 
 Lower training error does not necessarily mean a more useful image. Correct letters in an ugly layout and an attractive poster with the wrong date are different failures.
 
-The original report constructs DPO from flow-matching error differences on preferred images, while GRPO optimizes sampled trajectories. The language-model token log-probability formula cannot simply be reused unchanged. [Original post-training section](https://arxiv.org/html/2508.02324v1)
+The original report builds DPO by comparing flow-matching errors on the chosen and rejected images of each pair, relative to a reference model, while GRPO optimizes sampled trajectories. The language-model token log-probability formula cannot simply be reused unchanged. [Original post-training section](https://arxiv.org/html/2508.02324v1)
 
 For one editing instruction, separate reward dimensions: target text correctness, edit scope, preservation elsewhere, and visual defects. Check conflicts before choosing weights.
 
@@ -93,7 +93,7 @@ Randomness also needs care. A deterministic ODE solver follows a fixed trajector
 
 ## A small, useful evaluation set
 
-| Slice | Original example | Check |
+| Slice | Made-up example | Check |
 | --- | --- | --- |
 | Exact text | Friday → Saturday; 8:30 → 9:30 | Exact field match with manual checks for OCR errors |
 | Composition | Red cup left of blue book | Objects, colors, and relations separately |

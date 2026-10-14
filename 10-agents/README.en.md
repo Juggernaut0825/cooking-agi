@@ -2,7 +2,7 @@
 
 [中文](README.md) · **English**
 
-> Reading time: ~5 min · Level: advanced · Last reviewed: 2026-09
+> Reading time: ~5 min · Level: advanced · Last reviewed: 2026-10
 
 Explaining an error message may take one response. Opening files, changing code, running tests, and reacting to the next failure needs a loop. The result of each action informs the next one. We start there to decide when an agent is useful and when a fixed workflow is simpler.
 
@@ -18,13 +18,13 @@ rules, then a learned policy, now a model you ask.
 
 A few things from the RL side are worth keeping, because they come back later:
 
-- **It optimises later, not now.** The value function $V(s)$ is "how much is still to be had
+- **It counts what comes later, not just now.** The value function $V(s)$ is "how much is still to be had
   from this square if I keep playing well", and the discount $\gamma$ says how much later
   counts. Small $\gamma$ is short-sighted; large $\gamma$ will take the long way round. That
   is the value map in the figure above.
 - **Exploration against exploitation.** Always take the best known route and you never find a
   better one; always try new things and you never collect.
-- **It optimises whatever you actually pay for.** The fun and frightening one. OpenAI's boat
+- **It optimizes whatever you actually pay for.** The fun and frightening one. OpenAI's boat
   race is the classic ([Faulty reward functions in the wild](https://openai.com/index/faulty-reward-functions/),
   2016): the reward was the pickups along the course, so the agent found that spinning in a
   circle farming pickups scored better than finishing the race — and spun, catching fire, ramming
@@ -68,7 +68,7 @@ ReAct (Yao et al., 2022) interleaves reasoning and acting: the model writes down
 1. [Prompting, ICL, and CoT](prompting.en.md): specify inputs, examples, and the task.
 2. [Common building blocks](patterns.en.md): decide whether one call is enough or a loop is needed.
 3. [Tools, MCP, and skills](tools-and-skills.en.md): follow a review request through calls, execution, and permissions.
-4. [Deep Research](deep-research.en.md) and [different settings](scenarios.en.md): continue when evidence is missing or conflicting.
+4. [Deep Research](deep-research.en.md): continue when evidence is missing or conflicting; [different settings](scenarios.en.md): which tasks (coding, support, computer use) can be checked automatically and what guardrails each needs.
 5. [Model selection and routing](model-choice.en.md): compare quality, latency, and full costs for a concrete task.
 6. [Review questions](review.en.md): check which ideas you can explain independently.
 

@@ -78,7 +78,7 @@ Consider frames at two and four seconds. Changing sampling FPS can change frame 
 
 With $N$ visual tokens and at most $w$ per window, global attention uses roughly $N^2$ scores per layer, versus $Nw$ for fixed windows. At $N=1024,w=64$, these are 1,048,576 and 65,536.
 
-However, Qwen2.5-VL retains some global-attention layers and uses RMSNorm. It is neither normalization-free nor a wholly linear-complexity visual encoder or VLM. [Official visual-encoder description](https://qwenlm.github.io/blog/qwen2.5-vl/)
+However, Qwen2.5-VL's vision encoder still keeps a few global-attention layers (it also switched to RMSNorm and SwiGLU to match the LLM), so neither the encoder nor the whole VLM has linear complexity. [Official visual-encoder description](https://qwenlm.github.io/blog/qwen2.5-vl/)
 
 Local windows preserve local interactions but do not directly connect distant regions. Global layers provide that exchange. The resulting sequence still consumes LLM context and KV cache.
 

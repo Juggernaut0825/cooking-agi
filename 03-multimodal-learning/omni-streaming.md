@@ -26,12 +26,12 @@ flowchart TD
     C["文字问题与对话历史"] --> D["Thinker"]
     B --> D
     D --> E["文字回答"]
-    D --> F["Talker：生成语音 codec"]
+    D --> F["Talker：生成语音 codec token"]
     E --> F
     F --> G["流式音频解码 → 播放"]
 ```
 
-这是分工图，具体连线随版本而变。尤其是“3 不再使用 Thinker 的高层文本表征”，**不是说它不需要知道要说哪些文字**。要区分 hidden representations、离散文本 token 和多模态条件。[Qwen3-Omni §2](https://arxiv.org/html/2509.17765v1)
+这是分工图，具体连线随版本而变。尤其是“3 不再使用 Thinker 的高层文本表征”，**不是说它不需要知道要说哪些文字**。要区分隐藏层表征、离散文本 token 和多模态条件。[Qwen3-Omni §2](https://arxiv.org/html/2509.17765v1)
 
 <!-- paper-figure:qwen3omni-overview -->
 

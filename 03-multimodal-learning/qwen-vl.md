@@ -78,7 +78,7 @@ assert merged_image_tokens(560, 560) == 400
 
 假设有 $N$ 个视觉 token，每个窗口最多 $w$ 个。单层全局 attention 有约 $N^2$ 个分数；固定窗口的一层约为 $Nw$。拿 $N=1024,w=64$ 举例，分别为 1,048,576 和 65,536。
 
-但是，Qwen2.5-VL 仍保留部分全局 attention 层，还使用 RMSNorm。不能把它写成“没有归一化”，也不能把整个视觉编码器或整个 VLM 都称为线性复杂度。[官方视觉编码器说明](https://qwenlm.github.io/blog/qwen2.5-vl/)
+但是，Qwen2.5-VL 的视觉编码器仍保留少数全局 attention 层（它同时改用了 RMSNorm 和 SwiGLU，与语言模型对齐），所以不能把整个视觉编码器或整个 VLM 都称为线性复杂度。[官方视觉编码器说明](https://qwenlm.github.io/blog/qwen2.5-vl/)
 
 局部窗口适合保住细节，却不直接连接远处区域。全局层负责补这种交流；进入 LLM 后的视觉序列仍然要占 context 和 KV cache。
 

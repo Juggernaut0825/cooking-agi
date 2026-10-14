@@ -8,12 +8,12 @@ This overview follows the complete path. You do not need to finish the whole sec
 | --- | --- | --- |
 | Why can keyword matches rank poorly? | [TF-IDF and BM25](tfidf-and-bm25.en.md) | How repetition and document length affect scores |
 | How does text become a searchable vector? | [Dual encoders](dual-encoder.en.md) | What can be precomputed and how training uses positives and negatives |
-| Qwen Embedding or BGE? | [Specific model comparison](embedding-models.en.md) | Why inputs, pooling, and indexes must remain compatible |
+| Qwen3 Embedding or BGE-M3? | [Specific model comparison](embedding-models.en.md) | Why inputs, pooling, and indexes must remain compatible |
 | How do retrieval paths work together? | [Hybrid retrieval and reranking](hybrid-and-reranking.en.md) | Fusion and comparisons under equal budgets |
 
 The notes begin with intuition and small examples, then develop the arithmetic and implementation. Stop after the mechanism if that is what you need; return to the code and debugging when you are ready to build.
 
-## Start here: search is a decision process
+## Search is more than finding similar text
 
 Search is not just finding the most similar content in a database. It helps the model, when information is incomplete, decide **what to look for, where to look, which evidence is still missing, and when it can stop**.
 

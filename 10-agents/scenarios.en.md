@@ -2,7 +2,7 @@
 
 [中文](scenarios.md) · **English**
 
-> Reading time: ~3 min · Level: advanced · Last reviewed: 2026-09
+> Reading time: ~3 min · Level: advanced · Last reviewed: 2026-10
 
 ## The key difference: can the result be checked automatically?
 
@@ -13,7 +13,7 @@ Writing code and booking a flight are both called agents, yet they are entirely 
 | Coding | repository, shell, tests | yes: run the tests | tests pass but the logic is wrong; editing tests to make them pass | sandboxed execution; a person reviews the diff |
 | Search and research | search, reading web pages | partly: sources can be checked | invented citations; not knowing when to stop | require sources; set a budget |
 | Customer support | order and user systems, policy documents | partly: rules can be checked | breaking policy; answering the same question differently each time | limit tool permissions; hand hard cases to a person |
-| Data analysis | SQL, notebooks | yes: queries run | a wrong join or filter whose result still looks plausible | show the query; check row counts and definitions |
+| Data analysis | SQL, notebooks | partly: queries run, but results still need checking | a wrong join or filter whose result still looks plausible | show the query; check row counts and definitions |
 | Using a computer or browser | web pages, graphical interfaces | weakly | breaking when the interface changes; instructions injected by page content | confirm irreversible actions; isolated environment |
 | Personal assistant | email, calendar, memory | weakly | acting on stale memory; leaking private data | confirm before sending; memory can be corrected |
 

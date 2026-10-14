@@ -50,7 +50,7 @@ $$L_{I\to T}=-\frac{1}{N}\sum_{i=1}^{N}\log\frac{\exp(s_{ii})}{\sum_{j=1}^{N}\ex
 
 The column objective swaps queries and candidates; $L=(L_{I\to T}+L_{T\to I})/2$. This is the paper's symmetric cross-entropy objective. The [official implementation](https://github.com/openai/CLIP/blob/main/clip/model.py) exponentiates a learned logit scale, corresponding to $1/\tau$ here.
 
-For row 1 at $\tau=1$, the paired probability is about 0.489 and its loss about 0.716. The lab and page calculate the same numbers:
+For row 1 at $\tau=1$, the paired probability is about 0.489 and its loss about 0.716. Set the lab above to τ = 1.00 with the cat image selected to see the same 48.9% and 0.716; the script below prints the row-1 probabilities and the batch symmetric loss:
 
 ```bash
 python 00-foundations/code/multimodal_math.py

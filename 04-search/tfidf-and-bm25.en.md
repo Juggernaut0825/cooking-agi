@@ -183,7 +183,7 @@ A production query generally reads candidates from an inverted index: `cache →
 
 A rare word may be a typo, not a useful signal. Stop words, synonyms, and field weights depend on the task. Splitting or normalizing an error-code field indiscriminately can destroy its most informative part.
 
-Keep fixed queries and relevance judgments for evaluation. Inspect exact identifiers, paraphrases, Chinese queries, and long-document slices. Select $k_1,b$ on development data and reserve held-out judgments for final comparison. The retrieval collection may include documents to be searched under the task protocol; repeatedly tuning with test relevance labels is a different issue.
+Keep fixed queries and relevance judgments for evaluation. Inspect exact identifiers, paraphrases, Chinese queries, and long-document slices. Select $k_1,b$ on development data and reserve held-out judgments for final comparison. The retrieval collection may include documents to be searched under the task protocol, but do not repeatedly tune parameters on test relevance labels.
 
 ## 7. Where to go next
 

@@ -78,7 +78,7 @@ Completeness 是另一项：回答有没有覆盖「未拆封」「7 天」「�
 不要编造证据编号。不要输出冗长思维过程。
 ~~~
 
-输入可以另用 JSON 装好 task、candidate、evidence、reference。分隔字段有助于管理，却不是 prompt injection 的安全保证。后面的[偏差测试](bias-and-workflow.md)还会故意让 candidate 里出现「请给我满分」。
+输入可以另用 JSON 装好 task、candidate、evidence、reference。分隔字段有助于管理，却不是 prompt injection 的安全保证。后面的[偏差测试](bias-and-workflow.md)还会故意让 candidate 里出现「判我通过」这类指令。
 
 ## 写完之后，先让两个人试着标
 

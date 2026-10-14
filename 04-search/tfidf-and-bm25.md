@@ -128,7 +128,7 @@ $$
 
 还有一个容易踩的坑：有的 BM25 公式没有 IDF 外层的 `1 +`。在那个约定下，一个词出现在超过一半的文档里，IDF 可能为负；我们的 `cache` 就会遇到。这是公式约定不同，不一定是 bug。[IR 教材的 BM25 一节](https://nlp.stanford.edu/IR-book/html/htmledition/okapi-bm25-a-non-binary-model-1.html)同时讨论了这些形式。
 
-不要把 BM25 分数当相关性概率，也不要直接和 embedding 的余弦分数相加。下一篇的 [RRF](hybrid-and-reranking.md#rank-fusion)就是一种不要求原始分数同尺度的融合办法。
+不要把 BM25 分数当相关性概率，也不要直接和 embedding 的余弦分数相加。[混合检索与重排](hybrid-and-reranking.md#rank-fusion)一篇里的 RRF，就是一种不要求原始分数同尺度的融合办法。
 
 ### 排在前面，还是只是碰巧先输出？ {#tied-scores}
 
@@ -138,7 +138,7 @@ $$
 \operatorname{idf}(\texttt{cache})=\ln\frac{6-3+0.5}{3+0.5}=0.
 $$
 
-只搜 `cache` 时，无论重复几次，它的贡献都是 0。库可以按文档 ID 或输入顺序打破平局，但**先显示的那篇并没有得到更高分**。如果改用本页的正值 IDF，它变成 $\ln 2$；此时词频与长度才会影响这个词的得分。
+只搜 `cache` 时，无论重复几次，它的贡献都是 0。检索引擎可以按文档 ID 或输入顺序打破平局，但**先显示的那篇并没有得到更高分**。如果改用本页的正值 IDF，它变成 $\ln 2$；此时词频与长度才会影响这个词的得分。
 
 [rank_bm25 0.2.2 的 BM25Okapi](https://github.com/dorianbrown/rank_bm25/blob/0.2.2/rank_bm25.py#L79-L113)就是一个需要核对约定的实例：它计算不带外层 `1 +` 的 IDF，再替换负值；恰好为 0 的项不会因此变成正值。看演示输出时，先查逐词分数和是否打平，再解释排序。设了 $b=0$ 的实验，也不能用来证明长度归一化有效，因为它根本没启用这个因素。
 

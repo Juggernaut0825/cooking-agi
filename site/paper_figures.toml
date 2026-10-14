@@ -132,8 +132,8 @@ image = "2509.17765-fig2.webp"
 width = 1600
 height = 1691
 changes = "resized"
-zh = "Qwen3-Omni 总览：Thinker–Talker 结构。Thinker 负责生成文字；Talker 直接接收 Thinker 的高层表示，生成流式语音 token。为了低延迟，Talker 自回归地预测多码本序列：每一步由 MTP 模块给出当前帧的残差码本，再由 Code2Wav 逐帧合成波形。"
-en = "Qwen3-Omni overview: the Thinker–Talker architecture. Thinker generates text; Talker receives Thinker's high-level representations directly and generates streaming speech tokens. For low latency, Talker autoregressively predicts a multi-codebook sequence: at each step an MTP module outputs the current frame's residual codebooks, and Code2Wav synthesizes the waveform frame by frame."
+zh = "Qwen3-Omni 总览：Thinker–Talker 结构。Thinker 负责生成文字；Talker 接收 Thinker 的高层多模态表示（报告 §2 说明，3 代不再使用其中的高层文本表征），生成流式语音 token。为了低延迟，Talker 自回归地预测多码本序列：每一步由 MTP 模块给出当前帧的残差码本，再由 Code2Wav 逐帧合成波形。"
+en = "Qwen3-Omni overview: the Thinker–Talker architecture. Thinker generates text; Talker receives Thinker's high-level multimodal representations (per §2 of the report, version 3 no longer uses the high-level text representations) and generates streaming speech tokens. For low latency, Talker autoregressively predicts a multi-codebook sequence: at each step an MTP module outputs the current frame's residual codebooks, and Code2Wav synthesizes the waveform frame by frame."
 
 [[figure]]
 id = "qwen25omni-tmrope"
@@ -530,5 +530,5 @@ image = "2411.15124-fig1.webp"
 width = 1600
 height = 558
 changes = "resized"
-zh = "Tülu 3 配方总览：面向通用能力和目标能力的数据整理、训练策略，以及开发和最终评测共用的一套标准评测。"
+zh = "Tülu 3 配方总览：面向通用能力和目标能力的数据整理、训练策略，以及分别用于开发阶段和最终评测阶段的标准化评测。"
 en = "The Tülu 3 recipe: data curation for general and targeted capabilities, training strategies, and a standardized evaluation suite for development and final evaluation."

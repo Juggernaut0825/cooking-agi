@@ -47,7 +47,7 @@ L&=-\log\frac{\exp(s^+/\tau)}{Z}.
 \end{aligned}
 $$
 
-Here $s^+$ is the positive score, $s_j^-$ are comparison scores in this batch, and $\tau>0$ is temperature. Sum the exponentiated candidate scores into $Z$, then calculate the positive's share. The denominator is not every irrelevant document in the world. It is the candidate set used for this training comparison.
+Here $s^+$ is the positive score, $s_j^-$ are comparison scores in this batch, $B$ is the number of candidates compared (one positive plus $B-1$ comparisons), and $\tau>0$ is temperature. Sum the exponentiated candidate scores into $Z$, then calculate the positive's share. The denominator is not every irrelevant document in the world. It is the candidate set used for this training comparison.
 
 ### Positive and negative examples do not imply pairwise binary classification {#infonce-and-ce}
 
