@@ -2,7 +2,7 @@
 
 [中文](state-machine-dp.md) · **English** · [Pattern map](../leetcode.en.md)
 
-> Last reviewed: 2026-10-09 · Prerequisite: [Backtracking and DP](backtracking-and-dp.en.md)
+> Last reviewed: 2026-10 · Prerequisite: [Backtracking and DP](backtracking-and-dp.en.md)
 
 This is an algorithm exercise, not investment advice: prices are given for each day, at most one unit may be held, and buying is forbidden on the day after selling. Find the best final profit without a position.
 
@@ -14,7 +14,7 @@ At the end of each day:
 
 | State | Meaning | Tomorrow's options |
 | --- | --- | --- |
-| holding | Own one unit; profit includes its purchase cost | Hold or sell |
+| holding | Own one unit; profit net of its purchase cost | Hold or sell |
 | sold | Sold today | Rest; buying is forbidden |
 | resting | Own nothing and did not sell today | Rest or buy |
 
@@ -42,7 +42,7 @@ R_t&=\max(R_{t-1},S_{t-1}).
 \end{aligned}
 $$
 
-Holding comes from continuing to hold or buying after a day when buying was permitted. It cannot come from yesterday's `sold` state. Resting follows either another rest or yesterday's sale and the required cooldown.
+Holding comes from continuing to hold or buying today from yesterday's resting state. It cannot come from yesterday's `sold` state. Resting follows either another rest or yesterday's sale and the required cooldown.
 
 Why are these states sufficient? Histories at the same day and state allow the same continuations, so a lower-profit history cannot beat a higher-profit one from there. If the number of transactions is limited, the remaining count must also be part of that argument and state.
 

@@ -18,9 +18,7 @@ Skip familiar steps. If one example takes the evening, do not chase the schedule
 
 - **Functions, lists, and dictionaries are unfamiliar:** run a small example from [Useful Python](python.en.md), change its input, and follow the program.
 - **You know Python but not ML:** start with the prediction below. No PyTorch installation or GPU is needed yet.
-- **You can train models but struggle in interviews:** use the [review route](speedrun.en.md). Completing a route is not a reason to relearn familiar material.
-
-The hours help choose a manageable scope, not judge your learning speed. Rest, classes, and life do not create a study debt.
+- **You can train models but struggle in interviews:** use the [review route](speedrun.en.md) and let implementation and debugging exercises show what you still need.
 
 ## Try two hours: what does the program do, and what does a model add? {#first-two}
 
@@ -33,7 +31,7 @@ The hours help choose a manageable scope, not judge your learning speed. Rest, c
 | 15 minutes | Describe a small project or course assignment | Input, approach, result, and what you personally wrote |
 | 10 minutes | Leave a place to resume | Even one loop you do not yet understand |
 
-Suggested total: 120 minutes, not necessarily in one sitting. A [hash-map](algorithms/hash-and-prefix.en.md) counting example is a reasonable first algorithm; you do not need to start with an unfamiliar Medium.
+Suggested total: 120 minutes, not necessarily in one sitting. Start algorithms with the counting example in [hash maps](algorithms/hash-and-prefix.en.md): understand the approach, then practice it on new inputs.
 
 ### One prediction and loss calculation is enough to begin {#prediction}
 
@@ -70,7 +68,7 @@ print(mean_squared_error(predict(inputs, 1.0), targets))
 
 Change the parameter to 1.5; calculate before running. Predictions become `[1.5,3]` and loss is `(0.25+1)/2 = 0.625`. This is a small example of fitting training data better. **It has not established better performance on unseen data.**
 
-You can stop here. Next time, try explaining inputs, parameter, predictions, targets, and loss without the page. Revisit anything missing; there is no need to memorize the paragraph.
+After running it, point to where the inputs, parameter, predictions, targets, and loss appear in the code. The update example below uses each of them again.
 
 ## Add four hours: why change the parameter in this direction? {#next-four}
 
@@ -117,6 +115,6 @@ Suggested cumulative budget: twelve hours. This is not a claim of interview read
 
 ## How do separate sessions add up? {#keep-going}
 
-Recall the last example for a few minutes, change one condition, and leave one next step. On a low-energy day, rerunning a familiar example is fine. No streaks, and missing a day does not reset your work.
+If this session covered one gradient step, next time loop the update ten times and print the parameter and loss each time. Guess the result before running it, and stop to check any value that differs from your guess. That makes problems easier to see than switching to a bigger model.
 
 With an interview close by, choose one or two items for the confirmed round and be honest about work you have not done. A short timeline is a reason to reduce scope, not add pressure to learning.

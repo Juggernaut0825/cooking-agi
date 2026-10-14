@@ -117,7 +117,7 @@ $$
 \ell=\log\sum_j e^{z_j}-\sum_c q_c z_c.
 $$
 
-第一项对 $z_c$ 的导数是 $p_c$，第二项是 $-q_c$。批次取平均后再除以样本数；类别加权或未归一化目标会改变这个表达式。
+第一项对 $z_c$ 的导数是 $p_c$，第二项是 $-q_c$。按批次取平均时，梯度还要再除以样本数；类别加权或未归一化目标会改变这个表达式。
 
 注意 $-\log p_y$ 对“概率”求导会出现 $-1/p_y$，但对 logits 求导还要经过 Softmax。不能看见前者就断言 CE 的 logit 梯度会在低概率处爆炸。
 
@@ -163,7 +163,7 @@ assert wrong_logit.grad.item() == 0.
 
 一个小 batch 的有效 loss 分别是 `[2]` 和 `[1, 1, 1]`。按 token 平均得到 $5/4=1.25$；先按样本平均再平均得到 $(2+1)/2=1.5$。前者每个 token 等权，后者每条样本等权。两者都能定义成目标，但别把它们当成同一件事。
 
-同理，gradient accumulation 不能在有效 token 数不同时，未经调整就把每个 microbatch 的 mean 再平均。要先确定训练目标的分母；分布式时还要对齐跨 rank 的计数和梯度归约。实作见[训练循环](training-loop.md)，完整对话例子见 [SFT](../../05-post-training/sft-and-its-ceiling.md#mask-example)。
+同理，gradient accumulation 不能在有效 token 数不同时，未经调整就把每个 microbatch 的 mean 再平均。要先确定训练目标的分母；分布式时还要对齐跨 rank 的计数和梯度归约。按有效 token 总数归一化的做法见[一次训练更新](../deep-dives/training-step.md)，完整对话例子见 [SFT](../../05-post-training/sft-and-its-ceiling.md#mask-example)。
 
 <details markdown="1">
 <summary>工程检查：为什么同样叫 CE，换一种标签写法结果就不同？</summary>

@@ -1,8 +1,8 @@
-# Transformer follow-ups, quick review: the ones you will be asked
+# Transformer follow-ups, quick review: the common ones
 
 [中文](transformer-followups.md) · **English**
 
-> Reading time: ~8 min · Last reviewed: 2026-09
+> Reading time: ~8 min · Last reviewed: 2026-10
 
 > **Read this first**: only public fundamentals are collected here. These are not any company's interview questions, and nothing here describes any company's process. Model configurations change quickly; for numbers, trust the papers and released configs at the end of [the interactive Transformer page](../00-foundations/transformer-lab.en.md).
 
@@ -22,7 +22,7 @@ Generation happens one token at a time. Under a causal mask the K and V of past 
 <details class="qa" markdown="1">
 <summary>With a cache, what is the per-step complexity, and what becomes the bottleneck?</summary>
 
-Per-step attention drops from $O(t^2)$ to $O(t)$. The price is memory that grows linearly with tokens, and every step has to read the entire cache: decoding goes from compute-bound to **memory-bound**. Everything that “shrinks the cache” afterwards (GQA, MLA, sliding windows) is aimed at exactly this.
+Per-step attention drops from $O(t^2)$ to $O(t)$. The price is memory that grows linearly with tokens, and every step has to read the entire cache: small-batch decoding is usually limited by the bandwidth for reading weights and the cache (**memory-bound**). Everything that “shrinks the cache” afterwards (GQA, MLA, sliding windows) is aimed at exactly this.
 
 </details>
 
@@ -104,14 +104,14 @@ Each pair of dimensions in $q$ and $k$ is rotated by an angle proportional to th
 <details class="qa" markdown="1">
 <summary>Why must both Q and K be rotated? Would rotating one be enough?</summary>
 
-No. The relativity comes from the two rotations cancelling: $\langle R_m q, R_n k\rangle = \langle q, R_{n-m} k\rangle$. Rotate only one side and what is left in the dot product is absolute position.
+No. The relativity comes from the two rotations canceling: $\langle R_m q, R_n k\rangle = \langle q, R_{n-m} k\rangle$. Rotate only one side and what is left in the dot product is absolute position.
 
 </details>
 
 <details class="qa" markdown="1">
 <summary>Why raise the RoPE base θ for long context?</summary>
 
-A larger base makes every pair turn more slowly, so the score decays more slowly with distance and far-away positions stay distinguishable. Llama 3 uses $\theta = 500\text{k}$; Gemma 3 uses $\theta = 1\text{M}$ on its global layers.
+A larger base slows every pair except the first (whose frequency is $b^0=1$), so low-frequency pairs do not wrap around within a longer range and distant positions are less likely to alias. Changing the base alone does not guarantee good long-context behavior; training and evaluation still matter. Llama 3 uses $\theta = 500\text{k}$; Gemma 3 uses $\theta = 1\text{M}$ on its global layers.
 
 </details>
 
@@ -129,7 +129,7 @@ The FFN is replaced by $N$ experts, and a router sends each token to only the to
 <details class="qa" markdown="1">
 <summary>What is the classic problem in MoE training?</summary>
 
-Load imbalance: the router tends to send tokens to a few experts and the rest learn nothing. The usual fix is an auxiliary load-balancing loss; DeepSeek-V3 adjusts a bias term instead and adds no auxiliary loss.
+Load imbalance: the router tends to send tokens to a few experts and the rest learn nothing. The usual fix is an auxiliary load-balancing loss; DeepSeek-V3 relies mainly on a bias term instead, keeping only a very small sequence-wise auxiliary loss.
 
 </details>
 
@@ -145,9 +145,9 @@ It is not an approximation; the result is **exact**. What it saves is memory tra
 </details>
 
 <details class="qa" markdown="1">
-<summary>How is softmax computed once the row is split into blocks? Does a row not have to be normalised as a whole?</summary>
+<summary>How is softmax computed once the row is split into blocks? Does a row not have to be normalized as a whole?</summary>
 
-With an online softmax: every row keeps a running max and a running normaliser, and each new block updates both and corrects the output accumulated so far. Mathematically it is identical to normalising the whole row at once.
+With an online softmax: every row keeps a running max and a running normalizer, and each new block updates both and corrects the output accumulated so far. Mathematically it is identical to normalizing the whole row at once.
 
 </details>
 

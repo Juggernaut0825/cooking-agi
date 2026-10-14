@@ -18,7 +18,7 @@ You're choosing a starting point for **this topic**, not a label for yourself. S
 
 ## If you have a foundation, find the gaps first {#refresh}
 
-Without looking up a solution, pick a small task relevant to your role. There is no score; the point is to find something worth spending your next session on.
+Pick a small task relevant to your role and try it before looking up a solution. If you get stuck, decide whether the gap is the idea, writing the code, or checking the result, then return to the matching note.
 
 | Try this | If you get stuck, start here |
 | --- | --- |
@@ -35,8 +35,6 @@ Skip what you can already do independently. If you can recall a conclusion but n
 You could set aside **30–60 minutes of focused learning time** per session. That's a planning choice, not an estimate for finishing each unit. An unfamiliar idea may take several sessions. Breaks don't count, and missed sessions don't create work you owe.
 
 Pick the dates yourself; there is no daily commitment. Session length can differ too: perhaps 25 minutes on Tuesday and 70 on Saturday. Your own calendar or notes app is enough to keep track, and empty days are for rest.
-
-After studying, you can optionally record the actual date and focused minutes, reschedule, backfill a check-in, or undo it. Cancelled sessions can be restored too. There are no streaks or overdue penalties, and recording a session as done does not imply mastery.
 
 | Sequence | Read a little | Try it yourself | Leave something to return to |
 | --- | --- | --- | --- |
@@ -159,7 +157,7 @@ Leave three lines before stopping: **what you tried, what is still unclear, and 
 
 Keep those lines with your code or in your own notes. To come back to a note later, choose “Save this page” under its title. “My reading” at the top right lists saved notes and what you read recently, and a note reopens where you stopped.
 
-If you miss a day, there's nothing to make up. After a longer break, run your last example and decide whether to continue or revisit it.
+After a longer break, run your last example and decide whether to continue or revisit it.
 
 ## Keep a backup for your next device {#backups}
 

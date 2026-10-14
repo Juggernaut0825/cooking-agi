@@ -1,8 +1,8 @@
-# Transformer 进阶速查：那些一定会被追问的
+# Transformer 进阶速查：常见的追问
 
 **中文** · [English](transformer-followups.en.md)
 
-> 阅读时间：约 8 分钟 · 最近审阅：2026-09
+> 阅读时间：约 8 分钟 · 最近审阅：2026-10
 
 > **先读这个**：这里只整理公开的基础知识，不是任何一家公司的面试题，也不涉及任何公司的面试流程。模型的具体配置变得很快，数字以[交互图解](../00-foundations/transformer-lab.md)文末的论文和公开 config 为准。
 
@@ -22,7 +22,7 @@
 <details class="qa" markdown="1">
 <summary>有了 cache，单步复杂度是多少？瓶颈变成了什么？</summary>
 
-单步 attention 从 $O(t^2)$ 降到 $O(t)$。代价是显存随 token 数线性增长，而且每一步都要把整个 cache 读一遍——解码从 compute-bound 变成 **memory-bound**。后面所有“压 cache”的工作（GQA、MLA、sliding window）都是冲着这一点来的。
+单步 attention 从 $O(t^2)$ 降到 $O(t)$。代价是显存随 token 数线性增长，而且每一步都要把整个 cache 读一遍——小 batch 解码通常受读取权重和 cache 的带宽限制（**memory-bound**）。后面所有“压 cache”的工作（GQA、MLA、sliding window）都是冲着这一点来的。
 
 </details>
 
@@ -111,7 +111,7 @@ softmax 的权重必须加起来等于 1，当一个 head“没什么可看”�
 <details class="qa" markdown="1">
 <summary>长上下文为什么要调大 RoPE 的 base θ？</summary>
 
-base 越大，各对维度转得越慢，分数随距离衰减得也越慢，更远的位置仍然可区分。Llama 3 用 $\theta = 500\text{k}$，Gemma 3 在 global 层用 $\theta = 1\text{M}$。
+base 越大，除频率固定为 1 的第一对外，其余维度都转得更慢，低频维度在更长距离内不会转完一圈，远处位置更不容易混淆。只调 base 不保证长上下文好用，还要配合训练和评估。Llama 3 用 $\theta = 500\text{k}$，Gemma 3 在 global 层用 $\theta = 1\text{M}$。
 
 </details>
 
@@ -129,7 +129,7 @@ base 越大，各对维度转得越慢，分数随距离衰减得也越慢，更
 <details class="qa" markdown="1">
 <summary>MoE 训练最典型的问题是什么？</summary>
 
-负载不均：router 容易把 token 都塞给少数几个 expert，其余 expert 学不到东西。常见做法是加辅助的 load-balancing loss；DeepSeek-V3 改用一个 bias 项来调节，不引入辅助 loss。
+负载不均：router 容易把 token 都塞给少数几个 expert，其余 expert 学不到东西。常见做法是加辅助的 load-balancing loss；DeepSeek-V3 主要改用一个 bias 项来调节，只保留一个权重很小的序列级辅助 loss。
 
 </details>
 

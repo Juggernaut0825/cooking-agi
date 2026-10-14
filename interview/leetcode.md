@@ -17,7 +17,7 @@
 | 1 | [复杂度与 Python 工具](algorithms/complexity-and-tools.md) | average / amortized、递归栈、dict / deque / heapq 怎么选 |
 | 2 | [Hash map 与前缀和](algorithms/hash-and-prefix.md) | key 存什么、value 存什么，为什么有时要存频次 |
 | 3 | [双指针、窗口与二分](algorithms/pointers-and-search.md) | 每次移动，凭什么能排除一部分答案 |
-| 4 | [DFS / BFS：递归还是迭代](algorithms/traversal.md) | 走路顺序、栈与队列、visited、最短路的前提 |
+| 4 | [DFS / BFS：递归还是迭代](algorithms/traversal.md) | 访问顺序、栈与队列、visited、最短路的前提 |
 | 5 | [栈、堆与链表](algorithms/stack-heap-links.md) | 等一个未来答案、维护 Top K、安全地改指针 |
 | 6 | [回溯与动态规划](algorithms/backtracking-and-dp.md) | 路径和状态怎么区分，记忆化和循环怎么互换 |
 | 7 | [排序、区间与贪心](algorithms/sorting-and-greedy.md) | 排序省掉了什么，局部选择为什么不会后悔 |
@@ -62,7 +62,7 @@
 - **先讲再写**：用一两句话说暴力法，再说准备省掉哪部分重复工作。
 - **手走 4～6 个元素**：把变量写下来，别只在脑子里觉得“应该对”。
 - **关掉答案再写一次**：写完自己挑空输入、重复值、极端顺序试一试。
-- **隔几天换个条件**：有序变无序、正数加负数、树变带环图。能解释哪里失效，比背题号有用。
+- **隔几天换个条件**：有序变无序、正数加负数、树变带环图。说说哪里会失效。
 
 不用追求刷了多少题。隔几天还能写出来、能解释换个条件后哪里要改，就比记住题号更有用。
 

@@ -2,7 +2,7 @@
 
 [中文](monotonic-queue.md) · **English** · [Pattern map](../leetcode.en.md)
 
-> Last reviewed: 2026-10-09 · Prerequisite: [Stacks, heaps, and lists](stack-heap-links.en.md)
+> Last reviewed: 2026-10 · Prerequisite: [Stacks, heaps, and lists](stack-heap-links.en.md)
 
 For `[4,1,3,5,2,5]`, the maxima of consecutive windows of width 3 are `[4,5,5,5]`. Recomputing max for each window works, but costs $O(nk)$ for input length $n$ and width $k$.
 
@@ -79,4 +79,4 @@ A lazy heap is not automatically $O(k)$ space. You need a bound such as rebuildi
 
 For `[5,5,5]` and `k=2`, the result remains `[5,5]`. Also try `k=1`, `k=n`, negative values, and decreasing input. Explain why each removed index is no longer needed, rather than memorizing two while loops.
 
-Code and exhaustive small-array checks: [deeper_patterns.py](../code/deeper_patterns.py), [test_deeper_algorithm_patterns.py](../../site/tests/test_deeper_algorithm_patterns.py). This teaches a transferable window technique; it doesn't change the notebook into a Hard-problem collection.
+Code and exhaustive small-array checks: [deeper_patterns.py](../code/deeper_patterns.py), [test_deeper_algorithm_patterns.py](../../site/tests/test_deeper_algorithm_patterns.py). This teaches a transferable window technique; it doesn't mean your review should shift toward Hard problems.

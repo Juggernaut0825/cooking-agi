@@ -12,7 +12,7 @@
 
 | 练什么 | 入口 | 做完检查什么 |
 | --- | --- | --- |
-| 写对训练代码 | [PyTorch：从张量到训练](../../00-foundations/pytorch/README.md) | 数据有没有别名，梯度是否累积，loss 分母是否正确 |
+| 写对训练代码 | [PyTorch：从张量到训练](../../00-foundations/pytorch/README.md) | 改切片会不会影响原数据（是否共享存储），梯度是否累积，loss 分母是否正确 |
 | 从公式写到代码 | [白板手写](../../00-foundations/hand-write-kit.md) | shape、mask、边界条件和数值稳定性对不对 |
 | 排查 shape 和广播 | [张量运算](../../00-foundations/pytorch/operations-and-shapes.md) | 每个维度的含义，广播有没有改变原意 |
 | 确认梯度正确 | [自动求导](../../00-foundations/pytorch/autograd.md) | 计算图有没有被切断，梯度是否流向预期参数 |

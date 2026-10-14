@@ -77,7 +77,7 @@
         zh: p === 2 ? `2 没被划掉，是质数。从 2 × 2 = 4 开始划：${fresh.join('、')}。`
           : `${p} 是质数，从 ${p} × ${p} = ${from} 开始划。新划掉 ${fresh.join('、')}${again.length ? `；${again.join('、')} 之前已经划过，再划一次也没关系` : ''}。`,
         en: p === 2 ? `2 survives, so it is prime. Cross out from 2 × 2 = 4: ${fresh.join(', ')}.`
-          : `${p} is prime; start at ${p} × ${p} = ${from}. Newly crossed: ${fresh.join(', ')}${again.length ? `. ${again.join(', ')} were already gone; crossing again is harmless` : ''}.`});
+          : `${p} is prime; start at ${p} × ${p} = ${from}. Newly crossed: ${fresh.join(', ')}${again.length ? `. ${again.join(', ')} ${again.length > 1 ? 'were' : 'was'} already gone; crossing again is harmless` : ''}.`});
     }
     const primes = [];
     for (let n = 2; n <= limit; n++) if (!crossed.has(n)) primes.push(n);
@@ -102,8 +102,8 @@
       const zh = [`${index}: ${value} 进来。`], en = [`${index}: ${value} arrives.`];
       if (expired.length) { zh.push(`下标 ${expired.join('、')} 已经离开窗口，从队首删。`); en.push(`Index ${expired.join(', ')} has left the window; drop it from the front.`); }
       if (popped.length) {
-        zh.push(`${popped.map(i => values[i]).join('、')} 不比 ${value} 大，又更早过期，永远当不了最大值，从队尾删。`);
-        en.push(`${popped.map(i => values[i]).join(', ')} ${popped.length > 1 ? 'are' : 'is'} no larger than ${value} and expire${popped.length > 1 ? '' : 's'} sooner, so ${popped.length > 1 ? 'they' : 'it'} can never be the maximum; drop from the back.`);
+        zh.push(`${popped.map(i => values[i]).join('、')} 不比 ${value} 大，又更早过期，之后求最大值用不到它，从队尾删。`);
+        en.push(`${popped.map(i => values[i]).join(', ')} ${popped.length > 1 ? 'are' : 'is'} no larger than ${value} and expire${popped.length > 1 ? '' : 's'} sooner, so ${popped.length > 1 ? 'they are' : 'it is'} never needed for a later maximum; drop from the back.`);
       } else if (queue.length > 1) { zh.push(`它比队尾小，将来可能接班，排到队尾。`); en.push(`It is smaller than the back, but may take over later; append it.`); }
       zh.push(`队列 [${fmt(queue).join(', ')}]，` + (full ? `窗口最大值是队首的 ${values[queue[0]]}。` : '窗口还没满。'));
       en.push(`Queue [${fmt(queue).join(', ')}]; ` + (full ? `the window maximum is the front, ${values[queue[0]]}.` : 'the window is not full yet.'));
@@ -166,7 +166,7 @@
       list.push({chars, left, right, best, zh: `放进位置 ${right} 的 ${ch}，窗口是 ${window}，目前最长 ${best}。`, en: `Add the ${ch} at position ${right}. The window is ${window}; longest so far ${best}.`});
     });
     list.push({chars, left, right: chars.length - 1, best, done: true, zh: `读完了，最长是 ${best}。left 只往右走、从不回退，每个字符最多进出一次。`,
-      en: `Done: the longest is ${best}. left only moves right and never goes back, so each character enters and leaves once.`});
+      en: `Done: the longest is ${best}. left only moves right and never goes back, so each character enters and leaves at most once.`});
     return frames(list);
   };
 
@@ -211,8 +211,8 @@
       freq.set(prefix, (freq.get(prefix) || 0) + 1);
       prefixAt.push(prefix);
       list.push({values, freq: snapshot(), prefix, total, index, stored: prefix, prefixes: prefixAt.slice(),
-        zh: `再存：前缀 ${prefix} 的次数变成 ${freq.get(prefix)}。` + (index === 0 ? '先查后存，才不会把空子数组算进去。' : ''),
-        en: `Then store: prefix ${prefix} now appears ${freq.get(prefix)} time${freq.get(prefix) === 1 ? '' : 's'}.` + (index === 0 ? ' Looking up before storing keeps the empty subarray out.' : '')});
+        zh: `再存：前缀 ${prefix} 的次数变成 ${freq.get(prefix)}。` + (index === 0 ? '先查后存：target = 0 时，这样才不会把空子数组算进去。' : ''),
+        en: `Then store: prefix ${prefix} now appears ${freq.get(prefix)} time${freq.get(prefix) === 1 ? '' : 's'}.` + (index === 0 ? ' Looking up before storing keeps the empty subarray out when target is 0.' : '')});
     });
     list.push({values, freq: snapshot(), prefix, total, done: true, prefixes: prefixAt.slice(),
       zh: `合计 ${total}：两个单独的 1，加上整段。字典存的是次数，不是一个下标。`,

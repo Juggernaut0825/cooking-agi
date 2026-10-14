@@ -99,7 +99,7 @@ assert sum(doubling_append_costs(8)) == 15
 
 </details>
 
-## 4. 几个经常用的 function
+## 4. 几个常用函数
 
 ```python
 from collections import Counter, defaultdict, deque
@@ -126,7 +126,7 @@ smallest = heapq.heappop(heap)
 
 ## 5. 递归、切片和输出都要算空间
 
-一棵长成链的树：没有显式列表，递归深度仍可达 n，调用栈就是 O(n)。平衡二叉树的高度才是 O(log n)。
+一棵长成链的树：没有显式列表，递归深度仍可达 n，调用栈就是 O(n)。平衡二叉树才保证高度是 O(log n)。
 
 `values[left:right]` 会复制这一段；`''.join(parts)` 也要创建输出字符串。原地修改不一定代表 O(1) 空间，例如排序内部还可能使用辅助缓冲。
 

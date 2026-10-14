@@ -95,7 +95,7 @@ Both versions have the same asymptotic time and space bounds. The first exposes 
 
 ## 3. Not every subarray problem supports a window
 
-Now change the goal: find the shortest contiguous subarray of positive values `[2, 1, 4, 3]` whose sum is at least 7.
+Now change the goal: in the all-positive array `[2, 1, 4, 3]`, find the shortest contiguous subarray whose sum is at least 7.
 
 - Extending to `[2, 1, 4]` gives 7. Record length 3. Removing 2 leaves 5, so stop shrinking for now.
 - Add 3: `[1, 4, 3]` sums to 8. Remove 1 and `[4, 3]` still sums to 7, improving the answer to 2.
@@ -103,7 +103,7 @@ Now change the goal: find the shortest contiguous subarray of positive values `[
 
 Here we **record an answer while the window satisfies the requirement, then try shortening it**. In the unique-substring problem, we first removed duplicates and then recorded a valid length. Answer-update timing follows the question, not a universal template.
 
-Stopping is safe here because every value is positive: removing more values can only decrease the sum. For `[1, -1, 3]`, the total is 3. Removing 1 lowers it to 2, but removing −1 raises it back to 3. Stopping as soon as the sum falls below the target misses the one-element `[3]`.
+Stopping is safe here because every value is positive: removing more values can only decrease the sum. With target 3 and `[1, -1, 3]`, the total is 3. Removing 1 lowers it to 2, but removing −1 raises it back to 3. Stopping as soon as the sum falls below the target misses the one-element `[3]`.
 
 Negative values don't rule out every window algorithm; they invalidate this particular expand/shrink argument. [Prefix sums plus a map](hash-and-prefix.en.md) handle counting signed subarrays with an exact sum, but that is a counting problem, not automatically a solution to the shortest-length problem.
 
@@ -139,7 +139,7 @@ def lower_bound(values, target):
 
 For `[1, 2, 2, 5]`, target 2 returns 1; target 6 returns 4. O(log n) time, O(1) space. To test existence, also check `index < len(values)` and `values[index] == target`. The library equivalent is [bisect_left](https://docs.python.org/3/library/bisect.html).
 
-“Binary search on the answer” uses the same idea: if feasibility holds for a capacity and every larger capacity, search for the first feasible one. Time is **predicate cost × number of search steps**, not automatically O(log n).
+“Binary search on the answer” uses the same idea: if any feasible capacity guarantees that every larger capacity is feasible too, search for the first feasible one. Time is **predicate cost × number of search steps**, not automatically O(log n).
 
 ## 5. A few problems, many changed conditions
 
@@ -148,7 +148,7 @@ For `[1, 2, 2, 5]`, target 2 returns 1; target 6 returns 4. O(log n) time, O(1) 
 | [Two Sum II](https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/) | Justify discarding an endpoint; the problem returns one-based indices |
 | [Longest Substring Without Repeating Characters](https://leetcode.com/problems/longest-substring-without-repeating-characters/) | Never move left backward |
 | [Minimum Size Subarray Sum](https://leetcode.com/problems/minimum-size-subarray-sum/) | Positive-input assumption and answer-update timing |
-| [Search Insert Position](https://leetcode.com/problems/search-insert-position/) | Empty intervals, duplicates, past-the-end results |
+| [Search Insert Position](https://leetcode.com/problems/search-insert-position/) | Empty arrays, duplicates, past-the-end results |
 
 <details class="interview" markdown="1">
 <summary>Why can a window with an inner while loop still take O(n)?</summary>

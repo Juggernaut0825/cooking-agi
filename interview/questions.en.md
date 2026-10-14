@@ -2,9 +2,9 @@
 
 [中文](questions.md) · **English**
 
-> Reading time: as needed · Last reviewed: 2026-09
+> Reading time: as needed · Last reviewed: 2026-10
 
-> **Read this first**: every question here comes from the notes on this site — each note's “interview questions” section and its closing self-check — not from any company's interviews, and nothing here describes any company's process. What interviews emphasise changes quickly, so this list is time-sensitive.
+> **Read this first**: every question here comes from the notes on this site — each note's “interview questions” section and its closing self-check — not from any company's interviews, and nothing here describes any company's process. What interviews emphasize changes quickly, so this list is time-sensitive.
 
 This page covers the same material as [Foundations](../learn/README.en.md), but serves a different purpose. There you **learn** it, with derivations and interactive figures. Here you **review it before an interview** through questions and answers. The overlap is deliberate.
 

@@ -8,7 +8,7 @@
 
 这里算的是**有效学习时间**，也就是阅读、动手和思考的时间，不含休息。六小时可以分成几晚；每次学多久，按你的日程调整。
 
-不用每天学，日期和时长自己定。想之后回来读的文章，点标题下的「收藏本页」，右上角「我的阅读」里能找到；换设备或清理浏览器前，记得[导出备份](study-plan.md#backups)。
+想之后回来读的文章，点标题下的「收藏本页」，右上角「我的阅读」里能找到；换设备或清理浏览器前，记得[导出备份](study-plan.md#backups)。
 
 <nav class="study-route goal-route" aria-label="按当前基础选择路线">
 <a href="speedrun-start.md"><small>刚接触这部分知识</small><strong>从基础开始</strong><span>从 Python 函数、预测和 loss 学起，再看参数怎样更新</span></a>

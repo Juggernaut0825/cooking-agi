@@ -8,7 +8,7 @@ Choosing the right container usually helps more than shortening a line. Are you 
 
 ## 1. Complexity isn't a count of loops
 
-A `while` inside a `for` isn't automatically O(n²). If both pointers only advance, each moves at most n times: O(n) overall. Conversely, one loop copying `values[:index]` each time copies 0 through n−1 elements in total: O(n²).
+A `while` inside a `for` isn't automatically O(n²). If both pointers only advance, each moves at most n times: O(n) overall. Conversely, one loop copying `values[:index]` each time copies 0, 1, …, n−1 elements in turn, O(n²) in total.
 
 We assume constant-cost integer operations and comparisons. Very large integers, long strings, and tuple keys require accounting for arithmetic, comparison, and hashing lengths.
 
@@ -126,7 +126,7 @@ Results: `counts['a'] == 3`, `first == 'start'`, `left == 1`, `right == 3`. The 
 
 ## 5. Recursion, slices, and outputs use space too
 
-A tree shaped like a chain can need n recursive frames even without an explicit list: O(n) stack space. O(log n) height requires a balanced binary tree.
+A tree shaped like a chain can need n recursive frames even without an explicit list: O(n) stack space. Only a balanced binary tree guarantees O(log n) height.
 
 `values[left:right]` copies that slice; `''.join(parts)` allocates the output string. “In place” doesn't always mean O(1) auxiliary space: sorting may still use temporary storage internally.
 

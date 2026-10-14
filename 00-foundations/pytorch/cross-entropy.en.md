@@ -163,7 +163,7 @@ A language model predicts vocabulary scores at each position, often shaped `[bat
 
 Suppose two examples have valid token losses `[2]` and `[1, 1, 1]`. A token mean is $5/4=1.25$; a mean of per-example means is $(2+1)/2=1.5$. One weights tokens equally, the other weights examples equally. Either can be an intentional objective, but they are not interchangeable.
 
-The same issue applies to gradient accumulation: naively averaging microbatch means gives the wrong token mean when their valid counts differ. Decide the denominator first; distributed training must also account for cross-rank counts and gradient reduction. See the [training loop](training-loop.en.md) and the complete conversation example in [SFT](../../05-post-training/sft-and-its-ceiling.en.md#mask-example).
+The same issue applies to gradient accumulation: naively averaging microbatch means gives the wrong token mean when their valid counts differ. Decide the denominator first; distributed training must also account for cross-rank counts and gradient reduction. See [one training update](../deep-dives/training-step.en.md) for normalizing by the total valid-token count, and the complete conversation example in [SFT](../../05-post-training/sft-and-its-ceiling.en.md#mask-example).
 
 <details markdown="1">
 <summary>Implementation detail: why can a different label format change CE?</summary>

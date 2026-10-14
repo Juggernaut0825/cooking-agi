@@ -2,7 +2,7 @@
 
 **中文** · [English](ml-math-interview.en.md)
 
-> 阅读时间：约 14 分钟 · 类型：面试速查 · 最近审阅：2026-09
+> 阅读时间：约 14 分钟 · 类型：面试速查 · 最近审阅：2026-10
 
 <div class="lesson-recipe">
   <div><span>解决什么问题</span><strong>不只写出公式，还能解释输入、梯度、数值问题与成立条件</strong></div>
@@ -20,12 +20,12 @@
 
 **面试回答**
 
-> 我会先定义随机变量、shape 和目标，再给核心梯度与稳定实现，最后明确 theorem assumptions。比如 CE 对 logits 的梯度是 $p-y$；L1 在 0 有 subgradient 区间所以可产生精确零；Gauss–Markov 不要求误差正态，只要求线性、无偏、同方差且不相关。
+> 我会先定义随机变量、shape 和目标，再给核心梯度与稳定实现，最后明确 theorem assumptions。比如 CE 对 logits 的梯度是 $p-y$；L1 在 0 有 subgradient 区间所以可产生精确零；Gauss–Markov 不要求误差正态，只要求模型线性、$X$ 满列秩、误差条件均值为零、同方差且不相关。
 
 <details markdown="1">
 <summary><b>深挖</b>：为什么“证明思路”比从头展开代数更重要？</summary>
 
-面试中的关键通常是能否指出结构：CE 由 negative log-likelihood 得到，L1 稀疏由 KKT/subgradient 或约束几何解释，BLUE 用任意线性无偏估计量写成 OLS 加一个与 $X$ 正交的项，再证明多出来的 covariance 半正定。
+面试中的关键通常是能否指出结构：CE 由 negative log-likelihood 得到，L1 稀疏由 KKT/subgradient 或约束几何解释，证明 BLUE 时，把任意线性无偏估计量写成 OLS 加一个与 $X$ 正交的项，再证明多出来的 covariance 半正定。
 
 </details>
 </details>
@@ -179,7 +179,7 @@ $$\min_w\frac12(w-a)^2+\lambda|w|.$$
 
 $$w^*=\operatorname{sign}(a)\max(|a|-\lambda,0).$$
 
-当 $|a|\le\lambda$，零点的 subgradient 包含最优条件，因此整段输入都会映射成**精确的
+当 $|a|\le\lambda$，目标在 $w=0$ 处的次梯度集合 $[-a-\lambda,\,-a+\lambda]$ 包含 0，满足最优条件，因此整段输入都会映射成**精确的
 零**。相同数据项配 L2 时：
 
 $$w^*=\frac{a}{1+\lambda},$$

@@ -2,7 +2,7 @@
 
 [中文](ml-math-interview.md) · **English**
 
-> Reading time: ~14 min · Type: interview quick reference · Last reviewed: 2026-09
+> Reading time: ~14 min · Type: interview quick reference · Last reviewed: 2026-10
 
 <div class="lesson-recipe">
   <div><span>The problem</span><strong>Go beyond writing the formula: explain its inputs, gradient, numerical issues, and the conditions under which it holds</strong></div>
@@ -20,7 +20,7 @@ These questions do not require pushing every proof from its first line to its la
 
 **Interview answer**
 
-> I first define the random variables, shapes, and objective, then give the key gradient and the stable implementation, and finally state the theorem assumptions explicitly. For example, the gradient of CE with respect to the logits is $p-y$; L1 has a subgradient interval at 0, so it can produce exact zeros; Gauss–Markov does not require normal errors, only linearity, unbiasedness, homoscedasticity, and uncorrelated errors.
+> I first define the random variables, shapes, and objective, then give the key gradient and the stable implementation, and finally state the theorem assumptions explicitly. For example, the gradient of CE with respect to the logits is $p-y$; L1 has a subgradient interval at 0, so it can produce exact zeros; Gauss–Markov does not require normal errors, only linearity, full column rank of $X$, zero conditional mean errors, homoscedasticity, and uncorrelated errors.
 
 <details markdown="1">
 <summary><b>Deep dive</b>: why does the “proof strategy” matter more than expanding the algebra from scratch?</summary>
@@ -106,7 +106,7 @@ The optimum is soft thresholding:
 
 $$w^*=\operatorname{sign}(a)\max(|a|-\lambda,0).$$
 
-When $|a|\le\lambda$, the subgradient at zero contains the optimality condition, so a whole
+When $|a|\le\lambda$, the subdifferential at $w=0$, $[-a-\lambda,\,-a+\lambda]$, contains 0, so zero is optimal and a whole
 interval of inputs maps to an **exact zero**. The same data term paired with L2 gives
 
 $$w^*=\frac{a}{1+\lambda},$$
@@ -157,7 +157,7 @@ corresponds to an L2 penalty; a Laplace prior:
 $$p(w)\propto e^{-\lambda\|w\|_1}$$
 
 corresponds to an L1 penalty. Regularization can therefore be read as the negative
-log-prior in MAP. Both MLE and MAP depend on the modelling assumptions in the likelihood;
+log-prior in MAP. Both MLE and MAP depend on the modeling assumptions in the likelihood;
 MAP also depends on the prior. With a large amount of data and suitable conditions, the
 relative influence of the prior often fades, but that does not automatically repair model
 misspecification or non-identifiability.

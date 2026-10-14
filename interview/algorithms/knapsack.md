@@ -2,7 +2,7 @@
 
 **中文** · [English](knapsack.en.md) · [方法地图](../leetcode.md)
 
-> 最近审阅：2026-10-09 · 先读：[回溯与 DP](backtracking-and-dp.md)
+> 最近审阅：2026-10 · 先读：[回溯与 DP](backtracking-and-dp.md)
 
 容量 5，有三件物品：重量和价值分别是 `(2,5)、(3,7)、(4,8)`。每件最多拿一次，最优是前两件，价值 12。按价值最大先拿，会选重量 4 的那件，反而只有 8。
 
@@ -90,4 +90,4 @@ def minimum_coins(coins, amount):
 
 一维数组只保留最优值，足够回答“值是多少”。若要输出物品，可以保留二维表并从末格倒推：选中当前物品时减去重量，否则只退一行。不要边覆盖一维 DP 边随手记一个 predecessor，就假定历史选择还存在。
 
-先检验空物品、容量 0、全部装不下，以及 `(2,5)` / 容量 4 的单物品反例。代码与穷举测试在 [deeper_patterns.py](../code/deeper_patterns.py)。背包的重点不是背循环，而是每次读取的是上一层还是当前层。
+先检验空物品、容量 0、全部装不下，以及 `(2,5)` / 容量 4 的单物品反例。代码在 [deeper_patterns.py](../code/deeper_patterns.py)，穷举测试在 [test_deeper_algorithm_patterns.py](../../site/tests/test_deeper_algorithm_patterns.py)。背包的重点不是背循环，而是每次读取的是上一层还是当前层。
