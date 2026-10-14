@@ -6,7 +6,7 @@
 
 ## Define the task
 
-Build an interest-community homepage with 20 posts, including unfollowed authors. Assume one million eligible posts, a 200 ms server-side p95 budget, and a target of making new posts retrievable within five minutes. Leave ads and video out of scope.
+Build an interest-community homepage that returns 20 posts and may include authors the user doesn't follow. Assume one million eligible posts, a 200 ms server-side p95 budget, and a target of making new posts retrievable within five minutes. Leave ads and video out of scope.
 
 Where does the latency timer start and stop? Does freshness mean indexed or actually displayed? Those are different requirements.
 

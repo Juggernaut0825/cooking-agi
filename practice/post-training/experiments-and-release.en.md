@@ -6,7 +6,7 @@
 
 After training, the tempting question is “How much did it improve?” An aggregate move from 60% to 70% doesn't tell you which questions improved, which regressed, or whether evaluation added an extra hint.
 
-We'll follow an experiment from saved settings to paired results, then open a failure and work out what to change. For debugging, start with [the missing-evidence example](#trace-a-failure). For a new experiment, start with the manifest below.
+We'll follow an experiment from saved settings to paired results, then open a failure and work out what to change. For debugging, start with [“The retriever found it. Why was the answer wrong?”](#trace-a-failure). For a new experiment, start with the manifest below.
 
 ## Save enough information to repeat the experiment
 
@@ -193,7 +193,7 @@ The [code](code/experiment_checks.py) prints the six-case overall and slice resu
 | --- | --- | --- |
 | One example / batch | Tokens, masks, loss, finite gradients | Tiny-dataset training |
 | Tiny dataset | Learn a few clear examples without breaking unsupported-answer behavior | More data and longer runs |
-| Save and restore | Output comparisons under fixed settings, optimizer/scheduler and required random state | Long runs and interruption recovery |
+| Save and restore | Next-update comparison between continuous and resumed runs, optimizer/scheduler and required random state | Long runs and interruption recovery |
 | Full offline evaluation | Fixed protocol, slice regressions, resource cost | Controlled release with explicit rollback |
 
 If a few examples cannot be learned, inspect inputs, objectives, and implementation before adding GPUs. Memorizing those examples doesn't establish generalization either; it is a training-path check.

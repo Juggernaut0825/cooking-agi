@@ -17,10 +17,10 @@
 ## 按你现在的问题来读
 
 <div class="rd-route-grid widget">
-<a href="00-architecture.md"><small>01 / 全局</small><strong>我想先看懂整套系统</strong><span>分清 3 条路径，知道模型、索引和数据分别负责什么。</span></a>
-<a href="01-feed-pipeline.md"><small>02 / 请求</small><strong>我想跟一条帖子走到底</strong><span>从公开实现读召回、排序和列表选择，追踪候选在哪一步被留下或淘汰。</span></a>
-<a href="06-why-two-towers.md"><small>03 / 设计</small><strong>我想知道为什么这样选</strong><span>自己改查询向量，再比较编码器、索引、缓存和发布方案。</span></a>
-<a href="05-evaluation-lab.md"><small>04 / 验证</small><strong>我想判断它是不是真变好了</strong><span>保持模型不变，只改候选池或分母，看看分数怎样变化。</span></a>
+<a href="00-architecture.md"><small>00 / 全局</small><strong>我想先看懂整套系统</strong><span>分清 3 条路径，知道模型、索引和数据分别负责什么。</span></a>
+<a href="01-feed-pipeline.md"><small>01 / 请求</small><strong>我想跟一条帖子走到底</strong><span>从公开实现读召回、排序和列表选择，追踪候选在哪一步被留下或淘汰。</span></a>
+<a href="06-why-two-towers.md"><small>06 / 设计</small><strong>我想知道为什么这样选</strong><span>自己改查询向量，再比较编码器、索引、缓存和发布方案。</span></a>
+<a href="05-evaluation-lab.md"><small>05 / 验证</small><strong>我想判断它是不是真变好了</strong><span>保持模型不变，只改候选池或分母，看看分数怎样变化。</span></a>
 </div>
 
 第一次读，建议按 **架构导读 → 01 → 02 → 03 → 05** 走一遍。之后用 04 对照新方法，用 06–08 深挖设计。不必一次把所有代码读完。

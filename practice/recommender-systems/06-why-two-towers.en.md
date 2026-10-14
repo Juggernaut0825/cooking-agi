@@ -1,4 +1,4 @@
-# 06 · Why two towers, rather than one bigger model?
+# 06 · Why two towers: precomputation versus expressiveness
 
 [中文](06-why-two-towers.md) · **English**
 
@@ -96,7 +96,7 @@ Here $u$ is the user, $i^+$ a known positive, $s(u,i)$ the matching score, and $
 
 With one comparison item, equal scores assign probability 1/2 to the positive, giving loss $-\ln(1/2)\approx0.693$. If the positive's score exceeds the other's by $\tau\ln3$, its probability becomes 3/4 and loss is about 0.288. Training favors relative ordering within this comparison set; that probability is not the user's true click probability.
 
-Other batch members' positives are convenient comparison items, but some may also interest this user: false negatives. Duplicate items, multiple positives, and the sampling distribution change the objective. Multiple positives require adjusting the single-positive formula above.
+Other batch members' positives are convenient comparison items, but some may also interest this user: false negatives. Duplicate items, multiple positives, and the sampling distribution change the objective. In-batch negatives are drawn roughly in proportion to how often an item appears as a positive, so popular items are over-penalized; a common fix subtracts the log of each candidate's sampling probability from its logit (logQ correction). Multiple positives require adjusting the single-positive formula above.
 
 A stronger tower may not fix missing label distinctions, coverage, or unsuitable negatives. Also distinguish contrastive retrieval training from generative next-token SFT: they don't have the same loss.
 
@@ -107,7 +107,7 @@ A stronger tower may not fix missing label distinctions, coverage, or unsuitable
 - Fine-grained matching matters: retrieve first, then jointly encode a small set. This division also appears in text retrieval. [Retrieve & Re-Rank](https://www.sbert.net/examples/sentence_transformer/applications/retrieve_rerank/README.html)
 - Evidence for a complex model is weak: establish a measurable baseline and locate the bottleneck.
 
-**Two towers are a trade-off between expressiveness, reusable computation, and search cost—not a mandatory stage of building recommendations.**
+Two towers move much of the computation ahead of time but limit fine-grained user–item interaction. Whether the split is worth it depends on candidate scale, latency requirements, and how much the downstream ranker can recover.
 
 ## How do multiple vectors stay affordable?
 

@@ -2,7 +2,7 @@
 
 [中文](choose-your-path.md) · **English**
 
-Pick what you'd like to do next: understand a model, practice for an interview, build something, or get ready to apply. You don't need to finish the site first.
+Pick what you'd like to do next: understand a model, practice for an interview, read research, build something, study one topic, or get ready to apply.
 
 <nav class="study-route goal-route" aria-label="Choose a route by goal">
 <a href="#getting-started"><small>Build an understanding</small><strong>I'm new to ML / LLMs</strong><span>From a prediction problem to a Transformer</span></a>
@@ -27,7 +27,7 @@ A little Python is enough to begin. If vectors and gradients are unfamiliar, sta
 
 ## Interviews: find the part that needs practice {#interviews}
 
-In [Interview prep](../interview/README.en.md), choose a quick review or a gradual study plan. The first narrows the scope; the second follows the prerequisites. Both let you start with what you know. Suggested hour budgets are not deadlines.
+In [Interview prep](../interview/README.en.md), choose “Quick review” or “Study at your pace”. The first narrows the scope; the second follows the prerequisites. Both let you start with what you know. Suggested hour budgets are not deadlines.
 
 Start with the job description and any interview information you've received. Two MLE roles may emphasize quite different things. Without a particular interview coming up, try one concept question and one small implementation to see where you get stuck.
 
@@ -91,4 +91,4 @@ For a particular term, use the search button at the top or press `/`. Try either
 
 Pick an area for what you need: [Foundations](README.en.md) explains mechanisms, [Interview prep](../interview/README.en.md) has review and practice, [Engineering practice](../practice/README.en.md) breaks down systems, [Tech history](technology-timeline.en.md) follows how the field developed, and [Career](../career/README.en.md) covers experiences and decisions. A note lives in one place; routes link to it rather than duplicating it.
 
-Use **中文 / EN** at the top to switch the same note. **My reading** keeps saved and recently opened pages in this browser; export bookmarks before moving devices. The collection is still growing. [Coverage and backlog](coverage.en.md) distinguishes what is written from what still needs checking.
+Use **中文 / EN** at the top to switch the same note. Save a note with **Save this page** under its title, then find it, along with recently opened pages, under **My reading**. Records stay in this browser; export a backup under Settings before moving devices. The collection is still growing. [Coverage and backlog](coverage.en.md) distinguishes what is written from what still needs checking.

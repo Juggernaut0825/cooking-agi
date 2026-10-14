@@ -72,7 +72,7 @@ $$\cos(q,v)=\frac{q^\top v}{\|q\|\|v\|}.$$
 | 小 MLP / 多任务 ranker | 用户—内容特征交互、多个行为目标 | 标签缺失、任务冲突、校准和 loss 权重都需要处理 |
 | 序列或联合编码模型 | 更细的历史—候选、文本—文本匹配 | 输入读取与交互计算更贵，适合先在小候选集检验增量 |
 
-不是“越往下越好”。双塔先缩小范围、排序再多花一些计算，是历史上已经存在的分工；具体阶段怎么划，要看你的工作量和目标。[YouTube 2016 论文](https://research.google/pubs/deep-neural-networks-for-youtube-recommendations/)
+不是“越往下越好”。召回先缩小范围、排序再多花一些计算，是历史上已经存在的分工；具体阶段怎么划，要看你的工作量和目标。[YouTube 2016 论文](https://research.google/pubs/deep-neural-networks-for-youtube-recommendations/)
 
 排序器也不能凭空修复召回遗漏。反过来，召回集合已经包含足够多相关内容时，继续追求更大候选池可能只是在把成本转给下一层。
 

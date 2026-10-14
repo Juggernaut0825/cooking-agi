@@ -20,7 +20,7 @@ Before expanding the notes further, we're bringing the existing changes together
 - **Repository README:** the [main README](../README.md) introduces the project in English, with a separate [Chinese version](../README.zh.md). Reading goals come first, then topic routes, contributing, and local setup.
 - **Explanations and figures:** BERT, RL / post-training, Python, and retrieval now have more examples and derivations. Figure text is written for each language, with optional detail to expand. Article-by-article review is still ongoing.
 
-**Checks so far:** language switching and narrow-screen layouts for the homepage, retrieval notes, and pages changed in subsequent batches; regressions for the first-visit tip, saved language choice, and existing links. Chapter reviews are still in progress. The repository's `CONTENT_RELEASE_CHECKLIST.md` records the scope and findings of each batch, rather than treating a scoped check as site-wide approval. The README uses short entry lists instead of a table that needs horizontal scrolling on a phone.
+**Checks so far:** language switching and narrow-screen layouts for the homepage, retrieval notes, and pages changed in subsequent batches; regressions for the first-visit tip, saved language choice, and existing links. Chapter reviews are still in progress. The repository's `CONTENT_RELEASE_CHECKLIST.md` records the scope and findings of each batch, rather than treating a scoped check as site-wide approval.
 
 **Still to do:** continue reviewing our explanations, examples, figures, and wording in both languages, and verify any image equations or external material used to support our claims. Unused reference material stays outside that verification scope; “read” is not the same as “validated.” Technical claims are checked against original papers or official implementations. Teaching examples in engineering notes are not evidence of full GPU training runs.
 
@@ -30,14 +30,13 @@ For example, [LatentMoE](../00-foundations/moe/latent-moe.en.md) explains widths
 
 - **Article available**: a dedicated article or substantive explanation is linked; this does not establish equivalence to every detail in the reference.
 - **Topic index**: an entry connects several notes, such as the algorithm and PyTorch routes; it is not an empty chapter awaiting content.
-- **Partial explanation**: related material exists, but derivations, examples, or scope still need expansion.
 - **To add**: the topic stays on the list without an empty placeholder article pretending it is finished.
 
 The scope comes from the [language-model study map](https://tcn6r3nlptym.feishu.cn/wiki/N2Yjwoez0iUA0AkGQBRcSps1nPf). The prose of all 71 pages in the nine main chapters has been read through the browser, including all 16 multimodal pages. Sections 7.1–7.7 share one page and count as one article. All seven ML-foundations and 20 PyTorch articles in Appendix 3 have also been read to the end. These counts describe prose reading, not complete validation of code, images, and external links.
 
 The appendix review led to new chapters on [generalization and training diagnosis](../00-foundations/deep-dives/generalization.en.md), [activations and initialization](../00-foundations/deep-dives/activation-and-initialization.en.md), and [optimizers](../00-foundations/deep-dives/optimizers.en.md). Small examples distinguish optimization failure from poor generalization, ReLU second moments from variance, and Adam bias correction from AdamW decay. Related RNN / GRU, normalization, and fundamentals explanations have also been corrected. Examples are written independently rather than copied from the reference.
 
-A new [PyTorch practice path](../00-foundations/pytorch/README.en.md) covers tensor storage, operation shapes, autograd, and training loops in four chapters, with complete code in both languages. Rather than listing APIs, it explains mistakes that can run silently: cross-batch broadcasting, incorrect loss denominators, unretained intermediate gradients, and restoring weights without complete training state. Numerical tests use PyTorch 2.8.0 / CPU, with versions and teaching limitations stated separately.
+A new [PyTorch practice path](../00-foundations/pytorch/README.en.md) covers tensor storage, operation shapes, cross-entropy and losses, autograd, and training loops in five chapters, with complete code in both languages. Rather than listing APIs, it explains mistakes that can run silently: cross-batch broadcasting, incorrect loss denominators, unretained intermediate gradients, and restoring weights without complete training state. Numerical tests use PyTorch 2.8.0 / CPU, with versions and teaching limitations stated separately.
 
 New bilingual multimodal notes cover [LLaVA / DeepSeek-VL](../03-multimodal-learning/vlm-designs.en.md), [Qwen-VL](../03-multimodal-learning/qwen-vl.en.md), [Omni](../03-multimodal-learning/omni-streaming.en.md), [OCR compression](../03-multimodal-learning/ocr-compression.en.md), [image generation](../03-multimodal-learning/image-generation.en.md), and [fine-tuning checks](../03-multimodal-learning/vlm-finetuning.en.md). Earlier [ViT](../03-multimodal-learning/vit.en.md), [CLIP](../03-multimodal-learning/clip.en.md), and [BLIP / Q-Former](../03-multimodal-learning/blip-and-q-former.en.md) material remains. OCR 2, Qwen3.5 / 3.8-Omni, and later Qwen-Image releases are checked separately. Teaching calculations are not model-training measurements; multimodal GPU fine-tuning has not been run.
 
@@ -46,6 +45,8 @@ Evaluation now includes [BLEU, ROUGE, and edit distance](../07-evaluation/text-m
 Post-training adds [DAPO](../05-post-training/dapo.en.md), [GSPO / ASPO](../05-post-training/policy-ratios.en.md), and [SAO / asynchronous training](../05-post-training/async-policy-learning.en.md). Examples cover sampling costs, loss reduction, stop-gradients, and stale trajectories. Earlier claims that clipping hard-constrains probabilities or that a Critic only supplies a baseline have been corrected. The small calculations are tested; the papers' full training results have not been reproduced.
 
 The previous bilingual additions on [RAG evidence and evaluation](../04-search/rag-evidence.en.md), [IVF / PQ indexes](../04-search/vector-indexes.en.md), and [agent execution](../10-agents/patterns.en.md) remain. New [prompting](../10-agents/prompting.en.md) notes cover task contracts and controlled comparisons; [deep research](../10-agents/deep-research.en.md) covers evidence queues, citation checks, and stopping logic. Runnable local examples are not completed model-comparison experiments.
+
+New [tools, MCP, and skills](../10-agents/tools-and-skills.en.md) notes and rewritten [model selection and routing](../10-agents/model-choice.en.md) follow a review request and four hypothetical tasks through execution, permissions, budgets, and tradeoffs. No live-model or serving benchmark is claimed.
 
 Earlier updates to [DeepSeek](../00-foundations/model-families/deepseek.en.md), [Qwen](../00-foundations/model-families/qwen.en.md), and [distributed training](../06-systems/distributed-training.en.md) remain. This batch adds routing weights, reward boundaries, ring traffic, weight versions, and recovery examples. BLIP filtering audits and an InstructBLIP ablation plan are also added, without claiming completed training experiments.
 
@@ -92,7 +93,7 @@ Our [MoE router note](../00-foundations/moe/router.en.md#dispatch-example) now f
 
 ### Where should readers find these topics?
 
-New pages should not follow the reference question order, nor should everything be filed under “advanced.” Keep the site's four existing reading areas and organize by prerequisites:
+New pages should not follow the reference question order, nor should everything be filed under “advanced.” Keep the site's existing sections and organize by prerequisites:
 
 | Reading goal | Start here | What can wait |
 | --- | --- | --- |
@@ -120,5 +121,3 @@ This reorganization changes classification and entry points, not public article 
 Continue through the reference in the browser, recording prose, image-based equations, and code separately. Compare definitions, derivations, examples, and implementation details. Fill gaps in existing chapters where possible; create a new article when it answers a distinct question, rather than duplicating another site's table of contents.
 
 To report a gap, include the topic, a public source, and the question you want explained in an issue. Maintenance notes live in `CONTENT_COVERAGE.md`. The main mapping comes from `site/reference-coverage.toml`; the screenshot and browser-directory appendix inventory comes from `site/appendix-coverage.toml`.
-
-New [tools, MCP, and skills](../10-agents/tools-and-skills.en.md) notes and rewritten [model selection and routing](../10-agents/model-choice.en.md) follow a review request and four hypothetical tasks through execution, permissions, budgets, and tradeoffs. No live-model or serving benchmark is claimed.

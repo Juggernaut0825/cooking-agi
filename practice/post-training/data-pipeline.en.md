@@ -60,7 +60,7 @@ labels       -100  -100    21    22     2
 attention       1     1     1     1     1
 ```
 
-A common causal-LM loss interface aligns `logits[:, :-1]` with `labels[:, 1:]` internally. The output at position 1 therefore predicts token 21; it is not predicting itself after seeing the answer. A custom loss must establish who performs this shift, rather than applying it twice.
+A common causal-LM loss interface aligns `logits[:, :-1]` with `labels[:, 1:]` internally. The output at position 1 (counting from 0, so token 12) therefore predicts token 21; it is not predicting itself after seeing the answer. A custom loss must establish who performs this shift, rather than applying it twice.
 
 Excluding user tokens as targets does not hide the context. The attention mask controls visibility or valid positions; `labels=-100` is this example's ignored-loss convention. See [Data and objectives](data-and-objectives.en.md) for the arithmetic.
 
@@ -107,7 +107,7 @@ python3 practice/post-training/code/training_contracts.py
 python3 -m unittest discover -s site/tests -p 'test_training_contracts.py'
 ```
 
-Try an unknown citation ID, an all-zero target mask, or a pad ID equal to EOS. The first two should fail. The last should preserve genuine EOS targets and ignore only added padding. Tests also reject groups spanning multiple dataset splits.
+Try an unknown citation ID or an all-zero target mask; both should fail. The demo already pads with the EOS ID (both are 2): the first example keeps its genuine EOS label, and only the two added positions become -100. Change the pad ID to 0 and the labels should stay the same. Tests also reject groups spanning multiple dataset splits.
 
 These checks cannot detect a misread date in an existing document. That still requires content review, counterexamples, and fixed evaluation. Schema validity is not a data-quality verdict.
 

@@ -46,7 +46,7 @@
 | tokenized 缓存 | token、目标 mask、长度、预处理指纹 | 同一句话为什么变成这些监督位置 |
 | 运行清单 | 数据快照、模板、tokenizer revision、配置 | 更换依赖后是否还在做同一个实验 |
 
-训练视图可使用 `system` 指令、包含问题和证据的 `user` 消息、作为示范的 `assistant` 消息。来源元数据留在旁路文件，不要不加区分地全塞进模型上下文。证据要有清晰边界，并按不可信资料处理，不能让其中的文字覆盖系统指令。
+训练视图可使用 `system` 指令、包含问题和证据的 `user` 消息、作为示范的 `assistant` 消息。来源元数据另存一个附属文件，不要不加区分地全塞进模型上下文。证据要有清晰边界，并按不可信资料处理，不能让其中的文字覆盖系统指令。
 
 模板也不是随意添加几个角色名。[Transformers 的聊天模板文档](https://huggingface.co/docs/transformers/chat_templating)说明了模型特定控制 token 的作用。训练使用完整示范，不额外加一个待生成的 assistant 开头；若先格式化成字符串再 tokenize，要避免重复添加 special tokens。
 
@@ -60,7 +60,7 @@ labels       -100  -100    21    22     2
 attention       1     1     1     1     1
 ```
 
-在常见 causal-LM loss 接口中，模型内部把 `logits[:, :-1]` 与 `labels[:, 1:]` 对齐。于是位置 1 的输出预测 token 21；并不是同一位置“偷看”答案后预测自己。接自定义 loss 时要确认谁负责 shift，不能重复移位。
+在常见 causal-LM loss 接口中，模型内部把 `logits[:, :-1]` 与 `labels[:, 1:]` 对齐。于是位置 1（从 0 数起，即 token 12）的输出预测 token 21；并不是同一位置“偷看”答案后预测自己。接自定义 loss 时要确认谁负责 shift，不能重复移位。
 
 用户 token 不作为 target，不代表模型看不见它们。`attention_mask` 控制可见或有效位置，`labels=-100` 是这里采用的忽略 loss 约定。更完整的手算见[数据与目标](data-and-objectives.md)。
 
@@ -68,7 +68,7 @@ attention       1     1     1     1     1
 
 ## 长度预算与 packing：省掉的是什么
 
-假设输入共 1,600 token，答案 500 token，而上限是 2,048，至少超了 52 token。机械保留前 2,048 个 token 会截掉答案尾部，可能恰好丢掉引用和结束标记。先决定缩短哪些证据或历史，再重新生成样本并验证支持关系；保不住目标就剔除或另分一桶，不静默裁掉。
+假设输入共 1,600 token，答案 500 token，而上限是 2,048，超出 52 token，至少要删掉这么多。机械保留前 2,048 个 token 会截掉答案尾部，可能恰好丢掉引用和结束标记。先决定缩短哪些证据或历史，再重新生成样本并验证支持关系；保不住目标就剔除或另分一桶，不静默裁掉。
 
 | 做法 | 好处 | 代价与检查 |
 | --- | --- | --- |
@@ -107,7 +107,7 @@ python3 practice/post-training/code/training_contracts.py
 python3 -m unittest discover -s site/tests -p 'test_training_contracts.py'
 ```
 
-可以改三处试试：把引用 ID 换成不存在的资料、把全部 target mask 改成 0、把 pad ID 设成与 EOS 一样。前两种应报错，最后一种应保留真实 EOS，只屏蔽新补的 pad。测试还会拒绝跨集合的同组样本。
+可以改两处试试：把引用 ID 换成不存在的资料、把全部 target mask 改成 0，两种都应报错。演示里的 pad ID 本来就和 EOS 相同（都是 2）：第一条样本的真实 EOS 仍是 label，只有新补的两个位置是 -100；把 pad ID 改成 0 再跑，labels 应完全不变。测试还会拒绝跨集合的同组样本。
 
 这些检查抓不住“资料存在，但日期读错了”。那部分仍需要内容审核、反例和固定评估。不要把 schema 校验通过写成数据质量已经过关。
 

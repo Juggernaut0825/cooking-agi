@@ -38,7 +38,7 @@ When we moved to broader ML fundamentals, including some classical models, I sta
 
 This was my first interview with a large Chinese tech company. I'd heard that the questions could be broad, but hadn't prepared thoroughly enough. One experience doesn't describe every company. It did tell me that reviewing only the topics closest to my project wasn't enough for the next round.
 
-I want to get past recognizing an answer when I see it. I need to explain the basic idea, when I'd use it, and where it can fail without looking at the notes. Otherwise, a differently phrased question is likely to expose the same gap.
+I want to get past recognizing an answer when I see it. Without looking at my notes, I need to explain the basic idea, when I'd use it, and where it can fail. Otherwise, a differently phrased question is likely to expose the same gap.
 
 ## Explaining technical work in Chinese takes practice too
 
@@ -50,4 +50,4 @@ That wasn't the main reason I struggled, but it's something I can practice separ
 
 The role wasn't a particularly close match for my experience, and I was underprepared. The useful follow-ups were fairly clear: review a broader range of fundamentals, state the assumptions before discussing a design, and practice technical explanations in Chinese.
 
-I also interviewed for two RS roles around that time and may add those reflections when I've put them together. For now, remembering the gaps this interview revealed is more useful than giving myself an overall grade.
+I also interviewed for two Research Scientist (RS) roles around that time and may add those reflections when I've put them together. For now, remembering the gaps this interview revealed is more useful than giving myself an overall grade.

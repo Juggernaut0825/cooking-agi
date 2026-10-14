@@ -12,7 +12,7 @@ I don't think I've mastered the mental side of recruiting. It's easy to write so
 
 I don't agree with everything interviews test. But a hiring team has limited time and needs something it can observe: can you write the code, explain your reasoning, or draw on relevant experience?
 
-Whether someone follows through, handles disagreements well, or sees a project through is harder to establish in an hour. An interview catches some of that and misses plenty.
+Whether someone is reliable to work with, handles disagreements well, or sees a project through is harder to establish in an hour. An interview catches some of that and misses plenty.
 
 A rejection might reflect a gap in my preparation, or a team looking for someone with more experience in that particular area. Often I don't know which. If I can identify something I answered badly, I can work on it. Guessing at the parts I never got feedback on doesn't get me very far.
 

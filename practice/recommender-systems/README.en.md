@@ -19,10 +19,10 @@ Remember: **a box is not necessarily a separate service, and refreshing an item 
 ## Pick the question you came with
 
 <div class="rd-route-grid widget">
-<a href="00-architecture.en.md"><small>01 / ORIENT</small><strong>I want to understand the whole system</strong><span>Separate the 3 paths and the responsibilities of models, indexes, and data.</span></a>
-<a href="01-feed-pipeline.en.md"><small>02 / TRACE</small><strong>I want to follow a post through a request</strong><span>Read public retrieval, ranking, and selection code. Track where a candidate survives or disappears.</span></a>
-<a href="06-why-two-towers.en.md"><small>03 / DESIGN</small><strong>I want to understand the choices</strong><span>Change query vectors yourself, then compare encoders, indexes, caches, and release strategies.</span></a>
-<a href="05-evaluation-lab.en.md"><small>04 / VERIFY</small><strong>I want to know whether it actually improved</strong><span>Keep the model fixed and change only the candidate pool or denominator.</span></a>
+<a href="00-architecture.en.md"><small>00 / ORIENT</small><strong>I want to understand the whole system</strong><span>Separate the 3 paths and the responsibilities of models, indexes, and data.</span></a>
+<a href="01-feed-pipeline.en.md"><small>01 / TRACE</small><strong>I want to follow a post through a request</strong><span>Read public retrieval, ranking, and selection code. Track where a candidate survives or disappears.</span></a>
+<a href="06-why-two-towers.en.md"><small>06 / DESIGN</small><strong>I want to understand the choices</strong><span>Change query vectors yourself, then compare encoders, indexes, caches, and release strategies.</span></a>
+<a href="05-evaluation-lab.en.md"><small>05 / VERIFY</small><strong>I want to know whether it actually improved</strong><span>Keep the model fixed and change only the candidate pool or denominator.</span></a>
 </div>
 
 For a first pass, try **architecture guide → 01 → 02 → 03 → 05**. Return to 04 for newer approaches and 06–08 for design details. You do not need to read every source file first.

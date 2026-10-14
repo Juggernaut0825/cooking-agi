@@ -15,7 +15,7 @@
 | 没做过完整项目，想先知道有哪些环节 | 读完本页的全貌与团队交接 |
 | 数据怎么变成模型、index 和可发布版本 | [数据到模型](data-to-model.md) |
 | 一次请求怎么跑，线上慢了或答错了怎么查 | [上线与反馈](serving-and-feedback.md) |
-| FSDP、vLLM、SGLang 分别放在哪里 | 本页看位置，再读[训练框架](../../06-systems/training-frameworks.md)与[推理引擎](../../06-systems/inference-frameworks.md) |
+| FSDP、vLLM、SGLang 分别放在哪里 | FSDP 的位置见[数据到模型](data-to-model.md#training)，vLLM / SGLang 见[上线以后](serving-and-feedback.md#generation)，再读[训练框架](../../06-systems/training-frameworks.md)与[推理引擎](../../06-systems/inference-frameworks.md) |
 | 图片怎么和文字一起检索 | [CLIP](../../03-multimodal-learning/clip.md) → [SigLIP](../../03-multimodal-learning/siglip.md)，再回来检查索引兼容性 |
 
 ## 先分开三条时间线 {#three-loops}
@@ -50,7 +50,7 @@
 
 ## 这些工作通常怎么分？ {#ownership}
 
-下面是**一种可用的分工示意**，不是业界统一的组织结构。小团队可能一个人兼几项，大团队也可能把同一项拆得更细。MLE、SWE、RS 等 title 本身不足以判断负责范围。
+下面是**一种可用的分工示意**，不是业界统一的组织结构。小团队可能一个人兼几项，大团队也可能把同一项拆得更细。MLE、SWE、RS（research scientist）这些职位名称本身不足以判断负责范围。
 
 | 工作边界 | 可能主要负责的团队 | 交给下游的东西 | 谁需要一起验收 |
 | --- | --- | --- | --- |

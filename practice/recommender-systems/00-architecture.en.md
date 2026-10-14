@@ -2,7 +2,7 @@
 
 [中文](00-architecture.md) · **English**
 
-> Teaching architecture · Last reviewed: 2026-09. All examples are invented, not descriptions of a company’s production configuration.
+> Teaching architecture · Last reviewed: 2026-10. All examples are invented, not descriptions of a company’s production configuration.
 
 A refresh, an edited post, and a completed training run can all change what a reader sees. They are not the same operation. Draw them as one long arrow and it becomes easy to imagine that every request retrains the model and re-encodes the catalog.
 
@@ -12,7 +12,7 @@ Before choosing a model, establish **what runs when, what it produces, and who c
 
 | Path | Trigger | Main output | Typical concern |
 | --- | --- | --- | --- |
-| A refresh · online | Opening a page or requesting the next list | Useful, eligible results within a deadline | Too few candidates, slow dependencies, invalid eligibility |
+| A refresh · online | Opening a page or requesting the next list | Useful, eligible results within a deadline | Too few candidates, slow dependencies, filtering errors |
 | Content updates · batch / nearline | Publication, edits, deletions, or scheduled refreshes | Updated features, vectors, and indexes | Old events overwriting new content; delayed deletion |
 | Model learning · offline | Data and experiments are ready | A new model and evidence for a release decision | Wrong labels, temporal leakage, aggregate-only evaluation |
 

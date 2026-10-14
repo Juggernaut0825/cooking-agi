@@ -33,7 +33,7 @@ print(recall_at_k(larger_pool, {"P"}, 2))
 
 ## 别把两个 Recall 定义混着用
 
-这一页用标准的已知正例分母：
+这一页用标准的已知正例分母，$P$ 表示该用户全部已知正例的集合（上面的例子里只有候选 P 一个）：
 
 $$\operatorname{Recall@K}=\frac{|\operatorname{TopK}\cap P|}{|P|}.$$
 

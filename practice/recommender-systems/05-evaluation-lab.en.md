@@ -33,7 +33,7 @@ This prints `1.0` and `0.0`. [evaluation.py](code/evaluation.py) contains the ru
 
 ## Don't mix two Recall definitions
 
-This page uses the number of known positives as the denominator:
+This page uses the number of known positives as the denominator, where $P$ is the user's set of known positives (in the example above, just candidate P):
 
 $$\operatorname{Recall@K}=\frac{|\operatorname{TopK}\cap P|}{|P|}.$$
 

@@ -58,7 +58,7 @@ Two sources return `[A,B,C,D]` and `[B,C,E,F]`, with a target of four final item
 | Source results | 8 entries | An item may appear in multiple sources |
 | Deduplicate by item ID | A, B, C, D, E, F | Merge B and C while retaining both sources |
 | Current eligibility | A, B, C, E, F | D was deleted |
-| Feature enrichment | A, B, C, E | F lacks a required feature under this example's rule |
+| Feature hydration | A, B, C, E | F lacks a required feature under this example's rule |
 | Author constraint | A, C, E | B shares A's author and exceeds the example's cap |
 
 Three remain. Do not restore deleted D merely to fill four slots. A bounded refill within the remaining deadline or an explicitly allowed short list are alternatives, depending on latency and product requirements. Retrieving more from every source costs additional feature lookup and scoring.

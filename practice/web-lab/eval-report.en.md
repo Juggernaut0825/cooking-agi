@@ -161,7 +161,7 @@ Rendering uses Python's [`html.escape`](https://docs.python.org/3.12/library/htm
 
 ## Two questions to ask after it runs {#next}
 
-First, does “unchanged” mean both versions passed or both failed? It only means the pass/fail labels match, not that the answer texts are identical. Open the case and read it. A required case that was already failing still blocks this tool; “not worse” isn't enough.
+First, does “unchanged” mean both versions passed or both failed? It only means the pass/fail labels match, not that the answer texts are identical. Open the case and read it. If a required case was already failing, this tool still blocks the change; “not worse” isn't enough.
 
 Second, can one non-required slice regress while gains elsewhere compensate for it? **Yes.** This gate doesn't require every slice to hold its score. The slice table exposes the change. If your product needs a per-slice rule, agree on it before inspecting results and add tests; don't choose metrics afterward based on which version they favor.
 

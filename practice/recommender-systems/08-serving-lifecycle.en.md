@@ -107,7 +107,7 @@ One possible contract assigns comparable monotonic versions to all changes for a
 
 That still doesn't establish that ANN deletion has completed. A final eligibility check must block the item. If that service is unavailable, a safety-sensitive path cannot interpret “check failed” as “allowed”; narrow to a safe fallback or fail explicitly.
 
-Count retries across layers. If a request passes through three layers, each making **at most three attempts including the first call**, independently exhausting those budgets can cause `3×3×3=27` calls at the lowest layer. “Retry three times after failure” instead permits four attempts per layer, for a worst case of `4×4×4=64` calls.
+Count retries across layers. If a request passes through three layers, each making **at most three attempts including the first call**, independently exhausting those budgets can cause `3×3×3=27` calls to the dependency beneath those three layers. “Retry three times after failure” instead permits four attempts per layer, for a worst case of `4×4×4=64` calls.
 
 Decide which layer owns retries, propagate the remaining request deadline, and cap total retry work. Google SRE's [overload chapter](https://sre.google/sre-book/handling-overload/) explains the amplification; the timestamp/version example here is an original teaching design.
 
