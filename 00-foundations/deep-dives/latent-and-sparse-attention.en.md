@@ -12,6 +12,8 @@ MLA primarily asks how much state each token leaves behind. Sparse attention ask
 
 Temporarily omit positions and multiple heads, using column vectors. Compress a hidden state into $c_j=W_{\mathrm{down}}h_j$, then define
 
+<!-- paper-figure:deepseekv2-attention -->
+
 $$
 k_j=U_Kc_j,\qquad v_j=U_Vc_j.
 $$

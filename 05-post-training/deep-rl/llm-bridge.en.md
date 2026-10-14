@@ -24,6 +24,8 @@ Appending a token is nearly deterministic in ordinary generation, but sampling a
 
 PPO estimates advantages from rollout-policy trajectories, then uses probability ratios and clipping to stop rewarding excessive changes in certain directions; it does not hard-bound those ratios. A reference-model KL penalty is different: it penalizes drift from a fixed anchor, while PPO clipping modifies the local optimization objective for the collected batch.
 
+<!-- paper-figure:grpo-vs-ppo -->
+
 GRPO commonly uses relative rewards among several responses to one prompt to construct group-based advantages, reducing reliance on a separate value Critic. Identical group rewards can yield zero relative signal after normalization. Grouping and normalization also affect prompt weighting. They do not automatically fix sparse rewards, faulty verifiers, or cross-task comparability.
 
 If advantages and probability ratios are still unfamiliar, start with [PPO clipping](../rlhf/ppo-clipping.en.md). For a comparison of the data PPO, GRPO, and DPO use, see [the method overview](../rlhf/after-rlhf.en.md).

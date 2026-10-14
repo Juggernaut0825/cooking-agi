@@ -14,6 +14,8 @@ Current hidden state ─→ match retrieved key ─→ gate × value ─→ loca
 
 A token-ID normalization map lets some surface variants share lookup space. This branch does not mean replacing every token in the main model input. Suffix n-grams of different lengths are hashed into multiple tables, and their embeddings are concatenated into $e_t$. The table vectors are learned parameters, not manually written answers.
 
+<!-- paper-figure:engram-arch -->
+
 ## Why consult a table when context is available?
 
 It separates some of the work: recurrent local patterns use deterministic addressing, while context-sensitive interpretation and long-distance relations remain model computations. Retrieving the same local pattern does not require using it identically.

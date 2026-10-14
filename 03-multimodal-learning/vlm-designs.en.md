@@ -40,6 +40,8 @@ flowchart TD
 
 A simplified budget: each view is $336\times336$, with patch width 14, retaining $24\times24=576$ patch features. Four local tiles plus one thumbnail give $5\times576=2880$ visual positions. Actual lengths also depend on unpadding, newlines, and separators.
 
+<!-- paper-figure:llava15-hd -->
+
 Suppose the question and history occupy 120 positions. One view gives length 696; five give 3000. Dense attention score-element counts differ by $(3000/696)^2\approx18.58$. **That is not a measured 18.58-fold latency increase**: vision computation, matrix multiplication, caching, and kernels remain outside this calculation.
 
 Tiling is not free accuracy. With a limited budget, compare a thumbnail, a thumbnail plus selected tiles, and localization followed by cropping. The last saves input length but adds a call and can fail at localization.

@@ -46,6 +46,8 @@ assert future_pairs(list("ABCD"), [0, 0, 1, 1], 2) == []
 
 [Gloeckle 等人的工作](https://arxiv.org/abs/2404.19737)讨论从共享表示预测多个未来 token 的多头训练。[DeepSeek-V3](https://arxiv.org/abs/2412.19437)使用串行附加模块，并保留逐步的因果条件关系。
 
+<!-- paper-figure:mtp-overview -->
+
 可以用同一个位置区分：
 
 ```text
@@ -86,6 +88,8 @@ $$
 ## 两个候选词，算一遍“接受”是什么意思
 
 先只看同一前缀下的一个位置。目标模型分布为 $p$，草稿分布为 $q$。草稿抽到 token $x$ 后，用 $\min(1,p(x)/q(x))$ 的概率接受；拒绝时从归一化的 $[p-q]_+$ 重采样。这是[原算法](https://proceedings.mlr.press/v202/leviathan23a.html)的单步规则，不是比较两个 argmax 是否相同。
+
+<!-- paper-figure:speculative-decoding -->
 
 假设下一词只可能是“是”或“否”：
 

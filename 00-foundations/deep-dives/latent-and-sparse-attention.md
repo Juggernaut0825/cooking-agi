@@ -12,6 +12,8 @@ MLA 主要回答“每个 token 留下多少缓存”；稀疏注意力回答“
 
 先省略位置编码和多头，使用列向量。把某个位置的 hidden state 压成 $c_j=W_{\mathrm{down}}h_j$，再定义
 
+<!-- paper-figure:deepseekv2-attention -->
+
 $$
 k_j=U_Kc_j,\qquad v_j=U_Vc_j.
 $$

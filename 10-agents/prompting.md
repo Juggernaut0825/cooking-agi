@@ -45,6 +45,8 @@ ICL（in-context learning）在这里指根据上下文中的任务和示范改�
 
 [早期 CoT 论文](https://arxiv.org/abs/2201.11903)研究在示范中加入中间解题步骤。它和“放几个例子”不是同一维度：可以有只给最终答案的 few-shot，也可以有带步骤的 few-shot。
 
+<!-- paper-figure:cot-examples -->
+
 如果任务是“活动提前 90 分钟签到，开始时间 14:00，签到几点”，计算步骤有用；如果只是提取“周六下午”，强行写一页推理反而多余。
 
 对现在的 reasoning models，应先看具体模型的控制方式，不把“请逐字展示全部内部思考”当通用技巧。让输出包含**可核对的关键依据、计算式或来源**通常更实用。长解释不是正确证明，多次答案一致也不是独立验证。[当前 prompting 指南](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices)也区分模型的 thinking 控制与普通示范。
