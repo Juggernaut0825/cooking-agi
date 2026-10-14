@@ -317,6 +317,8 @@ For a later encoder, ask separately about its architecture, data construction, a
 
 Suppose we have downloaded a pretrained checkpoint and want to classify reviews as positive or negative. Now we provide complete reviews without hiding words. The training target changes from “which token was here?” to “which class does this review belong to?”
 
+<!-- paper-figure:bert-procedure -->
+
 ### Start with a review classifier {#classify-example}
 
 For “The tea was cold, and I waited ages,” we want the negative class. The encoder still produces a vector at every position, and the classifier reads `[CLS]` to produce class scores. `[CLS]` is not a predefined average of the sentence: it receives information through attention and learns what to retain through training. The original classification code also applies a dense layer and tanh to pool that state. [Classifier implementation](https://github.com/google-research/bert/blob/master/run_classifier.py), [pooler implementation](https://github.com/google-research/bert/blob/master/modeling.py)

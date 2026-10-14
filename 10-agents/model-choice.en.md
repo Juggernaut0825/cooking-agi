@@ -178,6 +178,8 @@ $$kb+\frac{ak(k-1)}{2}.$$
 
 For $b=1000,a=200,k=4$, the inputs contain 1000, 1200, 1400, and 1600 tokens: 5200 total. Summarization, windows, retrieval, and caching change storage, computation, and billing. Not every agent has quadratic cost. Outputs and tool returns need their own accounting.
 
+<!-- widget:step-context-staircase -->
+
 **Pin more than a model name.** Weights, tokenizer, chat template, tool schemas, sampling, and serving versions can all affect results. After an upgrade, rerun representative tasks rather than only checking that the endpoint returns text.
 
 ## 8. What self-hosting estimates often miss {#what-self-hosting-actually-costs}

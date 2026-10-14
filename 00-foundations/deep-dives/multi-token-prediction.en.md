@@ -46,6 +46,8 @@ There is no model forward pass here. The purpose is to verify supervision relati
 
 [Gloeckle et al.](https://arxiv.org/abs/2404.19737) study multiple prediction heads over shared representations. [DeepSeek-V3](https://arxiv.org/abs/2412.19437) uses sequential auxiliary modules preserving the causal conditioning chain.
 
+<!-- paper-figure:mtp-overview -->
+
 At one position:
 
 ```text
@@ -86,6 +88,8 @@ Preserving the target sampling distribution requires correct acceptance, rejecti
 ## What does acceptance mean? A two-token example
 
 At one position under a fixed prefix, let $p$ be the target distribution and $q$ the draft distribution. Accept a draft token $x$ with probability $\min(1,p(x)/q(x))$; on rejection, sample from normalized $[p-q]_+$. This is the [original algorithm's](https://proceedings.mlr.press/v202/leviathan23a.html) one-step rule, not agreement between two argmaxes.
+
+<!-- paper-figure:speculative-decoding -->
 
 Suppose the next token is either “yes” or “no”:
 

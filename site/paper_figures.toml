@@ -1,0 +1,534 @@
+# Figures from papers, placed in notes with <!-- paper-figure:ID -->.
+#
+# Every entry names the paper, the figure and its licence. An entry with `image` is
+# embedded: allowed only for CC BY 4.0 / CC BY-SA 4.0 / CC0 papers (checked by
+# site/tests/test_paper_figures.py), rendered with the credit, licence link and our
+# changes. Without `image` the note gets a link card that opens the figure in the
+# paper: use it for arXiv-licensed and NC papers, and when the paper ships no image.
+# These figures are third-party material: they keep their own licence, not the
+# repository's CC BY 4.0 (see LICENSE.md).
+#
+# Images live in site/static/paper-figures/, downloaded from the paper's arXiv HTML
+# version; `changes` says what we did to them ("resized" or "converted").
+
+[[figure]]
+id = "blip-capfilt"
+paper = "BLIP"
+credit = "Li et al., 2022"
+arxiv = "2201.12086"
+figure = 1
+url = "https://arxiv.org/html/2201.12086v2#S1.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2201.12086-fig1.webp"
+width = 1370
+height = 425
+changes = "converted"
+zh = "BLIP 的 CapFilt：用 Captioner（Cap）给网页图片生成合成描述，再用 Filter（Filt）去掉有噪声的描述。"
+en = "BLIP's CapFilt: a Captioner (Cap) writes synthetic captions for web images, and a Filter (Filt) removes noisy captions."
+
+[[figure]]
+id = "blip2-stage2"
+paper = "BLIP-2"
+credit = "Li et al., 2023"
+arxiv = "2301.12597"
+figure = 3
+url = "https://arxiv.org/html/2301.12597v3#S3.F3"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2301.12597-fig3.webp"
+width = 1600
+height = 483
+changes = "resized"
+zh = "第二阶段：借冻结的 LLM 自举生成能力。上：接 decoder-only 的 LLM（如 OPT）；下：接 encoder-decoder 的 LLM（如 FlanT5）。全连接层把 Q-Former 的输出维度对齐到 LLM 的输入维度。"
+en = "Second stage: bootstrapping generation from a frozen LLM. Top: a decoder-based LLM (e.g. OPT). Bottom: an encoder–decoder LLM (e.g. FlanT5). A fully connected layer maps Q-Former's output dimension to the LLM's input dimension."
+
+[[figure]]
+id = "blip2-qformer"
+paper = "BLIP-2"
+credit = "Li et al., 2023"
+arxiv = "2301.12597"
+figure = 2
+url = "https://arxiv.org/html/2301.12597v3#S3.F2"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2301.12597-fig2.webp"
+width = 1600
+height = 330
+changes = "resized"
+zh = "左：Q-Former 的结构，以及第一阶段联合优化的三个目标，让一组可学习的 query 取出与文本最相关的视觉表示；右：每个目标各自的 self-attention mask。"
+en = "Left: Q-Former's architecture and the three first-stage objectives optimized jointly, which push a set of learnable queries to extract the visual representation most relevant to the text. Right: each objective's self-attention mask."
+
+[[figure]]
+id = "instructblip-qformer"
+paper = "InstructBLIP"
+credit = "Dai et al., 2023"
+arxiv = "2305.06500"
+figure = 3
+url = "https://arxiv.org/html/2305.06500v2#S2.F3"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2305.06500-fig3.webp"
+width = 1379
+height = 590
+changes = "converted"
+zh = "InstructBLIP 的结构：Q-Former 从冻结图像编码器的输出里提取与指令相关的视觉特征，作为软提示交给冻结的 LLM；用语言建模 loss 做指令微调。"
+en = "InstructBLIP's architecture: the Q-Former extracts instruction-aware visual features from the frozen image encoder's outputs and feeds them to the frozen LLM as a soft prompt; instruction tuning uses the language-modeling loss."
+
+[[figure]]
+id = "llava-arch"
+paper = "LLaVA"
+credit = "Liu et al., 2023"
+arxiv = "2304.08485"
+figure = 1
+url = "https://arxiv.org/html/2304.08485v2#S4.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+zh = "LLaVA 的网络结构（论文的 HTML 版没有单独的图片文件，所以这里只放链接）。"
+en = "LLaVA's network architecture (the paper's HTML version has no separate image file, so this is a link)."
+
+[[figure]]
+id = "dsvl2-overview"
+paper = "DeepSeek-VL2"
+credit = "Wu et al., 2024"
+arxiv = "2412.10302"
+figure = 2
+url = "https://arxiv.org/html/2412.10302v1#S1.F2"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2412.10302-fig2.webp"
+width = 1064
+height = 419
+changes = "converted"
+zh = "DeepSeek-VL2 总览：LLaVA 式结构，由视觉编码器、VL 适配器和基于 MoE 的 LLM 组成。"
+en = "DeepSeek-VL2 overview: a LLaVA-style architecture with a vision encoder, a VL adaptor and a MoE-based LLM."
+
+[[figure]]
+id = "dsvl2-tiling"
+paper = "DeepSeek-VL2"
+credit = "Wu et al., 2024"
+arxiv = "2412.10302"
+figure = 3
+url = "https://arxiv.org/html/2412.10302v1#S2.F3"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2412.10302-fig3.webp"
+width = 1090
+height = 345
+changes = "converted"
+zh = "DeepSeek-VL2 的动态切块：把图片分成多块，细粒度理解比 DeepSeek-VL 更强。图里能看到每行末尾的换行标记和两种视图之间的分隔符。"
+en = "DeepSeek-VL2's dynamic tiling: splitting the image into tiles gives finer-grained understanding than DeepSeek-VL. The newline token ending each row and the separator between the two views are visible."
+
+[[figure]]
+id = "qwen3omni-overview"
+paper = "Qwen3-Omni"
+credit = "Qwen Team, 2025"
+arxiv = "2509.17765"
+figure = 2
+url = "https://arxiv.org/html/2509.17765v1#S2.F2"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2509.17765-fig2.webp"
+width = 1600
+height = 1691
+changes = "resized"
+zh = "Qwen3-Omni 总览：Thinker–Talker 结构。Thinker 负责生成文字；Talker 直接接收 Thinker 的高层表示，生成流式语音 token。为了低延迟，Talker 自回归地预测多码本序列：每一步由 MTP 模块给出当前帧的残差码本，再由 Code2Wav 逐帧合成波形。"
+en = "Qwen3-Omni overview: the Thinker–Talker architecture. Thinker generates text; Talker receives Thinker's high-level representations directly and generates streaming speech tokens. For low latency, Talker autoregressively predicts a multi-codebook sequence: at each step an MTP module outputs the current frame's residual codebooks, and Code2Wav synthesizes the waveform frame by frame."
+
+[[figure]]
+id = "qwen25omni-tmrope"
+paper = "Qwen2.5-Omni"
+credit = "Qwen Team, 2025"
+arxiv = "2503.20215"
+figure = 3
+url = "https://arxiv.org/html/2503.20215v1#S2.F3"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2503.20215-fig3.webp"
+width = 1600
+height = 420
+changes = "resized"
+zh = "Qwen2.5-Omni 的 TMRoPE（时间对齐的多模态 RoPE）示意。"
+en = "Qwen2.5-Omni's TMRoPE (time-aligned multimodal RoPE)."
+
+[[figure]]
+id = "vit-overview"
+paper = "ViT"
+credit = "Dosovitskiy et al., 2020"
+arxiv = "2010.11929"
+figure = 1
+url = "https://arxiv.org/html/2010.11929v2#S3.F1"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "模型总览：把图片切成固定大小的块，逐块线性嵌入、加上位置向量，再把这串向量送进标准的 Transformer 编码器。"
+en = "Model overview: split the image into fixed-size patches, embed each linearly, add position embeddings, and feed the sequence to a standard Transformer encoder."
+
+[[figure]]
+id = "qwen25vl-framework"
+paper = "Qwen2.5-VL"
+credit = "Qwen Team, 2025"
+arxiv = "2502.13923"
+figure = 1
+url = "https://arxiv.org/html/2502.13923v1#S2.F1"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "Qwen2.5-VL 的框架：视觉编码器和语言模型解码器怎样一起处理多模态输入。"
+en = "The Qwen2.5-VL framework: how the vision encoder and the language-model decoder process multimodal inputs together."
+
+[[figure]]
+id = "siglip2-recipe"
+paper = "SigLIP 2"
+credit = "Tschannen et al., 2025"
+arxiv = "2502.14786"
+figure = 1
+url = "https://arxiv.org/html/2502.14786v1#S1.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+zh = "SigLIP 2 在 SigLIP 的 sigmoid loss 之上，加入 LocCa 基于描述的预训练，以及 SILC、TIPS 的自蒸馏和 masked prediction（只在最后 20% 的训练里）。"
+en = "SigLIP 2 adds LocCa's captioning-based pretraining and the self-distillation and masked prediction of SILC and TIPS (in the last 20% of training) to SigLIP's sigmoid loss."
+
+[[figure]]
+id = "bge-m3-training"
+paper = "M3-Embedding"
+credit = "Chen et al., 2024"
+arxiv = "2402.03216"
+figure = 2
+url = "https://arxiv.org/html/2402.03216v5#S3.F2"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2402.03216-fig2.webp"
+width = 1177
+height = 417
+changes = "converted"
+zh = "M3-Embedding（BGE-M3）的多阶段训练和自知识蒸馏。"
+en = "M3-Embedding (BGE-M3): multi-stage training with self-knowledge distillation."
+
+[[figure]]
+id = "rag-overview"
+paper = "RAG"
+credit = "Lewis et al., 2020"
+arxiv = "2005.11401"
+figure = 1
+url = "https://arxiv.org/html/2005.11401#S1.F1"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "原始 RAG 的做法：把预训练的检索器（查询编码器 + 文档索引）和预训练的 seq2seq 生成器接在一起，端到端微调。"
+en = "The original RAG approach: a pre-trained retriever (query encoder + document index) combined with a pre-trained seq2seq generator and fine-tuned end to end."
+
+[[figure]]
+id = "prometheus2-modes"
+paper = "Prometheus 2"
+credit = "Kim et al., 2024"
+arxiv = "2405.01535"
+figure = 2
+url = "https://arxiv.org/html/2405.01535v2#S2.F2"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2405.01535-fig2.webp"
+width = 1579
+height = 822
+changes = "converted"
+zh = "直接打分和两两比较：在宽泛的“有帮助”标准下，两份回答都可以算不错；换成具体的评价标准，打分结论就可能改变。"
+en = "Direct assessment versus pairwise ranking: under a broad notion of “helpfulness” both responses look decent, but the decision can change with a specific evaluation criterion."
+
+[[figure]]
+id = "react-trajectories"
+paper = "ReAct"
+credit = "Yao et al., 2022"
+arxiv = "2210.03629"
+figure = 1
+url = "https://arxiv.org/html/2210.03629#S1.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+zh = "四种提示方式解同一道 HotpotQA 题：Standard、CoT（只推理）、只行动，以及推理和行动交替的 ReAct；下半部分是 AlfWorld 上只行动和 ReAct 的对比。"
+en = "Four prompting methods on one HotpotQA question: standard, chain-of-thought (reason only), act-only, and ReAct (reason + act); below, act-only versus ReAct on an AlfWorld game."
+
+# --- second set: foundations, post-training and agents notes ---------------------
+
+[[figure]]
+id = "transformer-arch"
+paper = "Transformer"
+credit = "Vaswani et al., 2017"
+arxiv = "1706.03762"
+figure = 1
+url = "https://arxiv.org/html/1706.03762v7#S3.F1"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "Transformer 的模型结构。"
+en = "The Transformer model architecture."
+
+[[figure]]
+id = "gqa-heads"
+paper = "GQA"
+credit = "Ainslie et al., 2023"
+arxiv = "2305.13245"
+figure = 2
+url = "https://arxiv.org/html/2305.13245v3#S2.F2"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2305.13245-fig2.webp"
+width = 1600
+height = 526
+changes = "resized"
+zh = "分组查询注意力一览：MHA 有 H 个 query、key、value 头；MQA 让所有 query 头共用一组 key/value；GQA 让每组 query 头共用一组 key/value，介于两者之间。"
+en = "Grouped-query attention: multi-head attention has H query, key and value heads; multi-query attention shares one key/value head across all query heads; GQA shares one key/value head per group of query heads, in between the two."
+
+[[figure]]
+id = "streamingllm-windows"
+paper = "StreamingLLM"
+credit = "Xiao et al., 2023"
+arxiv = "2309.17453"
+figure = 1
+url = "https://arxiv.org/html/2309.17453v4#S1.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2309.17453-fig1.webp"
+width = 1324
+height = 440
+changes = "converted"
+zh = "StreamingLLM 和已有做法对比：(a) 全量注意力，缓存越来越大，超出预训练长度后效果下降；(b) 只缓存最近 L 个 token 的窗口注意力，开头 token 的 KV 被挤掉后效果骤降；(c) 每步用最近 L 个 token 重算的滑动窗口，效果好但很慢；(d) StreamingLLM 保留开头几个 token（attention sink）再加最近的 token，又快又稳。"
+en = "StreamingLLM versus existing methods: (a) dense attention, whose cache keeps growing and which degrades past the pre-training length; (b) window attention over the most recent L tokens, which collapses once the first tokens' keys and values are evicted; (c) a sliding window with re-computation, which works but is slow; (d) StreamingLLM keeps a few initial tokens (the attention sink) plus recent ones, efficient and stable."
+
+[[figure]]
+id = "mistral-swa"
+paper = "Mistral 7B"
+credit = "Jiang et al., 2023"
+arxiv = "2310.06825"
+figure = 1
+url = "https://arxiv.org/html/2310.06825v1#S2.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2310.06825-fig1.webp"
+width = 1600
+height = 596
+changes = "resized"
+zh = "滑动窗口注意力：每个 token 最多看前一层的 W 个 token（图中 W = 3）。窗口外的 token 仍会影响预测：每过一层，信息最多往前传 W 个 token，k 层之后最多 k × W 个。"
+en = "Sliding window attention: each token attends to at most W tokens of the previous layer (W = 3 here). Tokens outside the window still matter: each layer moves information forward by up to W tokens, so k layers reach up to k × W."
+
+[[figure]]
+id = "mixtral-moe"
+paper = "Mixtral"
+credit = "Jiang et al., 2024"
+arxiv = "2401.04088"
+figure = 1
+url = "https://arxiv.org/html/2401.04088v1#S2.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2401.04088-fig1.webp"
+width = 1600
+height = 732
+changes = "resized"
+zh = "MoE 层：router 把每个输入向量分给 8 个专家中的 2 个，输出是这两个专家输出的加权和。Mixtral 里每个专家就是普通 Transformer 的 FFN 块。"
+en = "A mixture-of-experts layer: a router assigns each input vector to 2 of 8 experts, and the output is the weighted sum of the two experts' outputs. In Mixtral each expert is a standard Transformer feed-forward block."
+
+[[figure]]
+id = "flashattention-tiling"
+paper = "FlashAttention"
+credit = "Dao et al., 2022"
+arxiv = "2205.14135"
+figure = 1
+url = "https://arxiv.org/html/2205.14135v2#S1.F1"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "FlashAttention 用分块计算，不在较慢的 GPU HBM 上写出完整的 N×N 注意力矩阵：外层循环把 K、V 分块读进片上 SRAM，内层循环处理 Q 的分块，再把结果写回 HBM。"
+en = "FlashAttention tiles the computation so the full N×N attention matrix never lands in slower GPU HBM: the outer loop loads blocks of K and V into on-chip SRAM, the inner loop processes blocks of Q, and outputs are written back to HBM."
+
+[[figure]]
+id = "mtp-overview"
+paper = "Multi-token prediction"
+credit = "Gloeckle et al., 2024"
+arxiv = "2404.19737"
+figure = 1
+url = "https://arxiv.org/html/2404.19737v1#S1.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2404.19737-fig1.webp"
+width = 1600
+height = 2003
+changes = "resized"
+zh = "多 token 预测概览。上：训练时由共享主干加 4 个独立输出头，一次预测后面 4 个 token；推理时只用下一个 token 的输出头，其余三个可以选用来加速。下：在 MBPP 代码任务上，模型越大，多 token 预测对 pass@1 的提升越明显。"
+en = "Multi-token prediction. Top: during training a shared trunk and 4 dedicated output heads predict the next 4 tokens at once; at inference only the next-token head is used, and the other three can optionally speed it up. Bottom: on the MBPP code task the pass@1 gain grows with model size."
+
+[[figure]]
+id = "speculative-decoding"
+paper = "Speculative decoding"
+credit = "Leviathan et al., 2023"
+arxiv = "2211.17192"
+figure = 1
+url = "https://arxiv.org/html/2211.17192v2#S0.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2211.17192-fig1.webp"
+width = 1600
+height = 401
+changes = "resized"
+zh = "推测解码示意（无条件语言建模）：每一行是一轮。绿色是小模型提出、被目标模型接受的 token，红色是被拒绝的建议，蓝色是目标模型给出的更正。比如第一行，目标模型只跑了一次就生成了 5 个 token。"
+en = "Speculative decoding on unconditional language modeling: each line is one iteration. Green tokens are the small model's suggestions that the target model accepted; red ones were rejected and blue ones are the target model's corrections. In the first line, one run of the target model produced 5 tokens."
+
+[[figure]]
+id = "looped-mechanism"
+paper = "Looped Transformers"
+credit = "Saunshi et al., 2025"
+arxiv = "2502.17416"
+figure = 1
+url = "https://arxiv.org/html/2502.17416v1#S1.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2502.17416-fig1.webp"
+width = 1600
+height = 494
+changes = "resized"
+zh = "循环机制：一个 k 层的 block 循环 L 次，记作 (k⊗L)，相当于共享权重的深模型。两个对照：参数一样多的 (k⊗1)，以及深度相同、参数多 L 倍的 (kL⊗1)。"
+en = "The looping mechanism: a k-layer block looped L times, written (k⊗L), is in effect a weight-shared deep model. Two baselines: (k⊗1) with the same distinct parameters, and (kL⊗1) with the same depth and L times the parameters."
+
+[[figure]]
+id = "gated-deltanet-arch"
+paper = "Gated DeltaNet"
+credit = "Yang et al., 2024"
+arxiv = "2412.06464"
+figure = 1
+url = "https://arxiv.org/html/2412.06464v3#S3.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+zh = "Gated DeltaNet 的（混合）结构和 block 设计：H1 用 Gated DeltaNet + SWA，H2 用 Mamba2 + Gated DeltaNet + SWA（论文的 HTML 版没有单独的图片文件，所以这里只放链接）。"
+en = "The (hybrid) architecture and block design of Gated DeltaNet: H1 uses Gated DeltaNet + SWA, H2 uses Mamba2 + Gated DeltaNet + SWA (the paper's HTML version has no separate image file, so this is a link)."
+
+[[figure]]
+id = "engram-arch"
+paper = "Engram"
+credit = "Cheng et al., 2026"
+arxiv = "2601.07372"
+figure = 1
+url = "https://arxiv.org/html/2601.07372v2#S1.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+zh = "Engram 结构：从静态的 N-gram 记忆里查表，再通过随上下文变化的门控和动态隐状态融合；只加在部分层上，把记忆和计算分开，输入输出 embedding 保持不变（论文的 HTML 版没有单独的图片文件，所以这里只放链接）。"
+en = "Engram: the module retrieves static N-gram memory and fuses it with dynamic hidden states through context-aware gating; it sits only in specific layers, decoupling memory from compute and leaving the input embedding and un-embedding intact (the paper's HTML version has no separate image file, so this is a link)."
+
+[[figure]]
+id = "deepseekv2-attention"
+paper = "DeepSeek-V2"
+credit = "DeepSeek-AI, 2024"
+arxiv = "2405.04434"
+figure = 3
+url = "https://arxiv.org/html/2405.04434v5#S2.F3"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "MHA、GQA、MQA 和 MLA 的简化对比：MLA 把 key 和 value 一起压缩成一个隐向量，推理时 KV cache 小很多。"
+en = "MHA, GQA, MQA and MLA side by side: MLA jointly compresses keys and values into a latent vector, which greatly reduces the KV cache at inference."
+
+[[figure]]
+id = "bert-procedure"
+paper = "BERT"
+credit = "Devlin et al., 2018"
+arxiv = "1810.04805"
+figure = 1
+url = "https://arxiv.org/html/1810.04805v2#S2.F1"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "BERT 的预训练和微调流程：除了输出层，两个阶段用同一套结构；不同下游任务都从同一组预训练参数开始，微调时所有参数都会更新。"
+en = "BERT's pre-training and fine-tuning: apart from the output layers both use the same architecture; every downstream task starts from the same pre-trained parameters, and fine-tuning updates all of them."
+
+[[figure]]
+id = "qlora-memory"
+paper = "QLoRA"
+credit = "Dettmers et al., 2023"
+arxiv = "2305.14314"
+figure = 1
+url = "https://arxiv.org/html/2305.14314v1#S1.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2305.14314-fig1.webp"
+width = 960
+height = 420
+changes = "converted"
+zh = "几种微调方式和各自的显存需求：QLoRA 在 LoRA 的基础上把 Transformer 量化到 4 bit，并用分页优化器应对显存峰值。"
+en = "Fine-tuning methods and their memory requirements: QLoRA improves on LoRA by quantizing the Transformer to 4-bit precision and using paged optimizers to handle memory spikes."
+
+[[figure]]
+id = "instructgpt-steps"
+paper = "InstructGPT"
+credit = "Ouyang et al., 2022"
+arxiv = "2203.02155"
+figure = 2
+url = "https://arxiv.org/html/2203.02155v1#S1.F2"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "InstructGPT 的三步：(1) 监督微调（SFT），(2) 训练奖励模型（RM），(3) 针对奖励模型用 PPO 做强化学习。"
+en = "InstructGPT's three steps: (1) supervised fine-tuning (SFT), (2) reward model (RM) training, and (3) reinforcement learning with PPO against the reward model."
+
+[[figure]]
+id = "dpo-overview"
+paper = "DPO"
+credit = "Rafailov et al., 2023"
+arxiv = "2305.18290"
+figure = 1
+url = "https://arxiv.org/html/2305.18290v3#S1.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2305.18290-fig1.webp"
+width = 1600
+height = 321
+changes = "resized"
+zh = "DPO 不用强化学习就能优化人类偏好：已有方法先在偏好对上拟合奖励模型，再用 RL 找让奖励最大的策略；DPO 用一个简单的分类目标直接优化策略，它隐含的奖励模型对应的最优策略可以闭式求出。"
+en = "DPO optimizes for human preferences without reinforcement learning: existing methods first fit a reward model to preference pairs and then use RL to maximize it; DPO directly optimizes the policy with a simple classification objective, fitting an implicit reward model whose optimal policy has a closed form."
+
+[[figure]]
+id = "grpo-vs-ppo"
+paper = "DeepSeekMath"
+credit = "Shao et al., 2024"
+arxiv = "2402.03300"
+figure = 4
+url = "https://arxiv.org/html/2402.03300v3#S4.F4"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "PPO 和 GRPO：GRPO 去掉 value 模型，用同一组回答的分数估计 baseline，训练资源省很多。"
+en = "PPO and GRPO: GRPO drops the value model and estimates the baseline from a group's scores, greatly reducing training resources."
+
+[[figure]]
+id = "cot-examples"
+paper = "Chain-of-thought"
+credit = "Wei et al., 2022"
+arxiv = "2201.11903"
+figure = 1
+url = "https://arxiv.org/html/2201.11903v6#S0.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2201.11903-fig1.webp"
+width = 1600
+height = 780
+changes = "resized"
+zh = "思维链提示让大模型能处理复杂的算术、常识和符号推理题；高亮部分是推理过程。"
+en = "Chain-of-thought prompting lets large language models tackle complex arithmetic, commonsense and symbolic reasoning; the reasoning is highlighted."
+
+[[figure]]
+id = "llava15-hd"
+paper = "LLaVA-1.5"
+credit = "Liu et al., 2023"
+arxiv = "2310.03744"
+figure = 2
+url = "https://arxiv.org/html/2310.03744v2#S3.F2"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2310.03744-fig2.webp"
+width = 1422
+height = 379
+changes = "converted"
+zh = "LLaVA-1.5-HD：把图片切成网格分别编码，就能处理任意分辨率，不必给 ViT 插值位置编码；另外拼上一张缩小后整图的特征，给 LLM 全局信息。"
+en = "LLaVA-1.5-HD: splitting the image into a grid and encoding the cells independently scales to any resolution without interpolating ViT position embeddings; features of a downsampled whole image are concatenated for global context."
+
+[[figure]]
+id = "tulu3-recipe"
+paper = "Tülu 3"
+credit = "Lambert et al., 2024"
+arxiv = "2411.15124"
+figure = 1
+url = "https://arxiv.org/html/2411.15124v5#S0.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2411.15124-fig1.webp"
+width = 1600
+height = 558
+changes = "resized"
+zh = "Tülu 3 配方总览：面向通用能力和目标能力的数据整理、训练策略，以及开发和最终评测共用的一套标准评测。"
+en = "The Tülu 3 recipe: data curation for general and targeted capabilities, training strategies, and a standardized evaluation suite for development and final evaluation."

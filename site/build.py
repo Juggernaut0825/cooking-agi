@@ -63,7 +63,8 @@ NOGLOSS_CLASSES = {"lesson-recipe", "taste-check", "widget", "mermaid",
                    "study-atlas", "study-route", "chapter-context", "worked-update", "engine-map", "technology-tree", "tree-eras", "rl-budget", "prep-hub", "prep-progress", "prep-note", "study-workspace",
                    "home-block", "term", "curriculum-card", "curriculum-hero",
                    "learning-path", "lab-matrix", "bilingual-intro",
-                   "drl-flow", "drl-paths", "drl-lab", "interview-roles", "method-map"}
+                   "drl-flow", "drl-paths", "drl-lab", "interview-roles", "method-map",
+                   "paper-fig", "paper-fig-link"}
 
 GLOSS_BLOCKS = {"p", "li", "td", "th", "dd"}
 GLOSSARY_COMPOUND_EXCLUSIONS = {"方差": ("平方差", "立方差")}
@@ -562,14 +563,41 @@ ALGO_LAB = [
     ("algo-append", "摊还：偶尔很贵，平均很便宜", "Amortized: occasionally expensive, cheap on average"),
     ("algo-knapsack", "背包：更新顺序决定能拿几次", "Knapsack: update order decides how many copies"),
 ]
-for _name, _zh, _en in ALGO_LAB:
+# Chapter figures (also static/algo-lab.js): one per idea where a picture helps.
+# kind "step" = a stepper, "still" = a single diagram without controls.
+FIGURE_LAB = [
+    ("step-contrastive", "一次对比训练：分数 → 概率 → 损失 → 梯度", "One contrastive step: scores → probabilities → loss → gradients", "step"),
+    ("step-embedding-swap", "维度一样，坐标不一定对得上", "Same dimension, different coordinates", "step"),
+    ("step-rrf", "RRF：只看名次，把两路结果合起来", "RRF: fuse two lists by rank alone", "step"),
+    ("step-retrieval-metrics", "同一份结果，四个指标各问什么", "One result list, four questions", "step"),
+    ("step-pq", "PQ：查表再相加，得到近似距离", "PQ: look up and add to get an approximate distance", "step"),
+    ("step-vit-patches", "ViT：切块、展平、投影", "ViT: patch, flatten, project", "step"),
+    ("step-qwen-merge", "14 像素切块，再 2×2 合并", "14-pixel patches, then a 2×2 merge", "step"),
+    ("step-qformer-masks", "Q-Former 的三种可见性", "Q-Former's three visibility masks", "still"),
+    ("step-flow-matching", "Flow matching：在数轴上走一步", "Flow matching on a number line", "step"),
+    ("step-eval-funnel", "逐层嵌套的漏斗：100 → 55", "A nested funnel: 100 → 55", "step"),
+    ("step-bleu", "BLEU-2：截断计数和长度惩罚", "BLEU-2: clipped counts and the brevity penalty", "step"),
+    ("step-judge-renorm", "先归一到 1–5 分，再算均分", "Renormalize to the 1–5 labels, then average", "step"),
+    ("step-win-rate", "胜率的分母怎么定", "Choosing the win-rate denominator", "step"),
+    ("step-weighted-slices", "平均分涨了，一组却退步了", "The average rises while one group regresses", "step"),
+    ("step-context-staircase", "每次重发全部历史，输入越来越长", "Resending the whole history on every call", "step"),
+    ("step-skill-loading", "按需加载，还是一次全读", "On demand, or everything up front", "step"),
+    ("step-agent-patterns", "五种 workflow 和一种 agent", "Five workflows and an agent", "still"),
+    ("step-audio-frames", "25 ms 窗口、10 ms 步长：2 秒是 198 帧", "25 ms windows, 10 ms hops: 198 frames in 2 seconds", "step"),
+    ("step-vl2-layout", "VL2 的序列长度：1415，不是 1372", "VL2 sequence length: 1415, not 1372", "step"),
+    ("step-mrope", "M-RoPE：时间、高度、宽度三个序号", "M-RoPE: time, height and width positions", "step"),
+    ("step-ppl-windows", "滑动窗口：前文可以重读，目标只计一次", "Sliding windows: reread the context, score each target once", "step"),
+    ("step-ivf", "IVF：最近的簇里不一定有最近的点", "IVF: the nearest cluster may not hold the nearest point", "step"),
+]
+for _name, _zh, _en, _kind in [(name, zh, en, "step") for name, zh, en in ALGO_LAB] + FIGURE_LAB:
+    _kicker = 'data-zh="动画" data-en="Step by step"' if _kind == "step" else 'data-zh="图解" data-en="Diagram"'
     WIDGETS[_name] = f"""
 <figure class="widget tx-lab algo-lab" id="{_name}" data-widget="{_name}">
   <figcaption class="widget-head">
-    <span class="widget-kicker" data-zh="动画" data-en="Step by step"></span>
+    <span class="widget-kicker" {_kicker}></span>
     <span class="widget-title" data-zh="{_zh}" data-en="{_en}"></span>
   </figcaption>
-  <div class="widget-body"><p class="tx-fallback" data-zh="这张动画需要启用 JavaScript。" data-en="This step-by-step figure needs JavaScript."></p></div>
+  <div class="widget-body"><p class="tx-fallback" data-zh="这张图需要启用 JavaScript。" data-en="This figure needs JavaScript."></p></div>
 </figure>
 """
 
@@ -1034,6 +1062,47 @@ def localize_shell(shell: str, page) -> str:
     return re.sub(r'data-zh="([^"]*)"\s+data-en="([^"]*)"([^>]*)>\s*</', fill, shell)
 
 
+def load_paper_figures():
+    """site/paper_figures.toml: figures from papers, each with its credit and licence."""
+    f = SITE / "paper_figures.toml"
+    entries = tomllib.loads(f.read_text(encoding="utf-8")).get("figure", []) if f.exists() else []
+    return {entry["id"]: entry for entry in entries}
+
+
+PAPER_FIGURES = load_paper_figures()
+
+
+def paper_figure_html(name: str, page=None) -> str:
+    """A paper's own figure: embedded with its credit and licence when the licence allows
+    copying (an `image` is registered), otherwise a card that opens the figure in the paper."""
+    fig = PAPER_FIGURES.get(name)
+    if fig is None:
+        raise SystemExit(f"unknown paper figure {name!r}: register it in site/paper_figures.toml")
+    zh = page is None or page.lang == "zh"
+    esc = lambda value: html.escape(str(value), quote=True)
+    caption = esc(fig["zh"] if zh else fig["en"])
+    source = f'{esc(fig["credit"])} · {esc(fig["paper"])} · Figure {fig["figure"]}'
+    label = "原文图" if zh else "From the paper"
+    if "image" in fig:
+        # relative to the note's source, like any markdown image; rewrite_links maps site/static/ to the built asset
+        src = f'site/static/paper-figures/{fig["image"]}'
+        src = page.rel(src) if page is not None else src
+        changes = {"resized": ("缩小尺寸并转为 WebP", "resized and converted to WebP"),
+                   "converted": ("转为 WebP", "converted to WebP")}[fig["changes"]]
+        tall = " is-tall" if fig["height"] > 0.8 * fig["width"] else ""
+        credit = (f'图源：<a href="{esc(fig["url"])}">{source}</a> · <a href="{esc(fig["license_url"])}">{esc(fig["license"])}</a> · {changes[0]}'
+                  if zh else
+                  f'Source: <a href="{esc(fig["url"])}">{source}</a> · <a href="{esc(fig["license_url"])}">{esc(fig["license"])}</a> · {changes[1]}')
+        return (f'<figure class="paper-fig{tall}" id="pf-{esc(name)}">'
+                f'<a class="pf-image" href="{esc(src)}"><img src="{esc(src)}" width="{fig["width"]}" height="{fig["height"]}" '
+                f'alt="{caption}" loading="lazy" decoding="async"></a>'
+                f'<figcaption><span class="pf-label">{label}</span>{caption}<span class="pf-credit">{credit}</span></figcaption></figure>')
+    go = "在原论文里看" if zh else "Open in the paper"
+    return (f'<aside class="paper-fig-link" id="pf-{esc(name)}"><a href="{esc(fig["url"])}">'
+            f'<span class="pf-label">{label}</span><span class="pf-title">{source}</span>'
+            f'<span class="pf-desc">{caption}</span><span class="pf-go">{go} ↗</span></a></aside>')
+
+
 def expand_widgets(md_text: str, page=None) -> str:
     def expand(m):
         name = m.group(1)
@@ -1041,6 +1110,7 @@ def expand_widgets(md_text: str, page=None) -> str:
             return DYNAMIC_WIDGETS[name](page)
         shell = WIDGETS.get(name, "")
         return localize_shell(shell, page) if page is not None else shell
+    md_text = re.sub(r"<!--\s*paper-figure:([a-z0-9_.-]+)\s*-->", lambda m: paper_figure_html(m.group(1), page), md_text)
     return re.sub(r"<!--\s*widget:([a-z0-9_-]+)\s*-->", expand, md_text)
 
 
@@ -2003,7 +2073,9 @@ def assemble(page, sections, people, nav, built, template):
     card = f"{origin}/static/og.png" if origin else f"{prefix}static/og.png"
     image_url, image_dims = card, '<meta property="og:image:width" content="1200">\n<meta property="og:image:height" content="630">\n'
     if page.kind != "home":
-        image_match = re.search(r'<img\s+[^>]*src="([^"]+\.(?:png|jpe?g|webp))"', page.body, re.I)
+        # a paper's figure is shared with its credit on the page, never as a bare card image
+        own_images = re.sub(r'<figure class="paper-fig.*?</figure>', "", page.body, flags=re.S)
+        image_match = re.search(r'<img\s+[^>]*src="([^"]+\.(?:png|jpe?g|webp))"', own_images, re.I)
         if image_match:
             raw_image = image_match.group(1)
             if re.match(r"https?://", raw_image):
@@ -2031,6 +2103,8 @@ def assemble(page, sections, people, nav, built, template):
         template = template.replace('</head>', f'<script defer src="{prefix}static/chronicle.js?v={built}"></script>\n</head>')
         template = template.replace('<canvas class="sky" aria-hidden="true"></canvas>\n', "")
         template = re.sub(r'<script defer src="\{\{prefix\}\}static/sky\.js[^>]*></script>\n?', "", template)
+    if 'class="paper-fig' in page.body:
+        template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/paper-figures.css?v={built}">\n</head>')
     if 'class="method-map"' in page.body:
         template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/method-map.css?v={built}">\n</head>')
     if 'data-bert-story' in page.body:

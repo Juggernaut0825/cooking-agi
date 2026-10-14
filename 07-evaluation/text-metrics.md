@@ -38,6 +38,8 @@ $$
 
 换成 `the bus leaves at nine`：长度相同，unigram 匹配 4/5，bigram 匹配 3/4，BLEU-2 为 $\sqrt{0.8\times0.75}\approx0.7746$。时间错了，分数却更高。若任务就是查发车时间，字段正确率才是直接指标。
 
+<!-- widget:step-bleu -->
+
 ### 可以运行的小版本
 
 ```python
@@ -169,6 +171,8 @@ $$
 | `C D E F` | C、D | E、F | 2 |
 
 第二个窗口保留 C、D，让 E、F 有前文可读，但不再给 C、D 计分。整段总共计 5 个目标，而不是 6 个或两个窗口的长度之和。窗口步长变小，通常能给目标更多上下文，但会增加 forward 次数；因此评测时也要记下窗口长度、步长、BOS/EOS 和文档边界的处理方式。[上下文窗口说明](https://huggingface.co/docs/transformers/perplexity)
+
+<!-- widget:step-ppl-windows -->
 
 <details markdown="1">
 <summary>代码里怎样避免 shift 后少算一个 token？</summary>

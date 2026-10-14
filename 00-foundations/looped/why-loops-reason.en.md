@@ -22,6 +22,8 @@ $$D_{\text{shared}}=D_{\text{untied}}=kL,\qquad P_{\text{shared block}}=kP_{\tex
 
 This is parameter accounting at fixed width, excluding extra components, not an accuracy formula. The study also finds tradeoffs in perplexity and some memorization tasks. It does not establish that reasoning depends only on depth rather than parameters.
 
+<!-- paper-figure:looped-mechanism -->
+
 ## How it relates to CoT
 
 Chain-of-thought adds computation by **generating intermediate tokens**. With KV caching, each new position traverses the network without recomputing the whole prefix. Looping instead updates **hidden states**, without requiring an output token per loop. The two can coexist, and a visible CoT is not automatically a faithful account of the model's decision.

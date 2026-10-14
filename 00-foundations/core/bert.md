@@ -317,6 +317,8 @@ $$
 
 假设我们已经下载了一个预训练 checkpoint，接下来想判断评论是好评还是差评。这时给模型的是完整评论，不需要像 MLM 那样先把词藏起来。训练答案也从“原词是什么”，换成了“这条评论是什么类别”。
 
+<!-- paper-figure:bert-procedure -->
+
 ### 先做一个评论分类器 {#classify-example}
 
 以“茶凉了，等了很久”为例，我们希望模型输出负面类别。Encoder 仍然给每个位置输出向量，分类层读取 `[CLS]` 的表示，把它转成类别分数。`[CLS]` 不是预先写好的整句平均值；它通过 attention 接收其他位置的信息，再在训练中学会保留任务需要的内容。原始分类代码还会对它做一次 dense + tanh pooling。[分类实现](https://github.com/google-research/bert/blob/master/run_classifier.py)、[Pooler 实现](https://github.com/google-research/bert/blob/master/modeling.py)

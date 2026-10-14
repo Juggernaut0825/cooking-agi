@@ -10,24 +10,35 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "site"))
 import build
 
-MARKER = re.compile(r"<!-- widget:(algo-[a-z0-9-]+) -->")
+MARKER = re.compile(r"<!-- widget:((?:algo|step)-[a-z0-9-]+) -->")
+SKIP = {"_site", "node_modules", ".git", "templates"}
+
+
+def embedded_figures():
+    found = {}
+    for note in sorted(ROOT.rglob("*.md")):
+        if SKIP & set(note.relative_to(ROOT).parts):
+            continue
+        for name in MARKER.findall(note.read_text(encoding="utf-8")):
+            found.setdefault(name, set()).add(str(note.relative_to(ROOT)))
+    return found
 
 
 class AlgoLabTests(unittest.TestCase):
     @unittest.skipUnless(shutil.which("node"), "Node.js required")
     def test_figures_end_on_the_notes_answers(self):
-        subprocess.run([shutil.which("node"), "--test", str(ROOT / "site/tests/algo-lab.test.cjs")], check=True, capture_output=True)
+        for test in ["algo-lab.test.cjs", "figure-lab.test.cjs"]:
+            subprocess.run([shutil.which("node"), "--test", str(ROOT / "site/tests" / test)], check=True, capture_output=True)
 
     def test_every_registered_figure_is_implemented_and_embedded_in_both_languages(self):
-        script = (ROOT / "site/static/algo-lab.js").read_text(encoding="utf-8")
-        embedded = {}
-        for note in sorted((ROOT / "interview/algorithms").glob("*.md")):
-            for name in MARKER.findall(note.read_text(encoding="utf-8")):
-                embedded.setdefault(name, set()).add(note.name)
-        names = [name for name, _zh, _en in build.ALGO_LAB]
+        scripts = {prefix: (ROOT / f"site/static/{file}").read_text(encoding="utf-8")
+                   for prefix, file in [("algo-", "algo-lab.js"), ("step-", "figure-lab.js")]}
+        embedded = embedded_figures()
+        names = [name for name, _zh, _en in build.ALGO_LAB] + [name for name, _zh, _en, _kind in build.FIGURE_LAB]
+        self.assertTrue(all(kind in {"step", "still"} for _n, _z, _e, kind in build.FIGURE_LAB))
         self.assertEqual(len(names), len(set(names)))
         for name in names:
-            self.assertIn(f"FIGURES['{name}']", script, name)
+            self.assertTrue(f"FIGURES['{name}']" in scripts[name[:5]], f"{name} has no drawing")
             notes = embedded.get(name, set())
             chinese = {note for note in notes if not note.endswith(".en.md")}
             self.assertTrue(chinese, f"{name} is not in any note")
@@ -37,7 +48,7 @@ class AlgoLabTests(unittest.TestCase):
 
     def test_the_lab_loads_only_on_pages_with_a_figure(self):
         source = (ROOT / "site/static/app.js").read_text(encoding="utf-8")
-        self.assertIn("""if ($('[data-widget^="algo-"]'))""", source)
+        self.assertIn("""if ($('[data-widget^="algo-"], [data-widget^="step-"]'))""", source)
         self.assertIn('"algo-lab.js"', source)
 
 

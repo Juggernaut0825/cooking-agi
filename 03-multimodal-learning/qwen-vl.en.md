@@ -19,6 +19,8 @@ This is an architecture walkthrough, not a leaderboard. Always record the model 
 
 Sources: [Qwen-VL](https://arxiv.org/abs/2308.12966), [Qwen2-VL](https://qwenlm.github.io/blog/qwen2-vl/), [Qwen2.5-VL](https://qwenlm.github.io/blog/qwen2.5-vl/), [official Qwen3-VL overview](https://github.com/QwenLM/Qwen3-VL).
 
+<!-- paper-figure:qwen25vl-framework -->
+
 ## Fixed queries and dynamic tokens are different budgets
 
 Qwen-VL's learned queries read a visual sequence into a fixed number of vectors. That does not mean the preceding vision encoder processes only 256 patches. [Qwen-VL §2](https://arxiv.org/html/2308.12966v3)
@@ -34,6 +36,8 @@ $$N_{visual}=\frac{H}{28}\frac{W}{28}.$$
 | 560 × 560 | 1600 | 400 |
 
 These sizes simplify arithmetic; they are not serving recommendations. The formula excludes text, boundary markers, and video's temporal dimension. Inspect the processor's actual grids and sequences.
+
+<!-- widget:step-qwen-merge -->
 
 ```python
 def merged_image_tokens(height, width, patch_size=14, merge_size=2):
@@ -65,6 +69,8 @@ For a teaching example, let an image start at position 7 with a merged grid of t
 | Bottom left | 7 | 8 | 7 |
 
 A still image shares time but not row/column coordinates. A text token uses equal values on its three axes; **different text tokens do not all receive the same position**.
+
+<!-- widget:step-mrope -->
 
 Consider frames at two and four seconds. Changing sampling FPS can change frame indices without changing event times. Qwen2.5-VL ties temporal positions to actual time. Qwen3-VL uses textual timestamps before frames and interleaves rotary frequencies across axes. Keep these version-specific choices separate. [2.5 report](https://arxiv.org/abs/2502.13923), [3 report](https://arxiv.org/abs/2511.21631)
 

@@ -93,6 +93,8 @@ When activations dominate, reducing the microbatch, shortening or bucketing sequ
 
 QLoRA stores the frozen base in low precision while training higher-precision LoRA parameters. Schematically:
 
+<!-- paper-figure:qlora-memory -->
+
 $$
 y=\operatorname{dequant}(W_q)x+sBAx.
 $$

@@ -23,6 +23,8 @@ A model can use retrieval, tools, and memory without every agent requiring all t
 
 These are not levels in a sophistication ranking, and they can be combined. A fixed workflow calling many models concurrently may cost more than an agent that searches once. Inspect the actual execution.
 
+<!-- widget:step-agent-patterns -->
+
 ## Follow one execution before memorizing pattern names
 
 Continue with the booking policy. This is an action record for developers, not a request for a lengthy disclosure of internal reasoning:
@@ -35,6 +37,8 @@ Continue with the booking policy. This is an action record for developers, not a
 | 4 | Answer using the applicable rule | Check the source and time calculation | A conclusion or a remaining uncertainty |
 
 [ReAct](https://arxiv.org/abs/2210.03629) interleaves reasoning, actions, and environmental observations. It does not require a separate “reasoning model” and “generation model.” A tool timeout is not evidence that no policy exists. Retries need limits, or the loop simply spends money repeatedly.
+
+<!-- paper-figure:react-trajectories -->
 
 ## What do function calling and MCP each do?
 

@@ -98,6 +98,8 @@ Consider these **invented token counts**. Real lengths must be measured with the
 
 A catalog-plus-all-instructions approach, with every procedure assumed to be 1,800 tokens and the same reference included, would total **23,280**. This is neither a measured saving nor the complete request bill. A tool may return a long document, and later calls may carry already-loaded material again.
 
+<!-- widget:step-skill-loading -->
+
 <details markdown="1">
 <summary>Check the arithmetic in Python</summary>
 

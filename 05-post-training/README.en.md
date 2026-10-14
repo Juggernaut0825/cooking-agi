@@ -140,7 +140,11 @@ Its limit is that it can only imitate behavior that appears in the data. For lon
 
 When the best answer is hard to write down directly but people can compare A with B, you can learn from preferences.
 
+<!-- paper-figure:instructgpt-steps -->
+
 Methods such as DPO turn preference pairs directly into a policy training objective. That is simpler than building a full reward pipeline, but it still rests on several assumptions: that the preference labels are stable, that the candidates differ enough, and that the training distribution is close to real use.
+
+<!-- paper-figure:dpo-overview -->
 
 ## What RL does
 
