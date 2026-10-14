@@ -38,7 +38,7 @@ This exercise does not implement an ANN index. Exact search, tree indexes, and a
 
 </details>
 
-Try duplicate points and `k` equal to 1, N, and N+1. The first two need defined results; this implementation rejects the last. Empty queries return empty results; an empty point set cannot support a valid k. Use ordinary-scale finite float64 inputs here, not a claim of exact arithmetic for arbitrary extreme coordinates.
+Try duplicate points and `k` equal to 1, N, and N+1. The first two need defined results; this implementation rejects the last. Empty queries return empty results; an empty point set cannot support a valid k. The exercise assumes finite float64 inputs of ordinary scale; it does not claim exact results for arbitrarily extreme coordinates.
 
 ## Binary search: a match is not a boundary {#bounds}
 
@@ -90,7 +90,7 @@ Kahn's algorithm tracks each task's unfinished predecessors: its indegree. Take 
 
 The reference `dependency_layers` returns `[[read], [clean,audit], [train]]`. Its input maps tasks to predecessors; it separately builds successor lists and deduplicates repeated dependencies. Time and space are $O(V+E)$, including the output.
 
-**These layers describe dependencies, not an optimal parallel schedule.** If independent tasks take 1 and 10 seconds, successors of the short task need not wait for the long one. A real executor releases dependencies as individual tasks finish and accounts for worker limits, resources, failure, retries, and idempotency. Python's [`TopologicalSorter.get_ready()` / `done()`](https://docs.python.org/3/library/graphlib.html) illustrates the distinction: `done()` does not mean submitted.
+**These layers describe dependencies, not an optimal parallel schedule.** If independent tasks take 1 and 10 seconds, successors of the short task need not wait for the long one. A real executor releases dependencies as individual tasks finish and accounts for worker limits, resources, failure, retries, and idempotency. Python's [`TopologicalSorter.get_ready()` / `done()`](https://docs.python.org/3/library/graphlib.html) illustrates the distinction: call `done()` when a task finishes, not when it is submitted to a worker.
 
 Add a dependency from `read` to `train`: the algorithm must reject the cycle. Add an independent `report` task: it can appear in the first layer. This implementation also requires every predecessor to be declared, so a typo cannot silently become an already-completed node.
 
@@ -110,12 +110,12 @@ $$P=\begin{bmatrix}0.8&0.2\\0.4&0.6\end{bmatrix}.$$
 
 For the first question, paths A→A→B and A→B→B give $0.8\times0.2+0.2\times0.6=0.28$. For the second, solve $0.2\pi_A=0.4\pi_B$ and normalize. For the third, spend one step, then with probability 0.8 return to A and start waiting again. Stop upon reaching B; its subsequent transitions do not enter the hitting time.
 
-The reference `markov_example` checks the three results with matrix multiplication and linear equations. It is a fixed two-state example, not a general solver for all chains. More generally, non-target states satisfy $h=\mathbf1+Qh$. Solving $(I-Q)h=\mathbf1$ for finite expected times requires appropriate reachability and finiteness conditions.
+The reference `markov_example` checks the three results with matrix multiplication and linear equations. It is a fixed two-state example, not a general solver for all chains. More generally, non-target states satisfy $h=\mathbf1+Qh$, where $Q$ is $P$ restricted to the non-target rows and columns (here $Q=[0.8]$). Solving $(I-Q)h=\mathbf1$ for finite expected times requires appropriate reachability and finiteness conditions.
 
 Stationarity does not guarantee convergence from every initial distribution. With `[[0,1],[1,0]]`, `[0.5,0.5]` is stationary, but starting at A alternates forever. If a starting state cannot reach the target, its hitting time is not finite. To add actions to states, continue with [MDPs and Bellman equations](../05-post-training/deep-rl/mdp-bellman.en.md).
 
 ## Change one assumption {#next}
 
-Question counts are a poor substitute for checking transfer. With ten times as much kNN data, how would you block it? When a task fails, when may its successors run? How do duplicates change a binary-search boundary? Predict the effect, then test it rather than memorizing this page.
+The number of problems you have solved is a poor measure of mastery. With ten times as much kNN data, how would you block it? When a task fails, when may its successors run? How do duplicates change a binary-search boundary? Predict the effect, then test it rather than memorizing this page.
 
 Return to the [RE / MLE preparation route](ai-roles-prep.en.md), or continue with [attention, sampling, and MLP implementations](../00-foundations/hand-write-kit.en.md).

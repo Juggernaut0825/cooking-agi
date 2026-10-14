@@ -21,7 +21,7 @@
 <div class="prep-panel-heading"><div><p class="prep-eyebrow">按计划学习</p><h2 id="plan-title">从基础到练习</h2></div><p>每一步都附上阅读内容和练习，遇到不熟的概念，可以回看对应讲解。</p></div>
 <ol class="prep-sequence"><li><span>01</span><strong>确认起点</strong><p>用小例子检查语法、概念与实现。</p></li><li><span>02</span><strong>补齐基础</strong><p>理解输入、预测、loss 和参数更新。</p></li><li><span>03</span><strong>选择专项练习</strong><p>按岗位需要练算法、ML Coding 或系统设计。</p></li><li><span>04</span><strong>测试与复盘</strong><p>检查代码，练习解释项目中的设计选择。</p></li></ol>
 <div class="prep-plan-links"><a class="prep-action" href="study-plan.md#build">从基础开始 →</a><a class="prep-action prep-action--quiet" href="study-plan.md#refresh">已有基础，查漏补缺 →</a></div>
-<p class="prep-time-note">每次可以安排半小时、一小时，或其他适合你的时长。不要求每天学习，也不记录连续打卡。</p>
+<p class="prep-time-note">每次可以安排半小时、一小时，或其他适合你的时长。不要求每天学习。</p>
 </section>
 <div class="prep-directory">
 <div class="prep-directory-heading"><h2 id="prep-routes">只想练某一项？</h2><a href="ai-roles-prep.md">按目标岗位找重点 ↗</a></div>

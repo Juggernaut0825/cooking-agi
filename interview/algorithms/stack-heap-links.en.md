@@ -2,9 +2,9 @@
 
 [中文](stack-heap-links.md) · **English** · [Pattern map](../leetcode.en.md)
 
-> Reading time: ~8 min · Last reviewed: 2026-09
+> Reading time: ~8 min · Last reviewed: 2026-10
 
-A stack remembers the most recently unfinished task. A heap keeps the current priority accessible. A linked list lets you reconnect neighboring nodes. The common mistake is using one as though it were another.
+A stack remembers the most recently unfinished task. A heap keeps the current highest-priority item at hand. A linked list lets you reconnect neighboring nodes. The common mistake is using one as though it were another.
 
 ## 1. Stack: close the most recently opened item
 

@@ -35,7 +35,7 @@ assert values[0].shape == (3, 4)
 assert values[0:1].shape == (1, 3, 4)
 ```
 
-整数索引去掉一个轴，切片保留这个轴。最后两行数值对应同一条序列，但 shape 不同；下游要不要保留 batch 维度，应当明确选择。
+整数索引去掉一个轴，切片保留这个轴。最后两行代码取的是同一条序列，但 shape 不同；下游要不要保留 batch 维度，应当明确选择。
 
 ## 创建张量时，不要把默认值当约定
 
@@ -101,7 +101,7 @@ assert repacked[:5].tolist() == [0, 6, 12, 18, 24]
 assert repacked.data_ptr() != swapped.data_ptr()
 ```
 
-第一段每隔两个存储位置取一个数，仍能按同一规律展平；第二段展平转置结果需要重新排数据。在这个具体例子里 `reshape` 复制了。`contiguous()` 也不是“总复制”：原来已经满足要求时可以原样返回。细则见 [view 的 stride 条件](https://docs.pytorch.org/docs/2.8/generated/torch.Tensor.view.html)。
+第一段每两个存储位置取一个数（stride 为 2），仍能按同一规律展平；第二段展平转置结果需要重新排数据。在这个具体例子里 `reshape` 复制了。`contiguous()` 也不是“总复制”：原来已经满足要求时可以原样返回。细则见 [view 的 stride 条件](https://docs.pytorch.org/docs/2.8/generated/torch.Tensor.view.html)。
 
 `flatten(start_dim=1)` 常用于保留 batch、合并后面各轴。`squeeze(dim)` 只移除指定的长度为 1 的轴；裸 `squeeze()` 可能把 batch size = 1 的 batch 轴也删掉。`unsqueeze(dim)` 则插入一个长度为 1 的轴。
 

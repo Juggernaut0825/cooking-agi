@@ -41,9 +41,9 @@ Empty axes need care: `[0]` and `[1]` can produce `[0]`, so “take the larger l
 
 `expand` can use zero strides to read the same storage repeatedly; `repeat` copies values. Either way, broadcasting small inputs into a large result can still allocate a large output.
 
-For example, `[B,1,D] - [1,N,D]` produces `[B,N,D]`. If only squared pairwise distances are needed, compare an implementation of `||q||² + ||k||² - 2qkᵀ` that avoids that three-dimensional difference. Consider cancellation error too: it is not automatically more accurate in every dtype.
+For example, `[B,1,D] - [1,N,D]` produces `[B,N,D]`. If only squared pairwise distances are needed, consider the matrix form `||q||² + ||k||² - 2qkᵀ`, which avoids materializing that three-dimensional difference. Consider cancellation error too: it is not automatically more accurate in every dtype.
 
-Several expanded elements can refer to the same memory location. Clone before treating an expanded view as independently writable. Backward sums gradients over broadcast paths; the next chapter illustrates this with a bias.
+Several expanded elements can refer to the same memory location. Clone before treating an expanded view as independently writable. Backward sums gradients over broadcast paths: for a `[D]` bias added to `[B,D]` activations, the bias gradient is the upstream gradient summed over the batch axis.
 
 ## Reductions: what is the denominator?
 

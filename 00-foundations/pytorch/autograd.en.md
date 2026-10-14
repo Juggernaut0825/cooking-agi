@@ -1,6 +1,6 @@
 # Autograd: computed gradients are not always stored gradients
 
-**English** · [中文](autograd.md)
+[中文](autograd.md) · **English**
 
 > Reading time: about 16 minutes · Prerequisites: the chain rule and tensor operations · Last reviewed: 2026-10
 

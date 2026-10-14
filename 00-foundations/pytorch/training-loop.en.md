@@ -1,6 +1,6 @@
 # From batches to a training loop: running is not learning
 
-**English** · [中文](training-loop.md)
+[中文](training-loop.md) · **English**
 
 > Reading time: about 18 minutes · Prerequisites: autograd and cross-entropy · Last reviewed: 2026-10
 

@@ -62,7 +62,7 @@ These signals narrow the choices; they don't decide for you. “Shortest” does
 - **Explain before coding:** describe brute force, then the repeated work you will avoid.
 - **Trace 4–6 elements:** write down variables instead of trusting a mental sketch.
 - **Close the solution and rewrite:** check empty input, duplicates, and extreme orderings.
-- **Change a condition a few days later:** sorted to unsorted, positive to signed, tree to cyclic graph. Explaining what breaks matters more than remembering an ID.
+- **Change a condition a few days later:** sorted to unsorted, positive to signed, tree to cyclic graph. Explain what breaks.
 
 Don't worry about hitting a problem count. Being able to rewrite a solution days later and explain what changes under a different constraint matters more than remembering its number.
 

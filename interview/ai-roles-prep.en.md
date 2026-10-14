@@ -27,7 +27,7 @@ Pick one row at a time: define the inputs and outputs, write a small test, imple
 | Two-layer MLP forward / backward | [Implementation kit](../00-foundations/hand-write-kit.en.md#the-last-one-is-the-dividing-line), with `interview_kit.py` | Mean-loss normalization; compare analytical gradients with float64 central differences away from ReLU kinks |
 | Multi-head causal attention | [Multi-head attention](../00-foundations/core/multi-head-attention.en.md), [NumPy implementation](../00-foundations/code/attention_numpy.py) | Label `[B,H,T,D]`; changing a future token must not affect earlier outputs |
 | Stable softmax and cross-entropy | [Softmax example](../00-foundations/hand-write-kit.en.md#softmax-numerics), [cross-entropy](../00-foundations/pytorch/cross-entropy.en.md) | Large logits, masked classes, fully masked rows; avoid taking the log of an underflowed probability |
-| Temperature, top-k, top-p, EOS | [Decoding](../00-foundations/core/decoding.en.md), [implementation kit](../00-foundations/hand-write-kit.en.md) | Keep the token that crosses the top-p threshold; stop each sequence independently and enforce a length cap |
+| Temperature, top-k, top-p, EOS | [Decoding](../00-foundations/core/decoding.en.md), [implementation kit](../00-foundations/hand-write-kit.en.md), [when generation stops](../00-foundations/core/decoder-only.en.md#1-inference-the-final-assistant-marker-is-the-generation-boundary) | Keep the token that crosses the top-p threshold; stop each sequence independently and enforce a length cap |
 | Incremental decoding and KV cache | [Implementation lab](../00-foundations/code/README.en.md), [KV mechanisms](../00-foundations/deep-dives/kv-cache-and-inference.en.md) | With fixed weights and dropout off, compare per-position logits for the same token sequence against a full forward pass within tolerance, before comparing sampled text |
 | A small MoE | [Routing](../00-foundations/moe/router.en.md), [load balancing](../00-foundations/moe/load-balancing.en.md) | How expert outputs combine; gate normalization, capacity limits, and unused experts |
 | Break a training loop, then fix it | [PyTorch training](../00-foundations/pytorch/training-loop.en.md), [data and objectives](../practice/post-training/data-and-objectives.en.md) | Change label shift, gradient clearing, padding loss masks, or `train/eval` one at a time; inspect losses and gradients, not just exceptions |
@@ -79,7 +79,7 @@ The [1point3acres inference account](https://www.1point3acres.com/home/thread/11
 
 ## Projects, research discussions, and behavioral preparation {#projects}
 
-Start with a table for one real project: problem and baseline, your change, alternatives, results, and unresolved issues. Separate your contribution from the team's work. Revisit older projects and papers where your contribution was smaller; check records instead of filling gaps from memory. [Andrey's account](https://reyzharkov.com/blog/posts/interviews-2025-ml-research-engineer-uk) describes being questioned about old projects and paper details.
+Start with a table for one real project: problem and baseline, your change, alternatives, results, and unresolved issues. Separate your contribution from the team's work. Revisit older projects and papers where your contribution was smaller; check your records instead of improvising details in the interview. [Andrey's account](https://reyzharkov.com/blog/posts/interviews-2025-ml-research-engineer-uk) describes being questioned about old projects and paper details.
 
 Then try three original follow-ups:
 

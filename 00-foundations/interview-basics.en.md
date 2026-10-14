@@ -2,7 +2,7 @@
 
 [中文](interview-basics.md) · **English**
 
-> Reading time: ~10 min · Type: quick reference · Last reviewed: 2026-08
+> Reading time: ~10 min · Type: quick reference · Last reviewed: 2026-10
 
 ## What these questions have in common {#what-these-questions-have-in-common}
 
@@ -188,7 +188,7 @@ Shift the input and the feature map shifts by the same amount. **Invariance** �
 1. **Buy it with data**: rotation augmentation. The network learns redundant filters, one set per orientation. You're **spending model capacity on invariance**, and only over the range you augmented.
 2. **Change the operator**: group-equivariant CNNs, steerable CNNs, harmonic networks — or a spatial transformer that learns to canonicalize the pose.
 
-**One line**: translation invariance is free, rotation invariance costs — and you pay in either data or operator.
+**One line**: translation equivariance comes free with convolution; rotation equivariance or invariance costs, and you pay in either data or the operator.
 
 **To make the conversation interesting**: even translation invariance is weaker than assumed — strided downsampling aliases, so a one-pixel shift can flip the prediction. The fix is anti-aliased downsampling.
 
@@ -198,8 +198,8 @@ Shift the input and the feature map shifts by the same amount. **Invariance** �
 
 ## One more: Egg Drop gets easy when you reverse the state {#one-more-egg-drop-gets-easy-when-you-reverse-the-state}
 
-With $k$ eggs and $n$ floors, find the threshold in the worst case. The direct formulation is
-indeed a two-dimensional DP:
+With $k$ eggs and $n$ floors, let $T(k,n)$ be the fewest drops that guarantee finding the threshold floor. The direct formulation is
+a two-dimensional DP:
 
 $$T(k,n)=1+\min_{1\le x\le n}\max\big(T(k-1,x-1),\;T(k,n-x)\big).$$
 
@@ -231,7 +231,7 @@ need 14 moves because $1+\cdots+14=105$. Three eggs need 9 because $F(8,3)=92<10
 $F(9,3)=129\ge100$.
 
 **The interview idea**: the original is an eggs-by-floors minimax DP. Reversing it gives a
-moves-by-eggs coverage DP that compresses to one dimension. “Shrinking the searchable space on
+moves-by-eggs coverage DP that compresses to one dimension. The intuition of “shrinking the searchable range on
 every action” is exactly what this recurrence counts.
 
 ## One more: Binary Tree Maximum Path Sum {#one-more-binary-tree-maximum-path-sum}
@@ -285,17 +285,17 @@ When asked to "walk through the architecture," don't recite the figure. **Go com
 | --- | --- |
 | Positional information | attention is permutation-equivariant — **on its own it cannot see word order** |
 | Residual | an identity path for gradients (same idea as the LSTM cell state) |
-| $\sqrt{d_k}$ scaling | the dot product sums $d_k$ terms so variance grows with $d_k$; unscaled, the softmax saturates toward one-hot and **the gradient vanishes** |
+| $\sqrt{d_k}$ scaling | the dot product sums $d_k$ terms so variance grows with $d_k$; unscaled, the softmax tends toward one-hot and the gradient through it becomes small |
 | Multi-head | **one softmax expresses one attention pattern**; heads attend to different relations in different subspaces |
-| FFN (≈4× expansion) | **most of the parameters live here**, usually read as key-value memory |
+| FFN (≈4× expansion) | **most of the parameters live here**; one common interpretation reads it as key-value memory |
 | Causal mask | see above — train/inference consistency |
 
 **Then volunteer this**, which separates "read the 2017 paper" from "knows what current models look like":
 
 | 2017 original | Modern LLM | Why |
 | --- | --- | --- |
-| Post-LN | Pre-LN + RMSNorm | no warmup, scales deeper |
-| Sinusoidal / learned absolute positions | RoPE | relative positions, better extrapolation |
+| Post-LN | Pre-LN + RMSNorm | Pre-LN reduces reliance on warmup and stacks deeper; RMSNorm drops centering to save compute |
+| Sinusoidal / learned absolute positions | RoPE | scores depend only on relative distance; going past the training length still needs RoPE scaling |
 | ReLU FFN | SwiGLU | better at equal compute |
 | MHA | GQA / MQA | **the KV cache is the inference memory bottleneck** |
 

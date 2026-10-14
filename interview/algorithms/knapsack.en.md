@@ -2,7 +2,7 @@
 
 [中文](knapsack.md) · **English** · [Pattern map](../leetcode.en.md)
 
-> Last reviewed: 2026-10-09 · Prerequisite: [Backtracking and DP](backtracking-and-dp.en.md)
+> Last reviewed: 2026-10 · Prerequisite: [Backtracking and DP](backtracking-and-dp.en.md)
 
 Capacity is 5. Three items have weight–value pairs `(2,5), (3,7), (4,8)`. With each item available once, the first two give value 12. Taking the largest value first selects the weight-4 item and gets only 8.
 
@@ -90,4 +90,4 @@ For coin combinations, iterate denominations outside and increasing amounts insi
 
 A one-row DP retains the optimal value. To recover items, keep the two-dimensional table and backtrack: taking an item reduces capacity; skipping it only moves to the previous row. Overwriting a one-row DP while recording a casual predecessor pointer doesn't guarantee that historical choices remain valid.
 
-Test no items, capacity 0, all items too heavy, and the single-item `(2,5)` / capacity-4 counterexample. Code and exhaustive checks: [deeper_patterns.py](../code/deeper_patterns.py). The important question is which layer every read refers to, not which loop you memorized.
+Test no items, capacity 0, all items too heavy, and the single-item `(2,5)` / capacity-4 counterexample. Code: [deeper_patterns.py](../code/deeper_patterns.py); exhaustive checks: [test_deeper_algorithm_patterns.py](../../site/tests/test_deeper_algorithm_patterns.py). The important question is which layer every read refers to, not which loop you memorized.

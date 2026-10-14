@@ -8,7 +8,7 @@
 <p class="prep-intro">Brush up on what you know, or build a foundation over time. Start with the kind of preparation you need—not the whole library.</p>
 <nav class="prep-modes" data-prep-modes aria-label="Preparation mode">
 <a id="prep-tab-review" href="#review" data-prep-tab="review"><strong>Quick review</strong><span>Speedrun · Focus on the gaps</span></a>
-<a id="prep-tab-plan" href="#plan" data-prep-tab="plan"><strong>Study at your pace</strong><span>A sequence of small, practical sessions</span></a>
+<a id="prep-tab-plan" href="#plan" data-prep-tab="plan"><strong>Study plan</strong><span>A sequence of small, practical sessions</span></a>
 </nav>
 <section id="review" class="prep-panel" data-prep-panel aria-labelledby="review-title">
 <div class="prep-panel-heading"><div><p class="prep-eyebrow">Quick review</p><h2 id="review-title">Start with what you know.</h2></div><p>Choose by familiarity with the topic, not years of experience. A new field can be new to anyone.</p></div>
@@ -20,7 +20,7 @@
 </section>
 <section id="plan" class="prep-panel" data-prep-panel aria-labelledby="plan-title">
 <span id="how-to-review"></span>
-<div class="prep-panel-heading"><div><p class="prep-eyebrow">Study at your pace</p><h2 id="plan-title">Make the next step smaller.</h2></div><p>Follow the prerequisites, one exercise at a time. Come back to the part you haven't worked out yet.</p></div>
+<div class="prep-panel-heading"><div><p class="prep-eyebrow">Study plan</p><h2 id="plan-title">From the basics to practice</h2></div><p>Follow the prerequisites, one exercise at a time. Come back to the part you haven't worked out yet.</p></div>
 <ol class="prep-sequence"><li><span>01</span><strong>Find a starting point</strong><p>Try a small example. Is the gap in syntax, the idea, or the implementation?</p></li><li><span>02</span><strong>Build the foundation</strong><p>Connect inputs, predictions, losses, and updates.</p></li><li><span>03</span><strong>Practice for your role</strong><p>Choose algorithms, ML coding, or system design as needed.</p></li><li><span>04</span><strong>Explain and revise</strong><p>Test your code and talk through the decisions in a project.</p></li></ol>
 <div class="prep-plan-links"><a class="prep-action" href="study-plan.en.md#build">Build from the basics →</a><a class="prep-action prep-action--quiet" href="study-plan.en.md#refresh">Find gaps in what I know →</a></div>
 <p class="prep-time-note">Set aside half an hour or an hour when it fits, or split a session further. Each step gives you a reading, an exercise, and somewhere to return when stuck. No daily schedule required.</p>

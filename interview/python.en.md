@@ -4,7 +4,7 @@
 
 > Reading time: ~10 min · Last reviewed: 2026-10
 
-> **Read this first**: this covers public language knowledge and the idioms I use myself when practising problems. It contains no interview questions from any company.
+> **Read this first**: this covers public language knowledge and the idioms I use myself when practicing problems. It contains no interview questions from any company.
 
 A few Python tools save a lot of typing: sort keys, comprehensions, unpacking, and standard-library containers. Start with the syntax you need, then use the questions at the end to check the details.
 
@@ -102,7 +102,7 @@ Many problem types have a tool waiting for them. Knowing this table saves a lot 
 | A queue, BFS | `collections.deque` | `append` and `popleft` are O(1); a list's `pop(0)` is O(n) |
 | Min-heap, top K | `heapq` | min-heap by default; negation works on older versions, and Python 3.14+ also has `_max` APIs |
 | A position in a sorted array | `bisect` | `bisect_left` finds the first index with value ≥ x, in O(log n) |
-| Memoised recursion | `functools.cache` | arguments must be hashable; the cache is unbounded, so consider memory and external state |
+| Memoized recursion | `functools.cache` | arguments must be hashable; the cache is unbounded, so consider memory and external state |
 | Permutations and combinations | `itertools` | `permutations`, `combinations`, `product`, `accumulate` |
 | Infinity | `math.inf` or `float("inf")` | a starting value when looking for a minimum |
 
@@ -129,7 +129,7 @@ For example, `groups.get("missing")` returns `None` without inserting a key. Cac
 - **Do not use a mutable default argument.** In `def f(x, acc=[])` the `[]` is created once, when the function is defined, and every later call shares it. Write `acc=None` and check `if acc is None: acc = []` inside.
 - **`is` and `==` differ.** `==` compares values; `is` asks whether two names refer to the same object. Test for None with `is None`.
 - **Shallow versus deep copy.** Ordinary list slicing and `copy()` copy the outer layer. Whether nested objects need copying depends on what you will mutate; nesting alone does not require `deepcopy`. See [why a copy can affect the original](python-objects.en.md#shallow-copy).
-- **Integer division and modulo with negatives.** Python's `//` rounds down: `-7 // 2` is `-4` and `-7 % 2` is `1`. C++ and Java round towards zero, so `-7 / 2` is `-3`, which trips people up when switching languages.
+- **Integer division and modulo with negatives.** Python's `//` rounds down: `-7 // 2` is `-4` and `-7 % 2` is `1`. C++ and Java round toward zero, so `-7 / 2` is `-3`, which trips people up when switching languages.
 - **Strings are immutable.** Repeated concatenation may repeatedly copy a growing prefix; interpreter optimizations are not a portable linear-time guarantee. For a batch of fragments, use `"".join(parts)`. [String operations](https://docs.python.org/3.14/library/stdtypes.html#common-sequence-operations)
 - **Recursion depth is limited.** A common default is about 1000 frames; check `sys.getrecursionlimit()`. A long DFS chain may raise `RecursionError`. Prefer an explicit stack over blindly raising the limit, which is not a safety guarantee. See the [DFS / BFS walkthrough](algorithms/traversal.en.md).
 - **`*args` and `**kwargs`.** The first collects extra positional arguments into a tuple, the second collects extra keyword arguments into a dict.
@@ -142,7 +142,7 @@ For choosing and reviewing problems, see [LeetCode practice](leetcode.en.md).
 <details class="interview" markdown="1">
 <summary>grid = [[0] * 3] * 3. After changing grid[0][0], why did all three rows change?</summary>
 
-`* 3` copies references: the three rows are one and the same list. Change it through any of the three names and you see the same object. The right way is `[[0] * 3 for _ in range(3)]`, which builds a new row on every iteration.
+`* 3` copies references: the three rows are one and the same list. Whether you write through `grid[0]`, `grid[1]`, or `grid[2]`, you change that one list, so all three rows show it. The right way is `[[0] * 3 for _ in range(3)]`, which builds a new row on every iteration.
 
 </details>
 
@@ -170,7 +170,7 @@ The lambda remembers the variable `i`, not its value, and looks the value up whe
 <details class="interview" markdown="1">
 <summary>What is -7 // 2? And -7 % 2?</summary>
 
-`-7 // 2 = -4` and `-7 % 2 = 1`. Python's integer division rounds down and guarantees `a == (a // b) * b + a % b`. C++ and Java round towards zero: `-7 / 2` is `-3` and the remainder is `-1`.
+`-7 // 2 = -4` and `-7 % 2 = 1`. Python's integer division rounds down and guarantees `a == (a // b) * b + a % b`. C++ and Java round toward zero: `-7 / 2` is `-3` and the remainder is `-1`.
 
 </details>
 

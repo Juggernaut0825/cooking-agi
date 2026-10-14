@@ -8,9 +8,7 @@ Your interview is scheduled, and you do not have time for hundreds of notes. Sta
 
 The budgets mean **focused learning time**: reading, writing, thinking, and reviewing, with breaks excluded. Spread six or twelve hours across sessions that fit your life. Set aside half an hour or an hour when it works for you, try one small exercise, and pick up there next time. No need to finish in one sitting or keep a daily streak.
 
-You need not study every day or spend the same amount of time each session. A free day isn't missed work; you set the pace. To come back to a note, choose “Save this page” under its title and find it under “My reading” at the top right. Before switching devices or clearing your browser, [export a backup](study-plan.en.md#backups).
-
-Sessions and check-ins stay in this browser alongside your study records and share the same JSON backup. No fork is needed, and normal site updates do not clear them. Clearing site data can remove them; changing browsers does not transfer them automatically. [Export and import a backup](study-plan.en.md#backups) when needed.
+To come back to a note, choose “Save this page” under its title and find it under “My reading” at the top right. Before switching devices or clearing your browser, [export a backup](study-plan.en.md#backups).
 
 <nav class="study-route goal-route" aria-label="Choose a route for your starting point">
 <a href="speedrun-start.en.md"><small>BUILD IT UP GRADUALLY</small><strong>I need the foundations first</strong><span>Start with a function and a prediction, with more explanation before attention</span></a>
@@ -20,7 +18,7 @@ Sessions and check-ins stay in this browser alongside your study records and sha
 Choose by familiarity, not years of employment. If you know Python but not ML, use just the model part of the starter route. Below is the **review route**, organized into suggested 2 / 6 / 12-hour budgets. Stay with a difficult idea longer rather than turning the page to keep up.
 
 <nav class="study-route speedrun-route" aria-label="Choose your available practice time">
-<a href="#two-hours"><small>2 HOURS</small><strong>Focus on your next round</strong><span>One algorithm, one code sample, one project</span></a>
+<a href="#two-hours"><small>2 HOURS</small><strong>Focus on your next round</strong><span>One algorithm, one code reading, one concept, one project</span></a>
 <a href="#six-hours"><small>6 HOURS</small><strong>Work on the likely sticking points</strong><span>Add an ML implementation, concepts, and a rehearsal</span></a>
 <a href="#twelve-hours"><small>12 HOURS</small><strong>Practice again under different conditions</strong><span>Add system tradeoffs, experiment checks, and another debugging pass</span></a>
 </nav>
@@ -46,7 +44,7 @@ The default route is for ML / LLM roles. If the next round is algorithms only, r
 
 Suggested total: 120 minutes, split however you like. If the algorithm takes longer, record whether you got stuck on the approach, implementation, or tests instead of rushing to the answer. The code-reading block uses one short example, not the whole chapter. Finishing only one part today is still useful.
 
-## Six hours: add four hours to the first route {#six-hours}
+## Six hours: add four hours to the two-hour plan {#six-hours}
 
 | Additional time | What to do | A stopping point |
 | --- | --- | --- |
@@ -56,7 +54,7 @@ Suggested total: 120 minutes, split however you like. If the algorithm takes lon
 | 45 minutes | Complete the [code-comprehension practice](code-comprehension.en.md#practice) | State expected behavior, fix it, and add regression tests |
 | 30 minutes | Rehearse a round with project follow-ups | Record a real sticking point, not just a smooth script |
 
-Suggested total: 360 minutes, not a requirement to master this by hour six. For a general SWE round, replace attention with a change to an unfamiliar program and its tests. For research discussions, move some extra algorithm time to hypotheses, controls, and failed experiments from your work; retain practice for any confirmed coding rounds.
+Suggested total: 360 minutes, not a requirement to master this by hour six. For a general SWE round, replace the ML implementation with a change to an unfamiliar program and its tests. For research discussions, move some extra algorithm time to hypotheses, controls, and failed experiments from your work; retain practice for any confirmed coding rounds.
 
 ## Twelve hours: add six hours and revisit your weak spots {#twelve-hours}
 
@@ -69,7 +67,7 @@ Suggested total: 360 minutes, not a requirement to master this by hour six. For 
 | 45 minutes | Rehearse the format closest to your actual round | Complete the main steps without hints; verify outputs even in AI-enabled practice |
 | 30 minutes | Redo two earlier mistakes | Explain the correction without looking at the previous answer |
 
-Suggested total: 720 minutes. With more time, use the [full preparation route](ai-roles-prep.en.md) rather than cramming more topics into this one. The night before an interview is not a requirement to start another field.
+Suggested total: 720 minutes. If you need more practice, pick from the [role-based guide](ai-roles-prep.en.md). Close to the interview, redo weak spots rather than switching to a new area.
 
 ## Core ideas: explain the mechanism, then follow up as needed {#core}
 
@@ -152,8 +150,8 @@ If your invitation includes that round, confirm the tools, test execution, and e
 
 ## Finish with a small note of your own {#finish}
 
-End each session with a place to resume: “add an empty-input test” or “check the softmax dimension by hand.” Next time, redo the small example before changing one condition. Returning after a few days does not mean starting the collection over.
+End each session with a place to resume: “add an empty-input test” or “check the softmax dimension by hand.” Next time, redo the small example before changing one condition. That checks whether you really understood it.
 
-Keep one recurring coding mistake, one unclear concept, the strongest evidence from your project, and one part you explicitly have not done. You do not need to present yourself as knowing everything. Explain your choices and what still needs testing rather than rushing through more terminology.
+Before the interview, go over your recurring coding mistakes, concepts you still cannot explain, the evidence in your project that supports its conclusions, and the parts you have not done. Above all, separate work you did yourself, work you contributed to, and things you only understand in principle. Explain your choices and what still needs testing rather than rushing through more terminology.
 
 For longer preparation, return to [Interview prep](README.en.md) or the [role-based guide](ai-roles-prep.en.md). This route helps you choose what to do now; it does not replace the detailed notes.

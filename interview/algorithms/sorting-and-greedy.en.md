@@ -2,7 +2,7 @@
 
 [中文](sorting-and-greedy.md) · **English** · [Pattern map](../leetcode.en.md)
 
-> Reading time: ~6 min · Last reviewed: 2026-09
+> Reading time: ~6 min · Last reviewed: 2026-10
 
 Sorting creates useful order; it isn't the solution by itself. Greedy doesn't mean “pick what looks best.” You need to explain why the local choice doesn't exclude a better answer.
 
@@ -63,7 +63,7 @@ For `[2,3,1,1,4]`, position 0 reaches 2; reachable position 1 extends the fronti
 
 Interval merging is a sorted scan. Not every sort-and-scan algorithm is a greedy optimization. Explain what you're proving rather than merely naming a technique.
 
-## 5. Practice and this round's scope
+## 5. Practice and first-pass scope
 
 - [Merge Intervals](https://leetcode.com/problems/merge-intervals/): closed endpoints, nesting, empty input.
 - [Jump Game](https://leetcode.com/problems/jump-game/): explain why a frontier is sufficient.

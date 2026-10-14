@@ -27,7 +27,7 @@ RE 是 Research Engineer，MLE 是 Machine Learning Engineer，RS 是 Research S
 | 两层 MLP 的 forward / backward | [手写模块](../00-foundations/hand-write-kit.md#_5)，配套 `interview_kit.py` | mean loss 的分母；float64 中心差分对照解析梯度，避开 ReLU 拐点 |
 | Multi-head causal attention | [多头注意力](../00-foundations/core/multi-head-attention.md)，[NumPy 实现](../00-foundations/code/attention_numpy.py) | 标出 `[B,H,T,D]`；修改未来 token，不能影响更早输出 |
 | 稳定 softmax 与交叉熵 | [softmax 算例](../00-foundations/hand-write-kit.md#softmax-numerics)、[交叉熵](../00-foundations/pytorch/cross-entropy.md) | 大 logits、被屏蔽的类别、全 mask；不要先取极小概率再取 log |
-| Temperature、top-k、top-p 与 EOS | [解码策略](../00-foundations/core/decoding.md)、[手写实现](../00-foundations/hand-write-kit.md) | top-p 保留跨过阈值的 token；各序列独立停止，另有长度上限 |
+| Temperature、top-k、top-p 与 EOS | [解码策略](../00-foundations/core/decoding.md)、[手写实现](../00-foundations/hand-write-kit.md)、[生成何时停止](../00-foundations/core/decoder-only.md#1-assistant) | top-p 保留跨过阈值的 token；各序列独立停止，另有长度上限 |
 | 增量解码与 KV cache | [从零实现实验](../00-foundations/code/README.md)、[KV 原理](../00-foundations/deep-dives/kv-cache-and-inference.md) | 固定权重、关闭 dropout，同一 token 序列的逐位置 logits 与全前向在容差内一致；先别比较随机采样文本 |
 | 简化 MoE | [Router](../00-foundations/moe/router.md)、[负载均衡](../00-foundations/moe/load-balancing.md) | 同一 token 去多个 expert 后怎样加权；门控归一化、容量限制、空 expert |
 | 故意弄错训练循环，再修好 | [PyTorch 训练循环](../00-foundations/pytorch/training-loop.md)、[数据与目标](../practice/post-training/data-and-objectives.md) | label shift、梯度清零、padding loss mask、`train/eval` 各改一处；观察 loss 与梯度，而不只看能否运行 |
@@ -75,7 +75,7 @@ RE 是 Research Engineer，MLE 是 Machine Learning Engineer，RS 是 Research S
 | GPU 利用率低，先改什么？ | 分开检查 CPU 输入、队列、执行、HBM 带宽、通信和输出缓冲；先取 trace，再改一个变量 |
 | 什么时候拆 prefill / decode？ | 在测出的干扰之外，算上 KV 传输、两端队列与失败恢复成本 |
 
-[地里的 inference 复盘](https://www.1point3acres.com/home/thread/1188659)特别强调相关经验和技术深度，语境主要是有经验、尤其 senior 的求职者。可以借它决定要深挖哪一层，但不能推出“新人必须先内部转岗”或“传统系统设计不用准备”。轮次还是要问清楚。
+[一亩三分地上的 inference 面试复盘](https://www.1point3acres.com/home/thread/1188659)特别强调相关经验和技术深度，语境主要是有经验、尤其 senior 的求职者。可以借它决定要深挖哪一层，但不能推出“新人必须先内部转岗”或“传统系统设计不用准备”。轮次还是要问清楚。
 
 ## 项目、研究讨论和 BQ，别拖到最后 {#projects}
 

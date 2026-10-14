@@ -17,7 +17,7 @@ First, make the current version useful. Right now that means helping someone cho
 The proposed **v1.0.0 · Interview prep** is about a usable learning flow, not complete coverage of AI.
 
 - **Find a starting point.** Work up from small examples if a topic is new, or go straight to implementation, debugging, and tradeoffs if you know the basics.
-- **Use the time you have.** Study on the days you choose, for as long as you like. There is no daily streak. Time estimates describe focused work, not how fast you should understand a chapter.
+- **Use the time you have.** Study on the days you choose, for as long as you like. You don't need to keep a daily streak. Time estimates describe focused work, not how fast you should understand a chapter.
 - **Keep the reading connected.** Exercises link to the main notes rather than a second textbook. Save a note you want to revisit and find it under “My reading” at the top right.
 - **Keep your own records.** Saved notes and reading history stay in the current browser, with JSON export and import. No account or fork required.
 
