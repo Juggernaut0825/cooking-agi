@@ -2,12 +2,12 @@
 
 **中文** · [English](transformer-lab.en.md)
 
-> 阅读时间：约 15 分钟，动手玩会更久 · 难度：入门到进阶 · 最近审阅：2026-10-09
+> 阅读时间：约 15 分钟，动手玩会更久 · 难度：入门到进阶 · 最近审阅：2026-10
 >
 > 这一页是 [Transformer 架构](transformer.md) 的动手版：公式和推导在那边，这里只做一件事——让每个机制都能拖、能点、能看到数字怎么变。图里的数字都在浏览器里实时计算；模型家族的具体配置变化很快，以文末的论文和公开 config 为准。
 
 <div class="lesson-recipe advanced">
-  <div><span>这次要拆什么</span><strong>一张会变形的结构图，和七个改变了它的优化</strong></div>
+  <div><span>这次要拆什么</span><strong>一张会变形的结构图，和六个改变了它的优化</strong></div>
   <div><span>需要先会</span><strong>attention 公式 · residual · causal LM</strong></div>
   <div><span>真正的主角</span><strong>KV cache · GQA / MLA · sliding window · RoPE · MoE · FlashAttention</strong></div>
   <div><span>最后要能证明</span><strong>每个优化省的是显存、访存还是计算，代价又是什么</strong></div>

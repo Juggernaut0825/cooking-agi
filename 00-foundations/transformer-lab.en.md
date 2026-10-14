@@ -2,18 +2,18 @@
 
 [中文](transformer-lab.md) · **English**
 
-> Reading time: ~15 min, longer if you play · Level: intro → advanced · Last reviewed: 2026-10-09
+> Reading time: ~15 min, longer if you play · Level: intro → advanced · Last reviewed: 2026-10
 >
-> This is the hands-on companion to [The Transformer architecture](transformer.en.md). The formulas and derivations live there; this page does one thing: make every mechanism something you can drag, click, and watch the numbers of. Everything in the figures is computed live in your browser. Model-family configurations change quickly, so treat the papers and released configs at the end as the source of truth.
+> This is the hands-on companion to [The Transformer architecture](transformer.en.md). The formulas and derivations live there; this page does one thing: let you drag and click every mechanism and watch its numbers change. Everything in the figures is computed live in your browser. Model-family configurations change quickly, so treat the papers and released configs at the end as the source of truth.
 
 <div class="lesson-recipe advanced">
-  <div><span>What we are dissecting</span><strong>One morphing block diagram, and the seven optimizations that reshaped it</strong></div>
+  <div><span>What we are dissecting</span><strong>One morphing block diagram, and the six optimizations that reshaped it</strong></div>
   <div><span>Prerequisites</span><strong>the attention formula · residuals · causal LM</strong></div>
   <div><span>Main mechanism</span><strong>KV cache · GQA / MLA · sliding window · RoPE · MoE · FlashAttention</strong></div>
   <div><span>Evidence to demand</span><strong>what each one saves (memory, memory traffic, or compute) and what it costs</strong></div>
 </div>
 
-One colour key runs through the page: **blue** is queries and attention, **orange** is keys, the FFN and experts, **green** is values and embeddings.
+One color key runs through the page: **blue** is queries and attention, **orange** is keys, the FFN and experts, **green** is values and embeddings.
 
 ## The map: one block, many families
 
@@ -29,7 +29,7 @@ Three steps are worth comparing: `Transformer ’17 → GPT-2 / 3` (drop the enc
 
 ## Self-attention, step by step
 
-Each token emits three vectors: a **query** (what am I looking for?), a **key** (what do I offer?) and a **value** (what do I pass on?). Scores are dot products $q\cdot k$, scaled by $\sqrt{d_k}$, masked so that no token sees the future, and normalised with a softmax. The output is a weighted average of values: $\operatorname{softmax}(QK^\top/\sqrt{d_k})\,V$.
+Each token emits three vectors: a **query** (what am I looking for?), a **key** (what do I offer?) and a **value** (what do I pass on?). Scores are dot products $q\cdot k$, scaled by $\sqrt{d_k}$, masked so that no token sees the future, and normalized with a softmax. The output is a weighted average of values: $\operatorname{softmax}(QK^\top/\sqrt{d_k})\,V$.
 
 <!-- widget:tx-attention -->
 

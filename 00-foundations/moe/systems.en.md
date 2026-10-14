@@ -2,13 +2,13 @@
 
 [中文](systems.md) · **English**
 
-> Reading time: ~3 min · Level: advanced · Last reviewed: 2026-10-09
+> Reading time: ~3 min · Level: advanced · Last reviewed: 2026-10
 
 ## Expert parallelism and two all-to-alls
 
 In a large model the experts live on different GPUs. The forward pass of one MoE layer then takes three steps (as in GShard):
 
-1. **dispatch**: one all-to-all sends each token to the GPU that holds the experts it chose;
+1. **dispatch**: one all-to-all sends each token to the GPUs that hold the experts it chose;
 2. each GPU runs its own experts;
 3. **combine**: a second all-to-all sends the results back to where each token came from.
 
@@ -33,7 +33,7 @@ So MoE's "each token computes only a small part" pays off differently at differe
 
 ## Numerical precision
 
-The router's softmax is sensitive to numerics. Switch Transformer computes the router in fp32 while the rest stays in low precision; ST-MoE's z-loss (previous note) addresses the same problem.
+The router's softmax is sensitive to numerics. Switch Transformer computes the router in fp32 while the rest stays in low precision; ST-MoE's router z-loss, covered in the [load-balancing note](load-balancing.en.md), addresses the same problem.
 
 ## In short
 

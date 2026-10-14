@@ -2,7 +2,7 @@
 
 [中文](residual-connections.md) · **English**
 
-> Reading time: ~10 min · Level: core · Last reviewed: 2026-10-09
+> Reading time: ~10 min · Level: core · Last reviewed: 2026-10
 
 Suppose the input is `[2, 3]` and a sublayer produces an update `[0.1, -0.2]`. Adding them gives `[2.1, 2.8]`. If the update is zero, the input passes through unchanged. This simple addition changes the function the layer learns and provides a direct path for backpropagation.
 
@@ -24,7 +24,7 @@ $$\frac{\partial y_L}{\partial x_0} = \prod_{l=1}^{L}\left(I + \frac{\partial f_
 
 The product follows the chain rule from the last layer backward; matrices cannot be reordered arbitrarily. Its expansion contains $I\cdots I=I$, but **the total gradient adds every term, not just that path**. [Identity Mappings](https://arxiv.org/abs/1603.05027) studies why identity routes help propagation.
 
-Without the residual, the product is $\prod_l J_{f_l}$. In a scalar example, a derivative of 0.8 per layer gives $0.8^{40}\approx0.000133$ after 40 layers. In higher dimensions, directions, singular values, and activation states matter; a whole matrix is not simply “above 1.”
+Without the residual, the product is $\prod_l J_{f_l}$. In a scalar example, a derivative of 0.8 per layer gives $0.8^{40}\approx0.000133$ after 40 layers. In higher dimensions, directions, singular values, and activation states matter; a whole matrix is not simply “above 1” or “below 1.”
 
 Residuals have counterexamples too: $f(x)=-x$ gives $y=0$ and derivative $1-1=0$; $f(x)=x$ gives derivative $2^{40}$ through 40 layers. The structure helps optimization but does not guarantee against vanishing or exploding gradients.
 
@@ -73,9 +73,9 @@ Dropout on $x$ changes the direct-path Jacobian from $I$ into a random diagonal 
 
 Whether to use dropout, where to put it, and which rate to use depend on the model configuration and validation results. One model's zero-dropout setting is not a universal answer for pretraining or finetuning.
 
-## How it interacts with normalisation {#how-it-interacts-with-normalisation}
+## How it interacts with normalization {#how-it-interacts-with-normalisation}
 
-Three different problems, but their **relative placement** matters:
+Residuals, dropout, and normalization solve different problems, but their **relative placement** matters:
 
 $$\underbrace{\text{Norm}(x + \text{Dropout}(f(x)))}_{\text{post-norm, 2017}} \qquad\text{vs}\qquad \underbrace{x + \text{Dropout}(f(\text{Norm}(x)))}_{\text{pre-norm, inside branch}}$$
 
@@ -152,16 +152,16 @@ This is a useful analogy between propagation across time and depth, not an equiv
 <div class="taste-check">
   <strong>You understand this if you can explain:</strong>
   <ol>
-    <li>Why is this an optimisation fix rather than an overfitting fix, and what experiment separates the two?</li>
+    <li>Why is this an optimization fix rather than an overfitting fix, and what experiment separates the two?</li>
     <li>What does the $I$ in $\partial y/\partial x = I + \partial f/\partial x$ do during backprop?</li>
     <li>Why does post-norm break that path?</li>
-    <li>How does residual-stream variance behave with depth, and what are the two usual remedies?</li>
+    <li>How does residual-stream variance behave with depth, and what are the usual remedies?</li>
   </ol>
 </div>
 
 ## Next {#next}
 
-Attention, normalisation and residuals are all covered — time to assemble them: [the vanilla Transformer](vanilla-transformer.en.md).
+Attention, normalization, and residuals are all covered — time to assemble them: [the vanilla Transformer](vanilla-transformer.en.md).
 
 ## Quick learning: why residual connections make depth trainable {#quick-learning-why-residual-connections-make-depth-trainable}
 

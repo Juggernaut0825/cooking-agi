@@ -66,7 +66,7 @@ output = hidden[0] - hidden[1]
 assert math.isclose(output, -1.4621171572600098)
 ```
 
-第一维输出为 0，不代表这一维永远收不到训练信号。设上游梯度为 $\delta$，则
+第一维输出为 0，不代表这一维永远收不到训练信号。设传回 $h$ 的上游梯度为 $\delta=\partial\mathcal L/\partial h$，则
 
 $$
 \frac{\partial\mathcal L}{\partial u}
@@ -99,4 +99,4 @@ SwiGLU 的门在特征维度上做连续调制。MoE 的 router 则为 token 选
 | Dense FFN / SwiGLU | 当前 token 的通道变换 | 中间激活、矩阵计算 |
 | MoE routing | 分配 token 到部分 expert | 负载、通信与路由稳定性 |
 
-想继续读，去 [MoE 专题](../moe/README.md)。写一个 FFN 的检查则很直接：核对 shape、确认非线性位置、对小输入做数值梯度检查，再比较等预算下的任务质量和耗时。
+想继续读，去 [MoE 专题](../moe/README.md)。自己实现 FFN 时，检查步骤很直接：核对 shape、确认非线性位置、对小输入做数值梯度检查，再比较等预算下的任务质量和耗时。

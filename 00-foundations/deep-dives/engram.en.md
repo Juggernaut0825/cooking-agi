@@ -18,11 +18,11 @@ A token-ID normalization map lets some surface variants share lookup space. This
 
 ## Why consult a table when context is available?
 
-It separates some of the work: recurrent local patterns use deterministic addressing, while context-sensitive interpretation and long-distance relations remain model computations. Retrieving the same local pattern does not require using it identically.
+It separates some of the work: recurring local patterns use cheap, deterministic addressing, while context-sensitive interpretation and long-distance relations remain model computations. Retrieving the same local pattern does not require using it identically.
 
 For example, `the bank` could occur in a river or finance context. The local lookup can be identical while the hidden states differ. A gate can use that context to modulate the same entry. This is an explanatory example, not a reported experiment.
 
-A simplified single-branch form is:
+A simplified single-branch form follows, where $h_t$ is the current hidden state and $d$ is its width:
 
 $$
 k_t=W_Ke_t,\quad v_t=W_Ve_t,\qquad
@@ -69,7 +69,7 @@ Consider one hypothetical table: one million entries, 64 dimensions, two bytes p
 
 This is not a deployment estimate. Multiple layers, n-gram lengths, hash heads, addressing, transfers, and training state all add costs. Random-access effective bandwidth also differs from sequential bandwidth.
 
-Deterministic addresses allow precomputation and prefetching. The tradeoff is possible random-read or CPU/GPU transfer bottlenecks. Having many parameters but reading only a few per step does not make additional knowledge free.
+Deterministic addresses allow precomputation and prefetching. The risk is that random reads or CPU/GPU transfers become the bottleneck. Having many parameters but reading only a few per step does not make additional knowledge free.
 
 ## How would we establish that it helps?
 

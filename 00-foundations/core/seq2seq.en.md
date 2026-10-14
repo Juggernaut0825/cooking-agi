@@ -2,7 +2,7 @@
 
 [中文](seq2seq.md) · **English**
 
-> Reading time: ~10 min · Level: core · Last reviewed: 2026-10-10
+> Reading time: ~10 min · Level: core · Last reviewed: 2026-10
 
 Translating “明天见” into “See you tomorrow” does not require equal input and output lengths or a word-by-word match. Seq2Seq uses an encoder to read the input and a decoder to produce the output. When writing `tomorrow`, how can the decoder find the relevant time information? This gives us a reason to introduce attention.
 
@@ -16,7 +16,7 @@ $$h_1,\ldots,h_S = \text{Encoder}(x_1,\ldots,x_S), \qquad c = h_S$$
 
 $$s_t = \text{Decoder}(y_{t-1}, s_{t-1}, c), \qquad p(y_t)=\text{softmax}(W s_t)$$
 
-The input length is $S$ and the output length is $T$; they need not match. Each decoder step produces a distribution over the vocabulary. The shorthand $p(y_t)$ above leaves conditioning on the source and previous outputs implicit.
+The input length is $S$ and the output length is $T$; they need not match. The formula feeds $c$ into every decoder step; Sutskever et al. (2014) and the reversal experiment below instead use $c$ only to initialize the decoder state. Both variants are common. Each decoder step produces a distribution over the vocabulary. The shorthand $p(y_t)$ above leaves conditioning on the source and previous outputs implicit.
 
 With one fixed vector, the decoder cannot revisit a particular input position after generation starts. This can make retaining details harder, but it does not mean every long sentence must fail. [Sutskever et al. (2014), §2](https://arxiv.org/html/1409.3215v3) describe the classic LSTM encoder–decoder; its effectiveness still depends on training and the task.
 
@@ -28,7 +28,7 @@ $$e_{tj}=\text{score}(s_{t-1},h_j), \qquad \alpha_{tj}=\text{softmax}_j(e_{tj})$
 
 $$c_t = \sum_j \alpha_{tj}h_j$$
 
-$c_t$ can change at every step, rather than making one unchanged vector serve the entire output sequence. [Bahdanau et al., §3.1](https://arxiv.org/html/1409.0473v7) describe this form of recurrent attention. It mixes states by weight; it need not select a single word.
+$c_t$ can change at every step, rather than making one unchanged vector serve the entire output sequence. [Bahdanau et al., §3.1](https://arxiv.org/html/1409.0473v7) describe this form of attention in an RNN encoder–decoder. It mixes states by weight; it need not select a single word.
 
 For states $h_1=(1,0),h_2=(0,1),h_3=(1,1)$, weights $(0.1,0.7,0.2)$ give $c_t=(0.3,0.9)$. At the next step, weights $(0.6,0.1,0.3)$ instead give $(0.9,0.4)$. These hand-chosen vectors do not imply that words have two literal semantic coordinates. Attention weights normalize over **input positions**, not output words. They are also not sufficient evidence of causal reliance on a source position.
 
@@ -95,7 +95,7 @@ This minimal script fixes both input and output length at 7 tokens, stops after 
   <ol>
     <li>Why does it not matter that the source and the target have different lengths?</li>
     <li>Compared with a fixed context vector, exactly which assumption does attention relax?</li>
-    <li>Why does teacher forcing make training easy yet leave an exposure gap for generation?</li>
+    <li>Why does teacher forcing make training easy yet cause exposure bias at generation time?</li>
   </ol>
 </div>
 

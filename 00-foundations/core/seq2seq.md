@@ -2,7 +2,7 @@
 
 **中文** · [English](seq2seq.en.md)
 
-> 阅读时间：约 10 分钟 · 难度：必修 · 最近审阅：2026-10-10
+> 阅读时间：约 10 分钟 · 难度：必修 · 最近审阅：2026-10
 
 把“明天见”翻成 “See you tomorrow”，输入和输出既不等长，也不用逐字对应。Seq2Seq 用一个 encoder 读取输入，再让 decoder 逐步生成输出。问题是：写到 `tomorrow` 时，decoder 怎样找到输入里与时间有关的信息？这正是 attention 要解决的问题。
 
@@ -16,7 +16,7 @@ $$h_1,\ldots,h_S = \text{Encoder}(x_1,\ldots,x_S), \qquad c = h_S$$
 
 $$s_t = \text{Decoder}(y_{t-1}, s_{t-1}, c), \qquad p(y_t)=\text{softmax}(W s_t)$$
 
-输入长度是 $S$，输出长度是 $T$，二者无需相等。decoder 的每一步都会输出一个词表上的概率分布；上式的 $p(y_t)$ 简写了对输入和已有前缀的条件。
+输入长度是 $S$，输出长度是 $T$，二者无需相等。decoder 的每一步都会输出一个词表上的概率分布；上式的 $p(y_t)$ 是简写，完整写法要以输入和已生成的前缀为条件。上式让 $c$ 在每一步都输入 decoder；Sutskever 等（2014）和下面的反转实验则只用 $c$ 初始化 decoder 的状态，两种做法都常见。
 
 固定向量的限制在于：生成开始后，decoder 不能再单独读取某个输入位置。这会增加保留细节的难度，但不是说固定向量遇到长句就一定失败。[Sutskever 等（2014），§2](https://arxiv.org/html/1409.3215v3)介绍了经典 LSTM encoder–decoder；具体效果仍取决于训练和任务。
 
@@ -95,7 +95,7 @@ Transformer 的关键动作不是“发明 attention”，而是把 recurrence �
   <ol>
     <li>为什么 source 和 target 长度不一样也没关系？</li>
     <li>attention 相比固定 context vector，究竟放松了哪个假设？</li>
-    <li>teacher forcing 为什么让训练容易，却给生成留下 exposure gap？</li>
+    <li>teacher forcing 为什么让训练容易，却在生成时带来 exposure bias？</li>
   </ol>
 </div>
 

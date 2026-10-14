@@ -4,7 +4,7 @@
 
 > Reviewed: 2026-10 · Prerequisites: [multi-head attention](multi-head-attention.en.md), [residuals](residual-connections.en.md)
 
-Transformer diagrams often give attention the prominent position and reduce the FFN to a small box. That box can hold substantial parameters and compute. Rather than reading the context again, it applies a nonlinear transformation to each position's existing representation.
+Transformer diagrams often give attention the prominent position and reduce the FFN to a small box. That box usually holds a large share of the parameters and compute. Rather than reading the context again, it applies a nonlinear transformation to each position's existing representation.
 
 We will use one token and column vectors, omitting batch dimensions, biases, and normalization.
 
@@ -66,7 +66,7 @@ output = hidden[0] - hidden[1]
 assert math.isclose(output, -1.4621171572600098)
 ```
 
-A zero output in the first dimension does not permanently cut off learning. With upstream gradient $\delta$,
+A zero output in the first dimension does not permanently cut off learning. With upstream gradient $\delta=\partial\mathcal L/\partial h$ arriving at $h$,
 
 $$
 \frac{\partial\mathcal L}{\partial u}

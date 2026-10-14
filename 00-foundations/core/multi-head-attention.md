@@ -2,7 +2,7 @@
 
 **中文** · [English](multi-head-attention.en.md)
 
-> 阅读时间：约 15 分钟 · 难度：必修 · 最近审阅：2026-10-10
+> 阅读时间：约 15 分钟 · 难度：必修 · 最近审阅：2026-10
 
 先只看一次加权求和：两个位置提供的 value 是 `[2, 0]` 和 `[0, 4]`，注意力权重是 `0.75` 和 `0.25`，读出的结果就是 `[1.5, 1]`。Attention 的计算从这里展开：权重怎么由 Q、K 得到，哪些位置要被遮住，多组这样的计算又怎样拼起来。
 
@@ -16,7 +16,7 @@
 
 ## Attention Matrix 表示什么 {#attention-matrix}
 
-这里先讲 self-attention：$Q$、$K$、$V$ 来自同一个输入 $X$ 的三组可学习线性投影。Cross-attention 则可以从另一条序列取 K/V，后面再展开。
+这里先讲 self-attention：$Q$、$K$、$V$ 来自同一个输入 $X$ 的三组可学习线性投影。Cross-attention 则可以从另一条序列取 K/V，详见[原版 Transformer](vanilla-transformer.md)。
 
 $$
 \begin{gathered}
@@ -126,7 +126,7 @@ s_{ij}=\mathbf q_i^\top\mathbf k_j/\sqrt{d_k},\\
 \end{gathered}
 $$
 
-在没有 attention dropout 时，每行权重非负且和为 1，所以**单个头投影前的输出**是 value 的凸组合。开头的 `[1.5, 1]` 就是一个例子。别把这个结论套到整个 Transformer block：dropout、输出投影和残差连接都会改变它；权重本身也随输入变化，并不是固定的平均。
+在没有 attention dropout 时，每行权重非负且和为 1，所以**单个头在输出投影 $W_O$ 之前的结果**是 value 的凸组合。开头的 `[1.5, 1]` 就是一个例子。别把这个结论套到整个 Transformer block：dropout、输出投影和残差连接都会改变它；权重本身也随输入变化，并不是固定的平均。
 
 ## 为什么除以 $\sqrt{d_k}$ {#sqrtd_k}
 
@@ -231,6 +231,8 @@ $$
 \end{gathered}
 $$
 
+单头对所有 value 通道只用一套注意力权重。把固定宽度拆成 $h$ 个头，可以在相近的投影和矩阵乘法成本下得到多套这样的关系；不过分别保存各头的注意力矩阵、启动各自的 kernel，也可能带来额外开销。下面三点说明其中的取舍。
+
 <div class="bilingual-note bilingual-intro">
   <span>逐概念双语 · CONCEPT-BY-CONCEPT</span>
   <p>下面三张卡默认中文；点 <strong>English ↻</strong> 可在原位置查看完整英文。</p>
@@ -287,7 +289,7 @@ O=AV.
 $$
 
 The main limitation is not that 512 dimensions are insufficient. It is that every
-value channel shares the same attention matrix $A$. Resolving a pronoun may require
+value channel shares the same attention matrix $A$. Resolving “she” in “Xiao Ming gave the book to Xiao Hong because she loves reading” may require
 coreference, syntactic dependency, semantic role, and local-neighborhood signals at
 the same time; one head must compress all of them into one distribution.
 
@@ -393,7 +395,7 @@ models sequentially.
 **多头不是为了把维度做大，而是在相近成本下获得多套注意力关系。**
 
 “不同表示子空间”也不要过度解释。每个头确实有独立参数，因此可以学习不同匹配
-函数；但“某个头一定负责公司语义、另一个一定负责水果语义”并不是预先设计或必然
+函数；但拿多义词“苹果”来说，“某个头一定负责公司义、另一个一定负责水果义”并不是预先设计或必然
 可解释的事实。
 
 </div>
@@ -573,7 +575,7 @@ output = F.scaled_dot_product_attention(
 | 可见位置是否相同 | 本例和 `nn.MultiheadAttention` 的布尔 mask 都是 `True` 表示屏蔽，SDPA 正好相反 |
 | 梯度是否相同 | 用相同的标量 loss 比较输入梯度；共享参数的手写与 SDPA 路径还要比较参数梯度 |
 
-完整脚本中的 `library_version` 会新建一个模块并复制参数，只用于对照；它的参数梯度不会回到原来的 `mha`。三条 PyTorch 路径覆盖了 bias、float32 / float64、逐头 mask 和梯度检查；NumPy 对照仍是无 bias 的小例子。这里都关闭 dropout，不是速度或显存测试。接口约定见 [PyTorch 2.8 MultiheadAttention](https://docs.pytorch.org/docs/2.8/generated/torch.nn.MultiheadAttention.html)。
+完整脚本中的 `library_version` 会新建一个模块并复制参数，只用于对照；它的参数梯度不会回到原来的 `mha`。仓库测试在三条 PyTorch 路径上覆盖了 bias、float32 / float64、逐头 mask 和梯度检查；NumPy 对照仍是无 bias 的小例子。这里都关闭 dropout，不是速度或显存测试。接口约定见 [PyTorch 2.8 MultiheadAttention](https://docs.pytorch.org/docs/2.8/generated/torch.nn.MultiheadAttention.html)。
 
 ## 接上 KV cache，mask 要从哪里开始？ {#cached-causal-mask}
 

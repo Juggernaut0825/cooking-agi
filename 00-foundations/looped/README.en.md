@@ -2,13 +2,13 @@
 
 [中文](README.md) · **English**
 
-> Reading time: ~3 min · Level: advanced · Last reviewed: 2026-10-10
+> Reading time: ~3 min · Level: advanced · Last reviewed: 2026-10
 
 Run a four-layer block three times: that is twelve layer evaluations with only four layers of stored weights. Each pass receives the state produced by the previous one, so the result usually changes. A looped model reuses parameters to spend more computation; it does not acquire new facts merely by looping.
 
 ## Depth and parameters normally come as a pair
 
-In an ordinary $L$-layer Transformer without parameter sharing, each layer has its own weights. Adding layers in that design increases both depth and parameters. Recurrence separates these budgets. Generating intermediate tokens or using tools can also add problem-solving computation, but those are different mechanisms.
+In an ordinary Transformer without parameter sharing, each layer has its own weights. Adding layers in that design increases both depth and parameters. Recurrence is one way to separate these budgets. Generating intermediate tokens or using tools can also add problem-solving computation, but those are different mechanisms.
 
 ## Loop the block
 

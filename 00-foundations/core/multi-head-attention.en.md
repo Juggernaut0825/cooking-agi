@@ -2,7 +2,7 @@
 
 [中文](multi-head-attention.md) · **English**
 
-> Reading time: ~15 min · Level: core · Last reviewed: 2026-10-10
+> Reading time: ~15 min · Level: core · Last reviewed: 2026-10
 
 Start with one weighted sum. Two positions supply values `[2, 0]` and `[0, 4]`. With attention weights `0.75` and `0.25`, the output is `[1.5, 1]`. The rest of attention explains where those weights come from, which positions are masked, and how several such computations are combined.
 
@@ -14,7 +14,7 @@ Each head uses its own projections to compute a weighted result, and the results
 
 ## What the attention matrix represents {#what-the-attention-matrix-represents}
 
-Start with self-attention: $Q$, $K$, and $V$ are three learned linear projections of the same input $X$. Cross-attention can instead obtain K/V from another sequence; we return to that later.
+Start with self-attention: $Q$, $K$, and $V$ are three learned linear projections of the same input $X$. Cross-attention can instead obtain K/V from another sequence; see [the vanilla Transformer](vanilla-transformer.en.md).
 
 $$
 \begin{gathered}
@@ -295,7 +295,7 @@ $$
 Standard MHA therefore has about $4d_{\text{model}}^2$ parameters across Q, K, V,
 and the output projection, independent of the head count itself. Code also usually
 performs one large projection and then reshapes to `(B, H, T, d_head)` rather than
-running eight small models in sequence — identical maths, a single GEMM.
+running eight small models in sequence — identical math, a single GEMM.
 
 ### 3. Expressivity is not a generalization guarantee {#3-expressivity-is-not-a-generalization-guarantee}
 
@@ -313,7 +313,7 @@ Therefore:
 
 “Different representation subspaces” should not be over-interpreted either. Each
 head does have independent parameters and can therefore learn a different matching
-function; but “one head must handle the company sense and another must handle the
+function; but for an ambiguous word like “apple,” “one head must handle the company sense and another must handle the
 fruit sense” is neither designed in advance nor guaranteed to be interpretable.
 
 ## The six places a from-scratch implementation goes wrong {#the-six-places-a-from-scratch-implementation-goes-wrong}
@@ -331,7 +331,7 @@ Check these six details before trying to diagnose a mistake from the final loss:
 
 **Why #1 must be that way.** The projection's output is `(B, T, d_model)`, where the `d_model` dimension holds the $h$ heads laid **end to end**. So split the last dimension into `(H, dh)` first, then move `H` forward. A direct `view(B,H,T,dh)` slices across the time dimension instead, so every "head" is a pile of fragments from unrelated positions — right shape, wrong numbers, and no error raised.
 
-**Check the mask with two scores.** Softmax of `[0, 0]` is `[0.5, 0.5]`. Allowing only the first position gives `[1, 0]` when masked before softmax. Zeroing the second weight afterwards gives `[0.5, 0]`, shrinking the output. Dividing again by the remaining weight sum is mathematically equivalent to `[1, 0]`, but that sum can underflow in finite precision. Masking before softmax avoids this issue. The teaching code rejects entirely masked rows instead of silently producing NaNs.
+**Check the mask with two scores.** Softmax of `[0, 0]` is `[0.5, 0.5]`. Allowing only the first position gives `[1, 0]` when masked before softmax. Zeroing the second weight afterwards gives `[0.5, 0]`, shrinking the output. Dividing by the remaining weight sum recovers `[1, 0]` mathematically, but that sum can underflow in finite precision. Masking before softmax avoids this issue. The teaching code rejects entirely masked rows instead of silently producing NaNs.
 
 ## Experiment: check the handwritten version against the library {#experiment-verify-three-equivalent-implementations}
 
@@ -597,7 +597,7 @@ The equations start from [Attention Is All You Need §3.2](https://arxiv.org/abs
 <details class="interview" markdown="1">
 <summary>Match, normalize, aggregate, and why multiple heads exist</summary>
 
-**Quick memory**: Q and K decide where to read; V decides what content is read. Each head learns a separate matching and transport subspace; multiple heads do not magically increase total model width.
+**Quick memory**: Q and K decide where to read; V decides what content is read. Each head uses its own projections to learn different relations; multiple heads do not simply enlarge total width.
 
 **Interview answer**
 

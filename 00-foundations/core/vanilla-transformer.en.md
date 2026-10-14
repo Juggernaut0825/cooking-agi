@@ -2,7 +2,7 @@
 
 [中文](vanilla-transformer.md) · **English**
 
-> Reading time: ~15 min · Level: core · Last reviewed: 2026-10-09
+> Reading time: ~15 min · Level: core · Last reviewed: 2026-10
 
 For translation, an encoder can read the entire source sentence at once. A decoder predicting the next word cannot look ahead at the unwritten translation. The original Transformer uses different attention paths and masks for those two conditions. Following one sentence through the encoder and decoder gives each block a concrete role.
 
@@ -20,7 +20,7 @@ architecture is still an encoder–decoder, but recurrence is removed completely
 
 Residual connections and normalization wrap those two operations. Stacking many
 layers still means repeating “go out and find information → come back and process
-it.” Remembering it this way is much lighter than memorizing the full block diagram.
+it.” This is much easier to remember than the full block diagram.
 
 ## The three attention sites ask different questions {#the-three-attention-sites-ask-different-questions}
 
@@ -269,7 +269,7 @@ s_{41}&s_{42}&s_{43}&s_{44}
 $$
 
 Since $e^{-\infty}=0$, masked positions have weight exactly 0 after softmax; position
-$i$ can read only target positions 1 through $i$. The first sublayer produces
+$i$ can read only target positions 1 through $i$. Write $Y\in\mathbb{R}^{T\times512}$ for the target-side input after embedding, positional encoding, and dropout (not the encoder-layer output $Y$ from step 2). The first sublayer produces
 
 $$H_1=\operatorname{LN}\big(Y+
 \operatorname{Dropout}(\operatorname{MaskedMHA}(Y))\big).$$
@@ -368,12 +368,12 @@ During training the true target sequence is known, so it can be shifted right as
 
 Choose a task next: [BERT](bert.en.md) uses the encoder for bidirectional pretraining and text understanding; [Decoder-only](decoder-only.en.md) expresses conditional generation, dialogue, and code as autoregressive prediction over a token stream. You need not read every model in historical order. Original configurations and weight-sharing conventions here follow [Attention Is All You Need](https://arxiv.org/abs/1706.03762).
 
-## Quick learning: one 2017 Transformer layer from end to end {#quick-learning-one-2017-transformer-layer-from-end-to-end}
+## Quick learning: the 2017 Transformer from input to next token {#quick-learning-one-2017-transformer-layer-from-end-to-end}
 
 <details class="interview" markdown="1">
 <summary>Encoder, decoder, and the boundary with modern decoder-only models</summary>
 
-**Quick memory**: an encoder is self-attention plus an FFN. A decoder adds masked self-attention and cross-attention. Residual paths and normalization wrap every sublayer.
+**Quick memory**: an encoder is self-attention plus an FFN. A decoder makes its self-attention causal (masked) and adds cross-attention. Residual paths and normalization wrap every sublayer.
 
 **Interview answer**
 
@@ -382,7 +382,7 @@ Choose a task next: [BERT](bert.en.md) uses the encoder for bidirectional pretra
 <details markdown="1">
 <summary><b>Deep dive</b>: why are both the target shift and the causal mask necessary?</summary>
 
-The shift decides that each position's input is the previous true token. The causal mask decides that this position cannot read labels farther to the right in self-attention. Shifting without masking still lets deeper attention layers peek at the future; masking without shifting hands the current position the embedding of the very token it has to predict.
+The shift decides that each position's input is the previous true token. The causal mask decides that this position cannot read labels farther to the right in self-attention. Shifting without masking lets position $t$ read the input one step to its right, already in the first self-attention layer, and that input is exactly the token it must predict; masking without shifting hands the current position the embedding of the very token it has to predict.
 
 </details>
 </details>

@@ -37,7 +37,7 @@ Place newer work next to the operation it changes: [Muon](muon.en.md) follows op
 | Predicting several positions | [Multi-token prediction](multi-token-prediction.en.md) | Align extra targets; separate training gains from generation speed |
 | Training memory use | [Precision and memory](precision-and-memory.en.md) | Account for weights, gradients, optimizer states, and activations separately |
 
-To implement these steps, use the [four PyTorch chapters](../pytorch/README.en.md). They start with storage and shapes and finish with a training loop, without requiring distributed-training experience.
+To implement these steps, use the [five PyTorch chapters](../pytorch/README.en.md). They start with storage and shapes and finish with a training loop, without requiring distributed-training experience.
 
 ## Generation: different ways of saving resources
 

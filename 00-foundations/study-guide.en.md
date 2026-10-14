@@ -4,14 +4,14 @@
 
 You don't need to read the directory from top to bottom. Start with the thing you're stuck on: the computation inside a model, how to train it, or how to tell whether it improved.
 
-This page guides the foundations-and-models route. The full [study map](../learn/README.en.md) also separates training and applications, coding exercises, and system design. Technical material no longer lives inside career reflections.
+This page covers how to read the foundations and model notes. To practice coding, study training methods, or work on system design, the [study map](../learn/README.en.md) has an entry point for each.
 
 ## Pick a route
 
 | What you want to do | Where to start | A useful checkpoint |
 | --- | --- | --- |
 | Learn language models systematically | [Learning map](README.en.md) → core mechanisms → implementations | Trace tokens to logits, identifying the input and output of each step |
-| Diagnose a model that will not learn or only fits training data | [Generalization](deep-dives/generalization.en.md) → [activations and initialization](deep-dives/activation-and-initialization.en.md) → [optimizers](deep-dives/optimizers.en.md) | Separate data, gradient, and update problems; calculate a small counterexample |
+| Diagnose a model that will not learn or only fits training data | [Generalization](deep-dives/generalization.en.md) → [activations and initialization](deep-dives/activation-and-initialization.en.md) → [optimizers](deep-dives/optimizers.en.md) | Tell implementation, optimization, and generalization problems apart, then design a small controlled comparison |
 | Understand learning from images and text | [Embeddings and similarity](core/embeddings-and-similarity.en.md) → [CLIP](../03-multimodal-learning/clip.en.md) → [Visual language models](../03-multimodal-learning/vision-to-language.en.md) | Distinguish pair scoring from answer generation, and trace both data and gradients |
 | Read a new model report | [Model-reading exercise](model-families/how-to-read.en.md) → family notes | Identify the exact version, its changes, and the experiments supporting an explanation |
 | Train or post-train models | [Feedback to objectives](../01-data-and-feedback/feedback-to-objectives.en.md) → [methods](../05-post-training/README.en.md) → [evaluation](../07-evaluation/README.en.md) | Explain what a label means, what the loss rewards, and how to catch side effects |
@@ -42,12 +42,12 @@ A dissatisfied user may reflect stale memory rather than a small model. A higher
   <div><span class="level-chip lab">03 · Recall</span><strong>Explain it in your own words</strong><p>Pick an example, explain the design, and consider a different assumption. Return to the notes wherever you get stuck.</p></div>
 </div>
 
-You don't need to memorize the wording. Explaining the assumptions and reasoning with an example of your own is a good place to start.
+You don't need to memorize the wording. If you can state the assumptions, walk through the reasoning, and give an example of your own, that's already good.
 
 ## Connect the chapters
 
 - **Foundations → model families:** understand attention before comparing why designs such as GQA change it.
-- **Data → training → evaluation:** a behavioral label may only approximate the goal. When changing the signal, check whether the old metrics can measure the intended improvement.
+- **Data → training → evaluation:** behavioral labels such as clicks or likes usually only approximate the real goal. When you change the training signal, check whether the old metrics can still measure the improvement you want.
 - **Memory → retrieval → agents:** not everything worth storing is worth retrieving; retrieved content must not become permission to act.
 - **Principles → practice → papers:** test your understanding in a small example, examine constraints in public projects, then check the scope of the original evidence.
 

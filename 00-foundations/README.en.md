@@ -2,22 +2,20 @@
 
 [中文](README.md) · **English**
 
-> Reading time: ~7 min · Type: learning map · Last reviewed: 2026-09
+> Reading time: ~7 min · Type: learning map · Last reviewed: 2026-10
 
 I have never much liked tutorials that open with the big Transformer block diagram: every box looks familiar, yet when you actually have to walk from a piece of text to the next token, it is easy to get lost somewhere in the middle.
 
-So this is not ordered by paper year, and it is in no hurry to pile up today's most fashionable components. I want to take things apart slowly along **a path you can actually walk end to end**: how text first becomes numbers, how a sequence remembers the past, how input and output align, why attention replaced recurrence, and only at the end today's decoder-only large models. Intuition first, then the mathematics, and finally a check in code.
+So this part follows the order you'd learn it in: first how text becomes numbers, then how RNNs and LSTMs handle a sequence and how Seq2Seq connects input to output, then attention and the Transformer, and finally today's decoder-only models. Examples first, then equations, then code you write yourself.
 
 <div class="curriculum-hero">
-  <div><span class="level-chip core">Core</span><strong>First know why it appeared</strong><p>Each page holds on to just the central computation, the tensor shapes, and where exactly the previous generation got stuck.</p></div>
-  <div><span class="level-chip deep">Deep dive</span><strong>Dig further when something feels off</strong><p>Derive gradients, take masks apart, and see how the training objective connects to the inference path.</p></div>
-  <div><span class="level-chip deep">Advanced</span><strong>Read model families sideways</strong><p>Not a list of brands: compare architecture, training, inference cost, and behaviour through one lens.</p></div>
-  <div><span class="level-chip lab">Lab</span><strong>Don't just trust the diagram; run it once yourself</strong><p>The same mechanism written once in pure Python / NumPy and once in PyTorch.</p></div>
+  <div><span class="level-chip core">Core</span><strong>Understand the basic idea first</strong><p>Follow the main computation and the tensor shapes, then see what problem the method solves.</p></div>
+  <div><span class="level-chip deep">Advanced</span><strong>Go further with the derivations</strong><p>Derive gradients, take masks apart, and see how the training objective connects to the inference path.</p></div>
+  <div><span class="level-chip deep">Advanced</span><strong>Read model families side by side</strong><p>Don't memorize model names; compare architecture, training, inference cost, and behavior by the same criteria.</p></div>
+  <div><span class="level-chip lab">Lab</span><strong>Then try it yourself</strong><p>The same mechanism written once in pure Python / NumPy and once in PyTorch.</p></div>
 </div>
 
-For routes across the whole collection, start with the [study and review guide](study-guide.en.md). This page focuses on language-model foundations; you don't need to finish the other areas first.
-
-If similarity or a training step still feels abstract, try [embeddings and similarity](core/embeddings-and-similarity.en.md) and [one training step](deep-dives/training-step.en.md). Then follow [CLIP → visual language models](../03-multimodal-learning/README.en.md) to see how images enter the computation.
+To see how the whole collection fits together, start with the [study and review guide](study-guide.en.md). This page covers language-model foundations; you don't need to finish the other areas first.
 
 ## One path, end to end
 
@@ -49,9 +47,11 @@ flowchart LR
   <a class="curriculum-card" href="core/decoder-only.en.md"><span class="card-step">05 · Generation</span><h3>Decoder-only</h3><p>Once the prompt and the answer sit in one sequence, why a single next-token loss is enough.</p><b>Read →</b></a>
 </div>
 
-After this level, the ideal state is not being able to recite terms. It is being able to take a blank sheet of paper and draw the whole way from text to logits, knowing why every step in between is there.
+After reading these, try drawing the computation from text to logits without notes, explaining the input and output of each step. Wherever you get stuck is where to go back.
 
 ## Beyond the main line: two advanced routes
+
+If similarity or a training step still feels fuzzy, read [embeddings and similarity](core/embeddings-and-similarity.en.md) and [one training step](deep-dives/training-step.en.md) first. To see how images join the same computation, continue with [CLIP → visual language models](../03-multimodal-learning/README.en.md).
 
 Once the main line is clear, you can continue in two directions. One goes inward into equations, gradients, and execution paths. The other goes sideways across model families to compare different solutions to the same problem. They meet again at systems cost and evaluation.
 

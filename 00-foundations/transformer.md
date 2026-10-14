@@ -2,12 +2,12 @@
 
 **中文** · [English](transformer.en.md)
 
-> 阅读时间：约 15 分钟 · 难度：入门到进阶 · 最近审阅：2026-10-09
+> 阅读时间：约 15 分钟 · 难度：入门到进阶 · 最近审阅：2026-10
 >
 > 主线读完就够用。标着 **进阶** 的折叠块是推导和边角情况，跳过不影响理解。
 
 <div class="lesson-recipe advanced">
-  <div><span>这次要拆什么</span><strong>把 Transformer 从框图拆回矩阵与 invariant</strong></div>
+  <div><span>这次要拆什么</span><strong>把 Transformer 从框图拆回矩阵运算和可以检查的性质</strong></div>
   <div><span>需要先会</span><strong>矩阵乘 · softmax · residual · causal LM</strong></div>
   <div><span>真正的主角</span><strong>Q/K/V · norm · RoPE · GQA · KV cache</strong></div>
   <div><span>最后要能证明</span><strong>实现满足因果性、位置相对性与 cache 等价性</strong></div>
@@ -101,6 +101,8 @@ def attention(q, k, v, mask=None):
     return attn @ v, attn
 ```
 
+这份代码用 `True` 表示屏蔽，要求允许位置的分数有限。softmax 前把禁止位置设为 `-inf`；设成 0 仍会分到权重。之后只把权重置零却不重新归一化，也不等价。具体例子见[多头注意力](core/multi-head-attention.md)。
+
 <details markdown="1">
 <summary><b>追问</b>：如果 $Q=K$，attention 会变成什么</summary>
 
@@ -123,7 +125,7 @@ softmax 之后一般**不再对称**，因为每一行有自己的归一化分�
 
 $$Q=XW_Q,\qquad K=XW_K,\qquad V=XW_V.$$
 
-你的直觉要分成两层：
+这个问题要分两层回答：
 
 - **单个参数值或某一维通常没有固定的人类语义。** 换一个随机种子，坐标轴和
   权重数值可以完全不同，模型仍实现相近功能。
@@ -156,8 +158,6 @@ $$Q'=QR,\qquad K'=KR^{-\top},$$
 孤立地解释某个元素如 $W_Q[17,42]$ 通常没有意义；有意义的是整个投影实现的函数、
 它对输出的因果作用，以及 Q/K/V 之间的接口约束。
 
-这份代码用 `True` 表示屏蔽，要求允许位置的分数有限。softmax 前把禁止位置设为 `-inf`；设成 0 仍会分到权重。之后只把权重置零却不重新归一化，也不等价。具体例子见[多头注意力](core/multi-head-attention.md)。
-
 ## 同一模块的三种用法：改变 Q/K/V 的来源 {#qkv}
 
 这是原论文（2017）的 encoder-decoder 结构里最该盯住的地方。`self_attn(x, x, x)` 和 `cross_attn(x, memory, memory)` 是同一个类，只是喂进去的三个张量不同：
@@ -170,7 +170,7 @@ $$Q'=QR,\qquad K'=KR^{-\top},$$
 
 ![三处注意力的 Q/K/V 来源](assets/attention-sites.svg)
 
-交叉注意力是两座塔唯一接触的地方：decoder 每生成一步，就拿当前状态当查询去 encoder 的输出里查一次。
+交叉注意力是 encoder 和 decoder 唯一交换信息的地方：decoder 每生成一步，每一层都拿当前状态当查询，去 encoder 的输出里查一次。
 
 [`code/vanilla_demo.py`](code/vanilla_demo.py) 训练模型把序列反过来，再打印交叉注意力矩阵。下面画的是直观的反向对齐示意，不是注意力必须学成的唯一答案：encoder 的每个位置本身已经混合了上下文，输出正确也不保证某个头呈反对角线。
 
@@ -187,7 +187,7 @@ $$Q'=QR,\qquad K'=KR^{-\top},$$
   ^ decoder step
 ```
 
-实际效果要看脚本中的独立生成检查，而不是只看这张图。即使一个小批次全部预测正确，也不能说明模型对任意长度或未见分布都能泛化。
+字符越密，权重越大：`@` 接近 1；第 4 步的 `#` 和 `:` 表示权重分在了相邻两个位置上。实际效果要看脚本中的独立生成检查，而不是只看这张图。即使一个小批次全部预测正确，也不能说明模型对任意长度或未见分布都能泛化。
 
 ## 多头注意力：为什么不是一个大注意力 {#_4}
 
@@ -254,7 +254,7 @@ $$\langle R_m\mathbf{q},\; R_n\mathbf{k}\rangle
 
 $m$ 和 $n$ 在这项旋转恒等式里只以差出现，但这不是长上下文泛化保证。更长输入会带来未训练过的相位、距离和注意力分布，还需要专门的长度扩展与评估。
 
-也是为什么不能只旋转 $\mathbf{q}$ 不旋转 $\mathbf{k}$：那样 $R_m^\top$ 没有配对的 $R_n$，绝对位置就消不掉了。
+这也是为什么不能只旋转 $\mathbf{q}$ 不旋转 $\mathbf{k}$：那样 $R_m^\top$ 没有配对的 $R_n$，绝对位置就消不掉了。
 
 </details>
 
@@ -327,7 +327,7 @@ $$2 \cdot n_{\text{layer}} \cdot n_{\text{kv}} \cdot d_{\text{head}} \cdot T \cd
   <strong>完成这一章后，至少要能解释四个关键问题：</strong>
   <ol>
     <li>为什么 attention score 要除以 $\sqrt{d_k}$？</li>
-    <li>pre-norm 改变了哪条梯度高速路？</li>
+    <li>pre-norm 把 norm 挪到残差分支里以后，梯度多了哪条直通的路径？</li>
     <li>RoPE 的相对性为什么要求同时旋转 Q 和 K？</li>
     <li>怎样证明 KV cache 是正确实现，而不是只让生成结果“看起来没坏”？</li>
   </ol>
@@ -373,7 +373,7 @@ $$
 ## 参考论文 {#_9}
 
 - [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — 原版
-- [On Layer Normalization in the Transformer Architecture](https://arxiv.org/abs/2002.04745) — pre-norm 为什么能去掉 warmup
+- [On Layer Normalization in the Transformer Architecture](https://arxiv.org/abs/2002.04745) — Post-LN 为什么依赖 warmup；在论文的设置下，Pre-LN 可以不用 warmup
 - [RoFormer](https://arxiv.org/abs/2104.09864) — RoPE
 - [GQA](https://arxiv.org/abs/2305.13245) — 分组查询注意力
 - [GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202) — SwiGLU

@@ -25,7 +25,7 @@ flowchart LR
     B --> C["Pretraining data and objective"]
     C --> D["Post-training"]
     D --> E["Inference and serving cost"]
-    E --> F["Behaviour and evaluation"]
+    E --> F["Behavior and evaluation"]
     F -. new evidence .-> A
 ```
 
@@ -35,10 +35,10 @@ flowchart LR
 
 | Lens | Question | Common trap |
 | --- | --- | --- |
-| Objective | Does it prioritise capability, cost, length, multimodality, or deployment? | Explaining every change as “stronger” |
-| Architecture | What changed in attention, the FFN, norms, position encoding, or modality interface? | Memorising components without tracing tensors and data flow |
+| Objective | Does it prioritize capability, cost, length, multimodality, or deployment? | Explaining every change as “stronger” |
+| Architecture | What changed in attention, the FFN, norms, position encoding, or modality interface? | Memorizing components without tracing tensors and data flow |
 | Training | How do data, objective, scale, and curriculum work together? | Mixing architecture gains with data gains |
-| Post-training | Which behaviours come from SFT, preference optimisation, RL, or distillation? | Explaining chat-model behaviour from the base architecture |
+| Post-training | Which behaviors come from SFT, preference optimization, RL, or distillation? | Explaining chat-model behavior from the base architecture |
 | Systems | What is the bill for KV cache, active parameters, communication, and latency? | Looking at total parameters instead of per-token cost |
 | Evidence | Which claims have ablations, outside evaluation, or reproducible results? | Replacing mechanism evidence with one leaderboard |
 

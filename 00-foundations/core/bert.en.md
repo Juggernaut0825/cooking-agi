@@ -187,7 +187,7 @@ Suppose a batch already has 150 selected targets. About 120 take the `[MASK]` br
 <details markdown="1">
 <summary>One detail to check in the original 15% calculation</summary>
 
-The code calculates the prediction count from unpadded `len(tokens)`, including `[CLS]` and `[SEP]`. It rounds the count, requests at least one, and caps it at `max_predictions_per_seq`, then samples candidates that exclude structural tokens. This is not independent 15% selection of each ordinary position. For eight ordinary tokens plus `[CLS]` and `[SEP]`, length is 10: with a sufficient cap, `round(10 × 0.15)` requests two targets, not a mandatory 1.2.
+The code calculates the prediction count from unpadded `len(tokens)`, including `[CLS]` and `[SEP]`. It rounds the count, requests at least one, and caps it at `max_predictions_per_seq`, then samples candidates that exclude structural tokens. This is not independent 15% selection of each ordinary position. For eight ordinary tokens plus `[CLS]` and `[SEP]`, length is 10: with a sufficient cap, `round(10 × 0.15)` requests exactly two targets every time; selecting each of the eight ordinary positions independently at 15% would give 1.2 on average, with the count varying from sample to sample.
 
 The repository later added optional whole-word masking, grouping `##` subwords for selection. That option is not the recipe of every original checkpoint. Fix the version, sampling rules, and random state when reproducing a pipeline.
 

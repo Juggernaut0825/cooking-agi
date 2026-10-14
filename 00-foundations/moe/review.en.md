@@ -2,7 +2,7 @@
 
 [中文](review.md) · **English**
 
-> Reading time: ~4 min · Level: advanced · Last reviewed: 2026-10-09
+> Reading time: ~4 min · Level: advanced · Last reviewed: 2026-10
 
 ## Interview questions
 
@@ -23,7 +23,7 @@ A common router scores experts with a linear layer, then selects top-k. Mixtral 
 <details class="interview" markdown="1">
 <summary>Why is load balancing needed? Why is the Switch auxiliary loss f_i times P_i?</summary>
 
-More tokens provide more training opportunities, potentially reinforcing imbalance and leaving devices waiting. Switch uses $\alpha N \sum f_i P_i$: assignment fraction $f_i$ is nondifferentiable, while mean router probability $P_i$ is differentiable. Gradients flow through $P_i$. The value is $\alpha$ at perfect balance, not a strict lower bound over all routing distributions.
+An expert that receives more tokens gets more training and can become even more likely to be chosen; this self-reinforcing imbalance can also leave devices waiting. Switch uses $\alpha N \sum f_i P_i$: assignment fraction $f_i$ is nondifferentiable, while mean router probability $P_i$ is differentiable. Gradients flow through $P_i$. The value is $\alpha$ at perfect balance, not a strict lower bound over all routing distributions.
 
 </details>
 
@@ -61,7 +61,7 @@ Sparse activation does not automatically shrink weight storage by k/N. All param
   <strong>You understand this if you can explain:</strong>
   <ol>
     <li>why a dense model's parameter count and its compute per token are tied, and how MoE unties them;</li>
-    <li>what the normalisation after top-k runs over, and whether an unchosen expert gets any gradient from this token;</li>
+    <li>what the normalization after top-k runs over, and whether an unchosen expert gets any gradient from this token;</li>
     <li>what happens without load balancing, and what an auxiliary loss and a bias-only fix each cost;</li>
     <li>where tokens over capacity end up;</li>
     <li>why MoE saves compute rather than memory, and how batch size changes the arithmetic of decoding.</li>

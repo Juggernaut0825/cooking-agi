@@ -187,7 +187,7 @@ MLM（masked language modeling）先选预测位置，再决定如何扰动。�
 <details markdown="1">
 <summary>读原始代码时，15% 的分母要留意一下</summary>
 
-代码按尚未 padding 的 `len(tokens)` 算预测数量，这个长度包含 `[CLS]` / `[SEP]`；数量会取整、至少取 1，并受 `max_predictions_per_seq` 限制。随后从排除了结构 token 的候选位置中选择。因此它并不等于“每个普通位置独立以 15% 概率入选”。例如 8 个普通 token 加上 `[CLS]` / `[SEP]`，长度是 10；上限允许时，`round(10 × 0.15)` 得到 2 个目标，而不是强制 1.2 个。
+代码按尚未 padding 的 `len(tokens)` 算预测数量，这个长度包含 `[CLS]` / `[SEP]`；数量会取整、至少取 1，并受 `max_predictions_per_seq` 限制。随后从排除了结构 token 的候选位置中选择。因此它并不等于“每个普通位置独立以 15% 概率入选”。例如 8 个普通 token 加上 `[CLS]` / `[SEP]`，长度是 10；上限允许时，`round(10 × 0.15)` 每次都得到 2 个目标；如果每个普通位置各自以 15% 独立入选，8 个位置平均只有 1.2 个，而且每次的数量会波动。
 
 仓库后来还加入了 whole-word masking 选项，按 `##` 子词组成的组选择；不要把这个可选分支当作原版所有 checkpoint 的训练方式。实际复现时，应固定版本、采样规则和随机状态。
 

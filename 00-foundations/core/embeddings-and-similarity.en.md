@@ -2,7 +2,7 @@
 
 [中文](embeddings-and-similarity.md) · **English**
 
-> Reading time: about 6 minutes · Level: introductory · Last reviewed: 2026-10-09
+> Reading time: about 6 minutes · Level: introductory · Last reviewed: 2026-10
 
 “Turn text into a vector” skips an important question: why should a list of numbers mean anything? The answer lies in training—which things the model is rewarded for bringing together or separating.
 
@@ -56,7 +56,7 @@ Subtract the largest logit before exponentiating to avoid overflow without chang
 
 Suppose training pairs an image with one caption among several candidates. A contrastive objective increases the paired caption's relative probability. Gradients update the encoders to produce vectors that help with this objective. [InfoNCE](https://arxiv.org/abs/1807.03748) is a classic contrastive formulation.
 
-“Semantic similarity” is not a single target: describing the same object, answering the same question, and appealing to the same person are different relationships. Different data and objectives can induce different useful distances.
+“Semantic similarity” is not the only possible target: describing the same object, answering the same question, and appealing to the same person are different relationships. Different data and objectives can induce different useful distances.
 
 ## Check it yourself
 
@@ -66,6 +66,6 @@ The accompanying [pure-Python lab](../code/multimodal_math.py) computes dot prod
 python 00-foundations/code/multimodal_math.py
 ```
 
-Predict before running: what happens to dot product and cosine if $a$ is multiplied by 10? What happens to softmax if every logit increases by 100?
+Predict, then edit the numbers near the end of the script to check: if $a$ changes from `[2, 2]` to `[20, 20]`, what happens to the dot product and cosine? If you add 100 to every entry of `SCORES[0]`, what happens to the printed probabilities?
 
 Continue with [CLIP](../../03-multimodal-learning/clip.en.md): two encoders learn to match images and text in a shared space, rather than starting with one mixed input sequence.

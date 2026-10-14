@@ -2,7 +2,7 @@
 
 [中文](router.md) · **English**
 
-> Reading time: ~11 min · Level: advanced · Last reviewed: 2026-10-10
+> Reading time: ~11 min · Level: advanced · Last reviewed: 2026-10
 
 A token entering an MoE layer does not run through every expert. The router selects a few, then combines their outputs with learned weights. Selecting the largest scores is only the beginning: a token can take several branches, their results must return to the right position, and gradients must follow those paths back.
 
@@ -20,7 +20,7 @@ One common rule keeps the $k$ highest scores and normalizes over them to obtain 
 
 $$g_i = \frac{e^{s_i}}{\sum_{j \in \mathrm{TopK}} e^{s_j}}, \qquad i \in \mathrm{TopK}$$
 
-This is the same as a softmax over all $N$ followed by renormalising over the ones kept. Mixtral and gpt-oss do exactly this; DeepSeek-V3 scores with a sigmoid instead and normalises over the selected experts.
+This is the same as a softmax over all $N$ followed by renormalizing over the ones kept. Mixtral and gpt-oss do exactly this; DeepSeek-V3 scores with a sigmoid instead and normalizes over the selected experts.
 
 For scores `[2, 1, 0]`, keeping and renormalizing the top two gives weights about `[0.731, 0.269]`. This is not universal: top-1 in [Switch Transformer](https://www.jmlr.org/papers/v23/21-0998.html) keeps the selected probability from the full softmax rather than renormalizing it to 1. That gate preserves a task-gradient path to the router. The figure illustrates renormalization over selected experts.
 
@@ -33,7 +33,7 @@ These values are often called probabilities, but **top-k is not a random draw**.
 - **Top-1**: Switch Transformer. One expert per token, using less expert compute when other factors are equal.
 - **Top-2**: GShard, Mixtral. Two expert outputs can contribute, providing another path at additional cost.
 - **Top-4**: gpt-oss.
-- **Top-8**: DeepSeek-V3, Qwen3. Their experts are cut finer (next-but-one note), so each token picks more of them.
+- **Top-8**: DeepSeek-V3, Qwen3. Their experts are cut finer (see [fine-grained experts](fine-grained-and-shared.en.md)), so each token picks more of them.
 
 At fixed expert width, larger $k$ usually means more expert compute; cross-device traffic also depends on placement. Across models, top-8 with small experts need not cost more than top-2 with wide experts, or be more stable.
 

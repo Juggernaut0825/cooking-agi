@@ -2,7 +2,7 @@
 
 [中文](recurrent-dynamics.md) · **English**
 
-> Reading time: ~12 min · Level: advanced · Last reviewed: 2026-10-10
+> Reading time: ~12 min · Level: advanced · Last reviewed: 2026-10
 
 First replace each matrix with a scalar. Multiplying a gradient by 0.9 for 50 steps leaves about 0.005 of its original size; multiplying by 1.1 gives about 117 times the original. An RNN uses matrix products, but this calculation shows why modest local changes can become a serious optimization problem across a long sequence.
 
@@ -13,7 +13,7 @@ The state update of a vanilla RNN is $h_t=f(a_t)$, where $a_t=W_hh_{t-1}+W_xx_t+
 $$J_k=\frac{\partial h_k}{\partial h_{k-1}}=\operatorname{diag}\!\big(f'(a_k)\big)W_h,
 \qquad \frac{\partial h_T}{\partial h_t}=J_TJ_{T-1}\cdots J_{t+1}.$$
 
-These are column vectors. The earliest change passes through the rightmost $J_{t+1}$ first, then moves left. Matrices generally do not commute; reversing the order changes the calculation, even though a scalar example would hide the mistake.
+States are column vectors here. The earliest change passes through the rightmost $J_{t+1}$ first, then moves left. Matrices generally do not commute; reversing the order changes the calculation, even though a scalar example would hide the mistake.
 
 If every Jacobian operator norm is bounded by one common $c<1$, the product norm is bounded by $c^{T-t}$. A largest singular value above 1 at one step does not guarantee explosion: gradient directions and later matrices matter. Long dependencies therefore involve both capacity and a long optimization path. Weights are shared, but Jacobians change with the input and state; they are not one fixed matrix.
 
@@ -74,7 +74,7 @@ The core update of the cell state:
 
 $$c_t=f_t\odot c_{t-1}+i_t\odot\tilde c_t$$
 
-Along the direct cell path with gate values held fixed, the elementwise derivative is below. The full derivative also includes paths through the hidden state and gates:
+Along the direct cell path with gate values held fixed, the elementwise derivative is as follows (this is not the full derivative, which also includes paths from $c_{t-1}$ through $h_{t-1}$ into the gates and the candidate $\tilde c_t$):
 
 $$\left.\frac{\partial c_t}{\partial c_{t-1}}\right|_{\text{fixed gates}}
 =\operatorname{diag}(f_t).$$
@@ -96,18 +96,18 @@ The model can learn $f_t$ close to 1, so that the gradient need not pass through
 3. Shuffle the early key tokens: does the output really change?
 4. Is the forget gate persistently near 1? Inspect the input gate and candidate too; the forget gate alone does not establish pure state copying.
 
-## GRU: One State, Not Merely One Fewer LSTM Gate {#gru}
+## GRU: one state, not merely one fewer LSTM gate {#gru}
 
 A GRU maintains only $h_t$. A reset gate $r_t$ affects the candidate, while an update gate $z_t$ mixes the old state and candidate. In PyTorch's convention:
 
 $$n_t=\tanh(W_{in}x_t+b_{in}+r_t\odot(W_{hn}h_{t-1}+b_{hn})),\qquad
 h_t=(1-z_t)\odot n_t+z_t\odot h_{t-1}.$$
 
-Larger $z_t$ retains more old state; some texts define it in the opposite direction. With fixed gates, $h_{t-1}=0.8,n_t=-0.2,z_t=0.75$ gives $h_t=0.55$. The total derivative also passes through the gate and candidate, so it is not simply $z_t$.
+Larger $z_t$ retains more old state; some texts define it in the opposite direction. With fixed gates, $h_{t-1}=0.8,n_t=-0.2,z_t=0.75$ gives $h_t=0.55$. Along the direct $z_t\odot h_{t-1}$ path alone, the derivative with respect to $h_{t-1}$ is $\operatorname{diag}(z_t)$; the total derivative also passes through the gates and candidate, so it is not simply $z_t$.
 
 Implementation detail: $W(r\odot h)$ generally differs from $r\odot(Wh)$. For $h=[1,2],r=[1,0],W=[[1,1],[1,1]]$, they give `[1,1]` and `[3,0]`. This reset-placement difference exists between the original GRU and PyTorch; check it when transferring checkpoints. The [PyTorch 2.8 documentation](https://docs.pytorch.org/docs/2.8/generated/torch.nn.GRU.html) gives both formulas.
 
-At equal width, a GRU typically has one fewer gate projection than a standard LSTM. Quality and speed still depend on task, sequence length, and kernels. Both recur through time; an LSTM's more direct cell-state path does not solve every long-range learning problem.
+At equal width, a GRU typically has one fewer gate projection than a standard LSTM. Quality and speed still depend on task, sequence length, and kernels. Both recur through time and both have a gated additive path (the LSTM's $f_t\odot c_{t-1}$, the GRU's $z_t\odot h_{t-1}$); neither solves every long-range learning problem.
 
 The corresponding experiment is in [`../code/sequence_torch.py`](../code/sequence_torch.py).
 
@@ -127,7 +127,7 @@ The corresponding experiment is in [`../code/sequence_torch.py`](../code/sequenc
 <details class="interview" markdown="1">
 <summary>BPTT, Jacobian products, and the LSTM additive path</summary>
 
-**Quick memory**: a long-range dependency in an RNN passes through a product of Jacobians. Clipping can only stop explosion; it cannot recover gradients that have already vanished. An LSTM shortens the effective optimization path with a near-identity cell-state path.
+**Quick memory**: a long-range dependency in an RNN passes through a product of Jacobians. Clipping can only stop explosion; it cannot recover gradients that have already vanished. When the forget gate is near 1, an LSTM's cell-state path is close to identity, so gradients attenuate less per step; the number of time steps is not reduced.
 
 **Interview answer**
 

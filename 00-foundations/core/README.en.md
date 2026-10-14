@@ -9,8 +9,9 @@ After each note, try following one sentence through the computation. Explaining 
 1. [Tokenization](tokenization.en.md): split text into units, assign IDs, then map them to vectors the model can compute with.
 2. [Recurrent networks: RNN and LSTM](recurrent-models.en.md): update a state as the input arrives; LSTM gates control what to keep and forget.
 3. [Sequence-to-sequence (Seq2Seq)](seq2seq.en.md): encode the input, then generate the output; attention lets each step revisit relevant inputs.
-4. [Vanilla Transformer](vanilla-transformer.en.md): replace recurrent state updates with attention between positions.
-5. After the Transformer, choose a task: [BERT](bert.en.md) restores hidden tokens using both contexts and fine-tunes for tasks such as classification; [Decoder-only](decoder-only.en.md) generates from a prefix, one token at a time.
+4. [Multi-head attention](multi-head-attention.en.md), [residual connections](residual-connections.en.md), and [normalization](normalization.en.md): take the Transformer apart first—how attention reads across positions, and how residuals and normalization keep deep networks trainable.
+5. [Vanilla Transformer](vanilla-transformer.en.md): replace recurrent state updates with attention between positions.
+6. After the Transformer, choose a task: [BERT](bert.en.md) restores hidden tokens using both contexts and fine-tunes for tasks such as classification; [Decoder-only](decoder-only.en.md) generates from a prefix, one token at a time.
 
 ```mermaid
 flowchart LR
