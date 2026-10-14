@@ -43,7 +43,7 @@ If two coordinates have gradients 1 and 100, a common learning rate gives the se
 
 A common AdaGrad denominator is $\sqrt{s_t}+\epsilon$. A coordinate with a smaller accumulator can receive a larger effective step, but update frequency and accumulated squared magnitude are not identical. See the [AdaGrad paper](https://www.jmlr.org/papers/v12/duchi11a.html).
 
-AdaDelta also maintains $u_t=\rho u_{t-1}+(1-\rho)\Delta_t^2$ and forms
+AdaDelta uses the RMSProp-style squared-gradient EMA for $s_t$ (not AdaGrad's running sum just above) and also maintains $u_t=\rho u_{t-1}+(1-\rho)\Delta_t^2$, forming
 
 $$\Delta_t=-\frac{\sqrt{u_{t-1}+\epsilon}}{\sqrt{s_t+\epsilon}}g_t.$$
 

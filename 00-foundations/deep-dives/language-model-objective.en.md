@@ -2,7 +2,7 @@
 
 [中文](language-model-objective.md) · **English**
 
-> Reading time: ~10 min · Level: advanced · Last reviewed: 2026-08
+> Reading time: ~10 min · Level: advanced · Last reviewed: 2026-10
 
 One answer has 20 valid tokens and another has 200. Averaging over all tokens gives the second answer ten times as many loss terms. Averaging within each answer first gives the answers equal weight. Before changing any architecture, the reduction already changes whose examples dominate learning.
 
@@ -21,13 +21,13 @@ The only difference is whether the future is known. In training the whole ground
 | Main bottleneck | compute, activation memory | memory bandwidth, cache, number of serial steps |
 | Sources of error | data and objective | additionally, sampling and error accumulation |
 
-## Dissection one: cross-entropy does not decide “what matters” for you {#dissection-one-cross-entropy-does-not-decide-what-matters-for-you}
+## Part 1: cross-entropy does not decide “what matters” for you {#dissection-one-cross-entropy-does-not-decide-what-matters-for-you}
 
 The loss at a single position:
 
 $$\ell_t=-\log p_\theta(y_t\mid x_{\le t})$$
 
-The gradient with respect to the logits is still $p-y$; the formula is clean. But once all positions are summed, frequent tokens and long samples naturally hold more “votes”. So data mixing, sample weighting, and loss masking are not leftovers in the corner of a training script — they are what defines whom the model should actually care about.
+Here $y_t=x_{t+1}$ is the true token after position $t$. The gradient with respect to the logits is $p-e_{y_t}$, where $e_{y_t}$ is the one-hot vector for $y_t$; the formula is clean. But once all positions are summed, frequent tokens and long samples naturally hold more “votes”. So data mixing, sample weighting, and loss masking are not leftovers in the corner of a training script — they are what defines whom the model should actually care about.
 
 Perplexity is the exponential of the average token negative log-likelihood:
 
@@ -35,18 +35,18 @@ $$\text{PPL}=\exp\!\left(\frac{1}{N}\sum_t \ell_t\right)$$
 
 Different tokenizers have different token units, so perplexity cannot be compared directly across them.
 
-## Dissection two: training uses the true prefix; generation depends on the model's own output {#dissection-two-training-uses-the-true-prefix-generation-depends-on-the-models-own-output}
+## Part 2: training uses the true prefix; generation depends on the model's own output {#dissection-two-training-uses-the-true-prefix-generation-depends-on-the-models-own-output}
 
-In training the model always predicts on top of the true prefix; in generation it must continue from its own output. A low-probability error at one step can carry the subsequent context into a region that the training data rarely covers.
+In training the model always predicts on top of the true prefix (teacher forcing); in generation it must continue from its own output. This mismatch is commonly called exposure bias; see [Seq2Seq](../core/seq2seq.en.md) for a worked example. A low-probability error at one step can carry the subsequent context into a region that the training data rarely covers.
 
 It is very easy here to say, by reflex, “then use RL”. I hold off first and check where the problem actually comes from:
 
 1. the training data does not cover the target behavior;
 2. the loss mask or the template is wrong;
-3. the sampling strategy is unsuitable;
+3. the sampling strategy is unsuitable (to tell 1 from 3, score a reference answer: a low log-likelihood suggests training never covered it; a reasonable likelihood with bad samples points to temperature, top-p, and similar settings);
 4. a long-horizon objective cannot be expressed by per-token likelihood.
 
-Only the fourth category truly points to a sequence-level preference or an RL objective.
+The fourth category points most directly to a sequence-level preference or an RL objective; if the problem is exactly that the model's own outputs carry the context away from the training distribution, training on the model's own prefixes (on-policy data, RL, and similar) is also worth considering.
 
 ## The correctness floor: a cache is not “fine as long as it runs”; it must be equivalent {#the-correctness-floor-a-cache-is-not-fine-as-long-as-it-runs-it-must-be-equivalent}
 
@@ -62,7 +62,7 @@ Incremental decoding must be equivalent to a one-shot forward pass within numeri
 
 ## What post-training actually changes {#what-post-training-actually-changes}
 
-SFT, preference learning, and RL are not a separate theory of models. On the same autoregressive distribution they change: where the training samples come from, which tokens count toward the loss, how different outputs are compared, and how the return is assigned across a whole trajectory.
+SFT, preference learning, and RL do not switch to a different kind of model. On the same autoregressive distribution they change: where the training samples come from, which tokens count toward the loss, how different outputs are compared, and how the return is assigned across a whole trajectory.
 
 Continue with [Post-Training](../../05-post-training/README.en.md).
 

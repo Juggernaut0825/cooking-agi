@@ -78,7 +78,7 @@ HITL 的关键不是模型置信度低就问人，而是同时看**出错概率�
 用户拒绝或确认超时 → 不发送，记录原因
 ```
 
-这只是状态约束，不是发送实现。恢复暂停的工作流也不等于“从下一行只执行一次”：例如 [LangGraph 的 interrupt](https://docs.langchain.com/oss/python/langgraph/interrupts#side-effects-called-before-interrupt-must-be-idempotent) 恢复时会从节点开头重跑。待批准的外部写操作要放在有效批准之后，重试仍要遵守工具的幂等约定。
+这只是状态约束，不是发送实现。恢复暂停的工作流也不一定等于“从下一行只执行一次”：例如 [LangGraph 的 interrupt](https://docs.langchain.com/oss/python/langgraph/interrupts#side-effects-called-before-interrupt-must-be-idempotent) 恢复时会从节点开头重跑。待批准的外部写操作要放在有效批准之后，重试仍要遵守工具的幂等约定。
 
 ### 事后抽查 {#_9}
 

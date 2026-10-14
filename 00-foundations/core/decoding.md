@@ -85,7 +85,7 @@ Temperature → TopK → TopP
 | 1.0 | 5 | 5 |
 | 1.5 | **6** | 5 |
 
-顺序颠倒之后，同样的参数给出的候选池不一样。$T=1$ 时两者恰好相等，所以只在默认温度下测是发现不了这个差别的。
+顺序颠倒之后，同样的参数给出的候选池不一样。$T=1$ 时温度不改变分布，两者必然相等，所以只在默认温度下测是发现不了这个差别的。
 
 比较配置时，把 temperature 和 top-p 一起记录。固定顺序后再调参数，才能分清变化来自分布变平，还是候选被截掉。
 
@@ -271,7 +271,7 @@ top-k 固定保留 $k$ 个候选；top-p 保留累积概率刚好达到 $p$ 的�
 ## 继续阅读 {#_7}
 
 - [Decoder-only：自回归生成](decoder-only.md)：这些分布是怎么一步步产生的
-- [RLHF 的三个阶段](../../05-post-training/rlhf/)：rollout 采样参数为什么会影响梯度
+- [旧回答还能拿来训练吗](../../05-post-training/rlhf/on-off-policy.md)：temperature、top-p 怎样改变 rollout 的行为分布，log-prob 该记录哪一个
 
 ## 快速学习：模型概率与 decoding policy 是两层 {#decoding-policy}
 

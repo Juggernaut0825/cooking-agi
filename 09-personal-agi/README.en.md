@@ -6,7 +6,7 @@
 
 Here, Personal AGI names an aspiration for a personal assistant, not a claim that general intelligence has been achieved. Through long-term interaction, it would learn how to help you, ask when uncertain, and accept corrections—not just remember your name.
 
-## Start with a recommendation that misunderstood you
+## Start with planning a trip
 
 You tell the model: “Help me plan next month's trip.”
 
@@ -18,11 +18,11 @@ An ordinary assistant may handle only that one sentence. Personal AGI should als
 - which of these are only past preferences and which still hold;
 - which information is uncertain and should be checked with you first.
 
-The real value is not “remembering more.” It is **using the right understanding at the right time**.
+The real value is not “remembering more.” It is **knowing what information this task needs and which earlier judgments still apply**.
 
 ## How it differs from ordinary personalization
 
-Click prediction is a common personalization task, but personalization can also consider satisfaction, task completion, and long-term goals. Here, the focus is how an assistant could use that understanding across different tasks.
+Click prediction is a common personalization task, but personalization can also consider satisfaction, task completion, and long-term goals. Here, the focus is how an assistant could use its understanding of the user across different tasks.
 
 Personal AGI wants to go further and handle:
 

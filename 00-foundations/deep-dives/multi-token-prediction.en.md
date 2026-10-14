@@ -135,7 +135,7 @@ For a draft sequence, a causal target forward evaluates the conditional distribu
 
 Use **hypothetical timings**, not benchmark results: ordinary decoding takes 10 ms per token; drafting plus verification takes 18 ms per round and emits three final tokens on average. That is 6 ms per token, about 1.67× faster. If it emits only one, it costs 18 ms per token and is slower.
 
-Count accepted drafts plus any token emitted on rejection or full acceptance. Include sampling, cache handling, and scheduling in timing. A small module forward and a longer target verification do not have equal costs, so counting both as one step does not establish a $K/2$ speedup.
+Count accepted drafts plus any token emitted on rejection or full acceptance. Include sampling, cache handling, and scheduling in timing. A small module forward and a longer target verification do not have equal costs, so counting both as one step, then claiming a $K/2$ speedup from “$K$ tokens per two steps,” is not justified.
 
 ## Establish the benefit you actually want
 

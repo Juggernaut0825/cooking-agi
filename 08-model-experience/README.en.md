@@ -67,7 +67,7 @@ Start with a fictional travel timeline rather than simply asking, “Do you reme
 
 Start each test trajectory with independent state, advance in time, and expose only information known at that point; future corrections must not enter memory early. Hold the model, tools, and budget fixed when comparing versions with and without memory. Include tasks that need no history to detect interference from old preferences. See the [memory lifecycle](../02-memory/memory-lifecycle.en.md) for read and deletion mechanisms.
 
-These are proposed tests, not demonstrated improvements. Synthetic replay can expose mechanism failures, but cannot establish satisfaction weeks into real use. A real-use comparison can randomly assign users to groups, keep assignments stable for the observation period, and report dropouts and missing feedback, rather than only satisfied users who remain. [LongMemEval v2](https://arxiv.org/html/2410.10813v2#S3) offers tests of updates, temporal reasoning, and abstention; its QA scores do not replace this longitudinal experience evaluation.
+These are proposed tests, not demonstrated improvements. Synthetic replay can expose mechanism failures, but cannot establish satisfaction weeks into real use. A real-use comparison can randomly assign users to groups, keep assignments stable for the observation period, and report dropouts and missing feedback, rather than only satisfied users who remain. [LongMemEval (arXiv v2, Section 3)](https://arxiv.org/html/2410.10813v2#S3) offers tests of updates, temporal reasoning, and abstention; its QA scores do not replace this longitudinal experience evaluation.
 
 ## How offline metrics connect to experience
 
@@ -88,13 +88,13 @@ These are not simply metrics to maximize or minimize. Fewer corrections may mean
 
 - [Personal AGI](../09-personal-agi/README.en.md) defines the goal of the long-term relationship.
 - [Representation and memory](../02-memory/README.en.md) decides how the system maintains continuity.
-- [Search](../04-search/README.en.md) decides what information space the model can offer.
+- [Search](../04-search/README.en.md) explains how the model finds the information it needs.
 - [Evaluation](../07-evaluation/README.en.md) breaks subjective experience into evidence that can be verified.
 - [Human-in-the-Loop](../06-systems/human-in-the-loop.en.md) provides the mechanisms for control, escalation, and correction.
 
 ## Reference papers
 
-These works study long-context use and preference training, not proof of improved longitudinal personalization.
+These works study long-context use and preference training; they are not evidence that long-term personalization has improved.
 
 - [Lost in the Middle](https://arxiv.org/abs/2307.03172v1)
 - [InstructGPT](https://arxiv.org/abs/2203.02155v1)

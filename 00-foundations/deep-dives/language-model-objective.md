@@ -2,7 +2,7 @@
 
 **中文** · [English](language-model-objective.en.md)
 
-> 阅读时间：约 10 分钟 · 难度：进阶 · 最近审阅：2026-08
+> 阅读时间：约 10 分钟 · 难度：进阶 · 最近审阅：2026-10
 
 一条答案有 20 个有效 token，另一条有 200 个。如果 loss 按所有 token 平均，后者就贡献十倍的位置数；如果先分别求平均再按样本平均，两条答案权重一样。还没有换模型，“平均”怎么做，就已经改变了模型主要向谁学习。
 
@@ -29,7 +29,7 @@ $$p_\theta(x_{1:T})=\prod_{t=1}^{T}p_\theta(x_t\mid x_{<t})$$
 
 $$\ell_t=-\log p_\theta(y_t\mid x_{\le t})$$
 
-对 logits 的梯度仍是 $p-y$，公式很干净。但把所有位置加起来以后，频繁 token 和长样本天然拥有更多“投票权”。所以数据混合、sample weighting 与 loss masking 不是训练脚本边角料——它们就在定义模型到底该重视谁。
+这里 $y_t=x_{t+1}$ 是位置 $t$ 之后的真实 token。对 logits 的梯度是 $p-e_{y_t}$（$e_{y_t}$ 是 $y_t$ 的 one-hot 向量），公式很干净。但把所有位置加起来以后，频繁 token 和长样本天然拥有更多“投票权”。所以数据混合、sample weighting 与 loss masking 不是训练脚本边角料——它们就在定义模型到底该重视谁。
 
 Perplexity 是平均 token negative log-likelihood 的指数：
 
@@ -39,16 +39,16 @@ $$\text{PPL}=\exp\!\left(\frac{1}{N}\sum_t \ell_t\right)$$
 
 ## 拆解二：训练使用真实前缀，生成依赖自身输出 {#_3}
 
-训练时模型总在真实前缀上预测；生成时它必须在自己的输出上继续。某一步的小概率错误可能把后续上下文带到训练数据很少覆盖的区域。
+训练时模型总在真实前缀上预测（teacher forcing）；生成时它必须在自己的输出上继续。这种错位常被称为 exposure bias，例子见 [Seq2Seq](../core/seq2seq.md)。某一步的小概率错误可能把后续上下文带到训练数据很少覆盖的区域。
 
 这里很容易条件反射地说“那就上 RL”。我会先忍一下，检查问题到底来自：
 
 1. 训练数据没覆盖目标行为；
 2. loss mask 或模板错误；
-3. sampling 策略不合适；
+3. sampling 策略不合适（区分 1 和 3：让模型给参考答案打分；参考答案的 log-likelihood 很低，多半是训练没覆盖；概率不低、采样结果却差，再查 temperature、top-p 等设置）；
 4. 长程目标无法由逐 token likelihood 表达。
 
-只有第 4 类才真正指向 sequence-level preference 或 RL objective。
+第 4 类最直接指向 sequence-level preference 或 RL objective；如果问题正是模型自己的输出把上下文带离训练分布，在模型自己生成的前缀上训练（on-policy 数据、RL 等）也值得考虑。
 
 ## 正确性底线：Cache 不是“能跑就行”，它必须等价 {#cache}
 
@@ -64,7 +64,7 @@ $$\text{PPL}=\exp\!\left(\frac{1}{N}\sum_t \ell_t\right)$$
 
 ## Post-Training 到底改变了什么 {#post-training}
 
-SFT、preference learning 与 RL 并不是另一套模型学。它们在同一个自回归分布上改变：训练样本来自哪里、哪些 token 计入 loss、不同输出如何被比较、回报如何分配给整条 trajectory。
+SFT、preference learning 与 RL 并没有换一种模型。它们在同一个自回归分布上改变：训练样本来自哪里、哪些 token 计入 loss、不同输出如何被比较、回报如何分配给整条 trajectory。
 
 继续读 [Post-Training](../../05-post-training/)。
 

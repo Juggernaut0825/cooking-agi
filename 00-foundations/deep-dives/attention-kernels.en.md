@@ -165,7 +165,7 @@ A can process three more tokens and cache their K/V before another position need
 
 The [PagedAttention paper](https://arxiv.org/abs/2309.06180) develops this mapping and sharing approach. Our block IDs are illustrative, not a vLLM API. Cache reuse also depends on weights, adapters, positions, and multimodal inputs—not merely identical text.
 
-Unused slots inside allocated tail blocks are **internal fragmentation**. **External fragmentation** occurs when enough free space exists in total but is scattered into gaps too small for a required contiguous allocation. Paging mainly addresses the latter; block tables and partially filled tails still cost memory.
+Unused slots inside allocated tail blocks are **internal fragmentation**. **External fragmentation** occurs when enough free space exists in total but is scattered into gaps too small for a required contiguous allocation. Because all blocks have the same size, paging eliminates external fragmentation; allocating small blocks on demand also confines internal fragmentation to each request's last partially filled block. Block tables and those tail slots still cost memory.
 
 Separate a paper's sharing mechanisms from the features a framework currently implements. [vLLM's prefix-caching documentation](https://docs.vllm.ai/en/latest/design/prefix_caching/) describes reusing full blocks and including prefixes, token IDs, and adapter / multimodal information in cache keys. Do not assume arbitrary partially filled tails are reusable.
 

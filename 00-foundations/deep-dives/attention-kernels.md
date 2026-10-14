@@ -165,7 +165,7 @@ A 再把 3 个新 tokens 送入模型、形成它们的 K/V 后，可填满已�
 
 [PagedAttention 论文](https://arxiv.org/abs/2309.06180)讨论了这种块映射与共享。这里的块号是自拟示意，不是 vLLM API。缓存是否可共享，还要核对权重、adapter、位置与多模态输入等条件，而不只是文本相同。
 
-上图的尾块空槽叫**内部碎片（internal fragmentation）**。另一种情况是空闲空间散在几处，总量够，却放不下一段要求连续的大缓存，这是**外部碎片（external fragmentation）**。分页主要缓解后一种问题；块表和未填满的尾块仍有成本。
+上图的尾块空槽叫**内部碎片（internal fragmentation）**。另一种情况是空闲空间散在几处，总量够，却放不下一段要求连续的大缓存，这是**外部碎片（external fragmentation）**。所有块大小相同，所以分页消除了外部碎片；按需分配小块，又把内部碎片限制在每个请求最后一个未填满的块里。块表和这些尾块空槽仍有成本。
 
 还要分清论文里的共享机制与当前框架实际开放的功能。[vLLM 的 prefix caching 说明](https://docs.vllm.ai/en/latest/design/prefix_caching/)目前按完整块复用缓存，并把前缀、token IDs 及 adapter / 多模态信息等纳入缓存键。不能据此假定它会复用任意半满尾块。
 

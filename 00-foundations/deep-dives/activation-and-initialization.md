@@ -15,7 +15,7 @@
 | Sigmoid | $\sigma(z)=1/(1+e^{-z})$；`(0,1)` | 二分类概率、多标签独立概率、门值 | 大幅度输入会饱和；输出有界不代表已校准 |
 | Tanh | $\tanh(z)$；`(-1,1)` | 有正有负的候选状态 | 两端也会饱和；函数对称不保证实际输出均值为 0 |
 | ReLU | $\max(0,z)$ | 简单隐藏层 | 负半轴局部梯度为 0；正半轴不饱和不代表整网不会梯度消失 |
-| Leaky ReLU / PReLU | $\max(0,z)+a\min(0,z)$ | 保留负半轴梯度 | 前者固定 $a$，后者学习 $a$；不是必胜 ReLU |
+| Leaky ReLU / PReLU | $\max(0,z)+a\min(0,z)$ | 保留负半轴梯度 | 前者固定 $a$，后者学习 $a$；两者都不保证总比 ReLU 好 |
 | GELU / SiLU | $z\Phi(z)$ / $z\sigma(z)$ | 平滑隐藏层变换 | 不是概率输出；与门控 FFN 是相关但不同的概念 |
 | Softmax | $p_i=e^{z_i}/\sum_j e^{z_j}$ | 互斥类别 / attention 权重 | 是整组数的变换，不是独立地处理每个数 |
 
@@ -58,7 +58,7 @@ def categorical_loss_gradient(logits, target):
 
 对 $h_\ell=\phi(W_\ell h_{\ell-1}+b_\ell)$，局部 Jacobian 为
 
-$$J_\ell=\operatorname{diag}(\phi'(a_\ell))W_\ell.$$
+$$J_\ell=\operatorname{diag}(\phi'(u_\ell))W_\ell,\qquad u_\ell=W_\ell h_{\ell-1}+b_\ell.$$
 
 总梯度穿过的是一串 $J_\ell$，不是只连乘激活函数的导数。若每层算子范数都至多 $c<1$，乘积范数至多为 $c^L$，这是梯度衰减的一个充分条件。反过来，某一层最大奇异值大于 1，并不保证整条链爆炸：方向可能在后续层被压缩。
 
@@ -76,7 +76,7 @@ $$\mathbb E[z^2]=n s^2q.$$
 
 $$\operatorname{Var}(w)=\frac{2}{n_{in}+n_{out}}.$$
 
-对应零均值正态分布，标准差是这个数的平方根；均匀分布的边界为 $\pm\sqrt{6/(n_{in}+n_{out})}$。这是初始化时的近似尺度分析，不是全程梯度稳定定理。[Glorot 与 Bengio 的原论文](https://proceedings.mlr.press/v9/glorot10a.html)讨论了激活、梯度和层 Jacobian，而不是证明所有优化方法都归于一个“Glorot 条件”。
+对应零均值正态分布，标准差是这个数的平方根；均匀分布的边界为 $\pm\sqrt{6/(n_{in}+n_{out})}$。这是初始化时的近似尺度分析，不是全程梯度稳定定理。[Glorot 与 Bengio 的原论文](https://proceedings.mlr.press/v9/glorot10a.html)分析的是初始化时各层激活值、梯度和 Jacobian 的尺度怎样变化，上面的折中就来自这类分析。
 
 ## He：减半的是二阶矩，不一定是方差
 

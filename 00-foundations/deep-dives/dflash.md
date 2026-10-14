@@ -103,7 +103,7 @@ assert emitted == [10, 20, 30] and accepted == 2
 <details markdown="1">
 <summary>具体到位置：C 已经输出，为什么还没有它的 KV？</summary>
 
-设前缀 `P` 长 4，位置从 0 开始。Target 已从前缀预测出锚点 A，但还没把 A 作为输入跑前向。本轮草稿是 B、X；接受 B 后，target 用 C 替换 X。先不考虑 EOS 和长度上限。
+这里换成 DFlash 的设定，和上表不同：A 是 target 已选出的锚点，不算本轮草稿。设前缀 `P` 长 4，位置从 0 开始。Target 已从前缀预测出锚点 A，但还没把 A 作为输入跑前向。本轮草稿是 B、X；接受 B 后，target 用 C 替换 X。先不考虑 EOS 和长度上限。
 
 <div class="worked-table" markdown="1">
 

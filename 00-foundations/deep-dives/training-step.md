@@ -2,7 +2,7 @@
 
 **中文** · [English](training-step.en.md)
 
-> 阅读时间：约 6 分钟 · 难度：基础到进阶 · 最近审阅：2026-09
+> 阅读时间：约 6 分钟 · 难度：基础到进阶 · 最近审阅：2026-10
 
 架构图看懂了，代码里却还是一堆 `labels`、`mask`、`backward`。这一篇只追踪一个 batch：**哪些 token 提供上下文，哪些 token 被计分，最后什么参数变了。**
 
@@ -20,11 +20,11 @@
 | 3 | 答案 | EOS | 是 |
 | 4 | EOS | PAD | 否 |
 
-所以手写 loss 时，`logits[:, :-1]` 对齐 `input_ids[:, 1:]`，目标位置的 loss mask 也取 `[:, 1:]`。如果框架的模型已经在内部 shift，就不要再 shift 一次；先查实际实现。[Hugging Face 的 causal LM 教程](https://huggingface.co/docs/transformers/tasks/language_modeling)展示了一种由模型负责对齐的用法。
+所以手写 loss 时，`logits[:, :-1]` 对齐 `input_ids[:, 1:]`。loss mask 按 token 位置标出哪些 token 是计分目标（本例为 `[0, 0, 0, 1, 1, 0]`，即 `答案` 和 `EOS`），同样取 `[:, 1:]`，得到 `[0, 0, 1, 1, 0]`，正好对上表中各行。如果框架的模型已经在内部 shift，就不要再 shift 一次；先查实际实现。[Hugging Face 的 causal LM 教程](https://huggingface.co/docs/transformers/tasks/language_modeling)展示了一种由模型负责对齐的用法。
 
 ## 三种 mask 不做同一件事
 
-- **Causal mask**：不能看未来答案。
+- **Causal mask**：每个位置只能看自己和前面的 token，不能看后面的。
 - **Padding mask**：无效的补齐位置不应作为有效上下文。
 - **Loss mask**：哪些目标位置计入训练目标。
 
@@ -75,4 +75,4 @@ python -m unittest discover -s site/tests -p 'test_multimodal_math.py'
 
 此外，可以让一个真实的小模型先过拟合极小 batch，检查梯度是否有限、预期模块是否更新；再在不重叠的验证数据上看 loss 和任务表现。小 batch 能记住只能证明训练链基本通了，不能证明泛化。
 
-下一篇把这条训练链用到[视觉语言模型](../../03-multimodal-learning/vision-to-language.md)，你就能区分“加了哪个输入”和“改变了哪个目标”。
+想看这条训练链怎样接上图片输入，可以读[视觉语言模型](../../03-multimodal-learning/vision-to-language.md)，区分“加了哪个输入”和“改变了哪个目标”；训练路线的下一篇是[多 token 预测](multi-token-prediction.md)。

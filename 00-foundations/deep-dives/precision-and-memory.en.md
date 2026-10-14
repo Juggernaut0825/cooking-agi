@@ -105,7 +105,7 @@ print(dtypes)
 
 </details>
 
-This checks the PyTorch 2.8.0 CPU interface, not GPU speed. The FP32 parameters already retain updates here; do not count a second FP32 master copy serving the same purpose. A scheme with low-precision parameters and separate master weights needs different memory accounting. Consult the [AMP documentation](https://docs.pytorch.org/docs/2.8/amp.html) for operator-specific policies rather than generalizing this layer's dtypes to every operation.
+This checks the PyTorch 2.8.0 CPU interface, not GPU speed. The FP32 parameters already retain updates here; do not count a second FP32 master copy serving the same purpose. A scheme with low-precision parameters and separate master weights needs different memory accounting; the 16-byte ledger below assumes exactly that scheme. Consult the [AMP documentation](https://docs.pytorch.org/docs/2.8/amp.html) for operator-specific policies rather than generalizing this layer's dtypes to every operation.
 
 ## What does loss scaling protect?
 
@@ -363,7 +363,7 @@ Fix model, sequence distribution, valid tokens, and optimizer. Record peak memor
 | Lower precision | Some tensor storage and compute bandwidth | Rounding, range, kernel support |
 | Gradient accumulation | Concurrent microbatch activations | More serial steps; weights remain |
 | Activation checkpointing | Retained intermediates | Recomputation |
-| LoRA | Trainable gradients and optimizer states | Restricted updates; base forward remains |
+| LoRA | Trainable gradients and optimizer states | Restricted updates; base forward and backward passes remain (without base weight gradients) |
 | FSDP / ZeRO | Per-device training state | Communication and temporary gathers |
 
 “Less memory” is not the whole result. A slower step may enable a useful larger batch, so measure the total effect. A run that stops crashing by silently changing the objective is no longer the same comparison.

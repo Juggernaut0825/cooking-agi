@@ -33,7 +33,7 @@ To decide whether an additional review is worthwhile, a useful accounting rule i
 
 > **Net benefit of review ≈ expected loss without review − residual expected loss after review − review cost**
 
-For a teaching example, assign an error a cost of 100. If the automated error rate is 5%, review leaves a 1% error rate, and reviewing costs 1, the net benefit is `0.05 × 100 − 0.01 × 100 − 1 = 3`. Humans can make mistakes too. Estimate those probabilities from observed data rather than substituting a model's self-reported confidence.
+For a teaching example, assign an error a cost of 100. If the automated error rate is 5%, review leaves a 1% error rate, and reviewing costs 1, the net benefit is `0.05 × 100 − 0.01 × 100 − 1 = 3`. Humans make mistakes too, so residual risk after review is not zero. Estimate those probabilities from observed data rather than substituting a model's self-reported confidence.
 
 This is not a formula for bypassing authorization. An action that requires user approval still requires it, even when its estimated cost is low. Irreversibility affects the loss and response options; it does not need an arbitrary extra multiplier. Include waiting time in the cost as well.
 
@@ -41,7 +41,7 @@ Common triggers include:
 
 - several models or evaluators clearly disagree;
 - the input falls outside the historical distribution and the system has never handled it before;
-- the evidence search found is contradictory or not reliable enough;
+- the retrieved evidence is contradictory, or its sources are not reliable enough;
 - the action would send a message, spend money, modify data, or affect other people;
 - the user's goal is unclear and the cost of continuing to guess is high;
 - the agent enters a loop, falls back repeatedly, or shows abnormal cost.

@@ -156,6 +156,8 @@ Give each device one row. Ideal orthogonalization of each row simply normalizes 
 There is no network transfer or low-precision rounding in this example. The operations differ even with exact SVD. Using `polar_reference` from above:
 
 ```python
+import math
+
 momentum = torch.tensor([[1.0, 1.0], [0.0, 1.0]], dtype=torch.float64)
 whole_update = polar_reference(momentum)
 row_updates = torch.cat([polar_reference(row) for row in momentum.split(1, dim=0)])
@@ -171,7 +173,7 @@ assert not torch.allclose(row_updates, whole_update)
 2. Gather the required momentum-adjusted shards into a full matrix and run Newton–Schulz.
 3. Keep the local update slice, update the local parameters, then all-gather the updated parameters.
 
-**Orthogonalization is computation, not another communication collective.** TP needs additional handling. The report's communication ratios and negligible latency overhead belong to its configuration and cluster, not every training run. Measure reconstruction, temporary buffers, and overlap in your setup; no multi-GPU benchmark was run here.
+**Orthogonalization itself is computation; the extra communication is the step-2 gather that rebuilds the full matrix.** TP needs additional handling. The report's communication ratios and negligible latency overhead belong to its configuration and cluster, not every training run. Measure reconstruction, temporary buffers, and overlap in your setup; no multi-GPU benchmark was run here.
 
 </details>
 

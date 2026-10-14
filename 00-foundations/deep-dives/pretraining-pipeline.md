@@ -2,7 +2,7 @@
 
 **中文** · [English](pretraining-pipeline.en.md)
 
-> 最近审阅：2026-10 · 前置：[语言模型目标](language-model-objective.md)、[一次训练](training-step.md)
+> 最近审阅：2026-10 · 前置：[语言模型目标](language-model-objective.md) · 接着读：[一次训练](training-step.md)
 
 知道 next-token prediction 的公式以后，很容易觉得预训练就是“把文本喂进去，循环跑 loss”。但两次训练即使用同一个模型、同一个目标，也可能学出很不一样的东西：文本选了什么、重复了多少遍、怎样拼成序列，都会改变模型实际看到的任务。
 
@@ -56,7 +56,7 @@
 - **连续 token 流**：普通 causal mask 允许后文看前文；EOS 提示边界，但不会自动切断 attention。
 - **独立文档 packing**：使用块对角 causal mask；C 只能看文档 2。位置编号是否重置，也要与实现约定一致。
 
-如果不想训练 EOS 后跨文档预测 C，还要遮掉那一项 **loss**。attention mask 控制“能看谁”，loss mask 控制“哪项预测算分”，两者不能互相替代。C 的首 token 可以不算，也可以由本段 BOS 预测，取决于数据格式。
+如果不想训练 EOS 后跨文档预测 C，还要遮掉那一项 **loss**。attention mask 控制“能看谁”，loss mask 控制“哪项预测算分”，两者不能互相替代。文档 2 的首 token C 可以不算，也可以在文档 2 开头放 BOS、由 BOS 预测，取决于数据格式。
 
 | 输入位置 | 下一目标 | 连续流可计入 | 本例独立文档、不设 BOS |
 | --- | --- | --- | --- |

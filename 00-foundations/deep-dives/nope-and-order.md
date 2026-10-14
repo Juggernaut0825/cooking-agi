@@ -35,7 +35,7 @@ $$
 
 ## 普通 attention 为什么还要考虑位置？ {#unordered-attention}
 
-设一个 attention 层没有位置编码，没有 causal mask，也没有距离 bias。每个位置使用相同的投影，计算只依赖 token 内容。若把输入调换顺序，输出通常也只是跟着调换，不会凭空获得“谁原来在前面”的信息。这叫置换等变（permutation equivariance），不是说所有位置的输出都相同。
+设一个 attention 层没有位置编码，没有 causal mask，也没有距离 bias。每个位置使用相同的投影，计算只依赖 token 内容。在这些条件下，把输入调换顺序，输出也只是按同样方式调换，不会凭空获得“谁原来在前面”的信息。这叫置换等变（permutation equivariance），不是说所有位置的输出都相同。
 
 例如对 `[1, 2, 0]` 做全局均值，每个位置都得到 1。交换前两个数，结果仍然是 `[1, 1, 1]`。这可以看作 attention 分数全相同的极简情形。真实 attention 的分数会不同，但在上述条件下，同步重排输入与输出的性质仍成立。
 
@@ -79,7 +79,7 @@ $$
 
 2022 年的 NoPos 研究面对的是一个基本疑问：显式位置编码很常见，但 causal LM 是否非用不可？作者比较了 learned、sinusoidal 和 ALiBi，实验规模为 125M–1.3B。要理解结论，先看实验设置，再看位置探针和局限，不能把它当作今天超长上下文模型的验证。[原文 §3–6、§9](https://arxiv.org/html/2203.16634v2) · [作者代码与模型](https://github.com/adihaviv/NoPos)
 
-到 2025 年，Kimi Linear 关注的还有长序列的计算和 KV cache 成本：状态压缩能省资源，但会不会损失表达能力？它将全 MLA 和 Gated DeltaNet 混合架构列为对照。读这篇时，把“为什么要混合”和“混合后是否还需要 RoPE”分开看。[原文 §4–5](https://arxiv.org/html/2510.26692v1#S4) · [官方实现](https://github.com/MoonshotAI/Kimi-Linear)
+到 2025 年，Kimi Linear 关注的还有长序列的计算和 KV cache 成本：状态压缩能省资源，但会不会损失表达能力？它把全 MLA 模型和 Gated DeltaNet 混合模型（GDN-H）分别列为对照。读这篇时，把“为什么要混合”和“混合后是否还需要 RoPE”分开看。[原文 §4–5](https://arxiv.org/html/2510.26692v1#S4) · [官方实现](https://github.com/MoonshotAI/Kimi-Linear)
 
 两篇回答的问题并不完全相同，也不代表各自年份的全部业界实践。下面再看 K3 的具体选择，就不容易把“没有位置编码”误读成一条通用升级路线。
 

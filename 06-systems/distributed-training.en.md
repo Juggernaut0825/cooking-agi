@@ -15,7 +15,7 @@ If the full model fits on one device but training is slow, distributing data may
 | Method | Main partition | Each device handles |
 | --- | --- | --- |
 | Data parallel / DDP | Data | Different examples through a complete model |
-| FSDP / ZeRO | Some or all parameter, gradient, optimizer state | Shards, with materialization when needed |
+| FSDP / ZeRO | Some or all of the parameters, gradients, and optimizer state | Shards, with materialization when needed |
 | Tensor parallel / TP | Within-layer matrices | Part of an operation |
 | Pipeline parallel / PP | Layers | A stage and its microbatches |
 
@@ -82,7 +82,7 @@ Received bytes are equal; counting both directions doubles this number. With fou
 
 With per-round latency $\alpha$ and effective bandwidth $B$, a simplified serial-round cost is
 
-$$T\approx2(P-1)\alpha+2\frac{P-1}{P}\frac{S}{B}.$$
+$$t_{\text{ring}}\approx2(P-1)\alpha+2\frac{P-1}{P}\frac{S}{B}.$$
 
 This omits reduction computation, contention, chunk overlap, and actual topology. Large messages can be bandwidth-limited while small ones are latency-limited. The equation is not a substitute for profiling.
 
@@ -101,7 +101,7 @@ assert ring_traffic(120_000_000, 1)["rounds"] == 0
 
 Take $L(w)=w^2/2$ and learning rate 0.5. Starting at $w=2$, the first update gives 1. A current gradient of 1 then gives 0.5; a delayed worker's gradient computed at the old value 2 gives 0 instead. The stale update happens to be closer to the optimum here, but this is no general advantage: it follows a different optimization trajectory.
 
-Record gradient parameter versions, acceptable age, rejection or reweighting rules, and treatment of in-flight work on recovery. Faster synchronization alone does not establish training equivalence.
+Record which parameter version each gradient was computed from, how stale an update may be, whether stale updates are dropped or reweighted, and how in-flight work is handled on recovery. Faster synchronization alone does not establish training equivalence.
 
 ## FSDP and ZeRO reduce replicated state
 
@@ -169,7 +169,7 @@ $$
 
 For $X=[1,2]$ and $W=\begin{bmatrix}1&3\\2&4\end{bmatrix}$, the full output is $[5,11]$. Row partitioning produces $[1,3]$ and $[4,8]$, which must be summed, not averaged.
 
-[Megatron-LM](https://arxiv.org/abs/1909.08053) shows how complementary column and row partitions organize Transformer layers. Whether an intermediate remains sharded depends on the next operation; gathering everything after every layer wastes opportunities.
+[Megatron-LM](https://arxiv.org/abs/1909.08053) shows how complementary column and row partitions organize Transformer layers. Whether an intermediate remains sharded depends on the next operation; gathering after every layer may just move the data an extra time.
 
 Frequent TP communication benefits from fast interconnects. Splitting small matrices too finely can cost more in communication and scheduling than it saves.
 
@@ -270,7 +270,7 @@ CPU memory relieves GPU pressure; it is not free expansion. CPU optimizer update
 
 Dividing ideal state memory by device count covers only part of the budget. Temporary materialization, activations, prefetching, bandwidth, and optimizer completion still matter. Larger models, longer sequences, and more devices can each move the bottleneck.
 
-For an original estimate, transfer 2 GB of gradients out and 2 GB of weights back in sequence, with assumed effective bandwidth of 25 GB/s in each direction. Transfer alone takes `2/25 + 2/25 = 0.16` seconds, before the CPU update. These are decimal GB and hypothetical values, not a measured device specification.
+For example, transfer 2 GB of gradients out and 2 GB of weights back in sequence, with assumed effective bandwidth of 25 GB/s in each direction. Transfer alone takes `2/25 + 2/25 = 0.16` seconds, before the CPU update. These are decimal GB and hypothetical values, not a measured device specification.
 
 Hiding this time requires independent computation and timely arrival of weights needed by the next step. The critical path depends on dependencies, prefetch granularity, memory, and contention; taking one `max` over every duration is not a complete schedule model.
 

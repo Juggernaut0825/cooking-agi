@@ -82,7 +82,7 @@ $$V_{\text{send}}=2\frac{P-1}{P}S.$$
 
 若每轮固定延迟为 $\alpha$、有效带宽为 $B$，串行轮次的简化成本为
 
-$$T\approx2(P-1)\alpha+2\frac{P-1}{P}\frac{S}{B}.$$
+$$t_{\text{ring}}\approx2(P-1)\alpha+2\frac{P-1}{P}\frac{S}{B}.$$
 
 这里忽略归约计算、链路争用、分块重叠与实际拓扑。大消息可能受带宽限制，小消息可能受轮次延迟限制；这个公式不能替代 profiler。
 
@@ -201,7 +201,7 @@ $$
 
 | 方式 | 先看什么 | 不能省略什么 |
 | --- | --- | --- |
-| Sequence Parallel / SP | 在 Megatron 的用法中，配合 TP 切 LayerNorm、dropout 等部分的序列激活 | 不能据此说每层 attention 已在多卡之间拆开 |
+| Sequence Parallel / SP | 在 Megatron 的用法中，配合 TP 切 LayerNorm、dropout 等部分的序列激活 | 不能据此说 attention 已沿序列切到多卡上（配合的 TP 切的是 heads） |
 | Context Parallel / CP | 沿序列切输入与激活，各卡拿一段 context | 本地 query 仍需要远处 key/value，必须组织交换 |
 | Expert Parallel / EP | 将不同专家放到不同设备 | token 派发、结果归并与负载不均 |
 

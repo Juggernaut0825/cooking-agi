@@ -85,7 +85,7 @@ Use probabilities `0.40, 0.25, 0.15, 0.08, 0.05, 0.03, 0.025, 0.015`, convert th
 | 1.0 | 5 | 5 |
 | 1.5 | **6** | 5 |
 
-With the order reversed, the same parameters give a different candidate pool. At $T=1$ the two happen to be equal, so testing only at the default temperature will never reveal this difference.
+With the order reversed, the same parameters give a different candidate pool. At $T=1$ temperature leaves the distribution unchanged, so the two are necessarily equal, so testing only at the default temperature will never reveal this difference.
 
 Record temperature and top-p together. Fix the processing order before tuning so you can distinguish flattening the distribution from truncating its support.
 
@@ -271,7 +271,7 @@ In ordinary PPO, the denominator is the old policy that collected the batch, not
 ## Where to read next {#where-to-read-next}
 
 - [Decoder-only: autoregressive generation](decoder-only.en.md): how these distributions are produced step by step
-- [The three stages of RLHF](../../05-post-training/rlhf/README.en.md): why rollout sampling parameters affect the gradient
+- [On-policy and off-policy](../../05-post-training/rlhf/on-off-policy.en.md): how temperature and top-p change the rollout behavior distribution, and which log-probs to record
 
 ## Quick learning: model probabilities and the decoding policy are two layers {#quick-learning-model-probabilities-and-the-decoding-policy-are-two-layers}
 

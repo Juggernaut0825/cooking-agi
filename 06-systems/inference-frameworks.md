@@ -19,7 +19,7 @@
 <figcaption>这是职责划分，不要求每一层对应一个独立进程，也不代表引擎承担完整的生产安全边界。</figcaption>
 </figure>
 
-[vLLM V1 的架构文档](https://docs.vllm.ai/en/v0.31.0/design/arch_overview/)区分 API server、engine core 与 GPU workers：前者处理输入输出，中间组织调度与缓存，后者执行模型；开数据并行时还会多一个 DP coordinator。具体进程数量随部署而变。SGLang 也有自己的请求处理、调度与模型执行路径，不要把 vLLM 的类名原封不动套过去。
+[vLLM V1 的架构文档](https://docs.vllm.ai/en/v0.31.0/design/arch_overview/)区分 API server、engine core 与 GPU workers：API server 处理输入输出，engine core 组织调度与缓存，GPU workers 执行模型；开数据并行时还会多一个 DP coordinator。具体进程数量随部署而变。SGLang 也有自己的请求处理、调度与模型执行路径，不要把 vLLM 的类名原封不动套过去。
 
 更具体地看，[SGLang 固定版本的 Engine](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/entrypoints/engine.py#L238)把 tokenization、调度与 detokenization 分开：
 
@@ -147,7 +147,7 @@ SGLang 的上述执行选择可以在固定版本的 [ModelRunner](https://githu
 
 | 要报告什么 | 为什么 |
 | --- | --- |
-| TTFT、ITL、端到端 p50 / p95 / p99 | 平均吞吐掩盖不了用户等待；短输出也要计入 TTFT |
+| TTFT、ITL、端到端 p50 / p95 / p99 | 平均吞吐会掩盖用户的等待；短输出也要计入 TTFT |
 | 输入吞吐与输出吞吐，分别统计 | 两种 token 的计算含义不同 |
 | 满足质量和延迟要求的请求数 / 秒 | 大量超时换来的总吞吐没有同等价值 |
 | 超时、取消、拒绝、OOM、错误率 | 不能只统计成功返回的请求 |
