@@ -2,7 +2,7 @@
 
 [中文](benchmark-protocols.md) · **English**
 
-A knowledge-question score may be a poor way to choose an assistant for long reports. Knowledge, evidence retrieval, cross-document reasoning, citation, and abstention are different capabilities. One attractive average cannot establish them all.
+A knowledge-question score may be a poor way to choose an assistant for long reports. Knowledge, evidence retrieval, reasoning across sections, citation, and abstention are different capabilities. One attractive average cannot establish them all.
 
 This page is not a latest-model leaderboard. It gives a reusable process: choose the question, fix the protocol, then interpret scores. Checked 2026-10-08. Historical benchmarks remain useful for comparison, but age and familiarity do not establish present-day discriminative power.
 
@@ -38,7 +38,7 @@ Suppose one model emits an option directly while another reasons for 8,000 token
 
 Define timeout, parse-failure, and refusal handling before running. Accuracy calculated only over successful responses rewards systems that turn hard items into timeouts. [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) standardizes parts of the protocol, but still requires a pinned commit, task configuration, and run settings.
 
-## 3. A needle test starts with finding one record
+## 3. Needle tests: finding one record is only the start
 
 Create a small task: find the value associated with `target` among many records. Move the same evidence between beginning, middle, and end while retaining the other records.
 

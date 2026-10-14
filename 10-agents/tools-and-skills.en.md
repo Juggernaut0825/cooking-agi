@@ -153,4 +153,4 @@ If issue creation is added later, show the repository, title, and body for confi
 
 Then compare runs **with and without the skill, holding the model, tools, task set, and budget fixed**. Measure real errors found, false alarms, calls used, and unauthorized-action attempts. A longer checklist may help the model review carefully, or make it mechanically criticize every document.
 
-This chapter provides a workflow, hypothetical arithmetic, and a test plan. It does not connect to a real MCP server or report a model experiment. Next, [model selection and routing](model-choice.en.md) considers which model to use and how much budget each request needs.
+This chapter provides a workflow, hypothetical arithmetic, and a test plan. It does not connect to a real MCP server or report a model experiment. Next, [Deep Research](deep-research.en.md) organizes multi-step search; [model selection and routing](model-choice.en.md) later considers which model to use and how much budget each request needs.

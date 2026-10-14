@@ -8,7 +8,7 @@ This synthetic example builds a minimal experiment record. It contains no busine
 
 ## Write a falsifiable statement
 
-“More information should help” is too broad. Try: “At fixed candidate and inference budgets, adding field X improves sparse-history retrieval without a meaningful regression elsewhere.”
+“More information should help” is too broad. Try: “With the same candidate pool and inference budget, adding field X improves sparse-history retrieval without a meaningful regression elsewhere.”
 
 This identifies the intervention, target population, controls, and failure condition. Define primary metrics and thresholds before inspecting results.
 

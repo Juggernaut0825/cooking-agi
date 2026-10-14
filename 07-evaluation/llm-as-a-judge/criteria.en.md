@@ -79,7 +79,7 @@ Return JSON:
 Do not invent evidence IDs or provide a lengthy thought process.
 ~~~
 
-Supply task, candidate, evidence, and reference in a separate JSON payload. Delimiters help organization, not guaranteed injection resistance. [Bias testing](bias-and-workflow.en.md) deliberately includes candidate text asking for full marks.
+Supply task, candidate, evidence, and reference in a separate JSON payload. Delimiters help organization, not guaranteed injection resistance. [Bias testing](bias-and-workflow.en.md) deliberately includes candidate text demanding a pass verdict.
 
 ## Have two people try it first
 

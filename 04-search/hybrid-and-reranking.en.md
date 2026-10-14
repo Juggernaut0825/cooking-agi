@@ -86,7 +86,7 @@ A reranker can reorder only the candidates it receives. If the correct document 
 
 ## 5. Compare under the same budget
 
-Comparing 100 dense candidates against 100 dense plus 100 keyword candidates changes both the source and the downstream computation. Do not attribute the entire gain to the fusion algorithm.
+Comparing 100 dense candidates against 100 dense plus 100 keyword candidates increases both the candidate count and the downstream computation. Do not attribute the entire gain to the fusion algorithm.
 
 | Comparison | Hold fixed | What does it test? |
 | --- | --- | --- |

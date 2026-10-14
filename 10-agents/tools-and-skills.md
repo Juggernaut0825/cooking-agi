@@ -44,7 +44,7 @@ MCP 的基本结构是 host、client、server：host 是运行助手的应用，
 
 一个 Skill 可以调用 MCP 工具，也可以只使用本地文件工具；一个 MCP server 可以被多个助手使用，完全不需要附带 Skill。选择它们的理由应该是减少重复工作，而不是把几个热门名字都装进系统。
 
-**2026 年的更新：Skill 也可以通过 MCP 分发。** 官方 Skills 扩展用 Resources 读取说明及附件，这更说明二者可以组合。扩展已发布，但各 SDK / host 的支持仍需逐一确认。读取一份 `SKILL.md` 不等于激活它：应用还要校验内容，并完成所需授权；文件摘要只能验证一致性，不能证明内容可信。[Skills over MCP](https://modelcontextprotocol.io/extensions/skills/overview)（核对：2026-10-10）
+**2026 年的更新：Skill 也可以通过 MCP 分发。** 官方 Skills 扩展用 Resources 读取说明及附件，这更说明二者可以组合。扩展已发布，但各 SDK / host 的支持仍需逐一确认。读取一份 `SKILL.md` 不等于激活它：应用还要校验内容，并完成所需授权；文件哈希（digest）只能证明内容没被改动，不能证明内容可信。[Skills over MCP](https://modelcontextprotocol.io/extensions/skills/overview)（核对：2026-10-10）
 
 ## 3. MCP 不只有 tools {#mcp-primitives}
 
@@ -153,4 +153,4 @@ Skill 自身也要看来源。陌生仓库里的说明或脚本不能仅凭“�
 
 然后做一个小的对照：**相同模型、工具、任务集和预算，有无这份 Skill 分别跑一次。** 看真实错误找出了多少、误报多少、用了多少调用、有没有越权尝试。更长的检查清单不一定更好；它可能让模型更认真，也可能让模型机械地给每篇文章挑毛病。
 
-本章提供流程、假设算例和测试设计，没有接真实 MCP server，也没有跑模型效果实验。下一步可以读[模型选择与路由](model-choice.md)，看看这样的助手要用什么模型、怎样给每次请求分配预算。
+本章提供流程、假设算例和测试设计，没有接真实 MCP server，也没有跑模型效果实验。下一步读 [Deep Research](deep-research.md)，看多轮搜索怎样组织；之后的[模型选择与路由](model-choice.md)再讲这样的助手要用什么模型、怎样给每次请求分配预算。

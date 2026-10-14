@@ -43,7 +43,7 @@ Check the architecture and dimensions in the pinned [Qwen configuration](https:/
 
 Why the end for one and the beginning for the other? Under causal attention, the final position can use preceding content; the first cannot see the rest of the sentence. A bidirectional encoder's CLS can aggregate later content. **Pooling turns a sequence of token states into one vector and follows the model's training convention**, not whichever position is convenient. Architecture labels alone do not determine retrieval quality.
 
-A task instruction for the password query might specify retrieving help passages that directly answer the question. It guides the representation; it does not ask the model to generate the answer first. Both models depend on representation-learning training. Extracting a token from an ordinary chat model is not the same retriever.
+A task instruction for the password query might specify retrieving help passages that directly answer the question. It guides the representation; it does not ask the model to generate the answer first. Both models depend on representation-learning training. Taking one token's hidden state from an ordinary chat model does not give you the same retriever.
 
 ### Why these two designs? {#paper-context}
 
@@ -53,7 +53,7 @@ BGE-M3's 2024 motivation was broader than one benchmark score: languages, input 
 
 The 2025 Qwen3 Embedding report uses LLMs as both representation backbones and synthetic-data sources, followed by weak supervision, high-quality fine-tuning, and checkpoint merging. This is not merely an encoder-to-decoder swap; data and training recipes matter. [Original paper §3.2–3.3](https://arxiv.org/html/2506.05176v1#S3.SS2) · [Official code](https://github.com/QwenLM/Qwen3-Embedding)
 
-That background explains design choices, not why a newer model must suit your project better. Cross-paper scores also mix data, scale, output modes, and evaluation settings; they do not isolate architecture. Use the matched experiments in section 7 for an actual selection.
+That background explains the design choices; it does not mean a newer model will suit your project better. Cross-paper scores also mix data, scale, output modes, and evaluation settings; they do not isolate architecture. Use the matched experiments in section 7 for an actual selection.
 
 ### Where do the training signals come from? {#training-signals}
 

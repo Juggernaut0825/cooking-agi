@@ -2138,9 +2138,9 @@
     roTests.set({ '2 failing': t('2 failing', '2 个失败'), '1 failing': t('1 failing', '1 个失败'), 'all pass': t('all passing', '全部通过') }[cur[6]]);
     var end = step === steps.length - 1;
     TX.bi(caption,
-      mode === 'agent' ? (end ? 'The agent found a second failure it was never told about and kept going until the stopping condition held. It also made a model call before every action, which is where the extra cost and variance come from.' : 'After every observation the model chooses what to do next; nothing about the path is fixed in advance.')
+      mode === 'agent' ? (end ? 'After the first fix, the agent saw that one test still failed and kept going until the stopping condition held. It also made a model call before every action, which is where the extra cost and variance come from.' : 'After every observation the model chooses what to do next; nothing about the path is fixed in advance.')
                        : (end ? 'The workflow did exactly what it was written to do, cheaply and the same way every time, and stopped with a failure it had no step for. For well-understood tasks that predictability is the point.' : 'Each step is written in code; the model, if used at all, fills in one step and never chooses the next one.'),
-      mode === 'agent' ? (end ? 'Agent 发现了一个没人告诉它的新失败，一直做到满足停止条件为止。代价是每次行动前都有一次模型调用，额外的成本和不确定性就来自这里。' : '每看到一次结果，模型就自己决定下一步做什么；路径没有事先写死。')
+      mode === 'agent' ? (end ? '第一次修改后还有一个测试没过，Agent 接着查，一直做到满足停止条件为止。代价是每次行动前都有一次模型调用，额外的成本和不确定性就来自这里。' : '每看到一次结果，模型就自己决定下一步做什么；路径没有事先写死。')
                        : (end ? 'Workflow 完全按写好的步骤走：便宜、每次都一样，但遇到没写到的失败就停在那里。对已经想清楚的任务，这种可预测正是它的价值。' : '每一步都写在代码里；模型就算用上，也只负责填其中一步，不决定下一步。'));
     svg.setAttribute('aria-label', t(cur[1], cur[2]));
   }
@@ -2454,11 +2454,11 @@
 
   // ---- controls -------------------------------------------------------------
   var CAPTIONS = {
-    rules: ['Written rules: head for the nearest dot as the crow flies. Fast, free, the same every time — and blind to walls, so it presses against one while the dot sits on the other side. Every maze game before the 1990s was some version of this, and it is what most people still picture when they hear "agent".',
-      '写死的规则：哪颗豆直线距离最近就往哪边走。快、不要钱、每次都一样——但它看不见墙，于是会贴着墙一直顶，而豆就在墙那边。九十年代以前的迷宫游戏基本都是这么写的，多数人一听 agent 想到的也还是这个。'],
+    rules: ['Written rules: head for the nearest dot as the crow flies. Fast, free, the same every time — and blind to walls, so it presses against one while the dot sits on the other side. Many early maze games used some version of this, and it is what most people still picture when they hear "agent".',
+      '写死的规则：哪颗豆直线距离最近就往哪边走。快、不要钱、每次都一样——但它看不见墙，于是会贴着墙一直顶，而豆就在墙那边。早期很多迷宫游戏都是这么写的，多数人一听 agent 想到的也还是这个。'],
     rl: ['A value function: how much is still to be had from each square if you keep playing well. Dots pay 1, the ghost costs a lot, and γ = 0.9 discounts what is further away. Nobody told it about walls — the field flows around them because a square behind a wall is simply far in steps. Turn on the value map and watch where it glows.',
       '价值函数：站在每一格，往后还能拿多少分。豆 +1，鬼扣一大笔，γ = 0.9 表示越远的收益越不值钱。没人告诉它墙在哪儿——墙后面的格子「要走很多步才到」，价值自然就低，路线是算出来的。打开价值图，看哪片亮着。'],
-    llm: ['Asking a model each step: same judgement, but you wait for a network call and pay for it, so here it only re-decides every fifth step and coasts in between — watch it overshoot corners. What you buy is the thing the other two cannot do: change the goal by saying so, in a sentence, without retraining anything.',
+    llm: ['Asking a model each step: same judgment, but you wait for a network call and pay for it, so here it only re-decides every fifth step and coasts in between — watch it overshoot corners. What you buy is the thing the other two cannot do: change the goal by saying so, in a sentence, without retraining anything.',
       '每一步问一次模型：判断力差不多，但每次决策都要等一趟网络、花一次钱，所以这里让它每 5 步才重新决定，中间沿着上次的方向滑——会看到它冲过路口。换来的是另外两个做不到的事：想改目标，说一句话就行，不用重训。']
   };
   var caption = h('p', { class: 'fig-note' });

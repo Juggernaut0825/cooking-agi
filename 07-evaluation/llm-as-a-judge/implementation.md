@@ -35,7 +35,7 @@ python3 07-evaluation/llm-as-a-judge/code/judge_eval.py
 
 实际请求只发送 task、candidate、criterion 和允许的 evidence；有意使用 reference-based 时，再加入 reference。Human 标签留在独立的评分对照表里。
 
-程序检查 verdict 枚举、criterion_id、字段类型、未知证据 ID，以及重复 case_id。它不会验证「引用了 policy-1 就一定推理正确」，那仍需要语义复核。Judge 输出里多塞一个字段也会拒绝，避免下游误用没有约定过的数据。
+程序检查 verdict 枚举、criterion_id、字段类型、未知证据 ID，以及重复 case_id。它不会验证「引用了 policy-1 就一定推理正确」，那仍需要语义复核。Judge 输出里多塞一个字段，程序也会拒绝，避免下游误用没有约定过的数据。
 
 ## 4 种状态不要揉成一个分数
 

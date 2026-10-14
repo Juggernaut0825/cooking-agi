@@ -89,7 +89,7 @@ ROUGE-L uses the longest common subsequence (LCS). Matches need not be adjacent 
 
 ### Compute subsequences and edits together
 
-Both algorithms below use prefix dynamic programming with $O(mn)$ time and $O(n)$ rolling-array memory, where $n$ is the second sequence's length. LCS maximizes retained order; edit distance minimizes modification cost.
+Both algorithms below use prefix dynamic programming with $O(mn)$ time and $O(n)$ rolling-array memory, where $m$ and $n$ are the lengths of the first and second sequences. LCS maximizes retained order; edit distance minimizes modification cost.
 
 ```python
 def lcs_length(left, right):
@@ -231,4 +231,4 @@ Yes, but not as universal model-quality scores. New models do not invalidate the
 
 Semantic metrics such as [BERTScore](https://arxiv.org/abs/1904.09675) compare contextual representations; [COMET](https://aclanthology.org/2020.emnlp-main.213/) learns translation-quality assessment. They capture more than lexical overlap but still depend on the model, training data, and domain. They do not automatically replace fact checking. LLM judges also require [calibration](llm-as-a-judge/calibration.en.md).
 
-Keep dataset version, tokenization and normalization, reference count, implementation version, aggregation, and failure examples together. Small differences need paired uncertainty estimates rather than conclusions based on an extra decimal place. Continue to [metric robustness](metric-robustness.en.md).
+Keep dataset version, tokenization and normalization, reference count, implementation version, aggregation, and failure examples together. Small differences need paired uncertainty estimates rather than conclusions based on an extra decimal place. For paired uncertainty, see [Is the metric robust?](metric-robustness.en.md); next: [Benchmarks and long-context tests](benchmark-protocols.en.md).

@@ -10,7 +10,7 @@ Suppose a photo contains a bicycle, a rider, and a speed-limit sign. Retrieving 
 
 ## BLIP: three objectives, not three names for one score
 
-BLIP's MED architecture supports encoding, fusion, and decoding. The invented street scene below illustrates the objectives; it is not a model measurement.
+BLIP's MED (multimodal mixture of encoder-decoder) architecture can run as a unimodal encoder, an image-grounded text encoder, or an image-grounded text decoder. The invented street scene below illustrates the objectives; it is not a model measurement.
 
 | Objective | What the model does | Street-scene example | What it may miss alone |
 | --- | --- | --- | --- |

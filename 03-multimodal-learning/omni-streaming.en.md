@@ -26,7 +26,7 @@ flowchart TD
     C["Text question and history"] --> D["Thinker"]
     B --> D
     D --> E["Text answer"]
-    D --> F["Talker: generate speech codecs"]
+    D --> F["Talker: generate speech codec tokens"]
     E --> F
     F --> G["Streaming audio decoder → playback"]
 ```
@@ -91,7 +91,7 @@ A paper's latency under specified conditions is not a universal serving guarante
 
 Later releases go beyond Qwen3-Omni. Qwen3.5-Omni introduces ARIA to align text and speech units during streaming generation. Its understanding-side audio representations run at 6.25 Hz, or roughly one position per 160 ms. The previous 80 ms assumption no longer estimates its input length. [3.5 report](https://arxiv.org/abs/2604.15804)
 
-The September 2026 Qwen3.8-Omni report extends the discussion to tool-using audiovisual tasks, a hybrid language backbone, and spatial audio, alongside a realtime interaction harness. The model handles understanding and generation; the harness manages context, tools, and asynchronous work. [3.8 report](https://arxiv.org/abs/2609.25611)
+The September 2026 Qwen3.8-Omni report extends the discussion to tool-using audiovisual tasks, a hybrid language backbone, and spatial audio, alongside a real-time interaction harness. The model handles understanding and generation; the harness manages context, tools, and asynchronous work. [3.8 report](https://arxiv.org/abs/2609.25611)
 
 Consider an independent system example. You ask an assistant to review a video shot, then say “Never mind, look at the next one” before its tool returns. Stopping playback is insufficient: the system must cancel or isolate the old result so a late answer does not contaminate the new turn. A model with fast first-packet latency can still fail here.
 

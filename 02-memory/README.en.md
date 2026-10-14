@@ -61,7 +61,7 @@ What the user likes, what they are pursuing, and the evidence and confidence beh
 
 Reusable procedures or skills: for expense reports, extract dates and amounts, check for duplicates, then ask the user to confirm. This differs from “the user likes conclusions first”: one is how to perform a task; the other is a preference. Procedural knowledge may also reside in model parameters or code, not just stored text.
 
-## The four operations a memory system really has to solve
+## The four operations a memory system has to get right
 
 ### Write
 

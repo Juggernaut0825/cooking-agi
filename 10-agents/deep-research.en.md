@@ -38,7 +38,7 @@ flowchart LR
 - The **controller** enforces budgets, detects repeats, and stops loops.
 - The **writer / verifier** connects claims to evidence and checks omissions and unsupported additions.
 
-One model plus ordinary code is a reasonable first version. Parallelize genuinely independent questions. Multiple agents add context, duplication, coordination, and costs; quality is not a free upgrade.
+One model plus ordinary code is a reasonable first version. Parallelize genuinely independent questions. Multiple agents add context, duplicated work, coordination, and cost; they are not a free upgrade to research quality.
 
 ## 3. A summary alone is not an evidence record
 

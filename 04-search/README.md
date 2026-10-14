@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | 为什么命中了关键词，却排不对？ | [TF-IDF 与 BM25](tfidf-and-bm25.md) | 重复词与文档长度怎样影响打分 |
 | 文本怎样变成可检索的向量？ | [双塔检索](dual-encoder.md) | 什么能提前算，正负例怎样参与训练 |
-| 选 Qwen Embedding 还是 BGE？ | [具体模型对比](embedding-models.md) | 输入、pooling 与索引为什么得配套 |
+| 选 Qwen3 Embedding 还是 BGE-M3？ | [具体模型对比](embedding-models.md) | 输入、pooling 与索引为什么得配套 |
 | 几路结果怎么合在一起？ | [混合检索与重排](hybrid-and-reranking.md) | 怎样融合，怎样在相同预算下比较 |
 
 每篇先给直觉和小例子，再展开计算与实现。只想了解机制，可以先停在那里；准备动手时，再接后面的代码和排错。

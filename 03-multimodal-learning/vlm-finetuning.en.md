@@ -146,7 +146,7 @@ TensorBoard, MLflow, SwanLab, or local JSONL can record this. Consistent fields 
 
 Before a long run, save a small checkpoint, reload it, and repeat a fixed forward pass or generation check. A LoRA adapter still needs the correct base model and processor. Check consistency before and after merging weights. Resuming training also requires optimizer, scheduler, random-state, and data-progress considerations. The [post-training practice notes](../practice/post-training/experiments-and-release.en.md) organize these artifacts into one experiment record.
 
-This page supplies a checked mask example and an experiment protocol, **not a reproduced GPU fine-tuning result**. Its framework entry uses the versioned documentation above. On a version upgrade, repeat the batch checks rather than presenting an old environment list as a universal 2026 setup.
+This page supplies a checked mask example and an experiment protocol, **not a reproduced GPU fine-tuning result**. For framework usage, it relies on the pinned documentation linked above. On a version upgrade, repeat the batch checks rather than presenting an old environment list as a universal 2026 setup.
 
 ## Counterfactual images reveal more than one overall score
 

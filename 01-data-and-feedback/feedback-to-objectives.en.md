@@ -132,7 +132,7 @@ $$
 L=\lambda_r L_{\mathrm{retrieval}}+\sum_t\lambda_t L_t.
 $$
 
-This is a design to test, not a conclusion. Sparse tasks may learn poorly, and objectives can conflict. Inspect coverage, loss scales, and gradient effects; weights need validation rather than arbitrary values in an architecture diagram.
+Here $L_{\mathrm{retrieval}}$ is the shared encoder's main retrieval objective, $L_t$ is the prediction loss for behavior type $t$, and the $\lambda$ terms are weights. This is a design to test, not a conclusion. Sparse tasks may learn poorly, and objectives can conflict. Inspect coverage, loss scales, and gradient effects; weights need validation rather than arbitrary values in an architecture diagram.
 
 A sampled contrastive negative is also a training construction. It asks the model to distinguish positives within a candidate set; it does not establish that every unlabeled candidate is irrelevant. A hard negative is difficult for the current model; it isn't necessarily a verified negative.
 
@@ -173,7 +173,7 @@ Zero means exposed-but-unclicked, not disliked. Treating it as a negative requir
 
 ## Test whether the signal helps
 
-Hold the model, candidate set, and compute budget fixed when changing labels or sampling. Then hold data fixed when testing architecture. Otherwise attribution becomes difficult. Evaluate overall and predefined subgroup behavior, with a human or behavioral reference not scored by the training teacher alone.
+Hold the model, candidate set, and compute budget fixed when changing labels or sampling. Then hold data fixed when testing architecture. Otherwise attribution becomes difficult. Evaluate overall and predefined subgroup behavior, with a human or behavioral reference not scored by the training teacher.
 
 If scores don't move, inspect coverage of the intended population and whether the metric can detect the improvement before buying a larger model. One failed experiment neither disproves the signal nor proves that scale will rescue it.
 

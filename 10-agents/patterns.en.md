@@ -15,7 +15,7 @@ A model can use retrieval, tools, and memory without every agent requiring all t
 | Structure | How it works | When to use it |
 | --- | --- | --- |
 | Prompt chaining | Split the task into fixed steps, each step's output is the next one's input, with checks in between | The steps are clear, and a little latency is worth the accuracy |
-| Routing | Classify first, then hand off to a specialised path | Inputs differ a lot and are better handled separately |
+| Routing | Classify first, then hand off to a specialized path | Inputs differ a lot and are better handled separately |
 | Parallelization | Run independent subtasks at once (sectioning), or do the same thing several times and vote (voting) | Subtasks do not depend on each other, or you want a steadier result |
 | Orchestrator-workers | One model breaks the task down on the fly, hands pieces to workers, and combines the results | The subtasks cannot be listed in advance, such as which files a change must touch |
 | Evaluator-optimizer | One model generates, another evaluates and gives feedback, in a loop | There are clear evaluation criteria, and feedback really improves the result |
