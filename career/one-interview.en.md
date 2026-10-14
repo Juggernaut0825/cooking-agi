@@ -50,4 +50,4 @@ That wasn't the main reason I struggled, but it's something I can practice separ
 
 The role wasn't a particularly close match for my experience, and I was underprepared. The useful follow-ups were fairly clear: review a broader range of fundamentals, state the assumptions before discussing a design, and practice technical explanations in Chinese.
 
-I also interviewed for two RS roles around that time and may add those reflections when I've put them together. For now, remembering the gaps this interview revealed is more useful than giving myself an overall grade.
+I also interviewed for two Research Scientist (RS) roles around that time and may add those reflections when I've put them together. For now, remembering the gaps this interview revealed is more useful than giving myself an overall grade.
