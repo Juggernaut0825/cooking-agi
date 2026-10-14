@@ -32,7 +32,7 @@ Differentiating gives $2(2+u)+0.2u=0$, hence $u=-2/1.1\approx-1.8182$. Neither t
 
 ## LQR is a solvable special case
 
-Assume known linear dynamics $x_{t+1}=Ax_t+Bu_t$ and quadratic cost, with positive-semidefinite $Q,Q_f$, positive-definite $R$, and no additional action constraints:
+Assume known linear dynamics $x_{t+1}=Ax_t+Bu_t$ and quadratic cost, with positive-semidefinite $Q,Q_f$, positive-definite $R$, and no additional action constraints. In control notation, $x$ is the state, $u$ the action, and $Q,Q_f,R$ are cost matrices, not the action values Q of earlier chapters:
 
 $$
 J=\sum_{t=0}^{T-1}(x_t^\top Qx_t+u_t^\top Ru_t)+x_T^\top Q_fx_T.

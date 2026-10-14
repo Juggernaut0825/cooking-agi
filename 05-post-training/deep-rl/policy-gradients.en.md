@@ -101,7 +101,7 @@ Begin debugging with a two-action bandit whose rewards are known. Fix seeds and 
 
 ## Where this leads
 
-REINFORCE avoids learning an environment model and has a direct mechanism, but return variance and sample cost can be large. A Critic helps estimate the update direction. Continue with [Actor–Critic and GAE](actor-critic-gae.en.md).
+The estimator above, which weights log-probabilities by sampled returns, is REINFORCE. It avoids learning an environment model and has a direct mechanism, but return variance and sample cost can be large. A Critic helps estimate the update direction. Continue with [Actor–Critic and GAE](actor-critic-gae.en.md).
 
 Why does step size need more care than choosing a learning rate? Continue with [natural gradient and TRPO](trust-region.en.md), from a coin policy to a KL-constrained update.
 

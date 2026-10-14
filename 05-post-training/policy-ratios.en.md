@@ -2,7 +2,7 @@
 
 [中文](policy-ratios.md) · **English**
 
-> Last reviewed: 2026-10-10 · Prerequisites: [PPO clipping](rlhf/ppo-clipping.en.md) and [GRPO](rlhf/after-rlhf.en.md)
+> Last reviewed: 2026-10 · Prerequisites: [PPO clipping](rlhf/ppo-clipping.en.md) and [GRPO](rlhf/after-rlhf.en.md)
 
 An answer is correct overall, yet one token has become less likely. Should training raise the whole answer together, or give that token extra attention? GSPO and ASPO take different approaches. Start with where their weights enter the update, rather than the acronyms.
 
@@ -99,7 +99,7 @@ $\operatorname{sg}$ means stop-gradient. A directly differentiable `1 / ratio` h
 
 ### One local update
 
-Suppose behavior probability is 0.2, current probability is 0.1, and $A=1$. The ordinary ratio is 0.5; ASPO's positive-branch weight is 2. Before masking or weight caps apply, their coefficients on $\nabla\log p_\theta$ are therefore 0.5 and 2.
+Suppose behavior probability is 0.2, current probability is 0.1, and $A=1$. The ordinary ratio is 0.5; ASPO's positive-branch weight is 2. If neither masking nor a weight cap is triggered, their coefficients on $\nabla\log p_\theta$ are therefore 0.5 and 2.
 
 This checks the local stop-gradient interpretation by holding the denominator fixed during differentiation, rather than recomputing it after each perturbation.
 

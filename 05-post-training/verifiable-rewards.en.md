@@ -28,7 +28,7 @@ A discrete, nondifferentiable reward is not protection against exploitation. Pol
 
 Reward hacking describes behavior that earns more proxy reward without delivering the intended result. The proxy need not be a neural network: handwritten rules can give the wrong incentive too.
 
-Incomplete checks can reinforce unwanted behavior, including:
+Incomplete checks can reinforce a model that learns to:
 
 - hardcode returns for the specific test cases;
 - swallow every exception so the program doesn't crash, satisfying "doesn't error" style checks;
@@ -127,13 +127,6 @@ A task can use several checks. For a report, code might verify numbers and links
 - [The alignment tax](alignment-tax.en.md): check entropy, solution coverage, and actual quality separately
 - [Evaluation](../07-evaluation/): a verifier and an eval set are not the same thing
 
-## Starting papers {#starting-papers}
-
-- [DeepSeek-R1, §2.2.2](https://arxiv.org/html/2501.12948v1#S2.SS2.SSS2) — a concrete design using rule-based accuracy and format rewards
-- [DAPO](https://arxiv.org/abs/2503.14476) — dynamic sampling for all-right/all-wrong groups
-- [Let's Verify Step by Step](https://arxiv.org/abs/2305.20050) — process versus outcome supervision
-- The sorting and probability examples are checked by the [standard-library teaching script](code/selection_and_entropy.py). It neither executes model-generated programs nor reproduces training results.
-
 ## Quick learning: what does a verifiable reward replace? {#quick-learning-what-does-a-verifiable-reward-replace}
 
 <details class="interview" markdown="1">
@@ -143,7 +136,7 @@ A task can use several checks. For a report, code might verify numbers and links
 
 **Interview answer**
 
-> I would state what the verifier checks, then construct an answer that passes while violating the task. Checking sorted order, for instance, must also preserve element counts. I would then evaluate models with held-out tests and a fixed sampling budget rather than reporting training reward alone.
+> I would state what the verifier checks, then construct an answer that passes while violating the task. For sorting, for instance, checking order is not enough; the check must also confirm that every element and its count are preserved. I would then evaluate models with held-out tests and a fixed sampling budget rather than reporting training reward alone.
 
 <details markdown="1">
 <summary><b>Deep dive</b>: outcome reward or process reward?</summary>
@@ -152,3 +145,10 @@ Outcome-reward reliability depends on the specification and verifier coverage; i
 
 </details>
 </details>
+
+## Starting papers {#starting-papers}
+
+- [DeepSeek-R1, §2.2.2](https://arxiv.org/html/2501.12948v1#S2.SS2.SSS2) — a concrete design using rule-based accuracy and format rewards
+- [DAPO](https://arxiv.org/abs/2503.14476) — dynamic sampling for all-right/all-wrong groups
+- [Let's Verify Step by Step](https://arxiv.org/abs/2305.20050) — process versus outcome supervision
+- The sorting and probability examples are checked by the [standard-library teaching script](code/selection_and_entropy.py). It neither executes model-generated programs nor reproduces training results.

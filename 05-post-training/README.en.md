@@ -2,7 +2,7 @@
 
 [中文](README.md) · **English**
 
-> Reading time: ~12 min · Type: overview · Last reviewed: 2026-08
+> Reading time: ~12 min · Type: overview · Last reviewed: 2026-10
 
 ## Post-training changes how the model behaves
 
@@ -16,7 +16,7 @@ Pretraining teaches a model what the world usually contains. Post-training teach
 - **Continued Pretraining**: keep adapting to the data distribution and terminology of one domain.
 - **SFT**: learn instruction following and target behavior from high-quality demonstrations.
 - **Preference Learning**: learn preferences from comparisons between responses.
-- **RL**: adjust the whole action policy according to outcomes or verifiable rewards.
+- **RL**: adjust the policy according to task outcomes or reward signals.
 
 They are not interchangeable buttons; they solve different learning problems.
 
@@ -134,7 +134,7 @@ SFT uses input–output demonstrations to teach the model to imitate a target be
 - distill an expert's process into the model;
 - give the model a reasonably stable behavioral starting point first.
 
-Its limit is that it can only imitate behavior that appears in the data. For long-tail cases the demonstrations never covered, the model may not know what to do.
+Its limit is that the objective only imitates demonstrations. The model can generalize to similar situations, but for long-tail cases the demonstrations never covered it may not know what to do, so those cases need separate tests.
 
 ## What preference learning does
 
@@ -214,7 +214,7 @@ For demonstrations built from model outputs, read [rejection sampling and filter
 **II. Teaching by outcome: the RL line**
 
 5. [The three stages of RLHF, and what happened next](rlhf/README.en.md) — four models, which train and which are frozen
-6. [After PPO](after-ppo.en.md) — how GRPO / RLOO / REINFORCE++ / DAPO / DPO use different signals and objectives
+6. [PPO, GRPO, and DPO](after-ppo.en.md) — starting from PPO, how GRPO / RLOO / REINFORCE++ / DAPO / DPO use different signals and objectives
 7. [Verifiable rewards](verifiable-rewards.en.md) — sorting tests expose reward loopholes, followed by sparse feedback and process checks
 
 **III. Actually running it**
@@ -226,7 +226,7 @@ For demonstrations built from model outputs, read [rejection sampling and filter
 
 10. [Alignment trade-offs](alignment-tax.en.md) — check task-level regressions, diversity, and distribution shift; aggregate pass@1 and pass@k alone cannot establish mode collapse
 
-Read these as a connected sequence: choose supervision and an update method, then examine training, validation, and costs. Or go directly to the question you need to answer.
+Read these as a connected sequence: choose supervision and an update method, then examine training, validation, and costs.
 
 Use the contents to jump to a specific problem; there is no need to finish everything in one sitting.
 

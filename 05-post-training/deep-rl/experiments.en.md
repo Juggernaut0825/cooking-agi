@@ -27,7 +27,7 @@ python3 05-post-training/deep-rl/code/torch_updates.py
 
 [Arithmetic and boundary checks](code/rl_checks.py) cover Bellman updates, returns, GAE, Double DQN, and ESS. [PyTorch checks](code/torch_updates.py) verify Actor-gradient signs, detached targets, and continuous-action gradient flow, then train a two-action bandit.
 
-Bandit rewards are $[1,3]$, starting from equal probabilities. A fixed seed generates sampled actions, and REINFORCE updates the logits. Expect the second action's probability to increase, not reward to improve monotonically every step. **This checks one-stage mechanisms; it is not a full DQN / SAC reproduction or benchmark.**
+Bandit rewards are $[1,3]$, starting from equal probabilities. A fixed seed generates sampled actions, and REINFORCE with the current expected reward as a baseline updates the logits. Expect the second action's probability to increase, not reward to improve monotonically every step. **This checks the update mechanism on a single-step bandit; it is not a full DQN / SAC reproduction or benchmark.**
 
 ## Keep a checkable quantity at each stage
 

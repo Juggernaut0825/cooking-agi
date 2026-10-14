@@ -109,7 +109,7 @@ Variance explains randomness, but the log-variance term penalizes unlimited infl
 
 Two routes have predicted returns 3 and 10 but actual returns 3 and −5. Choosing the second is not weak search: the planner optimized the incorrect prediction successfully. Additional search may simply find the same flaw more reliably.
 
-Hold the model fixed and increase search budget, comparing predicted and real returns. If predictions improve while real outcomes worsen, inspect exploited regions before tuning search further. Then fix the planner, add real data from those regions, and check whether the gap closes.
+Hold the model fixed and increase search budget, comparing predicted and real returns. If predictions improve while real outcomes worsen, inspect exploited regions before tuning search further. Then hold the planner fixed, add real data from those regions, and check whether the gap closes.
 
 Short rollouts, disagreement penalties, and constraints can reduce some risks but have costs. Short horizons miss distant gains; pessimism may reject genuinely good routes; an incorrect constraint model gives no safety guarantee. Compare with model-free baselines and an oracle model, not only the learned model’s own scores.
 

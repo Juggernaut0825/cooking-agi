@@ -81,7 +81,7 @@ def double_dqn_loss(online, target, states, actions, rewards,
 | --- | --- | --- |
 | Double DQN | 下一动作的选择与估值解耦 | 仍是 Q-learning |
 | Dueling network | 以 value 与 action advantage 组合 Q | 不等于两个 target network |
-| Prioritized replay | 更常抽取某些 transition | 会改变采样分布，需考虑校正与偏差 |
+| Prioritized replay | 更常抽取某些 transition | 不改 target 公式；但采样分布变了，要用重要性权重校正偏差 |
 
 探索通常用 $\epsilon$-greedy。训练时随机动作是为了收集信息，评估时是否关掉要明确记录。把探索噪声造成的低分和 policy 本身的低分混在一起，曲线会不好解释。
 

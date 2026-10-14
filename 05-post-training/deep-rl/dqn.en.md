@@ -79,7 +79,7 @@ True terminal successors never enter the network: their target is the reward. Co
 | --- | --- | --- |
 | Double DQN | Decouples next-action selection and evaluation | Still Q-learning |
 | Dueling network | Combines value and action advantage into Q | Not two target networks |
-| Prioritized replay | Samples some transitions more frequently | Sampling shifts require attention to correction and bias |
+| Prioritized replay | Samples some transitions more frequently | Not the target formula; the shifted sampling distribution needs importance-weight correction |
 
 Exploration often uses $\epsilon$-greedy. Random training actions collect information; document whether evaluation disables them. Otherwise low scores from exploration and low scores from the policy itself become hard to separate.
 

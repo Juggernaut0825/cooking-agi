@@ -63,7 +63,7 @@ The first term discourages premature concentration; the second favors valuable a
 
 ## Reparameterization and the missing tanh correction
 
-Trace the data before the density calculation:
+Reparameterization writes a random action as fixed noise passed through a differentiable transform. Trace the data flow before the change of variables:
 
 <div class="drl-flow" aria-label="Differentiable sampling in the SAC Actor">
 <span>State s<br><small>Predict μ, log σ</small></span><b>→</b><span>Fixed noise ε<br><small>u = μ + σε</small></span><b>→</b><span>Action a<br><small>tanh + density correction</small></span><b>→</b><span>Q and log π<br><small>Both reach the Actor</small></span>
@@ -106,7 +106,7 @@ The extra 0.126 comes from the soft-value definition, not additional task reward
 
 Initialize the two target Q-networks from the current Q-networks, then typically Polyak-update them each Critic round. This variant has no target Actor and adds no separate TD3 smoothing noise. True termination gives $y=r$; an external time-limit truncation still uses a soft bootstrap from the final pre-reset state.
 
-The score-function update in the policy-gradient chapter treats sampled actions as fixed observations; this Actor differentiates through them. The distinction is the estimator, not simply discrete versus continuous actions: continuous policies can also use score-function gradients. The two paths need different detach positions.
+The policy-gradient chapter's update, which multiplies $\nabla\log\pi$ by a return (the score-function estimator), treats sampled actions as fixed observations; this Actor differentiates through them. The distinction is the estimator, not simply discrete versus continuous actions: continuous policies can also use score-function gradients. The two paths need different detach positions.
 
 ## Automatic temperature still involves choices
 

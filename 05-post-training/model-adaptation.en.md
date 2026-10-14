@@ -170,7 +170,7 @@ validity.
 
 ### Score a fixed label set {#score-a-fixed-label-set}
 
-Avoid free generation and compare candidate sequence log-probabilities:
+Avoid free generation and compare candidate sequence log-probabilities (the $P$ in the condition is the learned soft prompt, and $c_j$ is the $j$-th token of label $c$):
 
 $$
 \hat c=\arg\max_{c\in\mathcal C}\log P(c\mid P,x),
@@ -266,7 +266,7 @@ p_S(\cdot\mid x,y_{<t};T)
 \right).
 $$
 
-Temperature $T$ flattens the distribution so relationships among secondary tokens also
+Temperature $T$ (not to be confused with the subscripts $T$ and $S$, which mark Teacher and Student) flattens the distribution so relationships among secondary tokens also
 become supervision. Storing full-vocabulary logits is expensive, so systems often retain
 only Teacher top-$k$ logits. That creates obligations around residual probability mass,
 cross-tokenizer projection, masking, and normalization.
@@ -286,9 +286,9 @@ only LoRA. The Teacher is normally frozen; the Student is optimized and deployed
 | Goal | Natural starting point | Why |
 | --- | --- | --- |
 | many simple tasks sharing one huge model | Prompt / Prefix Tuning | store only a small task state |
-| substantial behavior change under limited resources | LoRA-SFT | more capacity than a soft prompt at far lower cost than full FT |
+| substantial behavior change under limited resources | LoRA-SFT | more capacity than a soft prompt; far fewer trainable parameters, less optimizer state, and smaller checkpoints than full FT |
 | ample data, large task shift, maximum adaptation ceiling | Full Fine-Tuning | fewest parameter constraints, highest cost and regression risk |
-| transfer a large model's capability into a small model | Distillation | Teacher supplies denser information than hard labels |
+| transfer a large model's capability into a small model | Distillation | Teacher can generate demonstrations at scale; logit distillation also supplies denser information than hard labels |
 | fixed enum classification | Label scoring or classification head | avoid free-generation uncertainty |
 | missing, changing external facts | Retrieval / tool use | model parameters should not act as a live database |
 
@@ -303,7 +303,7 @@ only LoRA. The Teacher is normally frozen; the Student is optimized and deployed
 <div class="taste-check">
   <strong>If you understand the page, you can explain:</strong>
   <ol>
-    <li>Why does a soft prompt not correspond to vocabulary tokens or require a natural-language interpretation?</li>
+    <li>Why does a soft prompt not correspond to vocabulary tokens, and why can it usually not be read as words?</li>
     <li>Where do Prompt Tuning and Prefix Tuning inject their parameters?</li>
     <li>Why is “LoRA versus SFT” an incomplete comparison?</li>
     <li>How can a generative classifier be forced to return only legal enum values?</li>
@@ -313,15 +313,8 @@ only LoRA. The Teacher is normally frozen; the Student is optimized and deployed
 
 ## Continue reading {#continue-reading}
 
-- [SFT: how far imitation goes](sft-and-its-ceiling.en.md)
+- [SFT: how a conversation becomes a training signal](sft-and-its-ceiling.en.md)
 - [Post-training infrastructure](post-training-infrastructure.en.md)
-
-## Papers {#papers}
-
-- [The Power of Scale for Parameter-Efficient Prompt Tuning](https://arxiv.org/abs/2104.08691)
-- [Prefix-Tuning](https://arxiv.org/abs/2101.00190)
-- [LoRA](https://arxiv.org/abs/2106.09685)
-- [Distilling the Knowledge in a Neural Network](https://arxiv.org/abs/1503.02531)
 
 ## Quick learning: separate the two axes {#quick-learning-separate-the-two-axes}
 
@@ -363,3 +356,10 @@ flowchart LR
     U --> L["LoRA / Adapter"]
     U --> T["Prompt / Prefix tuning"]
 ```
+
+## Papers {#papers}
+
+- [The Power of Scale for Parameter-Efficient Prompt Tuning](https://arxiv.org/abs/2104.08691)
+- [Prefix-Tuning](https://arxiv.org/abs/2101.00190)
+- [LoRA](https://arxiv.org/abs/2106.09685)
+- [Distilling the Knowledge in a Neural Network](https://arxiv.org/abs/1503.02531)

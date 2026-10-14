@@ -2,9 +2,9 @@
 
 [中文](async-policy-learning.md) · **English**
 
-> Last reviewed: 2026-10-08 · Prerequisites: [On- vs off-policy](rlhf/on-off-policy.en.md) and [GAE](deep-rl/actor-critic-gae.en.md)
+> Last reviewed: 2026-10 · Prerequisites: [On- vs off-policy](rlhf/on-off-policy.en.md) and [GAE](deep-rl/actor-critic-gae.en.md)
 
-One agent finishes in 5 seconds. Another searches, runs code, and takes 40. Waiting for the slowest leaves the trainer idle; training on whichever finishes first makes later trajectories stale. Asynchronous RL removes waiting, not the distribution mismatch.
+One agent finishes in 5 seconds. Another searches, runs code, and takes 40. Waiting for the slowest leaves the trainer idle; training on whichever finishes first makes later trajectories stale. Asynchronous RL removes the waiting but introduces this distribution mismatch, which still has to be handled.
 
 ## Draw the data path first
 
@@ -21,7 +21,7 @@ This is a teaching diagram. Production systems also handle timeouts, cancellatio
 
 ### A waiting-time example
 
-Suppose 4 rollouts for one prompt start together and finish at `[5, 8, 13, 40]` seconds. A group-relative update must wait until 40 seconds for the group rewards. The first three trajectories wait another 35, 32, and 27 seconds, giving 23.5 seconds of average extra waiting.
+Suppose 4 rollouts for one prompt start together and finish at `[5, 8, 13, 40]` seconds. A group-relative update must wait until 40 seconds for the group rewards. The first three trajectories wait another 35, 32, and 27 seconds and the last waits 0, so the average extra wait across all four is $(35+32+27+0)/4=23.5$ seconds.
 
 Enqueuing individual completed trajectories removes this group barrier. Queues, batching, and weight synchronization still add delays. The arithmetic is not a claim of a particular training speedup.
 
@@ -29,7 +29,7 @@ Enqueuing individual completed trajectories removes this group barrier. Queues, 
 
 [SAO (2026-07)](https://arxiv.org/html/2607.07508v1) studies single-rollout asynchronous agent training: use a value model rather than waiting for a same-prompt comparison group; calculate current / behavior ratios from rollout log-probabilities; mask tokens outside a chosen interval. The paper combines this with more frequent value updates, frozen attention parameters in the value model, and value pretraining.
 
-“Single rollout” means no comparison group per prompt, not one sample per optimizer step. The Critic and its cost return. Compare total time and learning quality rather than assuming that fewer components must be better.
+“Single rollout” means no comparison group per prompt, not one sample per optimizer step. This brings the Critic back, and its cost with it. Compare total time and learning quality rather than assuming that fewer components must be better.
 
 ## Why the denominator belongs to generation time
 

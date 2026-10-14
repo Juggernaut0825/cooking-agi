@@ -35,7 +35,7 @@ $$
 G_t^{(n)}=\sum_{k=0}^{n-1}\gamma^k r_{t+k}+\gamma^nV(s_{t+n}).
 $$
 
-到真实终点就停止求和并删去尾项。$n$ 越大，通常越依赖已经发生的奖励，越少依赖下一状态的估值。选多长才合适，要看轨迹噪声和估值质量，并不是越长越好。
+到真实终点就停止求和并删去尾项。$n$ 越大，通常越依赖已经发生的奖励，越少依赖末尾那一项估值（bootstrap）。选多长才合适，要看轨迹噪声和估值质量，并不是越长越好。
 
 ## 最容易写错：结束，不一定是终止
 
@@ -107,12 +107,12 @@ MC target 不依赖当前参数，比较像普通监督回归；TD target 会随
 
 固定学习率可能更适合跟踪变化，但不能照搬“精确收敛”的结论。换成非线性网络、off-policy 数据或不充分覆盖，更要重新检查前提。实作时先拿小的表格环境核对更新，再把网络放进去，可以少猜很多参数。
 
-## 检查你的理解
+## 检查实现里的边界假设
 
 <details markdown="1">
 <summary>只把 done 换成 terminated，就把所有边界问题修好了吗？</summary>
 
-不一定。Vector environment 可能已经自动 reset；你还得保存 final observation。GAE 的 bootstrap mask 与跨 episode 递推的 mask 也不一样，下一篇 Actor–Critic 会分开写。先检查你用的环境 API，再决定数组怎么存。
+不一定。Vector environment 可能已经自动 reset；你还得保存 final observation。GAE 的 bootstrap mask 与跨 episode 递推的 mask 也不一样，后面的 [Actor–Critic 与 GAE](actor-critic-gae.md) 会分开写。先检查你用的环境 API，再决定数组怎么存。
 
 </details>
 

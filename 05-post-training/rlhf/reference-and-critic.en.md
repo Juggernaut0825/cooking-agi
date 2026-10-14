@@ -114,7 +114,7 @@ $$
 
 For $\hat A_t=2$ and $\epsilon=0.2$, increasing $\rho_t$ from 1.2 to 1.5 leaves this term at 2.4. It removes further incentive in that direction; it **does not force the actual ratio back to 1.2**. Other samples share parameters, and successive updates interact.
 
-The [official PPO teaching implementation](https://spinningup.openai.com/en/latest/algorithms/ppo.html) explicitly warns that clipping can still allow excessive movement, motivating KL monitoring and early stopping. PPO-Clip does not strictly enforce TRPO's KL constraint.
+OpenAI's [Spinning Up PPO implementation](https://spinningup.openai.com/en/latest/algorithms/ppo.html) explicitly warns that clipping can still allow excessive movement, motivating KL monitoring and early stopping. PPO-Clip does not strictly enforce TRPO's KL constraint.
 
 ## 6. Checks worth doing before a larger run
 
@@ -126,4 +126,4 @@ The [official PPO teaching implementation](https://spinningup.openai.com/en/late
 | Reward scale | Multiplying rewards by ten while treating the old $\beta$ as equivalent | Specify normalization before comparing coefficients |
 | Critic target | Confusing returns with advantages, or bootstrapping through termination | Check value targets and advantages on a short trajectory |
 
-Continue with [who generated the data](on-off-policy.en.md), then [GRPO, DPO, and RLVR](after-rlhf.en.md). These address three connected questions: the objective, its gradient estimate, and its data source.
+Next, read [PPO clipping](ppo-clipping.en.md), then [GRPO, DPO, and RLVR](after-rlhf.en.md). The objective, its gradient estimate, and its data source (see [who generated the data](on-off-policy.en.md)) need to be stated together.

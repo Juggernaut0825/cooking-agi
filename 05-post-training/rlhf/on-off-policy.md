@@ -2,7 +2,7 @@
 
 **中文** · [English](on-off-policy.en.md)
 
-> 阅读时间：约 14 分钟 · 难度：必修 · 最近审阅：2026-10-10
+> 阅读时间：约 14 分钟 · 难度：必修 · 最近审阅：2026-10
 
 生成一批长回答很贵。刚收集完就丢掉，当然心疼；但一直反复使用，又会遇到一个问题：**生成这批回答的模型，已经不是眼下正在更新的模型了。**
 
@@ -51,7 +51,7 @@ PPO 允许对这一批数据做多轮 minibatch 更新，同时用 surrogate obj
 | 顺序 | 做什么 | 哪些东西别悄悄换掉 |
 |---|---|---|
 | 1. 采样 | 保存策略 v7；每个问题生成 $G$ 个回答 | 记录生成版本、采样设置和对应 log-prob |
-| 2. 打分 | 在同一个问题的回答组内算 reward、均值和 advantage | 别把不同问题的回答拼成一组，也别在过滤后假定原来的组均值仍为 0 |
+| 2. 打分 | 在同一个问题的回答组内算 reward、均值和 advantage | 别把不同问题的回答拼成一组，也别在过滤掉部分回答后，仍假定组内 advantage 的均值为 0 |
 | 3. 更新 | 用这些回答把模型更新为 v8、v9 | Ratio 的分母仍对应 v7；这批 advantage 和训练 mask 保持明确、一致 |
 | 4. 刷新 | 结束这批更新，用新的策略生成下一批 | 这是刷新 old policy，不是自动刷新 Reference |
 
@@ -217,7 +217,7 @@ assert math.isclose(target_return, 0.65)
 | 实际采样规则与概率 | temperature、top-p 等会改变行为分布 | 把未处理的模型概率直接当作 sampler 概率 |
 | Token、mask、终止原因 | 区分 prompt、padding、EOS 与长度截断 | 把截断当自然结束，或把 padding 算入 loss |
 | Reward / verifier 版本 | 打分规则变了，目标也可能变了 | 混合不同版本分数却不做标记 |
-| 轨迹年龄与队列延迟 | 异步生成可能落后于训练很多步 | 只看墙上过去几秒，不看策略更新了几次 |
+| 轨迹年龄与队列延迟 | 异步生成可能落后于训练很多步 | 只看过去了几秒，不看策略更新了几次 |
 
 特别是 top-p 等截断采样：一些 token 的实际采样概率会变成零。若你要声称做了精确 importance correction，就必须说明实际行为概率、目标分布与支持条件；不能默认为未截断 softmax。工程上采用近似也可以，但要明确近似在哪，并检查它的影响。
 
@@ -233,4 +233,4 @@ assert math.isclose(target_return, 0.65)
 
 回到开头：旧回答不是不能用，而是要知道它们来自哪里、覆盖了什么，以及你愿意承担哪种偏差。数据复用能省生成成本；为了省这笔钱，把估计前提弄丢了，最后可能连「训练变好了没有」都说不清。
 
-下一篇看 [Reference 与 Critic](reference-and-critic.md)，把 reference KL、old-policy ratio 和 baseline 彻底分开。
+下一篇看[三个阶段和四个模型](three-stages.md)，把整条流程摆出来；再到 [Reference 与 Critic](reference-and-critic.md)，把 reference KL、old-policy ratio 和 baseline 彻底分开。

@@ -15,7 +15,7 @@ L_{\rm BC}=-\mathbb E_{(s,a)\sim\mathcal D_{\rm expert}}
 [\log\pi_\theta(a\mid s)].
 $$
 
-No reward model or extensive agent trial and error is required. But training states come from the expert, while deployment states come from the learner. Drift toward the road edge changes subsequent observations, and the demonstrations may never show how to recover there.
+It needs no reward signal at all, and no extensive trial and error by the agent. But training states come from the expert, while deployment states come from the learner. Drift toward the road edge changes subsequent observations, and the demonstrations may never show how to recover there.
 
 This does not mean more data is always useless. More samples from the same narrow coverage may fail to teach recovery in new states.
 
@@ -57,7 +57,7 @@ Classical analyses show that BC errors can compound over the horizon in adverse 
 
 ## IRL infers objectives, not minds
 
-Inverse RL asks which reward could explain expert behavior. Many reward functions can explain the same policy. Adding identical trajectory constants or suitable potential shaping can preserve policy rankings.
+Inverse RL asks which reward could explain expert behavior. Many reward functions can explain the same policy. Adding the same constant to every trajectory's return, or applying suitable potential-based shaping, can preserve policy rankings.
 
 Additional assumptions or inductive biases are necessary: a reward family, a maximum-entropy model, or preference comparisons. Experts also face capability, information, and cost constraints; observed behavior need not reveal perfectly rational optimal preferences. A complete MaxEnt IRL optimization derivation is outside this introduction.
 
@@ -69,7 +69,7 @@ $$
 P(y^+\succ y^-\mid x)=\sigma(r_\phi(x,y^+)-r_\phi(x,y^-)).
 $$
 
-This supervises a reward difference, but does not automatically separate quality from length, style, or annotator preference. A policy optimizing the learned reward can exploit regions beyond label coverage. Keep independent task validation rather than relying on the same judge to approve its own influence.
+This supervises a reward difference, but does not automatically separate quality from length, style, or annotator preference. A policy optimizing the learned reward can exploit regions beyond label coverage. Keep independent task validation; do not let the judge that supplies the reward also decide whether training succeeded.
 
 ## How does one preference pair update a reward model?
 

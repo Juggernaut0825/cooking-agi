@@ -93,7 +93,7 @@ target, its special-token ID in the tokenizer, and the inference engine's stop
 configuration.
 
 A maximum-length limit remains a necessary safety fallback, but it is not the same as
-teaching natural termination. One forcibly truncates the system; the other makes the
+teaching natural termination. One is a cut-off the system imposes; the other makes the
 model assign high probability to “the answer is complete.”
 
 ## Follow the mask and the shift {#mask-example}
@@ -196,7 +196,7 @@ If every demonstration answers confidently, the model gets little practice askin
 
 The challenge is matching behavior to available information. Answer when evidence is sufficient; ask when something essential is missing. Adding generic refusal templates can instead make the model avoid answerable questions.
 
-Preference training or RL can compare the costs of different choices, but still depends on suitable rewards. No training label alone guarantees honesty.
+Preference training or RL can compare the costs of different choices, but still depends on suitable rewards. No training method, by itself, guarantees honesty.
 
 ## How do you check whether knowledge was learned? {#a-corollary-when-the-knowledge-in-the-demonstrations-isnt-in-the-model-sft-teaches-tone}
 
