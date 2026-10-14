@@ -23,6 +23,8 @@
 
 <!-- widget:tx-arch -->
 
+<!-- paper-figure:transformer-arch -->
+
 最值得对比的三步：`Transformer ’17 → GPT-2 / 3`（去掉 encoder 和 cross-attention，norm 移进残差分支）、`GPT-2 / 3 → Llama 3`（LayerNorm → RMSNorm，绝对位置 → RoPE，GELU → SwiGLU，MHA → GQA）、`Llama 3 → DeepSeek-V3`（GQA → MLA，dense FFN → MoE）。
 
 ## Self-attention：一步一步算
@@ -57,6 +59,8 @@ $$
 
 <!-- widget:tx-kv-heads -->
 
+<!-- paper-figure:gqa-heads -->
+
 下半部分是控制变量计算器，不是实际部署配置：固定层数、长度与存储精度，再替换 attention 方案。MLA 行固定使用 512 维 latent + 64 维 RoPE key。它不包含权重、临时激活、KV 分页碎片或跨卡副本，也不表示每个模型原生支持这四种方案。
 
 ## 不是每个 token 都要看到所有 token
@@ -64,6 +68,9 @@ $$
 完整的 causal attention 是 $O(n^2)$。**Sliding-window attention** 让每个 token 只看最近的 $w$ 个 token：计算量变成 $O(n\,w)$，cache 也封顶在 $w$。信息仍然能传得更远，因为每多一层，可达范围就再多一个窗口——$L$ 层之后大约是 $L\,(w-1)+1$ 个 token。
 
 <!-- widget:tx-windows -->
+
+<!-- paper-figure:streamingllm-windows -->
+<!-- paper-figure:mistral-swa -->
 
 拖动“堆叠层数”看浅色区域怎么扩张。这里的范围是信息可能经过的路径，不保证远处内容一定被记住。Gemma 3 采用 5 层 local 配 1 层 global；gpt-oss 交替使用窗口层与全局层。StreamingLLM 则保留开头的 sink token 和最近窗口，减少直接丢掉开头 KV 带来的失稳；已经移出窗口的细节并不会因此完整保留。
 
@@ -81,6 +88,8 @@ MoE 把一个 FFN 换成多个 expert，再由 router 为每个 token 选其中 
 
 <!-- widget:tx-moe -->
 
+<!-- paper-figure:mixtral-moe -->
+
 格子按真实数量画（8、128 或 256 个 expert），所以你看到的稀疏度就是真实的稀疏度。DeepSeek-V3 多了一个所有 token 都会经过的 shared expert。图里的 router 是随机的，只为演示负载分布；真实的 router 是一个学出来的线性层，负载均衡要靠辅助 loss 或 bias 项来维持。完整的一组笔记见 [MoE 系列](moe/)。
 
 ## FlashAttention：数学不变，少搬显存
@@ -88,6 +97,8 @@ MoE 把一个 FFN 换成多个 expert，再由 router 为每个 token 选其中 
 朴素 attention 会把完整的 $n\times n$ 分数和概率矩阵写到 HBM，来回读写可能很贵。FlashAttention 用分块和 online softmax 累积输出，不需要把这两张完整矩阵存到 HBM。它不靠稀疏化来近似 attention，但浮点计算顺序不同，结果不保证逐位相同。省下多少时间仍取决于形状、硬件和 kernel，不能一概说 attention 总是访存瓶颈。
 
 <!-- widget:tx-flash -->
+
+<!-- paper-figure:flashattention-tiling -->
 
 切到“标准 attention”，看 S 和 P 两个 $n\times n$ 矩阵怎样被完整写进 HBM；再切回来，注意右上角整块被 causal mask 直接跳过的 block。
 

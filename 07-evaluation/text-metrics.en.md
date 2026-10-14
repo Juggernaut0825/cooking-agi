@@ -38,6 +38,8 @@ Take reference `the bus leaves at ten` and candidate `the bus leaves`. Every can
 
 Now use `the bus leaves at nine`. Lengths match, unigram precision is 4/5, and bigram precision is 3/4. BLEU-2 is $\sqrt{0.8\times0.75}\approx0.7746$. The time is wrong yet the score is higher. If departure time is the task, exact field accuracy is the direct measure.
 
+<!-- widget:step-bleu -->
+
 ### A runnable small version
 
 ```python
@@ -169,6 +171,8 @@ Suppose the model accepts 4 tokens at a time and the test sequence has 6. There 
 | `C D E F` | C, D | E, F | 2 |
 
 The second window keeps C and D as context for E and F without scoring C or D again. There are 5 scored targets overall, not 6 or the sum of both window lengths. A smaller stride usually supplies more context but requires more forward passes. Record the window length, stride, BOS/EOS handling, and document boundaries as part of the evaluation protocol. [Context-window guidance](https://huggingface.co/docs/transformers/perplexity)
+
+<!-- widget:step-ppl-windows -->
 
 <details markdown="1">
 <summary>Count the labels after shifting, not before</summary>

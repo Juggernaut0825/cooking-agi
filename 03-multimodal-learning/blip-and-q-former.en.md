@@ -20,6 +20,8 @@ BLIP's MED architecture supports encoding, fusion, and decoding. The invented st
 
 Original BLIP shares most text-encoder/decoder parameters but separates their self-attention layers. CapFilt addresses data: a captioner adds descriptions, a filter rejects mismatched original and generated descriptions, and the curated data trains a new model. [BLIP, §3](https://arxiv.org/abs/2201.12086)
 
+<!-- paper-figure:blip-capfilt -->
+
 For example, replacing “happy weekend” with a description of a cyclist may improve visual supervision. But if the person is pushing rather than riding, synthetic text introduces an error. Passing a filter is not factual certification. A useful check would retain a small human-audited set and measure errors in original and generated captions separately, rather than reporting only dataset growth.
 
 High-similarity non-paired examples mined through ITC are also only **candidates for hard negatives**. A different but synonymous caption may be a false negative. Changing the sampler does not establish that a pair is wrong.
@@ -74,6 +76,8 @@ flowchart TD
 
 This simplifies stage 2; it is not three models trained from scratch together. A query is a parameter, not a written question or a guaranteed object slot. Compared with a per-patch MLP projector, it introduces content-dependent summarization—and another place to lose information.
 
+<!-- paper-figure:blip2-stage2 -->
+
 ## A 32-vector interface cannot promise to retain everything
 
 The paper uses 32 queries of width 768, not a universal connector requirement. With $257\times1024$ visual features and $32\times768$ query outputs, projection produces $32\times D_{\text{LM}}$ inputs. Projection changes width; query count sets visual-prefix length. [BLIP-2, §3.1](https://arxiv.org/abs/2301.12597)
@@ -85,6 +89,8 @@ A summary might retain “person cycling” but lose small digits on the sign. T
 ## The same queries, three visibility rules
 
 Stage 1 needs more than summing three losses. Query–text visibility determines whether information can leak:
+
+<!-- paper-figure:blip2-qformer -->
 
 | Objective | Queries see text? | Text sees queries? | Text sees text? |
 | --- | --- | --- | --- |
@@ -128,6 +134,8 @@ assert generation_mask[3] == [True, True, True, True, False]
 
 This covers query/text self-attention only, excluding visual cross-attention, padding, and actual Transformer computation. Making ITG fully bidirectional could lower training loss by exposing words unavailable at inference.
 
+<!-- widget:step-qformer-masks -->
+
 Multiple queries also need a scoring rule. The [official implementation](https://github.com/salesforce/LAVIS/blob/main/lavis/models/blip2_models/blip2_qformer.py) takes the maximum query–text similarity for ITC; ITM averages per-query two-class logits. For invented scores `[0.8, 0.1]`, max gives 0.8 and mean gives 0.45. These aggregation rules express different preferences and are not interchangeable. Neither establishes that queries have become identifiable object slots.
 
 ## InstructBLIP: tell the connector what to look for
@@ -146,6 +154,8 @@ flowchart TD
 ```
 
 This modifies the existing Q-Former's inputs rather than stacking another independent Q-Former. One engineering consequence follows: frozen image features can be reused for an identically preprocessed image, but question-conditioned query outputs generally need recomputation when the question changes. They are not permanent image-only cache entries.
+
+<!-- paper-figure:instructblip-qformer -->
 
 Task mixing matters too. The paper uses square-root dataset-size weights with some manual adjustments. In an invented example with datasets of 100 and 10,000 samples, size-proportional sampling gives about `1 : 100`, equal dataset sampling gives `1 : 1`, and square-root weighting gives `1 : 10`. This redistributes training exposure, not necessarily in favor of the most important task. Inspect each task's validation results.
 

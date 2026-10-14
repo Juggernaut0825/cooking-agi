@@ -17,6 +17,8 @@
 
 Reference-based 是「给什么信息」，不是这张表里的另一种输出。概率加权是「怎么汇总评分分布」，也不是新的质量维度。
 
+<!-- paper-figure:prometheus2-modes -->
+
 ## 交换 A/B，别把位置当答案
 
 <div data-judge-lab="pairwise"><p>交互演示需要 JavaScript。若总选第一个位置，交换顺序后会换成另一份答案；应先映射回稳定的答案 ID，再检查一致性。</p></div>
@@ -43,6 +45,8 @@ Reference-based 是「给什么信息」，不是这张表里的另一种输出�
 $$W_A=\frac{8+0.5\times4}{8+6+4}=\frac{10}{18}.$$
 
 这只是一个约定，不是唯一正确公式。报告要同时给出 20 条总任务、1 条弃权、1 条双方失败，不能只贴一个 55.6%。如果两版都不满足底线，「A 相对更好」仍然不是发布理由。
+
+<!-- widget:step-win-rate -->
 
 Pairwise 也可能出现 A 胜 B、B 胜 C、C 胜 A。Elo 或 Bradley–Terry 可以在特定假设下拟合整体排序，但不是从几场胜负里发现了模型的唯一真实能力。
 

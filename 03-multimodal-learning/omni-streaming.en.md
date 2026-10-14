@@ -33,6 +33,8 @@ flowchart TD
 
 This shows responsibilities; exact connections depend on the version. In particular, removing Thinker's high-level text representations in version 3 **does not mean Talker need not know the words to speak**. Separate hidden representations, discrete text tokens, and multimodal conditions. [Qwen3-Omni §2](https://arxiv.org/html/2509.17765v1)
 
+<!-- paper-figure:qwen3omni-overview -->
+
 ## Sample rate, frame rate, and token rate differ
 
 Waveform samples are not model tokens. Consider an independent example: two seconds of mono audio at 16 kHz contain 32,000 samples. A 25 ms window contains 400 samples; a 10 ms hop contains 160. Without centered padding, this gives:
@@ -57,11 +59,15 @@ assert frame_count(32000, 400, 160) == 198
 
 Real processors may pad, center windows, or retain partial tails. Inspect those settings before declaring an output wrong because it differs from 198.
 
+<!-- widget:step-audio-frames -->
+
 ## Synchronization is more than concatenating two lists
 
 Suppose a button lights up at 1.20 seconds and “here” occurs at 1.24. If video sampling retains only frames at zero and two seconds, precise audio timestamps cannot restore the missing image.
 
 Two questions remain separate: **was the evidence sampled**, and **was sampled evidence aligned**? Positional encoding addresses part of the second, not the first.
+
+<!-- paper-figure:qwen25omni-tmrope -->
 
 A reproducible test is a short video with a button changing color each second and speech naming its color. Shift audio by half a second, then restore synchronization. Compare event localization and answers, not merely transcription.
 

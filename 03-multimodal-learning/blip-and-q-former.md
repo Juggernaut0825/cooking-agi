@@ -20,6 +20,8 @@ BLIP 使用可以切换编码、融合与解码方式的 MED 结构。下面用�
 
 原始 BLIP 的 text encoder 和 decoder 共享大部分参数，但 self-attention 层分开；双向理解和因果生成需要不同的信息流。CapFilt 则处理数据：captioner 补描述，filter 筛掉不匹配的原始或生成描述，再用整理后的数据训练新模型。[BLIP §3](https://arxiv.org/abs/2201.12086)
 
+<!-- paper-figure:blip-capfilt -->
+
 比如原始文字是“周末快乐”，生成描述补成“一个人骑自行车”。这可能更适合视觉学习，但如果它把“推车”错写成“骑车”，合成数据也会带来错误。过滤器只能按自己的能力判断，不能把“通过过滤”当作事实认证。一个可行的检查是保留少量人工核对样本，分别统计原始描述和生成描述的错误，而不是只看数据量涨了多少。
 
 ITC 挖出的高相似非配对样本，也只是**值得检查的难负例候选**。照片配了另一句同义描述时，它可能是假负例。改变采样方式和证明样本真的错误，是两件事。
@@ -74,6 +76,8 @@ flowchart TD
 
 图中是第二阶段的简化路径，不是三个模型同时从头训练。query 是参数，不是一条手写问题，也不保证每个 query 固定对应一个物体。与逐 patch 的 MLP projector 相比，它多了内容相关的汇总，同时也多了一个可能丢信息的地方。
 
+<!-- paper-figure:blip2-stage2 -->
+
 ## 32 个向量：省下输入，不代表保留一切
 
 论文设置用 32 个 query，隐藏维度 768；这不是所有连接模块都必须遵守的数字。假设视觉输出为 $257\times1024$，Q-Former 输出 $32\times768$，再投影到 LLM 宽度 $D_{\text{LM}}$，则交给 LLM 的是 $32\times D_{\text{LM}}$。投影改变宽度，query 数决定视觉前缀长度。[BLIP-2 §3.1](https://arxiv.org/abs/2301.12597)
@@ -85,6 +89,8 @@ flowchart TD
 ## 同一组 query，三种可见范围
 
 第一阶段不只是把三个 loss 相加。要避免信息泄漏，还得控制 query 和文本能不能互相看见：
+
+<!-- paper-figure:blip2-qformer -->
 
 | 目标 | query 看文本？ | 文本看 query？ | 文本看文本？ |
 | --- | --- | --- | --- |
@@ -128,6 +134,8 @@ assert generation_mask[3] == [True, True, True, True, False]
 
 它只演示 query/text 的 self-attention，不包括读图的 cross-attention、padding 和真正的 Transformer。把 ITG 改成全双向后，训练 loss 可能更低，却是在用推理时拿不到的未来文字答题。
 
+<!-- widget:step-qformer-masks -->
+
 ITC 的相似度还要处理“多个 query 对一个文本”。[官方实现](https://github.com/salesforce/LAVIS/blob/main/lavis/models/blip2_models/blip2_qformer.py)先算每个 query 与文本的相似度，再取最大值；ITM 则平均各 query 的二分类 logits。假设两个 query 的配对分数为 `[0.8, 0.1]`：max 是 0.8，mean 是 0.45。它们表达的偏好不同，不能顺手替换；这些分数也不意味着 query 已经学成两个明确的物体槽。
 
 ## InstructBLIP：先告诉它要看什么
@@ -146,6 +154,8 @@ flowchart TD
 ```
 
 这是修改已有 Q-Former 的输入路径，不是再叠一个独立 Q-Former。工程上也带来取舍：对于同一张经过相同预处理的图片，可以复用冻结视觉编码器的结果；但问题变了，instruction-aware query 输出通常需要重算。问题依赖的特征不能当作永远可缓存的图片常量。
+
+<!-- paper-figure:instructblip-qformer -->
 
 任务数据怎么混也很重要。论文采用数据集大小的平方根加权，并有个别人工调整。用一个自拟例子比较：两个数据集分别有 100 和 10,000 条，按样本数混合约为 `1 : 100`，每个数据集等概率为 `1 : 1`，平方根权重则为 `1 : 10`。它改变训练注意力分配，不保证小数据集一定更重要；仍要分别看各任务的验证结果。
 

@@ -93,6 +93,8 @@ assert math.isclose(siglip_loss(scores), 2 * math.log1p(math.exp(-2)))
 
 [SigLIP 2 论文](https://arxiv.org/html/2502.14786v1)不只是给 sigmoid loss 换名字：它扩展了多语言数据与训练配方，结合 captioning 类任务、自蒸馏、masked prediction，并提供不同图像尺寸处理路线。**这些阶段并非每个变体都完全相同**；论文里的 NaFlex 路径没有采用标准变体的 self-distillation / masked-prediction 阶段。
 
+<!-- paper-figure:siglip2-recipe -->
+
 | 想解决的问题 | 理解这类训练时可以这样看 | 实际选模型时查什么 |
 | --- | --- | --- |
 | 整张图对得上，但局部语义弱 | 全局匹配之外，让局部表示也得到监督 | 下游取 pooled vector，还是 patch features |

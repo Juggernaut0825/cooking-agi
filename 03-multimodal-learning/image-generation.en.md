@@ -49,6 +49,8 @@ This is velocity regression, not cross-entropy over text tokens. Papers and impl
 
 For a scalar example, take noise 2 and target 10. At $t=0.25$, the position is 4 and target velocity is 8. A predicted velocity of 6 gives squared error 4. One Euler step of size 0.1 moves the position to 4.6. Real models operate on high-dimensional tensors, with predictions that vary with position and time.
 
+<!-- widget:step-flow-matching -->
+
 ```python
 def linear_flow_example(noise, clean, time, prediction, step):
     if not 0 <= time <= 1 or not 0 <= step <= 1 - time:

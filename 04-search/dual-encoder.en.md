@@ -90,6 +90,8 @@ $$
 
 The gradients are approximately $[-0.335,0.245,0.090]$. Treating scores as independent variables, gradient descent raises the positive and lowers both comparisons, pushing harder against the higher-scoring comparison. An actual encoder shares parameters across scores, so an update need not move every score in that direction. Gradients with respect to the original scores $s_j$ include another factor of $1/\tau$.
 
+<!-- widget:step-contrastive -->
+
 ```python
 import math
 

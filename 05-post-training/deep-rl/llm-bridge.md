@@ -24,6 +24,8 @@
 
 PPO 用采样策略收集的轨迹估计 advantage，再通过概率比值和 clipping，抑制某些方向上过大的更新收益；它不把比值硬锁在区间内。参考模型 KL 惩罚与 PPO clipping 也不同：前者惩罚偏离固定基准的行为，后者调整这批数据上的局部优化目标。
 
+<!-- paper-figure:grpo-vs-ppo -->
+
 GRPO 常用同一 prompt 下多个回答的相对奖励构造组内 advantage，减少对独立 value Critic 的依赖。若组内奖励全相同，标准化后的相对信号可能为零；分组与归一化还会影响 prompt 的相对权重。它不自动解决稀疏奖励、错误 verifier 或跨任务公平比较。
 
 如果 advantage 和概率比还不熟悉，可以先看 [PPO clipping](../rlhf/ppo-clipping.md)。想比较 PPO、GRPO、DPO 用什么数据，再看[方法对照](../rlhf/after-rlhf.md)。

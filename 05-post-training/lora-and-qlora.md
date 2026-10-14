@@ -93,6 +93,8 @@ $$
 
 QLoRA 把冻结的基础权重以低比特形式存储，同时训练较高精度的 LoRA 参数。可以粗略写成：
 
+<!-- paper-figure:qlora-memory -->
+
 $$
 y=\operatorname{dequant}(W_q)x+sBAx.
 $$

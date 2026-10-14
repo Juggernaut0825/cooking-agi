@@ -37,6 +37,8 @@ Ranks start at 1. $L_r$ is the list actually returned by source $r$; a missing d
 
 With a teaching constant $k=10$, B scores $1/12+1/11\approx0.1742$, C scores $1/13+1/12\approx0.1603$, A scores $1/11\approx0.0909$, and D scores $1/13\approx0.0769$. B and C receive support from both lists. Being first in keyword search does not guarantee that A wins fusion.
 
+<!-- widget:step-rrf -->
+
 ```python
 def reciprocal_rank_fusion(rankings, constant=10):
     if constant < 0:

@@ -93,6 +93,8 @@ Four accumulated local batches do not automatically create cross-batch pairs. Dr
 
 [SigLIP 2](https://arxiv.org/html/2502.14786v1) extends multilingual data and the training recipe with captioning-related tasks, self-distillation, masked prediction, and different image-shape handling. **Not every variant uses every stage**: the paper's NaFlex path omits the standard variant's self-distillation and masked-prediction stage.
 
+<!-- paper-figure:siglip2-recipe -->
+
 | Problem | Useful interpretation | Check when selecting a checkpoint |
 | --- | --- | --- |
 | Global matching works, local semantics are weak | Supervise local representations as well as global alignment | Pooled vectors versus patch features downstream |

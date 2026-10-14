@@ -20,6 +20,8 @@ For \(p(3)=0.1,\ p(4)=0.7,\ p(5)=0.2\), the result is 4.1. [G-Eval](https://arxi
 
 Raw vocabulary probabilities need not sum to one over the rating labels. Suppose all five labels are available: ratings 3, 4, and 5 have probabilities 0.08, 0.56, and 0.16, ratings 1 and 2 have zero, and other tokens hold the remaining 0.20. The raw weighted sum is 3.28. Dividing by the rating mass of 0.80 gives 4.1, the mean conditional on a valid 1–5 label. Retain that mass rather than presenting the conditional score as an unconditional distribution.
 
+<!-- widget:step-judge-renorm -->
+
 ```python
 raw_rating_probabilities = {1: 0.0, 2: 0.0, 3: 0.08, 4: 0.56, 5: 0.16}
 rating_mass = sum(raw_rating_probabilities.values())
