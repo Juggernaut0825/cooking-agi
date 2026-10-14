@@ -65,6 +65,8 @@ $$N=210+1+14r(14c+1).$$
 
 用一个 2 行 3 列布局复算，结果是 1415，不是 $7\times196=1372$；差的 43 个就是结构标记。
 
+<!-- widget:step-vl2-layout -->
+
 ```python
 def vl2_sequence_length(tile_rows, tile_columns):
     if any(type(value) is not int or value < 1

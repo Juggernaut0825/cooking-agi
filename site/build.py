@@ -584,6 +584,11 @@ FIGURE_LAB = [
     ("step-context-staircase", "每次重发全部历史，输入越来越长", "Resending the whole history on every call", "step"),
     ("step-skill-loading", "按需加载，还是一次全读", "On demand, or everything up front", "step"),
     ("step-agent-patterns", "五种 workflow 和一种 agent", "Five workflows and an agent", "still"),
+    ("step-audio-frames", "25 ms 窗口、10 ms 步长：2 秒是 198 帧", "25 ms windows, 10 ms hops: 198 frames in 2 seconds", "step"),
+    ("step-vl2-layout", "VL2 的序列长度：1415，不是 1372", "VL2 sequence length: 1415, not 1372", "step"),
+    ("step-mrope", "M-RoPE：时间、高度、宽度三个序号", "M-RoPE: time, height and width positions", "step"),
+    ("step-ppl-windows", "滑动窗口：前文可以重读，目标只计一次", "Sliding windows: reread the context, score each target once", "step"),
+    ("step-ivf", "IVF：最近的簇里不一定有最近的点", "IVF: the nearest cluster may not hold the nearest point", "step"),
 ]
 for _name, _zh, _en, _kind in [(name, zh, en, "step") for name, zh, en in ALGO_LAB] + FIGURE_LAB:
     _kicker = 'data-zh="动画" data-en="Step by step"' if _kind == "step" else 'data-zh="图解" data-en="Diagram"'

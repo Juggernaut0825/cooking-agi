@@ -68,6 +68,8 @@ For a teaching example, let an image start at position 7 with a merged grid of t
 
 A still image shares time but not row/column coordinates. A text token uses equal values on its three axes; **different text tokens do not all receive the same position**.
 
+<!-- widget:step-mrope -->
+
 Consider frames at two and four seconds. Changing sampling FPS can change frame indices without changing event times. Qwen2.5-VL ties temporal positions to actual time. Qwen3-VL uses textual timestamps before frames and interleaves rotary frequencies across axes. Keep these version-specific choices separate. [2.5 report](https://arxiv.org/abs/2502.13923), [3 report](https://arxiv.org/abs/2511.21631)
 
 ## Which computation does window attention save?

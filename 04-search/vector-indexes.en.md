@@ -44,6 +44,8 @@ The same query q
 
 The closest centroid need not own the closest point. Probing more clusters reduces this kind of miss at a cost. IVF-Flat still stores full vectors: it reduces the search scope, not the vector payload.
 
+<!-- widget:step-ivf -->
+
 ## 3. PQ: store IDs, but do not measure distances between IDs
 
 Product quantization (PQ) splits a vector into parts and represents each part by an entry in its own learned codebook. Split 768 dimensions into 64 parts with 256 entries per codebook: each part needs an 8-bit ID, making a 64-byte vector code. The original float32 vector needs 3,072 bytes, so the **code payload alone** is 48× smaller. Codebooks are fitted to training samples; splitting coordinates alone does not train a quantizer.

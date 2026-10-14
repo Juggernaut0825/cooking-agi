@@ -60,6 +60,11 @@
 .algo-lab .algo-grid-fine line{stroke:var(--tx-line-strong);stroke-width:.6;opacity:.7}
 .algo-lab .algo-grid-coarse line{stroke:var(--c-k);stroke-width:1.4}
 .algo-lab .algo-grid-fine,.algo-lab .algo-grid-coarse{transition:opacity .3s ease}
+.algo-lab .mr-t{fill:var(--c-q)}
+.algo-lab .mr-h{fill:var(--c-v)}
+.algo-lab .mr-w{fill:var(--c-k)}
+.algo-lab .mr-dim{opacity:.22}
+.algo-lab tspan{transition:opacity .3s ease}
 @media (prefers-reduced-motion: reduce){
   .algo-lab .algo-slide{transition:none}
   .algo-lab .algo-pointer,.algo-lab .algo-cell,.algo-lab .algo-band{transition:none}

@@ -65,6 +65,8 @@ The 210 positions contain the global view and its row markers; 1 separates views
 
 A two-row, three-column layout yields 1415, not $7\times196=1372$. The remaining 43 positions carry structure.
 
+<!-- widget:step-vl2-layout -->
+
 ```python
 def vl2_sequence_length(tile_rows, tile_columns):
     if any(type(value) is not int or value < 1

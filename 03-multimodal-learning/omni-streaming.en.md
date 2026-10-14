@@ -57,6 +57,8 @@ assert frame_count(32000, 400, 160) == 198
 
 Real processors may pad, center windows, or retain partial tails. Inspect those settings before declaring an output wrong because it differs from 198.
 
+<!-- widget:step-audio-frames -->
+
 ## Synchronization is more than concatenating two lists
 
 Suppose a button lights up at 1.20 seconds and “here” occurs at 1.24. If video sampling retains only frames at zero and two seconds, precise audio timestamps cannot restore the missing image.

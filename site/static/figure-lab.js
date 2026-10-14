@@ -404,6 +404,119 @@
       en: 'Left to right, top to bottom: the six rows of the table. They combine freely and are not a ranking; what matters is what actually runs.'}]);
   };
 
+  /* 03-multimodal-learning/omni-streaming: 2 s of 16 kHz audio, 25 ms windows, 10 ms hops, no padding. */
+  F.audioFrames = function (samples = 32000, windowSize = 400, hop = 160) {
+    const count = samples < windowSize ? 0 : 1 + Math.floor((samples - windowSize) / hop);
+    const lastStart = (count - 1) * hop, tail = samples - (lastStart + windowSize);
+    const base = {samples, windowSize, hop, count, lastStart, tail};
+    const n = x => x.toLocaleString('en-US');
+    return frames([
+      {...base, stage: 0, view: 'head', windows: [], zh: `2 秒、16 kHz 的单通道音频：${n(samples)} 个样本。波形的每个采样点不是一个 token。`,
+        en: `Two seconds of 16 kHz mono audio: ${n(samples)} samples. A waveform sample is not a model token.`},
+      {...base, stage: 1, view: 'head', windows: [0], zh: `第 1 帧：25 ms 窗口，覆盖样本 0–${windowSize}。`,
+        en: `Frame 1: a 25 ms window over samples 0–${windowSize}.`},
+      {...base, stage: 2, view: 'head', windows: [0, 1], zh: `第 2 帧往后挪 10 ms（${hop} 个样本），覆盖 ${hop}–${hop + windowSize}；和上一帧重叠 ${windowSize - hop} 个样本。`,
+        en: `Frame 2 moves 10 ms (${hop} samples) to cover ${hop}–${hop + windowSize}, overlapping the previous frame by ${windowSize - hop} samples.`},
+      {...base, stage: 3, view: 'head', windows: [0, 1, 2, 3], zh: `每 ${hop} 个样本起一帧，一直滑到末尾。`,
+        en: `A new frame starts every ${hop} samples, all the way to the end.`},
+      {...base, stage: 4, view: 'tail', windows: [count - 2, count - 1], zh: `最后一个完整窗口从 ${n(lastStart)} 开始、到 ${n(lastStart + windowSize)} 结束；剩下 ${tail} 个样本不够一窗，不补零就不算。`,
+        en: `The last full window runs from ${n(lastStart)} to ${n(lastStart + windowSize)}; the remaining ${tail} samples cannot fill a window and, without padding, are not counted.`},
+      {...base, stage: 5, view: 'head', windows: [0, 1, 2, 3], done: true, zh: `所以是 1 + ⌊(${n(samples)} − ${windowSize}) / ${hop}⌋ = ${count} 帧。编码器之后还会下采样（2.5 约 40 ms、3 约 80 ms 一个表征），帧数又不等于表征数。`,
+        en: `Hence 1 + ⌊(${n(samples)} − ${windowSize}) / ${hop}⌋ = ${count} frames. The encoder then downsamples (about 40 ms per representation in 2.5, 80 ms in 3), so frames are not representations either.`}
+    ]);
+  };
+
+  /* 03-multimodal-learning/vlm-designs: DeepSeek-VL2 sequence length for r x c local tiles. */
+  F.vl2Layout = function (rows = 2, cols = 3) {
+    const globalTokens = 14 * 14 + 14, separator = 1, local = 14 * rows * (14 * cols + 1);
+    const total = globalTokens + separator + local, naive = (rows * cols + 1) * 196;
+    const base = {rows, cols, globalTokens, separator, local, total, naive, markers: 14 + 14 * rows};
+    return frames([
+      {...base, stage: 0, zh: '每一块的视觉特征从 27×27 合并成 14×14 = 196 个位置。',
+        en: 'Each tile’s visual features merge from 27×27 to 14×14 = 196 positions.'},
+      {...base, stage: 1, zh: '全局视图：14×14，再在 14 行的每行末尾加一个行尾标记，共 196 + 14 = 210。',
+        en: 'The global view: 14×14 plus a row-end marker on each of its 14 rows, 196 + 14 = 210.'},
+      {...base, stage: 2, zh: '全局视图和局部块之间放 1 个视图分隔符。',
+        en: 'One view separator goes between the global view and the local tiles.'},
+      {...base, stage: 3, zh: `局部块排成 ${rows} 行 ${cols} 列：拼成 ${14 * rows} × ${14 * cols} 的网格，每行末尾也加标记，共 ${14 * rows} × ${14 * cols + 1} = ${local}。`,
+        en: `The local tiles sit in ${rows} rows and ${cols} columns: a ${14 * rows} × ${14 * cols} grid with a marker ending each row, ${14 * rows} × ${14 * cols + 1} = ${local}.`},
+      {...base, stage: 4, done: true, zh: `合计 210 + 1 + ${local} = ${total}，不是 ${rows * cols + 1} × 196 = ${naive}。差的 ${total - naive} 个是结构标记：14 + 1 + ${14 * rows}。`,
+        en: `Total 210 + 1 + ${local} = ${total}, not ${rows * cols + 1} × 196 = ${naive}. The ${total - naive} extra positions are structure: 14 + 1 + ${14 * rows}.`}
+    ]);
+  };
+
+  /* 03-multimodal-learning/qwen-vl: M-RoPE (time, height, width) for a 2 x 3 merged grid starting at 7. */
+  F.mrope = function (start = 7, rows = 2, cols = 3) {
+    const cells = [];
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) cells.push({r, c, t: start, h: start + r, w: start + c, given: r === 0 || c === 0});
+    const base = {start, rows, cols, cells};
+    return frames([
+      {...base, stage: 0, focus: null, zh: `图片从位置 ${start} 开始，合并后的网格是 ${rows} 行 ${cols} 列。每个视觉位置有三个序号：(时间, 高度, 宽度)。`,
+        en: `The image starts at position ${start}; the merged grid has ${rows} rows and ${cols} columns. Each visual position has three numbers: (time, height, width).`},
+      {...base, stage: 1, focus: 't', zh: `时间：一张静态图只有一个时刻，六个位置都是 ${start}。`,
+        en: `Time: a still image is a single moment, so all six positions have ${start}.`},
+      {...base, stage: 2, focus: 'w', zh: `宽度：同一行从左到右是 ${start}、${start + 1}、${start + 2}。`,
+        en: `Width: along a row, left to right, ${start}, ${start + 1}, ${start + 2}.`},
+      {...base, stage: 3, focus: 'h', zh: `高度：上一行是 ${start}，下一行是 ${start + 1}。`,
+        en: `Height: the top row has ${start}, the bottom row ${start + 1}.`},
+      {...base, stage: 4, focus: null, done: true, zh: '静态图时间相同、行列不同。文本 token 的三个轴用同一个值，但不同的文本 token 位置并不相同。（灰色两格是按同一规律推出的，表里没列。）',
+        en: 'A still image shares time but not row or column. A text token uses one value on all three axes, yet different text tokens get different positions. (The two grey cells follow the same pattern; the table does not list them.)'}
+    ]);
+  };
+
+  /* 07-evaluation/text-metrics: perplexity with a 4-token window over 6 tokens, no BOS. */
+  F.pplWindows = function () {
+    const tokens = ['A', 'B', 'C', 'D', 'E', 'F'];
+    const windows = [{from: 0, to: 3, context: [0], scored: [1, 2, 3]}, {from: 2, to: 5, context: [2, 3], scored: [4, 5]}];
+    const base = {tokens, windows};
+    return frames([
+      {...base, stage: 0, zh: '测试序列有 6 个 token，模型一次只能读 4 个。不加 BOS：第一个 A 没有前文，不计分。',
+        en: 'The test sequence has 6 tokens, and the model reads only 4 at a time. No BOS: the first token, A, has no context and is not scored.'},
+      {...base, stage: 1, active: 0, zh: '窗口 1 读 A B C D：A 只作上下文，B、C、D 计分，共 3 个目标。',
+        en: 'Window 1 reads A B C D: A is context only; B, C and D are scored, 3 targets.'},
+      {...base, stage: 2, active: 1, zh: '窗口 2 读 C D E F：C、D 再读一遍当前文，但不再计分；E、F 计分，共 2 个目标。',
+        en: 'Window 2 reads C D E F: C and D are read again as context but not scored again; E and F are scored, 2 targets.'},
+      {...base, stage: 3, done: true, zh: '整段一共计 5 个目标，不是 6 个，也不是两个窗口长度之和 8。步长更小，目标能看到更多前文，但 forward 次数更多；窗口长度、步长、BOS/EOS 和文档边界都要记下来。',
+        en: '5 targets in total, not 6, and not 8 (the two window lengths). A smaller stride gives targets more context at the cost of more forward passes; record window length, stride, BOS/EOS and document boundaries.'}
+    ]);
+  };
+
+  /* 04-search/vector-indexes: IVF with nprobe 1 vs 2 (an illustrative 2-D layout; the note gives no coordinates). */
+  F.ivf = function () {
+    const groups = {
+      A: [[110, 96], [128, 150], [150, 104], [172, 138], [204, 112], [122, 122], [160, 76], [140, 172]],
+      B: [[288, 136], [350, 92], [384, 152], [412, 112], [430, 146], [372, 70], [398, 124], [340, 168]],
+      C: [[500, 200], [530, 176], [556, 214], [522, 232], [486, 226]]
+    };
+    const query = [252, 128];
+    const mean = pts => [pts.reduce((a, p) => a + p[0], 0) / pts.length, pts.reduce((a, p) => a + p[1], 0) / pts.length];
+    const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+    const centroids = Object.fromEntries(Object.entries(groups).map(([k, pts]) => [k, mean(pts)]));
+    // the layout must actually make the note's point: every point belongs to its nearest centroid,
+    // the query's nearest centroid is A, and the true nearest point lives in B
+    for (const [k, pts] of Object.entries(groups)) for (const p of pts) {
+      const own = Object.entries(centroids).sort((x, y) => dist(p, x[1]) - dist(p, y[1]))[0][0];
+      if (own !== k) throw Error('point ' + p + ' is nearer centroid ' + own);
+    }
+    const order = Object.keys(centroids).sort((x, y) => dist(query, centroids[x]) - dist(query, centroids[y]));
+    const best = keys => keys.flatMap(k => groups[k].map(p => ({k, p, d: dist(query, p)}))).sort((x, y) => x.d - y.d)[0];
+    const one = best(order.slice(0, 1)), two = best(order.slice(0, 2)), all = best(Object.keys(groups));
+    if (order[0] !== 'A' || all.k !== 'B' || one.k !== 'A' || two.p !== all.p) throw Error('layout does not show the miss');
+    const base = {groups, query, centroids, order, one, two};
+    return frames([
+      {...base, stage: 0, zh: '库里的向量先被分成几个簇，每个簇有一个中心（×），各自保存自己的列表。',
+        en: 'The stored vectors are first split into clusters, each with a centre (×) and its own list.'},
+      {...base, stage: 1, zh: '查询 q 来了：先比较它到各个簇中心的距离，A 的中心最近。',
+        en: 'A query q arrives: compare it with each cluster centre first; A’s centre is the nearest.'},
+      {...base, stage: 2, probe: 1, zh: 'nprobe = 1：只扫描簇 A，在里面找到的最近点并不是全库最近的那个。',
+        en: 'nprobe = 1: scan only cluster A. The nearest point found there is not the nearest in the whole collection.'},
+      {...base, stage: 3, probe: 2, zh: 'nprobe = 2：再扫描簇 B，找到更近的点；它就在 B 靠近 q 的边上。',
+        en: 'nprobe = 2: also scan cluster B and find a closer point, sitting on B’s edge near q.'},
+      {...base, stage: 4, probe: 2, done: true, zh: '簇中心最近，不代表簇内一定有最近的点。多查几个簇能减少遗漏，但更慢。100 万条分 1000 个簇、查 10 个，约扫 1 万条；这只是粗略比例，不是加速倍数。',
+        en: 'The closest centre need not own the closest point. Probing more clusters misses less but costs more. With 1,000,000 vectors in 1000 clusters, probing 10 scans about 10,000: a rough ratio, not a speedup.'}
+    ]);
+  };
+
   if (typeof module !== 'undefined' && module.exports) module.exports = {F, frames};
   if (typeof document === 'undefined' || !scope.AlgoLab) return;
 
@@ -995,6 +1108,192 @@
     link(a.cx, a.b, a.cx, p.y + 112);
     V.text(svg, a.cx - 6, p.y + 112, t('停', 'stop'), 'algo-idx', 'end');
     return () => {};
+  }});
+
+  FIGURES['step-audio-frames'] = name => stepper(name, F.audioFrames(), {height: 236, setup(svg) {
+    const x0 = 30, x1 = 610, samples = 32000, span = 960, zoom = (x1 - x0) / span;
+    V.text(svg, x0, 22, t('整段：2 秒', 'whole clip: 2 s'), 'algo-head');
+    svg.append(s('rect', {x: x0, y: 30, width: x1 - x0, height: 14, rx: 3, class: 'algo-cell'}));
+    const region = s('rect', {y: 28, height: 18, class: 'algo-band'});
+    const linkL = s('line', {y1: 46, y2: 74, class: 'algo-edge algo-dash'}), linkR = s('line', {y1: 46, y2: 74, class: 'algo-edge algo-dash'});
+    svg.append(region, linkL, linkR);
+    V.text(svg, x1, 22, '32,000', 'algo-idx', 'end');
+    svg.append(s('line', {x1: x0, y1: 200, x2: x1, y2: 200, class: 'algo-edge'}));
+    const ticks = [0, 1, 2, 3, 4, 5, 6].map(i => {
+      const x = x0 + i * 160 * zoom;
+      svg.append(s('line', {x1: x, y1: 196, x2: x, y2: 204, class: 'algo-edge'}));
+      return V.text(svg, x, 220, '', 'algo-idx', 'middle');
+    });
+    const wins = [0, 1, 2, 3].map(() => {
+      const rect = s('rect', {height: 24, rx: 5, class: 'algo-cell is-look'});
+      const label = s('text', {'text-anchor': 'middle', class: 'algo-note'});
+      svg.append(rect, label);
+      return {rect, label};
+    });
+    const tail = s('rect', {y: 78, height: 112, class: 'algo-cell is-cross'});
+    svg.append(tail);
+    const tailLabel = V.text(svg, 0, 70, '', 'algo-note', 'middle');
+    const count = V.text(svg, x1, 70, '', 'algo-strong', 'end');
+    return frame => {
+      const offset = frame.view === 'tail' ? samples - span : 0;
+      const rx = x0 + offset / samples * (x1 - x0), rw = Math.max(4, span / samples * (x1 - x0));
+      region.setAttribute('x', rx); region.setAttribute('width', rw);
+      linkL.setAttribute('x1', rx); linkL.setAttribute('x2', x0); linkR.setAttribute('x1', rx + rw); linkR.setAttribute('x2', x1);
+      ticks.forEach((tick, i) => { tick.textContent = (offset + i * 160).toLocaleString('en-US'); });
+      wins.forEach((win, i) => {
+        const k = frame.windows[i];
+        const on = k != null;
+        const start = on ? k * frame.hop : 0, x = x0 + (start - offset) * zoom, y = 78 + i * 28;
+        win.rect.setAttribute('x', x); win.rect.setAttribute('y', y); win.rect.setAttribute('width', frame.windowSize * zoom);
+        win.rect.setAttribute('class', 'algo-cell ' + (on ? (i === frame.windows.length - 1 && !frame.done ? 'is-change' : 'is-look') : 'is-hidden'));
+        win.label.setAttribute('x', x + frame.windowSize * zoom / 2); win.label.setAttribute('y', y + 17);
+        win.label.textContent = on ? `${t('帧', 'frame')} ${k + 1}: ${start.toLocaleString('en-US')}–${(start + frame.windowSize).toLocaleString('en-US')}` : '';
+      });
+      const showTail = frame.view === 'tail';
+      const tx = x0 + (frame.samples - frame.tail - offset) * zoom;
+      tail.setAttribute('x', tx); tail.setAttribute('width', frame.tail * zoom);
+      tail.classList.toggle('is-hidden', !showTail);
+      tailLabel.setAttribute('x', tx + frame.tail * zoom / 2);
+      tailLabel.textContent = showTail ? t(`剩 ${frame.tail}`, `${frame.tail} left`) : '';
+      count.textContent = frame.done ? t(`${frame.count} 帧`, `${frame.count} frames`) : '';
+    };
+  }});
+
+  FIGURES['step-vl2-layout'] = name => stepper(name, F.vl2Layout(), {height: 268, setup(svg) {
+    const unit = 6, y0 = 40;
+    const block = (x, rows, cols, tile) => {
+      const g = s('g');
+      g.append(s('rect', {x, y: y0, width: cols * unit, height: rows * unit, class: 'algo-cell'}));
+      const fine = s('g', {class: 'algo-grid-fine'}), coarse = s('g', {class: 'algo-grid-coarse'});
+      for (let c = 1; c < cols; c++) (c % tile ? fine : coarse).append(s('line', {x1: x + c * unit, y1: y0, x2: x + c * unit, y2: y0 + rows * unit}));
+      for (let r = 1; r < rows; r++) (r % tile ? fine : coarse).append(s('line', {x1: x, y1: y0 + r * unit, x2: x + cols * unit, y2: y0 + r * unit}));
+      const markers = s('g');
+      for (let r = 0; r < rows; r++) markers.append(s('rect', {x: x + cols * unit + 1, y: y0 + r * unit + 0.5, width: unit - 1, height: unit - 1, class: 'algo-cell is-change'}));
+      g.append(fine, coarse, markers);
+      svg.append(g);
+      return {g, markers};
+    };
+    const global = block(30, 14, 14, 14), local = block(178, 28, 42, 14);
+    const sep = s('rect', {x: 150, y: y0, width: unit + 2, height: 14 * unit, rx: 2, class: 'algo-cell is-change'});
+    svg.append(sep);
+    const gLabel = V.text(svg, 30, y0 + 14 * unit + 18, '', 'algo-note');
+    const sLabel = V.text(svg, 154, y0 + 14 * unit + 18, '', 'algo-note', 'middle');
+    const lLabel = V.text(svg, 178, y0 + 28 * unit + 18, '', 'algo-note');
+    V.text(svg, 30, 26, t('全局视图', 'global view'), 'algo-head');
+    const localHead = V.text(svg, 178, 26, '', 'algo-head');
+    const sum = V.text(svg, 30, 256, '', 'algo-strong');
+    return frame => {
+      show(global.g, true); show(global.markers, frame.stage >= 1);
+      show(sep, frame.stage >= 2); show(local.g, frame.stage >= 3);
+      gLabel.textContent = frame.stage === 0 ? '14 × 14 = 196' : '196 + 14 = 210';
+      sLabel.textContent = frame.stage >= 2 ? '+1' : '';
+      lLabel.textContent = frame.stage >= 3 ? `28 × 43 = ${frame.local}` : '';
+      localHead.textContent = frame.stage >= 3 ? t(`局部块 ${frame.rows} × ${frame.cols}`, `local tiles ${frame.rows} × ${frame.cols}`) : '';
+      sum.textContent = frame.done ? `210 + 1 + ${frame.local} = ${frame.total}  ·  ${t('对照', 'vs')} 7 × 196 = ${frame.naive}  ·  ${t('多出', 'extra')} ${frame.total - frame.naive}` : '';
+    };
+  }});
+
+  FIGURES['step-mrope'] = name => stepper(name, F.mrope(), {height: 220, setup(svg) {
+    const x0 = 220, w = 122, ht = 52, gap = 10, y0 = 40;
+    const tspans = (x, y, values) => {
+      const node = s('text', {x, y, 'text-anchor': 'middle', class: 'algo-val'});
+      const parts = ['(', values[0], ', ', values[1], ', ', values[2], ')'].map((v, i) => s('tspan', {class: ['', 'mr-t', '', 'mr-h', '', 'mr-w', ''][i], text: String(v)}));
+      node.append(...parts);
+      svg.append(node);
+      return {node, t: parts[1], h: parts[3], w: parts[5]};
+    };
+    svg.append(s('rect', {x: 24, y: y0 + 30, width: 150, height: ht, rx: 7, class: 'algo-cell'}));
+    V.text(svg, 99, y0 + 22, t('文本 token', 'text token'), 'algo-head', 'middle');
+    const text = tspans(99, y0 + 61, ['n', 'n', 'n']);
+    const cells = F.mrope()[0].cells.map(cell => {
+      const x = x0 + cell.c * (w + gap), y = y0 + cell.r * (ht + gap);
+      const rect = s('rect', {x, y, width: w, height: ht, rx: 7, class: 'algo-cell'});
+      svg.append(rect);
+      return {cell, rect, label: tspans(x + w / 2, y + 31, [cell.t, cell.h, cell.w])};
+    });
+    [['mr-t', t('时间 t', 'time t')], ['mr-h', t('高度 h', 'height h')], ['mr-w', t('宽度 w', 'width w')]].forEach(([cls, label], i) => {
+      V.text(svg, x0 + i * 120, 200, '■ ' + label, 'algo-note ' + cls);
+    });
+    return frame => {
+      const dim = (part, axis) => part.classList.toggle('mr-dim', Boolean(frame.focus) && frame.focus !== axis);
+      cells.forEach(({cell, rect, label}) => {
+        rect.setAttribute('class', 'algo-cell' + (!cell.given ? ' is-out' : ''));
+        ['t', 'h', 'w'].forEach(axis => dim(label[axis], axis));
+        label.node.classList.toggle('is-dim', !cell.given && !frame.done);
+      });
+      ['t', 'h', 'w'].forEach(axis => dim(text[axis], axis));
+    };
+  }});
+
+  FIGURES['step-ppl-windows'] = name => stepper(name, F.pplWindows(), {height: 216, setup(svg) {
+    const size = 56, gap = 10, x0 = (640 - (6 * size + 5 * gap)) / 2, y = 82;
+    const xs = i => x0 + i * (size + gap);
+    const cells = F.pplWindows()[0].tokens.map((tok, i) => cell(svg, xs(i), y, size, size, tok));
+    const marks = cells.map((_, i) => V.text(svg, xs(i) + size / 2, y + size + 18, '', 'algo-idx', 'middle'));
+    const bracket = (from, to, yy, up, label) => {
+      const x1 = xs(from), x2 = xs(to) + size, d = up ? 8 : -8;
+      const path = s('path', {d: `M${x1} ${yy + d} L${x1} ${yy} L${x2} ${yy} L${x2} ${yy + d}`, class: 'algo-edge'});
+      const text = V.text(svg, (x1 + x2) / 2, up ? yy - 8 : yy + 18, label, 'algo-head', 'middle');
+      svg.append(path);
+      return {path, text};
+    };
+    const b1 = bracket(0, 3, 68, true, t('窗口 1', 'window 1')), b2 = bracket(2, 5, 168, false, t('窗口 2', 'window 2'));
+    const total = V.text(svg, 616, 30, '', 'algo-strong', 'end');
+    return frame => {
+      const active = frame.active != null ? frame.windows[frame.active] : null;
+      cells.forEach((c, i) => {
+        let state = '';
+        if (active) state = active.scored.includes(i) ? 'is-keep' : active.context.includes(i) ? 'is-look' : 'is-out';
+        else if (frame.done) state = i === 0 ? 'is-out' : 'is-keep';
+        else if (frame.stage === 0 && i === 0) state = 'is-out';
+        c.set(frame.tokens[i], state);
+        marks[i].textContent = active ? (active.scored.includes(i) ? t('计分', 'scored') : active.context.includes(i) ? t('上下文', 'context') : '') : frame.done && i > 0 ? t('计分', 'scored') : '';
+      });
+      [b1, b2].forEach((b, k) => {
+        const on = frame.active === k || frame.done;
+        b.path.setAttribute('class', 'algo-edge' + (frame.active === k ? ' is-keep' : '') + (on ? '' : ' is-out'));
+        b.text.classList.toggle('is-dim', !on);
+      });
+      total.textContent = frame.done ? `3 + 2 = 5 ${t('个目标', 'targets')}` : active ? `${t('本窗计分', 'scored here')}: ${active.scored.length}` : '';
+    };
+  }});
+
+  FIGURES['step-ivf'] = name => stepper(name, F.ivf(), {height: 262, setup(svg) {
+    const base = F.ivf()[0];
+    const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+    const regions = {}, dots = {}, cross = {};
+    Object.entries(base.groups).forEach(([k, pts]) => {
+      const c = base.centroids[k], r = Math.max(...pts.map(p => dist(p, c))) + 14;
+      regions[k] = s('circle', {cx: c[0], cy: c[1], r, class: 'algo-ghost'});
+      svg.append(regions[k]);
+    });
+    const lines = Object.keys(base.groups).map(k => { const line = s('line', {x1: base.query[0], y1: base.query[1], x2: base.centroids[k][0], y2: base.centroids[k][1], class: 'algo-edge algo-dash'}); svg.append(line); return [k, line]; });
+    const found = [0, 1].map(() => { const line = s('line', {x1: base.query[0], y1: base.query[1], class: 'algo-edge'}); svg.append(line); return line; });
+    Object.entries(base.groups).forEach(([k, pts]) => {
+      dots[k] = pts.map(p => { const dot = s('circle', {cx: p[0], cy: p[1], r: 5, class: 'algo-cell'}); svg.append(dot); return {p, dot}; });
+      const [cx, cy] = base.centroids[k];
+      cross[k] = s('path', {d: `M${cx - 6} ${cy - 6} L${cx + 6} ${cy + 6} M${cx + 6} ${cy - 6} L${cx - 6} ${cy + 6}`, class: 'algo-edge'});
+      svg.append(cross[k]);
+      V.text(svg, cx, cy - Math.max(...base.groups[k].map(p => dist(p, base.centroids[k]))) - 22, t(`簇 ${k}`, `cluster ${k}`), 'algo-head', 'middle');
+    });
+    const q = s('circle', {cx: base.query[0], cy: base.query[1], r: 7, class: 'algo-cell is-look'});
+    svg.append(q);
+    V.text(svg, base.query[0], base.query[1] + 24, 'q', 'algo-strong', 'middle');
+    const status = V.text(svg, 24, 250, '', 'algo-strong');
+    return frame => {
+      const scanned = frame.probe ? frame.order.slice(0, frame.probe) : [];
+      lines.forEach(([k, line]) => line.setAttribute('class', 'algo-edge algo-dash' + (frame.stage === 1 ? (k === frame.order[0] ? ' is-look-line' : '') : ' is-hidden')));
+      Object.entries(dots).forEach(([k, list]) => list.forEach(({p, dot}) => {
+        const isOne = p === frame.one.p && frame.stage >= 2, isTwo = p === frame.two.p && frame.stage >= 3;
+        dot.setAttribute('class', 'algo-cell ' + (isTwo ? 'is-keep' : isOne ? 'is-change' : scanned.includes(k) ? 'is-look' : frame.probe ? 'is-out' : ''));
+      }));
+      Object.entries(regions).forEach(([k, region]) => region.setAttribute('class', 'algo-ghost' + (frame.probe && !scanned.includes(k) ? ' is-out' : '')));
+      [[found[0], frame.one, frame.stage >= 2, frame.stage >= 3], [found[1], frame.two, frame.stage >= 3, false]].forEach(([line, hit, on, faded]) => {
+        line.setAttribute('x2', hit.p[0]); line.setAttribute('y2', hit.p[1]);
+        line.setAttribute('class', 'algo-edge ' + (line === found[1] ? 'is-keep' : 'is-change') + (on ? '' : ' is-hidden') + (faded ? ' is-out' : ''));
+      });
+      status.textContent = frame.probe === 1 ? t('nprobe = 1：只扫 A', 'nprobe = 1: scan A only') : frame.probe === 2 ? t('nprobe = 2：扫 A 和 B', 'nprobe = 2: scan A and B') : frame.stage === 1 ? t('先比较到各簇中心的距离', 'compare with the centres first') : '';
+    };
   }});
 
   for (const [name, build] of Object.entries(FIGURES)) build(name);

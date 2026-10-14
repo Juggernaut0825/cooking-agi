@@ -105,10 +105,42 @@ test('skills: 3,480 on demand vs 23,280 up front', () => {
   assert.deepEqual([end.lazyTotal, end.eagerTotal], [3480, 23280]);
 });
 
+test('audio framing: 32,000 samples, 400 / 160 → 198 frames, last at 31,520, 80 left', () => {
+  const end = last(F.audioFrames(32000, 400, 160));
+  assert.deepEqual([end.count, end.lastStart, end.tail], [198, 31520, 80]);
+});
+
+test('VL2 layout: 210 + 1 + 1204 = 1415, 43 more than 7 × 196', () => {
+  const end = last(F.vl2Layout(2, 3));
+  assert.deepEqual([end.globalTokens, end.separator, end.local, end.total, end.naive], [210, 1, 1204, 1415, 1372]);
+  assert.equal(last(F.vl2Layout(1, 1)).total, 421);
+});
+
+test('M-RoPE: the note\'s four cells, and the two derived ones marked as not given', () => {
+  const cells = last(F.mrope(7, 2, 3)).cells;
+  const pick = (r, c) => cells.find(x => x.r === r && x.c === c);
+  assert.deepEqual([[0, 0], [0, 1], [0, 2], [1, 0]].map(([r, c]) => { const x = pick(r, c); return [x.t, x.h, x.w, x.given]; }),
+    [[7, 7, 7, true], [7, 7, 8, true], [7, 7, 9, true], [7, 8, 7, true]]);
+  assert.deepEqual([pick(1, 1).given, pick(1, 2).given], [false, false]);
+});
+
+test('perplexity windows: 3 + 2 = 5 scored targets', () => {
+  const end = last(F.pplWindows());
+  assert.deepEqual(end.windows.map(w => w.scored.length), [3, 2]);
+});
+
+test('IVF: the nearest centroid is A, but the nearest point is in B', () => {
+  const end = last(F.ivf());
+  assert.equal(end.order[0], 'A');
+  assert.deepEqual([end.one.k, end.two.k], ['A', 'B']);
+  assert.ok(end.two.d < end.one.d);
+});
+
 test('every frame has both captions and the English ones carry no Chinese', () => {
   const runs = [F.contrastive(), F.embeddingSwap(), F.rrf([['A', 'B', 'C'], ['B', 'C', 'D']]), F.rrf([['A', 'B', 'C'], []]), F.rrf([['A'], ['B']]),
     F.retrievalMetrics(), F.pq(), F.vitPatches(), F.qwenMerge(280, 560), F.qformerMask('itc'), F.qformerMask('itm'), F.qformerMask('itg'), F.flow(),
-    F.funnel(), F.bleu('the bus leaves'), F.bleu('the bus leaves at nine'), F.renorm(), F.winRate(), F.slices(), F.staircase(), F.skills(), F.agentPatterns()];
+    F.funnel(), F.bleu('the bus leaves'), F.bleu('the bus leaves at nine'), F.renorm(), F.winRate(), F.slices(), F.staircase(), F.skills(), F.agentPatterns(),
+    F.audioFrames(), F.vl2Layout(), F.mrope(), F.pplWindows(), F.ivf()];
   for (const frames of runs) for (const frame of frames) {
     assert.ok(frame.zh && frame.en);
     assert.doesNotMatch(frame.en, /[　-〿一-鿿＀-￯]/, frame.en);

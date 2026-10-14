@@ -172,6 +172,8 @@ Suppose the model accepts 4 tokens at a time and the test sequence has 6. There 
 
 The second window keeps C and D as context for E and F without scoring C or D again. There are 5 scored targets overall, not 6 or the sum of both window lengths. A smaller stride usually supplies more context but requires more forward passes. Record the window length, stride, BOS/EOS handling, and document boundaries as part of the evaluation protocol. [Context-window guidance](https://huggingface.co/docs/transformers/perplexity)
 
+<!-- widget:step-ppl-windows -->
+
 <details markdown="1">
 <summary>Count the labels after shifting, not before</summary>
 
