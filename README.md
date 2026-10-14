@@ -8,7 +8,7 @@
 
 [![Build](https://github.com/tianyi-zhang-02/cooking-agi/actions/workflows/site.yml/badge.svg?branch=main)](https://github.com/tianyi-zhang-02/cooking-agi/actions/workflows/site.yml)
 
-<a href="https://tianyi-zhang-02.github.io/cooking-agi/"><img src=".github/media/promo.en.webp" width="100%" alt="A 29-second tour of the site: an interactive figure, the English and Chinese switch, 250+ notes, the chronicle tree, and reading history"></a>
+<a href="https://tianyi-zhang-02.github.io/cooking-agi/"><img src=".github/media/promo.en.webp" width="100%" alt="A 49-second tour of the site: interactive figures; 261 notes from first principles to applications, shown live in multimodal, post-training and RL, inference, agents, and engineering practice; interview prep; full-text search; and reading history"></a>
 
 <!-- /repository-only -->
 

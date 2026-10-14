@@ -8,7 +8,7 @@
 
 [![Build](https://github.com/tianyi-zhang-02/cooking-agi/actions/workflows/site.yml/badge.svg?branch=main)](https://github.com/tianyi-zhang-02/cooking-agi/actions/workflows/site.yml)
 
-<a href="https://tianyi-zhang-02.github.io/cooking-agi/index.zh.html"><img src=".github/media/promo.zh.webp" width="100%" alt="29 秒看一遍网站：可交互的图、中英切换、250+ 篇笔记、编年史之树和阅读记录"></a>
+<a href="https://tianyi-zhang-02.github.io/cooking-agi/index.zh.html"><img src=".github/media/promo.zh.webp" width="100%" alt="49 秒看一遍网站：可交互的图；从基础到应用的 261 篇笔记，实拍多模态、后训练与 RL、推理、Agent 和工程实践；面试准备；全文搜索；阅读记录"></a>
 
 <!-- /repository-only -->
 
