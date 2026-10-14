@@ -1,0 +1,6 @@
+# 中英文表达复核（2026-10 起）：一篇笔记的中英文都读完、改好之后，把它的中文源文件路径加到 reviewed。
+# The expression review pass (from 2026-10): once both languages of a note are read and fixed,
+# add its Chinese source path to `reviewed`. README's topic-coverage chart counts this list.
+pass = "2026-10"
+reviewed = [
+]

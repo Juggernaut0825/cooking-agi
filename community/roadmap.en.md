@@ -27,7 +27,9 @@ The initial routes focus on ML / LLMs, post-training, inference systems, and alg
 
 ## Next: improve the parts people already use {#next}
 
-These are open work, not completed features. We'll use feedback to choose the order rather than add everything at once.
+**First, we're reading every note again in both languages**: fixing stiff sentences and skipped steps, and adding missing examples. The home page's [topic coverage](../README.md#topic-coverage) shows how far that has got.
+
+The items below are open work, not completed features. We'll use feedback to choose the order rather than add everything at once.
 
 | Area | A small place to start | What a useful result looks like |
 | --- | --- | --- |

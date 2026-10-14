@@ -64,7 +64,39 @@ For practice, head to [ML coding](learn/ml-exercises/README.en.md), [Python](int
 
 **Still being worked on:** some explanations and source comparisons need more review. The [coverage and backlog](learn/coverage.en.md) separates material that exists from material that has been checked. Small tested examples are not claims of full-model training or benchmark reproduction.
 
-**Next up: v1.0 interview prep.** Preparation routes and exercises are the focus, with simple saved notes and reading history. See [release scope](community/updates.en.md) and the [roadmap](community/roadmap.en.md). CV, autonomous driving, edge deployment, simulation, and robotics are proposed areas for future contributions, not complete courses yet.
+## Roadmap
+
+### Now
+
+**Reading every note again, in both languages.** Note by note, we're fixing stiff sentences and explanations that skip steps, and filling in missing examples and content. The Chinese and English are read separately so each reads naturally on its own, rather than as a sentence-by-sentence translation. If something reads awkwardly, is hard to follow, or seems to be missing, please [tell us](https://github.com/tianyi-zhang-02/cooking-agi/issues/new?template=note-feedback.yml); every article also ends with a feedback button.
+
+**Next:** more step-by-step figures and original paper figures in more chapters. For computer vision, autonomous driving, Jetson, physical simulation and robotics, we'd like people who have worked in those areas to write with us, starting with one explanation and one small project. See the [roadmap](community/roadmap.en.md) for the full plan; the scope of the upcoming v1.0 interview-prep release is in [release scope](community/updates.en.md).
+
+### Topic coverage
+
+How many notes each topic has, and how far this review pass has got. The numbers update on every site deploy.
+
+<!-- repository-only -->
+
+<a href="https://tianyi-zhang-02.github.io/cooking-agi/learn/coverage.en.html"><picture><source media="(prefers-color-scheme: dark)" srcset="https://tianyi-zhang-02.github.io/cooking-agi/static/topic-coverage-en-dark.svg"><img src="https://tianyi-zhang-02.github.io/cooking-agi/static/topic-coverage-en-light.svg" width="100%" alt="Notes per topic and how many this review pass has covered"></picture></a>
+
+<!-- /repository-only -->
+
+<!-- widget:topic-coverage -->
+
+### How we got here
+
+| When | What happened |
+| --- | --- |
+| Early August 2026 | Started: Chinese notes and a systems study map; the first site and the Transformer foundations |
+| Late August | A post-training series from PPO to what came after; interview fundamentals and a whiteboard checklist |
+| Late September | Site redesign around career routes and knowledge blocks; interactive figures for RLHF, MoE, looped Transformers and Agents |
+| End of September to early October | The whole site in two languages; learning paths and self-checks, CLIP and multimodal, LLM-as-a-Judge, Deep RL labs |
+| October 9–11 | Bilingual routes organized into a system, examples checked one by one; training, inference and ML systems guides |
+| October 13 | The chronicle world tree (143 sourced milestones), reading history, page feedback and security hardening |
+| October 14 | Step-by-step animations in the LeetCode notes; saved notes and reading history folded into “My reading”; started reading every note again |
+
+Details of every merge are in the [changelog](README.md#changelog) at the bottom of this page.
 
 <span id="_3"></span>
 
@@ -113,7 +145,7 @@ python3 site/paritycheck.py --strict
 python3 site/build.py
 ```
 
-Some experiments also need PyTorch, as documented in their chapters; corresponding tests explicitly skip when it is unavailable. Your bookmark list, recently opened notes, and reading positions stay in this browser. Public counting is off by default; opting in sends only subsequent reads and manual save actions, not past records or study backups. No production counting service is connected yet.
+Some experiments also need PyTorch, as documented in their chapters; corresponding tests explicitly skip when it is unavailable. Your bookmark list, recently opened notes, and reading positions stay in this browser. Public counting is off by default; opting in sends only subsequent reads and manual save actions, not past records or backups.
 
 </details>
 
@@ -126,3 +158,32 @@ Moving from academic research toward industry, I often found that something I re
 I hope this makes it easier to get started without already having a background in the field or someone to hand you a reading list. It won't replace study and practice. Where others explain something better, we'll link to them; where we lack experience, we'd like to learn from people who have it. Comparing notes across fields may reveal connections we wouldn't find on our own.
 
 If it saves you some searching and leaves a little more time for the rest of your life, that's a good reason to keep working on it.
+
+<span id="_6"></span>
+
+## Changelog
+
+Every change merged into the main branch, by date, split into major and minor updates. Links go to the pull requests.
+
+| Date | Major | Minor |
+| --- | --- | --- |
+| 2026-10-14 | Step-by-step animations in the LeetCode notes ([#78](https://github.com/tianyi-zhang-02/cooking-agi/pull/78)) | Saved notes, reading history and backups fold into “My reading”; the study dashboard goes and its exercises move to the study plan ([#81](https://github.com/tianyi-zhang-02/cooking-agi/pull/81)) · New README promo ([#79](https://github.com/tianyi-zhang-02/cooking-agi/pull/79)) |
+| 2026-10-13 | Chronicle: a technology world tree with 143 sourced milestones, later a vertical timeline ([#65](https://github.com/tianyi-zhang-02/cooking-agi/pull/65) [#71](https://github.com/tianyi-zhang-02/cooking-agi/pull/71)) · Study dashboard and reading history ([#64](https://github.com/tianyi-zhang-02/cooking-agi/pull/64) [#67](https://github.com/tianyi-zhang-02/cooking-agi/pull/67)) | Reading panel: today, this week, all time ([#66](https://github.com/tianyi-zhang-02/cooking-agi/pull/66) [#70](https://github.com/tianyi-zhang-02/cooking-agi/pull/70)) · One-click page feedback ([#72](https://github.com/tianyi-zhang-02/cooking-agi/pull/72)) · Security hardening ([#73](https://github.com/tianyi-zhang-02/cooking-agi/pull/73)) · Study buddy ([#74](https://github.com/tianyi-zhang-02/cooking-agi/pull/74)) · Anonymous counts ([#75](https://github.com/tianyi-zhang-02/cooking-agi/pull/75) [#76](https://github.com/tianyi-zhang-02/cooking-agi/pull/76)) · vLLM / SGLang comparison ([#68](https://github.com/tianyi-zhang-02/cooking-agi/pull/68)) · README animation ([#69](https://github.com/tianyi-zhang-02/cooking-agi/pull/69)) |
+| 2026-10-11 | Bilingual entry, README and learning routes; engineering labs and more worked examples ([#61](https://github.com/tianyi-zhang-02/cooking-agi/pull/61) [#62](https://github.com/tianyi-zhang-02/cooking-agi/pull/62)) | Training, inference, SigLIP and ML systems guides ([#63](https://github.com/tianyi-zhang-02/cooking-agi/pull/63)) |
+| 2026-10-09 | Bilingual learning routes reorganized, examples checked one by one ([#60](https://github.com/tianyi-zhang-02/cooking-agi/pull/60)) | — |
+| 2026-10-05 | Bilingual Deep RL lessons with interactive labs ([#58](https://github.com/tianyi-zhang-02/cooking-agi/pull/58)) | More natural career notes ([#59](https://github.com/tianyi-zhang-02/cooking-agi/pull/59)) |
+| 2026-10-03 | Math and quant review with proofs and worked examples ([#56](https://github.com/tianyi-zhang-02/cooking-agi/pull/56), later removed) | Discussions retired to refocus on the notes ([#57](https://github.com/tianyi-zhang-02/cooking-agi/pull/57)) |
+| 2026-10-02 | Bilingual LLM-as-a-Judge lessons with interactive evaluation labs ([#55](https://github.com/tianyi-zhang-02/cooking-agi/pull/55)) | — |
+| 2026-10-01 | Navigation, reading tools and community pages ([#45](https://github.com/tianyi-zhang-02/cooking-agi/pull/45)) | Discussions launched and laid out ([#53](https://github.com/tianyi-zhang-02/cooking-agi/pull/53) [#54](https://github.com/tianyi-zhang-02/cooking-agi/pull/54)) |
+| 2026-09-30 | Bilingual learning paths and chapter self-checks ([#42](https://github.com/tianyi-zhang-02/cooking-agi/pull/42)) | CLIP / VLM notes and bilingual READMEs ([#44](https://github.com/tianyi-zhang-02/cooking-agi/pull/44)) · The Python you use in coding problems ([#40](https://github.com/tianyi-zhang-02/cooking-agi/pull/40)) |
+| 2026-09-25 | — | AI Infra section removed; skipped notes polished, a co-reviewer added ([#37](https://github.com/tianyi-zhang-02/cooking-agi/pull/37) [#38](https://github.com/tianyi-zhang-02/cooking-agi/pull/38)) |
+| 2026-09-24 | Quant zone: a probability series ([#36](https://github.com/tianyi-zhang-02/cooking-agi/pull/36), later removed) | — |
+| 2026-09-23 | Close readings, agents, model choice, career and AI infra ([#33](https://github.com/tianyi-zhang-02/cooking-agi/pull/33) [#34](https://github.com/tianyi-zhang-02/cooking-agi/pull/34)) | Contributors page and credits ([#30](https://github.com/tianyi-zhang-02/cooking-agi/pull/30) [#31](https://github.com/tianyi-zhang-02/cooking-agi/pull/31) [#32](https://github.com/tianyi-zhang-02/cooking-agi/pull/32)) · ML Systems reading list ([#35](https://github.com/tianyi-zhang-02/cooking-agi/pull/35)) |
+| 2026-09-22 | A nine-note RLHF series; MoE, looped Transformers and Agents with seven live figures ([#24](https://github.com/tianyi-zhang-02/cooking-agi/pull/24) [#25](https://github.com/tianyi-zhang-02/cooking-agi/pull/25)) | One language per page ([#18](https://github.com/tianyi-zhang-02/cooking-agi/pull/18)) · Night-sky design and home page ([#19](https://github.com/tianyi-zhang-02/cooking-agi/pull/19) [#20](https://github.com/tianyi-zhang-02/cooking-agi/pull/20) [#21](https://github.com/tianyi-zhang-02/cooking-agi/pull/21) [#22](https://github.com/tianyi-zhang-02/cooking-agi/pull/22)) · Long evaluation notes split ([#23](https://github.com/tianyi-zhang-02/cooking-agi/pull/23)) · Career notes ([#26](https://github.com/tianyi-zhang-02/cooking-agi/pull/26) [#27](https://github.com/tianyi-zhang-02/cooking-agi/pull/27) [#28](https://github.com/tianyi-zhang-02/cooking-agi/pull/28) [#29](https://github.com/tianyi-zhang-02/cooking-agi/pull/29)) |
+| 2026-09-21 | Site redesign around career routes, knowledge blocks and quick review ([#17](https://github.com/tianyi-zhang-02/cooking-agi/pull/17)) | — |
+| 2026-08-27 | — | Interview fundamentals, a whiteboard checklist and reference implementations ([#15](https://github.com/tianyi-zhang-02/cooking-agi/pull/15) [#16](https://github.com/tianyi-zhang-02/cooking-agi/pull/16)) |
+| 2026-08-26 | Post-training series in four steps, from PPO to what came after ([#11](https://github.com/tianyi-zhang-02/cooking-agi/pull/11) [#13](https://github.com/tianyi-zhang-02/cooking-agi/pull/13) [#14](https://github.com/tianyi-zhang-02/cooking-agi/pull/14)) | A Chinese reading guide ([#10](https://github.com/tianyi-zhang-02/cooking-agi/pull/10)) |
+| 2026-08-24 | — | Decoding and the RLHF pipeline restored ([#8](https://github.com/tianyi-zhang-02/cooking-agi/pull/8)) |
+| 2026-08-14 | — | Multi-head attention, normalization and residual connections ([#7](https://github.com/tianyi-zhang-02/cooking-agi/pull/7)) |
+| 2026-08-12 | Foundations chapter, reading order and the first site ([#3](https://github.com/tianyi-zhang-02/cooking-agi/pull/3)) | Smoother Chinese, grouped sidebar ([#4](https://github.com/tianyi-zhang-02/cooking-agi/pull/4)) · Architecture diagrams and intro / advanced layers ([#6](https://github.com/tianyi-zhang-02/cooking-agi/pull/6)) |
+| 2026-08-10 | First AI infrastructure study guide ([#1](https://github.com/tianyi-zhang-02/cooking-agi/pull/1)) | Redrawn diagrams ([#2](https://github.com/tianyi-zhang-02/cooking-agi/pull/2)) |

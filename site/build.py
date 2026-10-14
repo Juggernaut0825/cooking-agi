@@ -40,6 +40,7 @@ import markdown
 import collaboration
 import curriculum
 import prep_progress
+import topic_coverage
 import note_metrics
 import next_stop
 import technology_chronicle
@@ -59,7 +60,7 @@ PROTECTED = {"code", "pre", "a", "script", "style", "abbr",
 # Structured components whose text is laid out by CSS. An inline gloss chip
 # inside one splits a word in half and breaks the grid, so they are skipped
 # wholesale -- the annotation belongs in running prose, not in a summary card.
-NOGLOSS_CLASSES = {"lesson-recipe", "taste-check", "widget", "mermaid",
+NOGLOSS_CLASSES = {"lesson-recipe", "taste-check", "widget", "mermaid", "topic-coverage",
                    "study-atlas", "study-route", "chapter-context", "worked-update", "engine-map", "technology-tree", "tree-eras", "rl-budget", "prep-hub", "prep-progress", "prep-note", "study-workspace",
                    "home-block", "term", "curriculum-card", "curriculum-hero",
                    "learning-path", "lab-matrix", "bilingual-intro",
@@ -1019,7 +1020,15 @@ DYNAMIC_WIDGETS = {"question-bank": question_bank_md,
                    "appendix-coverage": lambda page: curriculum.appendix_coverage(page, BY_SRC, SITE / 'appendix-coverage.toml'),
                    "roadmap": roadmap_html, "blocks": blocks_html, "gallery": gallery_html,
                    "threads": threads_html, "categories": categories_html,
-                   "about-head": about_head_html}
+                   "about-head": about_head_html,
+                   "topic-coverage": lambda page: topic_coverage.figure(coverage_rows(), page.lang,
+                                                                        page.rel("learn/coverage.html" if page.lang == "zh" else "learn/coverage.en.html"))}
+
+
+def coverage_rows():
+    """Notes per topic and the current review pass (site/expression-review.toml)."""
+    _, reviewed = topic_coverage.load_reviewed(SITE / "expression-review.toml", BY_SRC)
+    return topic_coverage.rows(NAV, NAV.get("_sections", []), ROOT, reviewed)
 
 
 def localize_shell(shell: str, page) -> str:
@@ -1343,10 +1352,15 @@ def build_page(page: Page, terms, repo: str, known: set):
             flags=re.M,
         )
         home_details = {"怎么用这些笔记": "how-to-use-the-notes",
-                        "各个板块放什么": "whats-in-each-section"}
+                        "各个板块放什么": "whats-in-each-section",
+                        "现在在做": "now", "主题覆盖": "topic-coverage", "走到现在": "how-we-got-here"}
         for title, identifier in home_details.items():
             raw = re.sub(r"^### " + re.escape(title) + r"$",
                          f"### {title} {{#{identifier}}}", raw, flags=re.M)
+        # a section added before the numbered legacy anchors (_1 … _5) gets an English id so they don't shift
+        for title, identifier in {"路线图": "roadmap"}.items():
+            raw = re.sub(r"^## " + re.escape(title) + r"$",
+                         f"## {title} {{#{identifier}}}", raw, flags=re.M)
     meta = re.search(r"^>\s*(?:阅读时间|Reading time)[:：]?\s*(.+)$", raw, re.M)
     if meta:
         parts = [p.strip() for p in meta.group(1).split("·")]
@@ -2022,6 +2036,8 @@ def assemble(page, sections, people, nav, built, template):
     is_prep_hub = 'data-prep-hub' in page.body
     # the reader's own records (saved notes, reading history, positions), the reading drawer and the study buddy
     template = template.replace('</head>', f'<script defer src="{prefix}static/prep-progress-store.js?v={built}"></script>\n<script defer src="{prefix}static/prep-library-state.js?v={built}"></script>\n<script defer src="{prefix}static/prep-progress.js?v={built}"></script>\n<link rel="stylesheet" href="{prefix}static/reader-hub.css?v={built}">\n<script defer src="{prefix}static/reader-hub.js?v={built}"></script>\n<link rel="stylesheet" href="{prefix}static/study-buddy.css?v={built}">\n<script defer src="{prefix}static/study-buddy.js?v={built}"></script>\n</head>')
+    if 'class="topic-coverage"' in page.body:
+        template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/topic-coverage.css?v={built}">\n</head>')
     if is_prep_hub:
         template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/prep-hub.css?v={built}">\n<script defer src="{prefix}static/prep-hub.js?v={built}"></script>\n</head>')
     if 'class="tech-timeline"' in page.body:
@@ -2166,6 +2182,12 @@ def main():
     shutil.copytree(SITE / "static", OUT / "static")
     (OUT / 'static/prep-progress-catalog.json').write_text(
         json.dumps(prep_progress.catalog(BY_SRC), ensure_ascii=False), encoding='utf-8')
+    # the README embeds these from the deployed site, so GitHub shows current numbers
+    coverage = coverage_rows()
+    for language in ("zh", "en"):
+        for palette in topic_coverage.PALETTES:
+            (OUT / f"static/topic-coverage-{language}-{palette}.svg").write_text(
+                topic_coverage.svg(coverage, language, palette, built[:10]), encoding="utf-8")
     for d in ROOT.glob("*/assets"):
         shutil.copytree(d, OUT / d.relative_to(ROOT))
         print(f"  assets: {d.relative_to(ROOT)}")
