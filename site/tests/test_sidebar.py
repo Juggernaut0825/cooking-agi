@@ -102,8 +102,8 @@ class SidebarTests(unittest.TestCase):
         self.assertEqual(versions[0], versions[1])
         self.assertEqual(len(versions[0]), len(set(versions[0])))
         self.assertIn('example.en.html', markup)
-        self.assertIn('My reading', markup)
-        self.assertNotIn('我的阅读', markup)
+        self.assertIn('Current chapter', markup)
+        self.assertNotIn('定位本章', markup)
 
     def test_titles_escaped(self):
         markup = self.render()
@@ -112,8 +112,9 @@ class SidebarTests(unittest.TestCase):
 
     def test_controls_have_no_javascript_fallback(self):
         elements = Elements(self.render()).elements
-        controls = next(attrs for tag, attrs in elements if attrs.get("class") == "side-tools")
+        controls = next(attrs for tag, attrs in elements if attrs.get("class") == "side-directory-actions")
         self.assertIn("hidden", controls)
+        self.assertFalse(any(attrs.get("id") == "side-reading" for tag, attrs in elements))
         self.assertTrue(any(tag == "details" for tag, attrs in elements))
         ids = [attrs["id"] for tag, attrs in elements if "id" in attrs]
         self.assertEqual(len(ids), len(set(ids)))
@@ -148,7 +149,7 @@ class SidebarTests(unittest.TestCase):
     def test_reading_state_is_bounded_and_filters_untrusted_values(self):
         script = """
 const assert = require('node:assert/strict');
-const {cleanReading, recordVisit, importBookmarks} = require(process.argv[1]);
+const {cleanReading} = require(process.argv[1]);
 const known = new Set(Array.from({length: 110}, (_, index) => 'note-' + index));
 assert.deepEqual(cleanReading(null, known), {saved: [], recent: []});
 assert.deepEqual(cleanReading({saved: 'bad', recent: {}}, known), {saved: [], recent: []});
@@ -156,22 +157,6 @@ assert.deepEqual(cleanReading({saved: ['note-1', 'note-1', 'javascript:alert(1)'
 const bounded = cleanReading({saved: [...known], recent: [...known]}, known);
 assert.equal(bounded.saved.length, 100);
 assert.equal(bounded.recent.length, 8);
-const before = {saved: ['note-0'], recent: ['note-2', 'note-1']};
-const after = recordVisit(before, 'note-1');
-assert.deepEqual(after, {saved: ['note-0'], recent: ['note-1', 'note-2']});
-assert.deepEqual(before.recent, ['note-2', 'note-1']);
-assert.equal(recordVisit(bounded, 'note-109').recent.length, 8);
-const backup = entries => JSON.stringify({format: 'cooking-agi-bookmarks', version: 1, saved: entries});
-const imported = importBookmarks(backup(['note-0', 'note-1', 'note-1', 'javascript:alert(1)', 'removed.md']), before, known);
-assert.deepEqual(imported.state, {saved: ['note-0', 'note-1'], recent: ['note-2', 'note-1']});
-assert.equal(imported.added, 1);
-assert.equal(imported.unavailable, 2);
-assert.deepEqual(before.saved, ['note-0']);
-assert.equal(importBookmarks(backup(['note-109']), bounded, known).overflow, 1);
-assert.equal(importBookmarks(backup(['note-109']), bounded, known).state.saved.length, 100);
-for (const invalid of ['null', '{', '{}', JSON.stringify({format:'other', version:1,saved:[]}), backup([{}]), backup(['x'.repeat(301)]), backup(Array(1001).fill('note-1')), 'x'.repeat(131073)]) {
-  assert.throws(() => importBookmarks(invalid, before, known));
-}
 """
         result = subprocess.run([shutil.which("node"), "-e", script,
                                  str(build.ROOT / "site/static/sidebar.js")], capture_output=True, text=True)

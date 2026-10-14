@@ -4,5 +4,7 @@ __pycache__/
 .DS_Store
 agi-prep-progress*.json
 agi-prep-progress*.txt
+agi-notes-backup*.json
+agi-notes-bookmarks*.json
 .study-progress/
 .local-review/

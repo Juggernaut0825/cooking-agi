@@ -5,7 +5,7 @@
 First, make the current version useful. Right now that means helping someone choose a starting point, make a little time, and return without losing their place. As the notes grow, we'd like people from other fields to help explain the parts we know less about.
 
 <nav class="study-route roadmap-route" aria-label="Roadmap navigation">
-<a href="#now"><small>THIS VERSION</small><strong>Interview prep & study dashboard</strong><span>Choose a route, make a plan, read, and keep notes</span></a>
+<a href="#now"><small>THIS VERSION</small><strong>Interview prep & reading records</strong><span>Choose a route, read, save, and pick up where you left off</span></a>
 <a href="#next"><small>NEXT</small><strong>Make studying easier</strong><span>Less searching around, more useful practice</span></a>
 <a href="#future"><small>OPEN TO CONTRIBUTORS</small><strong>From vision to robotics</strong><span>Start with one good explanation and one small project</span></a>
 </nav>
@@ -14,16 +14,16 @@ First, make the current version useful. Right now that means helping someone cho
 
 ## This version: a complete interview-prep entry point {#now}
 
-The proposed **v1.0.0 · Study workspace** is about a usable learning flow, not complete coverage of AI.
+The proposed **v1.0.0 · Interview prep** is about a usable learning flow, not complete coverage of AI.
 
 - **Find a starting point.** Work up from small examples if a topic is new, or go straight to implementation, debugging, and tradeoffs if you know the basics.
-- **Use the time you have.** Save tasks on dates you choose, with a different duration each time. You don't have to study daily. Time estimates describe focused work, not how fast you should understand a chapter.
-- **Keep the reading connected.** Exercises link to the main notes rather than a second textbook. Bring questions and topics to revisit back to the dashboard.
-- **Keep your own records.** Progress stays in the current browser, with JSON export, import preview, and restore. No account or fork required.
+- **Use the time you have.** Study on the days you choose, for as long as you like. There is no daily streak. Time estimates describe focused work, not how fast you should understand a chapter.
+- **Keep the reading connected.** Exercises link to the main notes rather than a second textbook. Save a note you want to revisit and find it under “My reading” at the top right.
+- **Keep your own records.** Saved notes and reading history stay in the current browser, with JSON export and import. No account or fork required.
 
 The initial routes focus on ML / LLMs, post-training, inference systems, and algorithms. The [release notes](updates.en.md#v1-0-0) describe the scope, limits, and checks still needed.
 
-[Open the dashboard](../interview/dashboard.en.md) · [Browse the preparation routes](../interview/README.en.md)
+[Browse the preparation routes](../interview/README.en.md) · [Pick exercises by topic](../interview/study-plan.en.md#routes)
 
 ## Next: improve the parts people already use {#next}
 
@@ -31,9 +31,7 @@ These are open work, not completed features. We'll use feedback to choose the or
 
 | Area | A small place to start | What a useful result looks like |
 | --- | --- | --- |
-| Finding notes and making plans | Improve note search in the session form; then consider a preview for several sessions | Nothing saves without confirmation or replaces existing plans and drafts |
 | Connected practice | Review one route's prerequisites, example, exercise, and explanation | A beginner can attempt it from the linked notes; an experienced reader can skip the setup |
-| Returning to a topic | Filter chapter records by revisit status and personal notes | Readers find where they got stuck; a click doesn't count as understanding |
 | Backups and upgrades | Add older backup fixtures and cross-version restore tests | Routine updates preserve records; format changes have a migration path first |
 | Language and small screens | Fix a confusing passage or a layout problem you've encountered | Both languages read naturally, and the page works on a phone and with a keyboard |
 
@@ -53,7 +51,7 @@ These are areas we'd like to explore, **not complete courses or scheduled releas
 
 These shouldn't become five disconnected textbooks. Reuse the notes on data, evaluation, optimization, systems, and deployment where they help. We'd like each project to explain what a component receives, what it produces, and how it fits with the rest.
 
-Add a navigation section and dashboard route once there is useful material and someone willing to maintain it, not a row of empty categories first. Contributors don't need to take on an entire field. Work involving vehicles or physical robots needs its own experimental conditions, failure analysis, and safety limits; a successful simulation is not a safety case for hardware.
+Add a navigation section and preparation route once there is useful material and someone willing to maintain it, not a row of empty categories first. Contributors don't need to take on an entire field. Work involving vehicles or physical robots needs its own experimental conditions, failure analysis, and safety limits; a successful simulation is not a safety case for hardware.
 
 ## Where can I help? {#contribute}
 

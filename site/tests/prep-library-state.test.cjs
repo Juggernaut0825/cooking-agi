@@ -1,6 +1,7 @@
+// The shared envelope behind saved notes, reading history and positions: backups,
+// merges, recovery copies and the migration from the old sidebar keys.
 const assert = require('node:assert/strict');
 const {test} = require('node:test');
-const updates = require('../static/prep-content-updates.js');
 const store = require('../static/prep-progress-store.js');
 const libraryState = require('../static/prep-library-state.js');
 const first = 'note-0123456789abcdef';
@@ -14,94 +15,11 @@ function state(records = {}) {
     'follow-llm': {enabled: true, edition: 1, updatedAt: early}, ...records
   }, history: []}};
 }
-function catalog(edition = 2) {
-  return {updatesVersion: 1, edition, notes: {
-    [first]: {topics: ['llm'], update: {introduced: 1, revision: 1}},
-    [second]: {topics: ['llm'], update: {introduced: 2, revision: 2}}
-  }};
-}
 function tracked(original = state()) {
   original.entries[first] = {title: 'Attention', note: 'My private note', status: 'practiced', updatedAt: early};
   return original;
 }
-function apply(original, changes) {
-  return {...original, workspace: {...original.workspace, records: {...original.workspace.records, ...changes}}};
-}
 
-test('first visit quietly establishes a baseline, without backfilling the archive', () => {
-  const changes = updates.reconcile(store.empty(), catalog(), later);
-  assert.deepEqual(Object.keys(changes).sort(), ['baseline', 'preferences']);
-  assert.equal(changes.baseline.edition, 2);
-});
-test('new notes in followed topics enter an undated queue, without changing sessions or entries', () => {
-  const original = tracked();
-  const before = JSON.stringify(original);
-  const changes = updates.reconcile(original, catalog(), later);
-  assert.deepEqual(changes['notice-' + second], {kind: 'new', revision: 2, status: 'queued', updatedAt: later});
-  assert.equal(JSON.stringify(original), before);
-  assert.equal(changes.schedule, undefined);
-  assert.equal(updates.reconcile(apply(original, changes), catalog(), later)['notice-' + second], undefined);
-});
-test('auto-add off offers a choice, but does not delete an existing queue', () => {
-  const original = state({preferences: {autoAdd: false, updatedAt: later}});
-  let changes = updates.reconcile(original, catalog(), later);
-  assert.equal(changes['notice-' + second].status, 'available');
-  const queued = state({['notice-' + second]: {kind: 'new', revision: 2, status: 'queued', updatedAt: early}, preferences: {autoAdd: false, updatedAt: later}});
-  changes = updates.reconcile(queued, catalog(), later);
-  assert.equal(changes['notice-' + second], undefined);
-});
-test('unfollow is a persistent choice even when tracked notes belong to that topic', () => {
-  const original = tracked(state({'follow-llm': {enabled: false, edition: 1, updatedAt: later}}));
-  assert.deepEqual(updates.reconcile(original, catalog(), later), {});
-});
-test('actual study records infer following; a route filter alone does not', () => {
-  const original = tracked({...store.empty()});
-  const changes = updates.reconcile(original, catalog(), later);
-  assert.deepEqual(changes['follow-llm'], {enabled: true, edition: 2, updatedAt: later});
-  assert.equal(changes['notice-' + second], undefined);
-});
-test('title, URL, translation and presentation changes do not trigger an update', () => {
-  const current = catalog();
-  current.notes[first].pages = {en: {title: 'A clearer name', url: 'moved/attention.html'}};
-  const changes = updates.reconcile(tracked(state({'follow-llm': {enabled: false, edition: 1, updatedAt: early}})), current, later);
-  assert.deepEqual(changes, {});
-});
-test('substantive revision creates a notice without resetting practiced status', () => {
-  const current = catalog();
-  current.notes[first].update.revision = 2;
-  const original = tracked();
-  const changes = updates.reconcile(original, current, later);
-  assert.equal(changes['notice-' + first].kind, 'updated');
-  assert.equal(changes['notice-' + first].status, 'available');
-  assert.equal(original.entries[first].status, 'practiced');
-  assert.equal(original.entries[first].note, 'My private note');
-});
-test('read and dismissed revisions remain quiet; later substantive revisions can notify again', () => {
-  const current = catalog();
-  current.notes[first].update.revision = 2;
-  for (const status of ['dismissed', 'reviewed']) {
-    const original = tracked(state({['notice-' + first]: {kind: 'updated', revision: 2, status, updatedAt: early}}));
-    assert.equal(updates.reconcile(original, current, later)['notice-' + first], undefined);
-    const future = structuredClone(current);
-    future.edition = future.notes[first].update.revision = 3;
-    assert.equal(updates.reconcile(original, future, later)['notice-' + first].revision, 3);
-  }
-});
-test('acknowledgements and stale catalog versions never downgrade records', () => {
-  const current = catalog();
-  current.notes[first].update.revision = 2;
-  const original = tracked(state({['seen-' + first]: {revision: 3, updatedAt: later}}));
-  assert.equal(updates.reconcile(original, current, later)['notice-' + first], undefined);
-  current.updatesVersion = 2;
-  assert.deepEqual(updates.reconcile(original, current, later), {});
-});
-test('a saved session consumes a queued item, but a draft or cancelled session does not', () => {
-  const original = state({['notice-' + second]: {kind: 'new', revision: 2, status: 'queued', updatedAt: early}});
-  original.schedule = {sessions: {example: {noteId: second, status: 'planned'}}};
-  assert.equal(updates.reconcile(original, catalog(), later)['notice-' + second].status, 'scheduled');
-  original.schedule.sessions.example.status = 'cancelled';
-  assert.equal(updates.reconcile(original, catalog(), later)['notice-' + second], undefined);
-});
 test('new backups and old backups retain workspace data under every conflict policy', () => {
   const local = state();
   const incoming = state({preferences: {autoAdd: false, updatedAt: later}});

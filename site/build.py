@@ -40,8 +40,6 @@ import markdown
 import collaboration
 import curriculum
 import prep_progress
-import prep_schedule
-import prep_workspace
 import note_metrics
 import next_stop
 import technology_chronicle
@@ -1402,7 +1400,7 @@ def section_html(page, sec, show_head=True):
 
 
 def sidebar_html(page, sections, groups):
-    """Show the current direction; retain the full catalog for local reading history."""
+    """Show the current direction; keep the full catalog so saved notes resolve to their IDs."""
     by_group = {}
     for sec in sections:
         by_group.setdefault(sec.get("group", "reference"), []).append(sec)
@@ -1464,36 +1462,12 @@ def sidebar_html(page, sections, groups):
     return (
         f'<div class="side-context">{html.escape(context)}</div>'
         f'{route_link}'
-        '<div class="side-tools" hidden>'
-        f'<div class="side-views" role="group" aria-label="{"导航视图" if zh else "Navigation view"}">'
-        f'<button type="button" data-side-view="directory" aria-pressed="true" aria-controls="side-directory">'
-        f'{"目录" if zh else "Contents"}</button>'
-        f'<button type="button" data-side-view="reading" aria-pressed="false" aria-controls="side-reading">'
-        f'{"我的阅读" if zh else "My reading"}</button></div>'
-        '</div>'
         f'<div class="side-scroll"><div id="side-directory">{local_toc}'
         f'<div class="side-directory-actions" hidden>'
         f'<button type="button" data-side-current>{"定位本章" if zh else "Current chapter"}</button>'
         f'<button type="button" data-side-collapse>{"收起其他" if zh else "Collapse others"}</button></div>'
         f'<ul class="nav">{"".join(out)}</ul></div>'
-        '<section id="side-reading" hidden>'
-        f'<button type="button" class="side-save" data-side-save aria-pressed="false">'
-        f'{"收藏本页" if zh else "Save this page"}</button>'
-        f'<p class="side-local">{"关掉网页也会保留。记录只存于当前浏览器，不会上传或自动跨设备同步。" if zh else "Kept after closing the page. Stored in this browser only, without uploads or automatic device sync."}</p>'
-        f'<h2>{"收藏" if zh else "Saved"}</h2><ul class="side-reading-list" data-side-saved></ul>'
-        f'<div class="side-recent-heading"><h2>{"最近打开" if zh else "Recently opened"}</h2>'
-        f'<button type="button" data-side-clear>{"清空" if zh else "Clear"}</button></div>'
-        '<ul class="side-reading-list" data-side-recent></ul>'
-        '<details class="side-backup">'
-        f'<summary>{"备份与迁移" if zh else "Back up & move"}</summary>'
-        f'<p>{"换浏览器前，可以导出收藏，再到新浏览器导入。只备份收藏清单，不含阅读记录；导入会合并，不覆盖已有收藏。" if zh else "Export your saved notes before switching browsers, then import them in the new browser. Backups contain bookmarks only, not reading history. Importing merges with your existing list."}</p>'
-        '<div class="side-backup-actions">'
-        f'<button type="button" data-reading-export>{"导出收藏" if zh else "Export saved"}</button>'
-        f'<button type="button" data-reading-import>{"导入收藏" if zh else "Import saved"}</button></div>'
-        f'<input type="file" data-reading-file accept="application/json,.json" aria-label="{"导入收藏文件" if zh else "Import bookmark file"}" hidden>'
-        '</details>'
-        '<p class="side-status" role="status" aria-live="polite"></p>'
-        '</section></div>')
+        '</div>')
 
 
 def page_category(page):
@@ -1631,7 +1605,6 @@ def page_header_html(page):
   <h1>{html.escape(page.title)}</h1>
   <div class="article-meta">{'<b aria-hidden="true"></b>'.join(bits)}</div>
   {tools}
-  {prep_progress.note_controls(page, ROOT)}
 </header>"""
 
 
@@ -2017,28 +1990,8 @@ def assemble(page, sections, people, nav, built, template):
     description = share_description(page) or site["tagline_zh" if zh else "tagline_en"]
     content = curriculum.chapter_context(page, BY_SRC) + page.body
     is_prep_hub = 'data-prep-hub' in page.body
-    is_prep_workspace = 'data-prep-workspace' in page.body
-    if is_prep_workspace:
-        content = page.body
-    content = content.replace('<div data-prep-dashboard></div>', prep_progress.dashboard(zh))
-    content = content.replace('<div data-prep-schedule></div>', prep_schedule.planner(zh))
-    if is_prep_workspace:
-        content = content.replace('<div data-prep-routes></div>', prep_workspace.library(page, BY_SRC))
-        content = content.replace('<div data-prep-updates></div>', prep_progress.updates_panel(zh))
-    template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/prep-progress.css?v={built}">\n<script defer src="{prefix}static/prep-progress-store.js?v={built}"></script>\n<script defer src="{prefix}static/prep-content-updates.js?v={built}"></script>\n<script defer src="{prefix}static/prep-library-state.js?v={built}"></script>\n<script defer src="{prefix}static/prep-progress.js?v={built}"></script>\n<link rel="stylesheet" href="{prefix}static/reader-hub.css?v={built}">\n<script defer src="{prefix}static/reader-hub.js?v={built}"></script>\n<link rel="stylesheet" href="{prefix}static/study-buddy.css?v={built}">\n<script defer src="{prefix}static/study-buddy.js?v={built}"></script>\n</head>')
-    if is_prep_workspace:
-        template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/prep-schedule.css?v={built}">\n<script defer src="{prefix}static/prep-schedule.js?v={built}"></script>\n</head>')
-        template = template.replace('</head>', f'<script defer src="{prefix}static/prep-calendar.js?v={built}"></script>\n</head>')
-        template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/prep-workspace.css?v={built}">\n<script defer src="{prefix}static/prep-workspace.js?v={built}"></script>\n</head>')
-        template = template.replace('</head>', f'<script defer src="{prefix}static/prep-route-planner.js?v={built}"></script>\n</head>')
-        template = template.replace('</head>', f'<script defer src="{prefix}static/prep-updates-ui.js?v={built}"></script>\n</head>')
-        template = re.sub(r'<div class="shell">.*?(?=<dialog id="note-search")', '<main id="content" class="study-desk prose">{{content}}</main>\n\n', template, count=1, flags=re.S)
-        template = re.sub(r'<button class="icon-btn menu".*?</button>', '', template, count=1, flags=re.S)
-        template = template.replace('class="topbar-brand" href=', 'class="topbar-brand" aria-label="{{site_title}}" href=')
-        template = template.replace('<canvas class="sky" aria-hidden="true"></canvas>\n', '')
-        template = re.sub(r'<script defer src="\{\{prefix\}\}static/sky\.js[^>]*></script>\n?', '', template)
-        back = page.rel('learn/index.html' if zh else 'learn/index.en.html')
-        template = template.replace('{{tabs}}', f'<a class="study-back" href="{back}">{"← 返回知识库" if zh else "← Back to the library"}</a>')
+    # the reader's own records (saved notes, reading history, positions), the reading drawer and the study buddy
+    template = template.replace('</head>', f'<script defer src="{prefix}static/prep-progress-store.js?v={built}"></script>\n<script defer src="{prefix}static/prep-library-state.js?v={built}"></script>\n<script defer src="{prefix}static/prep-progress.js?v={built}"></script>\n<link rel="stylesheet" href="{prefix}static/reader-hub.css?v={built}">\n<script defer src="{prefix}static/reader-hub.js?v={built}"></script>\n<link rel="stylesheet" href="{prefix}static/study-buddy.css?v={built}">\n<script defer src="{prefix}static/study-buddy.js?v={built}"></script>\n</head>')
     if is_prep_hub:
         template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/prep-hub.css?v={built}">\n<script defer src="{prefix}static/prep-hub.js?v={built}"></script>\n</head>')
     if 'class="tech-timeline"' in page.body:
@@ -2082,8 +2035,6 @@ def assemble(page, sections, people, nav, built, template):
     page_class = "page-crew page-next-stop" if is_next_stop else "page-crew" if is_community_scene else f"page-{page.kind}"
     if is_prep_hub:
         page_class += " page-prep-hub"
-    if is_prep_workspace:
-        page_class += " page-prep-workspace"
     if 'data-technology-tree' in page.body:
         page_class += " page-technology-tree"
     output = (template

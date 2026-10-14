@@ -30,6 +30,9 @@ owner_url   = "https://tianyi-zhang-02.github.io/"
 "05-post-training/rlhf-pipeline.en.html" = "05-post-training/rlhf/index.en.html"
 "07-evaluation/llm-as-a-judge.html" = "07-evaluation/llm-as-a-judge/index.html"
 "07-evaluation/llm-as-a-judge.en.html" = "07-evaluation/llm-as-a-judge/index.en.html"
+# the study dashboard was folded into the reading drawer on 2026-10-14
+"interview/dashboard.html" = "interview/index.html"
+"interview/dashboard.en.html" = "interview/index.en.html"
 
 # home 是这个大类的落地页；每个 [[group]] 用 category 指到这里的 id。
 [[category]]
@@ -660,7 +663,7 @@ dir     = "interview"
 group   = "coding"
 zh      = "复习入口"
 en      = "Preparation guide"
-order   = ["README.md", "dashboard.md", "speedrun.md", "speedrun-start.md", "study-plan.md", "ai-roles-prep.md", "code-comprehension.md", "coding-checks.md", "python.md", "python-objects.md"]
+order   = ["README.md", "speedrun.md", "speedrun-start.md", "study-plan.md", "ai-roles-prep.md", "code-comprehension.md", "coding-checks.md", "python.md", "python-objects.md"]
 
 [[section]]
 dir = "interview/basics"
@@ -920,7 +923,6 @@ en  = "Templates"
 "community/roadmap.md" = ["接下来一起做什么", "Roadmap"]
 "community/updates.md" = ["版本与更新", "Releases & updates"]
 "interview/README.md"                                   = ["准备首页", "Preparation home"]
-"interview/dashboard.md"                                = ["我的学习台", "Study dashboard"]
 "interview/basics/README.md"                            = ["基础问答导读", "Fundamentals review guide"]
 "interview/leetcode.md"  = ["LeetCode 方法地图", "LeetCode pattern map"]
 "interview/algorithms/complexity-and-tools.md" = ["复杂度与工具", "Complexity & tools"]

@@ -8,7 +8,7 @@ Your interview is scheduled, and you do not have time for hundreds of notes. Sta
 
 The budgets mean **focused learning time**: reading, writing, thinking, and reviewing, with breaks excluded. Spread six or twelve hours across sessions that fit your life. Set aside half an hour or an hour when it works for you, try one small exercise, and pick up there next time. No need to finish in one sitting or keep a daily streak.
 
-To choose dates, open [your study dashboard](dashboard.en.md#schedule). You need not study every day or spend the same amount of time each session. Record the date and focused minutes afterward if you like; you can reschedule, backfill, or undo a check-in. A free day isn't missed work, and recording a session doesn't mark its topic as mastered. You set the pace.
+You need not study every day or spend the same amount of time each session. A free day isn't missed work; you set the pace. To come back to a note, choose “Save this page” under its title and find it under “My reading” at the top right. Before switching devices or clearing your browser, [export a backup](study-plan.en.md#backups).
 
 Sessions and check-ins stay in this browser alongside your study records and share the same JSON backup. No fork is needed, and normal site updates do not clear them. Clearing site data can remove them; changing browsers does not transfer them automatically. [Export and import a backup](study-plan.en.md#backups) when needed.
 

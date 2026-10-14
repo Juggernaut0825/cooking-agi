@@ -12,9 +12,7 @@ function mount(blocked = false) {
       replaceChildren() { this.children = []; }, append(child) { this.children.push(child); },
       click() { return this.listeners.click && this.listeners.click(); }, remove() {}, focus() {}};
   }
-  const selectors = Object.fromEntries(['.side-tools','#side-reading','.side-scroll','[data-side-save]',
-    '.side-status','.side-local','[data-reading-export]','[data-reading-import]','[data-reading-file]',
-    '[data-side-saved]','[data-side-recent]','[data-side-clear]'].map(selector => [selector, element()]));
+  const selectors = Object.fromEntries(['.side-scroll','[data-side-save]'].map(selector => [selector, element()]));
   const active = Object.assign(element(), {dataset:{note:'learn/one.md'}, title:'First note',
     getAttribute:() => '../learn/one.html', getBoundingClientRect: () => ({top:0,bottom:100}),
     closest: selector => selector === '[data-grp]' ? {querySelector:() => ({textContent:'Basics'})} : {dataset:{category:'learn'}}});
@@ -30,24 +28,19 @@ function mount(blocked = false) {
   currentGroup.parentElement = directory;
   const inlineSave = element(), inlineStatus = element(), noteTools = element();
   const side = {querySelector: selector => selector === '#side-directory' ? directory : selectors[selector], querySelectorAll:() => []};
-  const storage = new Map(), windowEvents = {}, blobs = [], downloads = [];
+  const storage = new Map(), windowEvents = {}, dispatched = [];
   selectors['.side-scroll'].getBoundingClientRect = () => ({top:0,bottom:200,height:200});
-  const document = {documentElement:{lang:'en'}, body: {append: child => downloads.push(child)},
+  const document = {documentElement:{lang:'en'},
     querySelector: selector => selector === '#side' ? side : selector === '.note-tool-status' ? inlineStatus : noteTools,
     querySelectorAll: () => [selectors['[data-side-save]'], inlineSave], createElement:element};
   vm.runInNewContext(source, {document, localStorage:{
     getItem: key => { if (blocked) throw Error('blocked'); return storage.get(key) || null; },
     setItem: (key, value) => { if (blocked) throw Error('blocked'); storage.set(key,value); }},
-    window:{addEventListener:(name, callback) => { windowEvents[name] = callback; }, dispatchEvent:event => { windowEvents.dispatched = event.type; }},
+    window:{addEventListener:(name, callback) => { windowEvents[name] = callback; }, dispatchEvent:event => { dispatched.push(event.type); }},
     requestAnimationFrame:callback => callback(), Event:class {constructor(type) {this.type=type;}},
-    Blob:class {constructor(parts) {blobs.push(parts.join(''));}}, URL:{createObjectURL:() => 'blob:backup', revokeObjectURL() {}},
-    setTimeout: callback => callback()});
-  return {selectors, inlineSave, inlineStatus, storage, blobs, downloads, windowEvents,
-    locate, collapse, currentGroup, otherGroup, directoryActions,
-    async import(text, size = text.length) {
-      selectors['[data-reading-file]'].files = [{size, text:async () => text}];
-      await selectors['[data-reading-file]'].listeners.change();
-    }};
+    CustomEvent:class {constructor(type, init) {this.type=type; this.detail=init && init.detail;}}});
+  return {selectors, inlineSave, inlineStatus, noteTools, storage, windowEvents, dispatched,
+    locate, collapse, currentGroup, otherGroup, directoryActions};
 }
 
 (async function () {
@@ -63,31 +56,19 @@ function mount(blocked = false) {
   page.inlineSave.click();
   assert.equal(page.inlineSave.attributes['aria-pressed'], 'true');
   assert.equal(page.selectors['[data-side-save]'].attributes['aria-pressed'], 'true');
-  assert.match(page.inlineStatus.textContent, /Note saved/);
-  page.selectors['[data-reading-export]'].click();
-  assert.deepEqual(JSON.parse(page.blobs[0]), {format:'cooking-agi-bookmarks',version:1,saved:['learn/one.md']});
-  assert.equal(page.downloads[0].download, 'agi-notes-bookmarks.json');
+  assert.match(page.inlineStatus.textContent, /Saved\. Find it under “My reading”/);
+  assert.deepEqual(JSON.parse(page.storage.get('cooking-agi:reading:v1')).saved, ['learn/one.md']);
+  assert.ok(page.dispatched.includes('notes:prep-storage'));
+  assert.equal(page.noteTools.hidden, false);
   page.selectors['[data-side-save]'].click();
   assert.equal(page.inlineSave.attributes['aria-pressed'], 'false');
-  await page.import(page.blobs[0]);
+  assert.match(page.inlineStatus.textContent, /Note unsaved/);
+  // another tab saved it: the button follows without a reload
+  page.storage.set('cooking-agi:reading:v1', JSON.stringify({saved:['learn/one.md'], recent:[]}));
+  page.windowEvents.storage({key:'cooking-agi:reading:v1'});
   assert.equal(page.inlineSave.attributes['aria-pressed'], 'true');
-  await page.import(page.blobs[0]);
-  assert.match(page.inlineStatus.textContent, /Added 0/);
-  const before = page.storage.get('cooking-agi:reading:v1');
-  await page.import('not json');
-  assert.equal(page.storage.get('cooking-agi:reading:v1'), before);
-  assert.match(page.inlineStatus.textContent, /Existing bookmarks are unchanged/);
-  await page.import('{}', 131073);
-  assert.equal(page.storage.get('cooking-agi:reading:v1'), before);
-  page.selectors['[data-side-clear]'].click();
-  const cleared = JSON.parse(page.storage.get('cooking-agi:reading:v1'));
-  assert.deepEqual(cleared, {saved:['learn/one.md'],recent:[]});
-  assert.equal(page.storage.get('cooking-agi:positions:v1'), '[]');
-  assert.equal(page.windowEvents.dispatched, 'notes:reading-cleared');
   const blocked = mount(true);
   blocked.inlineSave.click();
   assert.match(blocked.inlineStatus.textContent, /storage is unavailable/);
-  blocked.selectors['[data-reading-export]'].click();
-  assert.deepEqual(JSON.parse(blocked.blobs[0]).saved, ['learn/one.md']);
-  console.log('Bookmarks: both buttons, safe import/merge, export, limits, clearing, storage failure OK');
+  console.log('Sidebar: directory actions, both save buttons, cross-tab refresh, storage failure OK');
 })().catch(error => { console.error(error); process.exitCode = 1; });

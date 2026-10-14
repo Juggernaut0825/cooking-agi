@@ -6,7 +6,6 @@
 
 <div class="prep-hub" data-prep-hub>
 <p class="prep-intro">Brush up on what you know, or build a foundation over time. Start with the kind of preparation you need—not the whole library.</p>
-<section class="prep-dashboard-entry" id="schedule"><div><span id="progress"></span><strong>Make the plan fit your time.</strong><p>Your schedule, check-ins, and note progress now have their own dashboard. Your existing records are still there.</p></div><a class="prep-action" href="dashboard.en.md">Open my dashboard →</a></section>
 <nav class="prep-modes" data-prep-modes aria-label="Preparation mode">
 <a id="prep-tab-review" href="#review" data-prep-tab="review"><strong>Quick review</strong><span>Speedrun · Focus on the gaps</span></a>
 <a id="prep-tab-plan" href="#plan" data-prep-tab="plan"><strong>Study at your pace</strong><span>A sequence of small, practical sessions</span></a>

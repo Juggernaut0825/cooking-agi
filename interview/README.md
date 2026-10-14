@@ -4,7 +4,6 @@
 
 <div class="prep-hub" data-prep-hub>
 <p class="prep-intro">这里整理了 ML / LLM 基础问答、代码练习和系统设计资料。想查漏补缺，选「快速复习」；想系统补基础，选「按计划学习」。</p>
-<section class="prep-dashboard-entry" id="schedule"><div><span id="progress"></span><strong>安排学习、保存进度</strong><p>在学习台里选日期、记备注，下次继续。已有记录会保留。</p></div><a class="prep-action" href="dashboard.md">打开我的学习台 →</a></section>
 <nav class="prep-modes" data-prep-modes aria-label="准备方式">
 <a id="prep-tab-review" href="#review" data-prep-tab="review"><strong>快速复习</strong><span>按重点复习，查漏补缺</span></a>
 <a id="prep-tab-plan" href="#plan" data-prep-tab="plan"><strong>按计划学习</strong><span>按前置知识安排，边学边练</span></a>
