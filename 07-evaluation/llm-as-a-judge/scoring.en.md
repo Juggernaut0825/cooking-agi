@@ -44,6 +44,8 @@ $$W_A=\frac{8+0.5\times4}{8+6+4}=\frac{10}{18}.$$
 
 This is a convention, not the only valid formula. Report all 20 tasks, the abstention, and the both_bad case alongside 55.6%. A relative win is not permission to ship when both versions fail the minimum requirements.
 
+<!-- widget:step-win-rate -->
+
 Pairwise results can also cycle: A beats B, B beats C, C beats A. Elo or Bradley–Terry can fit overall rankings under assumptions; a few comparisons do not reveal a single true model ability.
 
 ## Decompose a checklist carefully

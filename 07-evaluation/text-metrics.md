@@ -38,6 +38,8 @@ $$
 
 换成 `the bus leaves at nine`：长度相同，unigram 匹配 4/5，bigram 匹配 3/4，BLEU-2 为 $\sqrt{0.8\times0.75}\approx0.7746$。时间错了，分数却更高。若任务就是查发车时间，字段正确率才是直接指标。
 
+<!-- widget:step-bleu -->
+
 ### 可以运行的小版本
 
 ```python

@@ -54,6 +54,8 @@ Assume nested success conditions: each stage counts only examples that passed th
 
 End-to-end success is $55/100$, not the final row’s $55/60$. Here $0.8\times(70/80)\times(60/70)\times(55/60)=0.55$ because the counts are nested; no stage-independence assumption is needed. Multiplying averages measured on unrelated samples has no equivalent interpretation.
 
+<!-- widget:step-eval-funnel -->
+
 Evaluating generation only where retrieval found evidence helps diagnose generation, but report excluded examples too. A worse retriever might leave only easy questions and make the conditional generation score look better.
 
 ## 4. What should a judge receive and return?

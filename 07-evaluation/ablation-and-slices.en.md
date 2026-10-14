@@ -36,6 +36,8 @@ This example has two groups with fixed weights:
 
 The average improves while the sparse-history group regresses sharply. This does not establish a cause; it identifies something to investigate.
 
+<!-- widget:step-weighted-slices -->
+
 ```python
 weights = [0.8, 0.2]
 baseline = [0.60, 0.50]

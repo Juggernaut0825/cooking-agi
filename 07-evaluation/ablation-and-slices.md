@@ -36,6 +36,8 @@
 
 平均分确实涨了，但稀疏人群退步很大。这里没有证明原因；它只告诉我们值得往哪儿查。
 
+<!-- widget:step-weighted-slices -->
+
 ```python
 weights = [0.8, 0.2]
 baseline = [0.60, 0.50]

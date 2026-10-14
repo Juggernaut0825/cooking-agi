@@ -65,9 +65,50 @@ test('flow matching: position 4, velocity 8, loss 4, one Euler step to 4.6', () 
   assert.deepEqual([end.position, end.velocity, end.loss, end.next], [4, 8, 4, 4.6]);
 });
 
+test('evaluation funnel: 100 → 80 → 70 → 60 → 55, end-to-end 0.55', () => {
+  const end = last(F.funnel());
+  assert.deepEqual(end.stages.map(s => s[2]), [100, 80, 70, 60, 55]);
+  assert.deepEqual(end.rates.slice(1).map(r => r.en), ['80%', '87.5%', 'about 85.7%', 'about 91.7%']);
+});
+
+test('BLEU-2: the short answer scores 0.5134, the wrong time 0.7746', () => {
+  const short = last(F.bleu('the bus leaves')), wrong = last(F.bleu('the bus leaves at nine'));
+  assert.deepEqual([short.p1, short.p2, Number(short.score.toFixed(4))], [1, 1, 0.5134]);
+  assert.deepEqual([wrong.p1, wrong.p2, wrong.bp, Number(wrong.score.toFixed(4))], [0.8, 0.75, 1, 0.7746]);
+});
+
+test('judge scores: raw 3.28, mass 0.80, rescaled 0.1/0.7/0.2, conditional mean 4.1', () => {
+  const end = last(F.renorm());
+  assert.deepEqual([end.raw, end.mass, end.mean], [3.28, 0.8, 4.1]);
+  assert.deepEqual(end.scaled.map(([, p]) => p), [0.1, 0.7, 0.2]);
+});
+
+test('win rate: 20 tasks, 18 in the denominator, W_A = 10/18', () => {
+  const end = last(F.winRate());
+  const count = kind => end.tiles.filter(t => t === kind).length;
+  assert.deepEqual(['a', 'b', 'tie', 'bad', 'unknown'].map(count), [8, 6, 4, 1, 1]);
+  assert.equal((count('a') + 0.5 * count('tie')) / (count('a') + count('b') + count('tie')), 10 / 18);
+});
+
+test('weighted slices: 0.58 → 0.588 from +0.048 and −0.040', () => {
+  const end = last(F.slices());
+  assert.deepEqual([end.before, end.after, end.parts], [0.58, 0.588, [0.048, -0.04]]);
+});
+
+test('context staircase: 1000, 1200, 1400, 1600 = 5200', () => {
+  const end = last(F.staircase(1000, 200, 4));
+  assert.deepEqual([end.inputs, end.running], [[1000, 1200, 1400, 1600], 5200]);
+});
+
+test('skills: 3,480 on demand vs 23,280 up front', () => {
+  const end = last(F.skills());
+  assert.deepEqual([end.lazyTotal, end.eagerTotal], [3480, 23280]);
+});
+
 test('every frame has both captions and the English ones carry no Chinese', () => {
   const runs = [F.contrastive(), F.embeddingSwap(), F.rrf([['A', 'B', 'C'], ['B', 'C', 'D']]), F.rrf([['A', 'B', 'C'], []]), F.rrf([['A'], ['B']]),
-    F.retrievalMetrics(), F.pq(), F.vitPatches(), F.qwenMerge(280, 560), F.qformerMask('itc'), F.qformerMask('itm'), F.qformerMask('itg'), F.flow()];
+    F.retrievalMetrics(), F.pq(), F.vitPatches(), F.qwenMerge(280, 560), F.qformerMask('itc'), F.qformerMask('itm'), F.qformerMask('itg'), F.flow(),
+    F.funnel(), F.bleu('the bus leaves'), F.bleu('the bus leaves at nine'), F.renorm(), F.winRate(), F.slices(), F.staircase(), F.skills(), F.agentPatterns()];
   for (const frames of runs) for (const frame of frames) {
     assert.ok(frame.zh && frame.en);
     assert.doesNotMatch(frame.en, /[　-〿一-鿿＀-￯]/, frame.en);

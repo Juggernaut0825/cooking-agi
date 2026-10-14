@@ -38,6 +38,8 @@ Take reference `the bus leaves at ten` and candidate `the bus leaves`. Every can
 
 Now use `the bus leaves at nine`. Lengths match, unigram precision is 4/5, and bigram precision is 3/4. BLEU-2 is $\sqrt{0.8\times0.75}\approx0.7746$. The time is wrong yet the score is higher. If departure time is the task, exact field accuracy is the direct measure.
 
+<!-- widget:step-bleu -->
+
 ### A runnable small version
 
 ```python

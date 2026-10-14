@@ -576,6 +576,14 @@ FIGURE_LAB = [
     ("step-qwen-merge", "14 像素切块，再 2×2 合并", "14-pixel patches, then a 2×2 merge", "step"),
     ("step-qformer-masks", "Q-Former 的三种可见性", "Q-Former's three visibility masks", "still"),
     ("step-flow-matching", "Flow matching：在数轴上走一步", "Flow matching on a number line", "step"),
+    ("step-eval-funnel", "逐层嵌套的漏斗：100 → 55", "A nested funnel: 100 → 55", "step"),
+    ("step-bleu", "BLEU-2：截断计数和长度惩罚", "BLEU-2: clipped counts and the brevity penalty", "step"),
+    ("step-judge-renorm", "先归一到 1–5 分，再算均分", "Renormalize to the 1–5 labels, then average", "step"),
+    ("step-win-rate", "胜率的分母怎么定", "Choosing the win-rate denominator", "step"),
+    ("step-weighted-slices", "平均分涨了，一组却退步了", "The average rises while one group regresses", "step"),
+    ("step-context-staircase", "每次重发全部历史，输入越来越长", "Resending the whole history on every call", "step"),
+    ("step-skill-loading", "按需加载，还是一次全读", "On demand, or everything up front", "step"),
+    ("step-agent-patterns", "五种 workflow 和一种 agent", "Five workflows and an agent", "still"),
 ]
 for _name, _zh, _en, _kind in [(name, zh, en, "step") for name, zh, en in ALGO_LAB] + FIGURE_LAB:
     _kicker = 'data-zh="动画" data-en="Step by step"' if _kind == "step" else 'data-zh="图解" data-en="Diagram"'

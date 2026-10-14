@@ -23,6 +23,8 @@ A model can use retrieval, tools, and memory without every agent requiring all t
 
 These are not levels in a sophistication ranking, and they can be combined. A fixed workflow calling many models concurrently may cost more than an agent that searches once. Inspect the actual execution.
 
+<!-- widget:step-agent-patterns -->
+
 ## Follow one execution before memorizing pattern names
 
 Continue with the booking policy. This is an action record for developers, not a request for a lengthy disclosure of internal reasoning:
