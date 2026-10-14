@@ -105,7 +105,7 @@ print(dtypes)
 
 </details>
 
-这是 PyTorch 2.8.0 / CPU 的接口检查，不是 GPU 速度实验。这里 FP32 参数本身就保存更新，不需要再算一份相同用途的 FP32 master copy；如果换成低精度参数加独立 master weights 的实现，后面的显存账也要跟着改。更多算子的选择规则见 [AMP 文档](https://docs.pytorch.org/docs/2.8/amp.html)，不要把这一个线性层的结果推广成所有算子的 dtype 规则。
+这是 PyTorch 2.8.0 / CPU 的接口检查，不是 GPU 速度实验。这里 FP32 参数本身就保存更新，不需要再算一份相同用途的 FP32 master copy；换成低精度参数加独立 master weights 的实现，显存账就不同了；后面 16 bytes 的算例假设的正是这种实现。更多算子的选择规则见 [AMP 文档](https://docs.pytorch.org/docs/2.8/amp.html)，不要把这一个线性层的结果推广成所有算子的 dtype 规则。
 
 ## Loss scaling 在救什么？
 
@@ -160,7 +160,7 @@ $$
 <li><small>权重</small><strong>2 GB</strong><span>10 亿个 BF16 参数，每个 2 bytes。</span></li>
 <li><small>梯度</small><strong>2 GB</strong><span>每个参数保存 1 个 BF16 梯度，也是 2 bytes。</span></li>
 <li><small>FP32 主副本 · master copy</small><strong>4 GB</strong><span>每个参数再留 1 份 FP32 副本，每个 4 bytes。</span></li>
-<li><small>ADAM 状态 · moments</small><strong>8 GB</strong><span>每个参数有 2 个 FP32 矩估计，共 8 bytes。</span></li>
+<li><small>Adam 状态 · moments</small><strong>8 GB</strong><span>每个参数有 2 个 FP32 矩估计，共 8 bytes。</span></li>
 </ol>
 <figcaption>合计 16 GB；只算本例的参数相关状态，还没加入激活和临时工作区。</figcaption>
 </figure>
@@ -363,7 +363,7 @@ FlashAttention 也不是“反向不需要保存任何东西”。[原论文 §3
 | 低精度 | 部分张量存储和计算带宽 | 舍入、范围与 kernel 支持 |
 | 梯度累积 | 同时存活的 microbatch 激活 | 更多串行步骤；权重不缩小 |
 | Activation checkpointing | 保存的中间激活 | 重算耗时 |
-| LoRA | 可训练梯度与 optimizer 状态 | 更新空间受限；基座仍需前向 |
+| LoRA | 可训练梯度与 optimizer 状态 | 更新空间受限；基座仍要做前向和反向传播（只是不存基座权重的梯度） |
 | FSDP / ZeRO | 每卡持有的训练状态 | 通信和临时参数聚合 |
 
 不要只报“显存降了多少”。如果每步慢了一倍，但可以使用更大的有效 batch，最后是否更快要测；如果不 OOM 了却改变了训练目标，就不是同一次比较。

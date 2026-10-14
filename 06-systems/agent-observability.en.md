@@ -52,7 +52,7 @@ Which instructions, memory, retrieved results, and tool outputs the model saw; w
 
 Also record token, latency, and cost budgets, so “nothing found” can be distinguished from “stopped because the budget ran out.”
 
-Recording evidence does not mean copying all raw content. Prefer versioned IDs and controlled references where these suffice. When raw content is necessary, restrict access, retention, and purpose, and exclude credentials and unrelated personal data. Hashing a predictable user ID is not necessarily anonymization; see [OpenTelemetry's sensitive-data guidance](https://opentelemetry.io/docs/security/handling-sensitive-data/).
+Recording evidence does not mean copying all raw content. Prefer versioned IDs and controlled references where these suffice. When raw content is necessary, restrict access, retention, and purpose, and exclude credentials and unrelated personal data. Hashing a predictable user ID is not anonymization, because anyone who can enumerate the IDs can recompute the hashes; see [OpenTelemetry's sensitive-data guidance](https://opentelemetry.io/docs/security/handling-sensitive-data/).
 
 Avoid collecting sensitive content at the source, then check allowed fields and redact before export, rather than only hiding values in a dashboard. Inspect automatic instrumentation, exception text, URL query parameters, and tool results too. Filtering a few top-level fields does not make free text secret-free.
 

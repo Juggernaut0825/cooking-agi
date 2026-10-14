@@ -103,7 +103,7 @@ This also explains cache rollback. Verification may compute K/V for X and its su
 <details markdown="1">
 <summary>Why can C be emitted before its KV exists?</summary>
 
-Let prefix `P` have length 4, using zero-based positions. The target has predicted anchor A but has not processed A as input yet. This round proposes B, X; verification accepts B and replaces X with C. Ignore EOS and output limits for this example.
+This switches to DFlash's setup, unlike the table above: A is the target-selected anchor, not a draft token. Let prefix `P` have length 4, using zero-based positions. The target has predicted anchor A but has not processed A as input yet. This round proposes B, X; verification accepts B and replaces X with C. Ignore EOS and output limits for this example.
 
 <div class="worked-table" markdown="1">
 

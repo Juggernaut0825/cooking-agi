@@ -58,7 +58,7 @@ Adding one common constant to all logits changes neither result. Relative differ
 
 For $h_\ell=\phi(W_\ell h_{\ell-1}+b_\ell)$, the local Jacobian is
 
-$$J_\ell=\operatorname{diag}(\phi'(a_\ell))W_\ell.$$
+$$J_\ell=\operatorname{diag}(\phi'(u_\ell))W_\ell,\qquad u_\ell=W_\ell h_{\ell-1}+b_\ell.$$
 
 The full derivative passes through a product of these matrices, not activation derivatives alone. If every operator norm is bounded by $c<1$, the product norm is at most $c^L$: a sufficient condition for decay. A largest singular value above 1 in one layer does not guarantee explosion, because subsequent layers can contract that direction.
 
@@ -76,7 +76,7 @@ A linearized forward-scale requirement suggests $s^2\approx1/n_{in}$. Backpropag
 
 $$\operatorname{Var}(w)=\frac{2}{n_{in}+n_{out}}.$$
 
-The normal-distribution standard deviation is its square root; the uniform bounds are $\pm\sqrt{6/(n_{in}+n_{out})}$. This is an approximate initialization analysis, not a guarantee throughout training. [Glorot and Bengio](https://proceedings.mlr.press/v9/glorot10a.html) examine activations, gradients, and Jacobians—not a universal theorem from which every optimizer follows.
+The normal-distribution standard deviation is its square root; the uniform bounds are $\pm\sqrt{6/(n_{in}+n_{out})}$. This is an approximate initialization analysis, not a guarantee throughout training. [Glorot and Bengio](https://proceedings.mlr.press/v9/glorot10a.html) examine how activations, gradients, and layer Jacobians scale at initialization; the compromise above comes from that analysis.
 
 ## He: The Second Moment Halves, Not Necessarily the Variance
 

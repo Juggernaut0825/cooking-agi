@@ -156,6 +156,8 @@ $$M=\begin{bmatrix}1&1\\0&1\end{bmatrix}.$$
 这里没有网络传输，也没有低精度舍入；即使用精确 SVD，两种算法也已经不同。用前面的 `polar_reference` 可以直接检查：
 
 ```python
+import math
+
 momentum = torch.tensor([[1.0, 1.0], [0.0, 1.0]], dtype=torch.float64)
 whole_update = polar_reference(momentum)
 row_updates = torch.cat([polar_reference(row) for row in momentum.split(1, dim=0)])
@@ -171,7 +173,7 @@ assert not torch.allclose(row_updates, whole_update)
 2. Gather 所需的动量更新分片，恢复完整矩阵，做 Newton–Schulz。
 3. 只取本卡负责的更新切片，更新本地参数，再 all-gather 更新后的参数。
 
-**正交化是计算，不是额外一次通信。** TP 启用后还要处理 TP 切分。报告里的通信量比例和“没有明显延迟”来自其配置与集群，不能直接预测你的训练速度；矩阵还原、临时缓冲和通信重叠都要实际测。这里没有运行多卡 benchmark。
+**正交化本身是计算；额外的通信来自第 2 步把动量分片 gather 成完整矩阵。** TP 启用后还要处理 TP 切分。报告里的通信量比例和“没有明显延迟”来自其配置与集群，不能直接预测你的训练速度；矩阵还原、临时缓冲和通信重叠都要实际测。这里没有运行多卡 benchmark。
 
 </details>
 

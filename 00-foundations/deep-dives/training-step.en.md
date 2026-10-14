@@ -2,7 +2,7 @@
 
 [中文](training-step.md) · **English**
 
-> Reading time: about 6 minutes · Level: introductory to intermediate · Last reviewed: 2026-09
+> Reading time: about 6 minutes · Level: introductory to intermediate · Last reviewed: 2026-10
 
 An architecture diagram does not explain every `labels`, `mask`, and `backward` in training code. Follow one batch: **which tokens provide context, which get scored, and which parameters change?**
 
@@ -20,11 +20,11 @@ Use the invented sequence `[BOS, question, SEP, answer, EOS, PAD]`, with each wo
 | 3 | answer | EOS | Yes |
 | 4 | EOS | PAD | No |
 
-A manual loss aligns `logits[:, :-1]` with `input_ids[:, 1:]`, using `[:, 1:]` of a target-position loss mask. If the model implementation already shifts internally, do not shift twice. The [Hugging Face causal LM tutorial](https://huggingface.co/docs/transformers/tasks/language_modeling) illustrates an interface where the model handles alignment.
+A manual loss aligns `logits[:, :-1]` with `input_ids[:, 1:]`. If the loss mask marks scored targets by token position (here `[0, 0, 0, 1, 1, 0]`: `answer` and `EOS`), take its `[:, 1:]` slice, `[0, 0, 1, 1, 0]`, which matches the table rows. If the model implementation already shifts internally, do not shift twice. The [Hugging Face causal LM tutorial](https://huggingface.co/docs/transformers/tasks/language_modeling) illustrates an interface where the model handles alignment.
 
 ## Three masks, three different jobs
 
-- **Causal mask:** prevent looking at future answers.
+- **Causal mask:** let each position see only itself and earlier tokens.
 - **Padding mask:** prevent treating padding as valid context.
 - **Loss mask:** choose which target positions contribute to the objective.
 
@@ -75,4 +75,4 @@ python -m unittest discover -s site/tests -p 'test_multimodal_math.py'
 
 For a real small model, first overfit a tiny batch, check finite gradients and expected parameter updates, then evaluate loss and task behavior on non-overlapping validation data. Memorizing the tiny batch checks the training path, not generalization.
 
-Continue with [visual language models](../../03-multimodal-learning/vision-to-language.en.md) to distinguish adding a new input from changing the learning objective.
+To see this chain take image inputs, read [visual language models](../../03-multimodal-learning/vision-to-language.en.md), which separates adding a new input from changing the learning objective. The next note on the training route is [multi-token prediction](multi-token-prediction.en.md).

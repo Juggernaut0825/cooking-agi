@@ -10,7 +10,7 @@ If you have not written a training loop, run the [two-example PyTorch update](..
 
 Consider two sequences. One has 2 valid targets and a summed loss of 4; the other has 6 valid targets and a summed loss of 6.
 
-The token-weighted mean is $(4+6)/(2+6)=1.25$. Averaging the two sequence means instead gives $(2+1)/2=1.5$. The data did not change, but the optimization weights did. Gradient accumulation, distributed training, and padding all bring this small issue back.
+The token-weighted mean is $(4+6)/(2+6)=1.25$. Averaging the two sequence means instead gives $(2+1)/2=1.5$. The data did not change, but each token's weight in the objective did. Gradient accumulation, distributed training, and padding all bring this small issue back.
 
 Establish the target, mask, and denominator before asking how to compute it faster.
 
@@ -32,11 +32,9 @@ These interventions act at different levels. BF16 changes number representation;
 | Results change with device count | Data partitioning, valid-token counts, synchronization, randomness | [Distributed training](../../06-systems/distributed-training.en.md) |
 | High utilization but poor throughput | Useful-token throughput, recomputation, communication, waiting | [Distributed training](../../06-systems/distributed-training.en.md) |
 
-On a first pass, the overview's distinction between DDP, FSDP, TP, and PP is enough. For the mechanics inside a layer, continue with [two GPUs computing one FFN](../../06-systems/tensor-parallel.en.md): calculate `[2, −1]` into `[9, 6]`, then follow the input gradient to see where communication happens. Framework configuration names can wait.
+On a first pass, the overview's distinction between DDP, FSDP, TP, and PP is enough. For the mechanics inside a layer, continue with [two GPUs computing one FFN](../../06-systems/tensor-parallel.en.md): calculate `[2, −1]` into `[9, 6]`, then follow the input gradient to see where communication happens. Framework configuration names can wait. Once data and model parallelism are clear, read [DDP, FSDP2, and training stacks](../../06-systems/training-frameworks.en.md). Follow parameter gathering and gradient updates to see what sharding saves and why it can cost time. The note also separates Trainer, Accelerate, NeMo RL, and generation engines by responsibility.
 
 ## Chapter contents
-
-Once data and model parallelism are clear, read [DDP, FSDP2, and training stacks](../../06-systems/training-frameworks.en.md). Follow parameter gathering and gradient updates to see what sharding saves and why it can cost time. The note also separates Trainer, Accelerate, NeMo RL, and generation engines by responsibility.
 
 <!-- widget:study-atlas -->
 

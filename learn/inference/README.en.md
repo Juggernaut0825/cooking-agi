@@ -24,13 +24,13 @@ This simplified autoregressive path does not prescribe a scheduler. Prefill proc
 | KV cache | Reuse of prefix keys / values | Caching does not remove subsequent reads of history |
 | MQA / GQA | Number and sharing of KV heads | Memory reduction is not end-to-end speedup |
 | RoPE / YaRN | Position representation and long-context handling | Accepting a long input is not using its evidence well |
-| [NoPE and sequence order](../../00-foundations/deep-dives/nope-and-order.en.md) | How causal attention and recurrent state carry order information | Removing RoPE from an existing checkpoint is a different experiment |
+| [NoPE and sequence order](../../00-foundations/deep-dives/nope-and-order.en.md) | No added explicit position encoding; order information has to come from elsewhere | It does not remove order information, and it is not training-free context extension |
 | FlashAttention | Attention-related memory traffic | Dense attention pairs do not disappear |
 | PagedAttention | Physical allocation and sharing of KV state | It does not make attention sparse |
 | MLA | Representation stored for each position | Compressing state differs from reading fewer positions |
 | Sparse attention | Query–key pairs included in computation | Omitted pairs are not necessarily unimportant |
 
-Start with generation and caching below, then move to context and efficient attention. If you already understand decoders, find the particular mechanism you need to distinguish.
+Start with generation and caching below, then move to long context and efficient attention. If you already understand decoders, find the particular mechanism you need to distinguish.
 
 ## Chapter contents
 

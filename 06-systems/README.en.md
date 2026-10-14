@@ -179,7 +179,6 @@ People do not need to review every step. Ask for confirmation, correction, or a 
 
 → [Read Human-in-the-Loop](human-in-the-loop.en.md)
 
-Use those records to decide whether to continue, ask, or stop:
 
 <figure class="worked-update" id="action-control-flow" lang="en">
 <figcaption>From a proposed action to an actual result</figcaption>
@@ -200,7 +199,7 @@ shows control flow, not a deployable security implementation.
 
 ## One layer further down: infra
 
-For a first explanation of how training spans devices, read [distributed training](distributed-training.en.md). It compares DDP, FSDP, TP, and PP on one small model, checks the global loss denominator, and accounts for memory and communication. It is a mechanism guide, not a deployment manual.
+For a first explanation of how training spans devices, read [distributed training](distributed-training.en.md). It compares DDP, FSDP, TP, and PP with small hand-checkable examples, checks the global loss denominator, and accounts for memory and communication. It is a mechanism guide, not a deployment manual. For one layer worked through, continue with [tensor parallelism](tensor-parallel.en.md); for what DDP, FSDP2, and related tools each take over, read [choosing a training stack](training-frameworks.en.md); on the inference side, start with [a request through the service](llm-serving.en.md) and [vLLM and SGLang](inference-frameworks.en.md).
 
 This chapter is about the path a request takes. Below it — how an inference engine schedules,
 how memory is laid out, how RL training and rollout are stitched together — is not my

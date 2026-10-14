@@ -35,7 +35,7 @@ Older inputs pass through more factors of $\alpha$. There is a cost: for $0<\alp
 
 ## Why consider positions in ordinary attention? {#unordered-attention}
 
-Consider attention without positional encoding, a causal mask, or distance bias. Every position uses shared projections, and computation depends only on token content. Permuting the inputs generally permutes the outputs in the same way; it does not reveal which token originally came first. This is **permutation equivariance**, not a claim that all output positions are identical.
+Consider attention without positional encoding, a causal mask, or distance bias. Every position uses shared projections, and computation depends only on token content. Under these conditions, permuting the inputs permutes the outputs in exactly the same way; it does not reveal which token originally came first. This is **permutation equivariance**, not a claim that all output positions are identical.
 
 For example, globally averaging `[1, 2, 0]` gives 1 at every position. Swap the first two inputs and the output is still `[1, 1, 1]`. This is a minimal equal-score attention example. Real scores differ, but the simultaneous input/output permutation property still holds under the stated assumptions.
 

@@ -4,7 +4,7 @@
 
 > Last reviewed: 2026-10 · Prerequisites: [Multi-head attention](../core/multi-head-attention.en.md), [Decoder-only](../core/decoder-only.en.md)
 
-After generating one token, why should a model read the whole conversation again? It does not need to recompute everything. Some earlier calculations can be kept: that is the starting point for a KV cache.
+After generating one token, should a model recompute the whole conversation from scratch? It does not need to. Some earlier calculations can be kept: that is the starting point for a KV cache.
 
 “Caching makes it fast” is not enough, though. Long conversations consume more memory, and concurrent requests can move the bottleneck elsewhere. Follow a short generation to separate computation, storage, and the optimizations that address each.
 

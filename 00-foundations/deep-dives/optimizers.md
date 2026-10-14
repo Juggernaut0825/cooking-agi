@@ -43,7 +43,7 @@ Nesterov 的直观写法是先在预测位置 $\theta_{t-1}-\eta\mu v_{t-1}$ 求
 
 AdaGrad 常见分母是 $\sqrt{s_t}+\epsilon$。平方累积较少的坐标可能得到更大有效步长，但“出现次数少”不完全等于“平方和小”。[AdaGrad 原论文](https://www.jmlr.org/papers/v12/duchi11a.html)讨论的是利用数据几何结构自适应调整。
 
-AdaDelta 还维护 $u_t=\rho u_{t-1}+(1-\rho)\Delta_t^2$，用
+AdaDelta 的 $s_t$ 用 RMSProp 那种梯度平方 EMA（不是上面 AdaGrad 的累加和），另外还维护 $u_t=\rho u_{t-1}+(1-\rho)\Delta_t^2$，用
 
 $$\Delta_t=-\frac{\sqrt{u_{t-1}+\epsilon}}{\sqrt{s_t+\epsilon}}g_t.$$
 
