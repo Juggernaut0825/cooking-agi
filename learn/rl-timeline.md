@@ -36,7 +36,7 @@
 
 Atari 的画面没法逐个状态填表。早期 DQN 用神经网络估计动作价值，并用经验回放抽取过去的转移，缓解相邻样本相关、数据分布变化的问题。这里选取的是 2013 年报告，不把后续版本的所有设计都归到这一年。
 
-更强的表示能力扩大了能做的任务，也让估值和训练稳定性更复杂。今天读 DQN，值得看 replay、target 和数据分布，不只是记一个游戏成绩。[原论文 §2–3](https://arxiv.org/html/1312.5602) · [DQN 与 Double DQN](../05-post-training/deep-rl/dqn.md)
+更强的表示能力扩大了能做的任务，也让估值和训练稳定性更复杂。今天读 DQN，值得看 replay、target 和数据分布，不只是记一个游戏成绩。[原论文 §2、§4](https://arxiv.org/html/1312.5602) · [DQN 与 Double DQN](../05-post-training/deep-rl/dqn.md)
 
 ### 2015 · TRPO：一步改太多，旧数据的判断就不可靠了 {#trpo}
 
@@ -60,7 +60,7 @@ Atari 的画面没法逐个状态填表。早期 DQN 用神经网络估计动作
 
 PPO 研究便于一阶优化的策略更新目标，clipped surrogate 是其中广泛使用的一种。它简化了部分更新机制，不负责解决所有奖励设计和采样问题。
 
-PPO 比 TRPO 更方便用，也不意味着裁剪会硬性限制实际 KL。今天仍需要检查 advantage 和更新幅度。[原论文 §3](https://arxiv.org/pdf/1707.06347) · [PPO clipping](../05-post-training/rlhf/ppo-clipping.md)
+PPO 比 TRPO 更方便用，但这不意味着裁剪会硬性限制实际 KL。今天仍需要检查 advantage 和更新幅度。[原论文 §3](https://arxiv.org/pdf/1707.06347) · [PPO clipping](../05-post-training/rlhf/ppo-clipping.md)
 
 ### 2022 · InstructGPT：把反馈流程接到指令模型 {#instructgpt}
 
@@ -100,7 +100,7 @@ R1-Zero 展示了在其基座与任务设置下、不先做 SFT 的 RL 训练；
 
 ### 2026 · 当前核对点：别把工程限制当作已经解决 {#current-checkpoint}
 
-这是本站截至 2026-10-11 的复核节点，不是一篇叫“2026 RL”的新算法。[verl 的当前文档](https://verl.readthedocs.io/en/latest/algo/rollout_corr.html)仍需要区分训练与推理的分布差异；[AReaL 的异步说明](https://areal-ai.io/docs/en/algorithms/async.html)仍需要控制策略陈旧度。
+这是本站截至 2026-10-11 的复核节点，不是一篇叫“2026 RL”的新算法。按 [verl 的当前文档](https://verl.readthedocs.io/en/latest/algo/rollout_corr.html)，训练与推理之间的分布差异仍要单独处理；按 [AReaL 的异步说明](https://areal-ai.io/docs/en/algorithms/async.html)，策略陈旧度仍要加以控制。
 
 这提醒我们：有了可用框架，不等于每个任务都有可靠配方。后续更新会注明新工作实际改了什么，不只给旧方法换一个新年份。[实验怎么排查](../05-post-training/deep-rl/why-rl-is-hard.md#diagnosis)
 

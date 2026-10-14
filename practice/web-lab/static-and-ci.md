@@ -49,7 +49,7 @@ python site/leakcheck.py
 
 ## 第二步：让 PR 先检查，但不发布 {#ci}
 
-读[本站工作流](../../.github/workflows/site.yml)，不用重新抄一套。它监听向 main 的 PR、main 的 push、手动运行和定时任务。`build` 依次获取源码、安装依赖、测试、检查和构建；`deploy` 依赖 `build` 成功。
+读[本站工作流](../../.github/workflows/site.yml)，不用重新抄一套。它监听向 main 的 PR、main 的 push、手动运行和定时任务。`build` 依次获取源码、安装依赖，跑协作配置检查、完整测试、泄漏检查和双语检查，然后构建，再用 `site/htmlcheck.py` 检查生成的 `_site/`；只有 main 上的非 PR 运行才上传产物。`deploy` 依赖 `build` 成功。
 
 | 场景 | 自动做什么 | 不代表什么 |
 | --- | --- | --- |
@@ -64,7 +64,7 @@ python site/leakcheck.py
 
 `needs: build` 只保证工作流内的先后关系。要禁止失败的 PR 合并，还要由维护者配置 branch protection / ruleset 的 required checks；单写 YAML 并不会自动设置仓库合并规则。
 
-如果把 fork 当自己的站点发布，还要核对 `site/nav.toml` 的 `repo`、`origin` 和 `base_url`：它们分别影响源码链接、站点正式地址和项目路径。先看构建结果里的链接，别让自己的“提交修改”按钮仍指向上游。维护者与贡献署名也要按实际情况整理，保留来源，不照搬本站的审核关系。
+如果把 fork 当自己的站点发布，还要核对 `site/nav.toml` 的 `repo` 和 `origin`：前者决定“改这一页”和反馈链接指向哪个仓库，后者决定页面的正式地址（canonical）和分享图地址。站内页面之间用相对路径互链，`build.py` 目前不读 `base_url`，项目路径不用另外配置。先看构建结果里的链接，别让自己的“改这一页”仍指向上游。维护者与贡献署名也要按实际情况整理，保留来源，不照搬本站的审核关系。
 
 ## 第三步：知道发布了什么，也知道怎么退回 {#delivery}
 

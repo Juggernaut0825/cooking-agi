@@ -87,7 +87,7 @@ L=\sum_{a:N_a>0}\alpha_a\,
 
 $n$ indexes examples, $m_{na}\in\{0,1\}$ marks an available label, $\ell_{na}$ is its per-example task loss, and $\alpha_a$ is a training weight. If a task has no labels in the batch, omit its term and report a label count of zero—not “zero loss, therefore perfect predictions.”
 
-For instance, valid like losses `[0.2, 0.6, 0.4]` average to 0.4; rejection losses `[0.1, 0.3, 0.5]` average to 0.3. With weights 1 and 0.5, total loss is **0.55**. Adding an example with neither label should change neither numerator nor denominator. Distributed training needs global valid counts too; averaging rank-local means is incorrect when those counts differ.
+For instance, valid like losses `[0.2, 0.6, 0.4]` average to 0.4; rejection losses `[0.1, 0.3, 0.5]` average to 0.3. With weights 1 and 0.5, total loss is **0.55**. Adding an example with neither label should change neither numerator nor denominator. Distributed training needs global valid counts too; averaging per-GPU means is incorrect when those counts differ.
 
 Task means don't guarantee freedom from task interference. Inspect valid-label counts and gradients together. Training weights $\alpha_a$ differ from serving weights $w_a$: a stronger serving-time rejection penalty might reduce unpleasant content while suppressing exploration, so check both outcomes.
 

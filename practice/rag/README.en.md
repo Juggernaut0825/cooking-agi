@@ -70,4 +70,4 @@ Check these four cases first:
 
 Then integrate a generator and compare answer quality, latency, and cost. When something fails, you'll know where to start looking.
 
-[Back to Industry practice](../README.en.md) · [Review retrieval foundations](../../04-search/README.en.md)
+[Back to engineering practice](../README.en.md) · [Review retrieval foundations](../../04-search/README.en.md)

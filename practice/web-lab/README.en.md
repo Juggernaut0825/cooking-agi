@@ -1,4 +1,4 @@
-# Learn by building a small version of this site
+# Use this site to learn how to build a small project
 
 [中文](README.md) · **English**
 

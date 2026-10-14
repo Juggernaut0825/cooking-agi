@@ -3505,7 +3505,7 @@
       },
       "body": {
         "zh": "当时不少大脑模型借用开关电路，把回忆写成预先接好的线路。Rosenblatt 认为，这不适合连线随机、元件不完美的网络。1958 年他提出感知机：感光点连到随机连线的联想单元，再连到几个响应单元。被强化的联想单元“价值”升高，同一刺激再来，原来的响应更易胜出。",
-        "en": "Many brain models of the time borrowed from switching circuits and symbolic logic, treating recall and comparison as wiring laid out in advance. Rosenblatt argued that this language did not suit a network of random connections and imperfect parts. In 1958 he proposed the perceptron: light-sensitive points feed randomly connected association units, which feed a few response units. Reinforced association units gain “value”, so the same stimulus more likely wins the same response next time."
+        "en": "Many brain models of the time borrowed from switching circuits and symbolic logic, treating recall and comparison as wiring laid out in advance. Rosenblatt argued that this language did not suit a network of random connections and imperfect parts. In 1958 he proposed the perceptron: light-sensitive points feed randomly connected association units, which feed a few response units. Reinforced association units gain “value”, so when the same stimulus returns, the same response is more likely to win."
       },
       "detail": {
         "zh": "设想一个只有两个响应的感知机，一个代表“方”，一个代表“圆”。图照到感光点上，点亮一部分联想单元；两个响应各自汇总，强的一方胜出，并压住对方。同类图形彼此相似时，没见过的新图也能以高于随机的概率归对类。\n\nRosenblatt 也写明了边界：具体的刺激它能学，可一旦要判断刺激之间的关系，比如“说出方块左边那个东西”，问题就变得极难。",
@@ -4712,8 +4712,8 @@
         "en": "Big labs kept their image–text data private; LAION-5B released 5.85 billion pairs."
       },
       "body": {
-        "zh": "CLIP 用 4 亿对图文训练，数据没公开；公开的英文图文数据集，最大的只有 1 亿对。大规模图文研究于是集中在少数几家公司。LAION-5B 从网页里挑出带 alt 文本的图片，按 CLIP 算的图文相似度筛选，公开了 58.5 亿对，图片要使用者自己下载。",
-        "en": "CLIP was trained on 400 million image–text pairs that were never released, and the largest public English image–text dataset had 100 million. Research on large image–text models had pooled in a few companies. LAION-5B took images with alt text from web pages, filtered them by CLIP similarity between image and text, and released 5.85 billion pairs. Users download the images themselves."
+        "zh": "CLIP 用 4 亿对图文训练，数据没公开；在 LAION 自己 2021 年放出 4 亿对的 LAION-400M 之前，公开的英文图文数据集最大约 1 亿对。大规模图文研究于是集中在少数几家公司。LAION-5B 从网页里挑出带 alt 文本的图片，按 CLIP 算的图文相似度筛选，公开了 58.5 亿对，图片要使用者自己下载。",
+        "en": "CLIP was trained on 400 million image–text pairs that were never released, and before LAION's own 400-million-pair LAION-400M (2021), the largest public English image–text dataset had about 100 million. Research on large image–text models had pooled in a few companies. LAION-5B took images with alt text from web pages, filtered them by CLIP similarity between image and text, and released 5.85 billion pairs. Users download the images themselves."
       },
       "detail": {
         "zh": "一对图文要过几关：从 Common Crawl 里找带 alt 文本的图片，下载，去掉文字太短或图片太小的，再用 CLIP 算相似度，低于门槛的删掉。最后这关删掉了约 500 亿张图片里的九成左右。因为只给链接，网页一变，图片就可能失效。\n\n论文用其中 4 亿对的子集训练 CLIP，在 ImageNet 零样本分类等测试上，和 OpenAI 的原版持平或接近。论文还写道，Stable Diffusion 就是用它的几个子集训练的。",
@@ -6008,7 +6008,7 @@
           },
           "summary": {
             "zh": "程序怎样变成硬件能执行的工作，有不同层次的问题。LLVM 组织可复用的代码表示与优化；CUDA 让开发者更直接地表达 GPU 线程和内存操作；NumPy 结束了 Python 两个数组包的分裂，给数值计算一个公共数组。",
-            "en": "Turning programs into executable work involves several layers. LLVM organizes reusable code representations and transformations; CUDA exposes GPU threads and memory operations; NumPy ended a split between two Python array packages and gave numerical code one shared array. These are neighboring tools, not a claimed invention lineage."
+            "en": "Turning programs into executable work involves several layers. LLVM organizes reusable code representations and transformations; CUDA exposes GPU threads and memory operations; NumPy ended a split between two Python array packages and gave numerical code one shared array."
           },
           "works": [
             "software-llvm-paper-2004",
@@ -6054,7 +6054,7 @@
           },
           "summary": {
             "zh": "机器一多，通信在两处卡住：交换机树的上层带宽不够，复制数据还要占用 CPU。fat-tree 用许多普通交换机提供多条等长路径，RDMAP 规定受保护的远端缓冲区读写；前者管网络拓扑，后者管主机上的数据搬运。",
-            "en": "With more machines, communication stalled in two places: upper switch tiers lacked bandwidth, and copying data consumed CPU time. Fat-tree used many commodity switches to provide multiple equal-cost paths, while RDMAP specified protected reads and writes to remote buffers; one concerns network topology, the other data movement at the hosts, and RDMAP does not cover every RDMA protocol."
+            "en": "With more machines, communication stalled in two places: upper switch tiers lacked bandwidth, and copying data consumed CPU time. Fat-tree used many commodity switches to provide multiple equal-cost paths, while RDMAP specified protected reads and writes to remote buffers; one concerns network topology, the other data movement at the hosts."
           },
           "works": [
             "networks-rdmap-rfc-2007",
@@ -6677,7 +6677,7 @@
       },
       "summary": {
         "zh": "Stable Diffusion 公开权重，ChatGPT 开放对话界面，让更多人直接用上生成模型。随着使用规模扩大，回答是否有用、服务能否又快又便宜，变得更受关注。",
-        "en": "Stable Diffusion released its weights and ChatGPT opened a chat window, so ordinary people could use large models directly. With so many users, helpful answers and fast, cheap serving became the new problems."
+        "en": "Stable Diffusion released its weights and ChatGPT opened a chat window, so many more people could use generative models directly. As use grew, whether answers helped and whether serving could be fast and cheap drew more attention."
       },
       "featured": [
         "nvidia-hopper-2022",
@@ -7247,7 +7247,7 @@
       },
       "next": {
         "zh": "已有 Penn Treebank、ImageNet、SQuAD、GLUE、MMLU、LAION-5B 和 Datasheets；语音语料（如 TIMIT）、网页语料（如 Common Crawl）、标注劳动、数据许可与版权仍需展开。",
-        "en": "Penn Treebank, ImageNet, SQuAD, GLUE, MMLU, LAION-5B and Datasheets are represented. Speech corpora such as TIMIT, web corpora such as Common Crawl, annotation labour, and data licensing and copyright still need histories."
+        "en": "Penn Treebank, ImageNet, SQuAD, GLUE, MMLU, LAION-5B and Datasheets are represented. Speech corpora such as TIMIT, web corpora such as Common Crawl, annotation labor, and data licensing and copyright still need histories."
       }
     },
     {
@@ -7446,7 +7446,7 @@
       },
       "next": {
         "zh": "已有 Dartmouth、GPL、arXiv、差分隐私、联邦学习、Datasheets、Model Cards 和 Hugging Face Transformers；资助机构、标注劳动、开放权重的许可和安全评估仍需展开。",
-        "en": "Dartmouth, the GPL, arXiv, differential privacy, federated learning, Datasheets, Model Cards and Hugging Face Transformers are represented. Funding bodies, annotation labour, licensing of open weights and safety evaluation still need histories."
+        "en": "Dartmouth, the GPL, arXiv, differential privacy, federated learning, Datasheets, Model Cards and Hugging Face Transformers are represented. Funding bodies, annotation labor, licensing of open weights and safety evaluation still need histories."
       }
     }
   ],
@@ -7926,8 +7926,8 @@
       "to": "glue-2018",
       "type": "uses",
       "description": {
-        "zh": "论文用 GLUE 报告微调结果，摘要给出的总分是 80.5%。",
-        "en": "The paper reports fine-tuning results on GLUE; its abstract gives a score of 80.5%."
+        "zh": "论文用 GLUE 报告微调结果，最终版摘要给出的总分是 80.5%（2018 年初版为 80.4%）。",
+        "en": "The paper reports fine-tuning results on GLUE; the final version's abstract gives 80.5% (80.4% in the first 2018 version)."
       },
       "source": "https://arxiv.org/abs/1810.04805"
     },

@@ -4,7 +4,7 @@
 
 这页记录已经写到哪里、还有哪些地方没核对完。整理目录时靠它防止漏项；读笔记时不必照着它逐项打卡。
 
-**截至 2026-10-10，已登记的主题都有阅读入口，但还不能说全部审完。** 主线 82 项中，81 项已有正文，1 项是面试复习导读；附录有 65 个专题和算法、PyTorch 两个汇总入口。它们会指向同一篇笔记，不能相加当作文章总数。
+**截至 2026-10-10，已登记的主题都有阅读入口，但还不能说全部审完。** 主线 82 项中，81 项已有正文，1 项是面试复习导读；附录有 65 个专题和算法、PyTorch 两个汇总入口。有些条目指向同一篇笔记，所以这些数字不能相加当作文章总数。
 
 附录 1 登记的参考正文已经读完，逐项记录见下方自动汇总。接下来要检查的是本站讲得是否准确、例子是否清楚，而不是继续凑阅读数量。读完正文，也不等于原图、外链和参考实现都验证过了。
 
@@ -20,7 +20,7 @@
 - **仓库 README**：英文介绍放在 [README](../README.md)，[中文版](../README.zh.md)单独保留；先选阅读目的，再看主题路线，贡献和本地构建说明放后面。
 - **正文与图解**：BERT、RL / post-training、Python 和检索补了例子与推导；图内说明分别写中英文，细节按需展开。后面仍有逐篇核对工作。
 
-**已做的检查：**首页、检索文章及后续各批改动页的语言切换和窄屏排版；首次提示、语言记忆和旧链接也做了回归检查。正文审阅继续按章节推进，具体范围和发现记录在仓库的 `CONTENT_RELEASE_CHECKLIST.md`，不把局部检查写成全站通过。README 的入口改成短列表，手机上不用左右拖表格。
+**已做的检查：**首页、检索文章及后续各批改动页的语言切换和窄屏排版；首次提示、语言记忆和旧链接也做了回归检查。正文审阅继续按章节推进，具体范围和发现记录在仓库的 `CONTENT_RELEASE_CHECKLIST.md`，不把局部检查写成全站通过。
 
 **还要做什么：**继续逐章检查本站的解释、例子、图和双语表达；对实际用来支撑结论的图片公式和外链，补上核验记录。没有采用的参考材料会注明范围，不把“看过”写成“验证过”。技术结论以原论文或官方实现为准；工程项目里的教学算例不等于真实 GPU 训练结果。
 
@@ -30,14 +30,13 @@
 
 - **有正文**：站内有专门的文章或实质讲解，能点进去读；不代表与参考资料的所有细节完全等价。
 - **汇总入口**：一个入口串起多篇文章，例如算法和 PyTorch 路线；不是尚未填上的空章。
-- **部分讲解**：已有相关内容，但独立推导、例子或完整范围仍需补充。
 - **待补**：主题保留在清单里，但不造一个空页面当作已经完成。
 
 参考范围来自[大模型学习地图](https://tcn6r3nlptym.feishu.cn/wiki/N2Yjwoez0iUA0AkGQBRcSps1nPf)。主线 9 章的 71 个页面已通过浏览器读完正文，包括多模态全部 16 页；第 7 章的 7.1–7.7 在同一页，按 1 篇计算。附录 3 的 7 篇 ML 基础与 20 篇 PyTorch 正文也已读到末尾。这里统计的是正文阅读，不是全部代码、图片和外链的验证。
 
 基础附录对应新增 [泛化与训练诊断](../00-foundations/deep-dives/generalization.md)、[激活与初始化](../00-foundations/deep-dives/activation-and-initialization.md)、[优化器](../00-foundations/deep-dives/optimizers.md)。用小例子区分训练失败与泛化差、ReLU 的二阶矩与方差、Adam 的偏差修正与 AdamW 的解耦衰减；原有 RNN / GRU、归一化和基础题的相关解释也同步修正。例子为本站原创，不复制参考代码。
 
-新增 [PyTorch 实践路线](../00-foundations/pytorch/README.md)，按张量存储、运算维度、自动求导和训练循环分成 4 章，中英文都有完整代码。重点不是罗列 API，而是解释那些“不报错却算错了”的情况：跨 batch 广播、错误的 loss 分母、没保留的中间梯度，以及只有模型权重却没有完整训练状态的恢复。数值测试使用 PyTorch 2.8.0 / CPU，软件版本与教学边界单独注明。
+新增 [PyTorch 实践路线](../00-foundations/pytorch/README.md)，按张量存储、运算维度、交叉熵与 loss、自动求导和训练循环分成 5 章，中英文都有完整代码。重点不是罗列 API，而是解释那些“不报错却算错了”的情况：跨 batch 广播、错误的 loss 分母、没保留的中间梯度，以及只有模型权重却没有完整训练状态的恢复。数值测试使用 PyTorch 2.8.0 / CPU，软件版本与教学边界单独注明。
 
 多模态新增双语 [LLaVA / DeepSeek-VL](../03-multimodal-learning/vlm-designs.md)、[Qwen-VL](../03-multimodal-learning/qwen-vl.md)、[Omni](../03-multimodal-learning/omni-streaming.md)、[OCR 压缩](../03-multimodal-learning/ocr-compression.md)、[图像生成](../03-multimodal-learning/image-generation.md)与[微调检查](../03-multimodal-learning/vlm-finetuning.md)。保留之前的 [ViT](../03-multimodal-learning/vit.md)、[CLIP](../03-multimodal-learning/clip.md)和 [BLIP / Q-Former](../03-multimodal-learning/blip-and-q-former.md)。2026 年的 OCR 2、Qwen3.5 / 3.8-Omni 与 Qwen-Image 后续版本单独核对，不把旧报告当最新版本。算例不是模型训练实测，多模态 GPU 微调尚未执行。
 
@@ -46,6 +45,8 @@
 后训练新增 [DAPO](../05-post-training/dapo.md)、[GSPO / ASPO](../05-post-training/policy-ratios.md)与 [SAO / 异步训练](../05-post-training/async-policy-learning.md)。补充采样成本、loss reduction、stop-gradient 与轨迹过期的算例；修正了旧文中“clipping 硬限制概率”“Critic 只用来做 baseline”等不准确表述。小例子有测试，但并未复现这些论文的完整训练结果。
 
 上一批新增的双语 [RAG：证据与评估](../04-search/rag-evidence.md)、[向量索引：IVF 与 PQ](../04-search/vector-indexes.md)，以及扩充的 [Agent 执行过程](../10-agents/patterns.md) 保留。新增 [Prompt](../10-agents/prompting.md) 的任务约定与对照实验设计，以及 [Deep Research](../10-agents/deep-research.md) 的证据队列、引用检查与停止逻辑。可运行的本地例子不代表已完成模型对比实验。
+
+新增[工具、MCP 与 Skills](../10-agents/tools-and-skills.md)和重写的[模型选择与路由](../10-agents/model-choice.md)，用笔记检查和 4 条假设请求解释调用、权限、预算与取舍；没有真实模型或服务性能测量。
 
 此前对 [DeepSeek](../00-foundations/model-families/deepseek.md)、[Qwen](../00-foundations/model-families/qwen.md)和[多卡训练](../06-systems/distributed-training.md)的补充保留；这批继续加入路由权重、奖励边界、Ring 通信、权重版本和恢复的算例。BLIP 的筛选审计与 InstructBLIP 消融方案也已补充，均不冒充完整训练实验。
 
@@ -92,7 +93,7 @@ DCA 的 chunk 边界位置、DSA 的 indexer 训练与错选例子已补入长�
 
 ### 这些问题放在哪里，读者才找得到？
 
-不按参考问答的顺序堆新页面，也不把所有内容塞进“进阶”。保留本站现有的 4 类目录，按知识依赖安排：
+不按参考问答的顺序堆新页面，也不把所有内容塞进“进阶”。保留本站现有的目录结构，按知识依赖安排：
 
 | 想怎么读 | 从哪里开始 | 哪些可以之后再看 |
 | --- | --- | --- |
@@ -120,5 +121,3 @@ DCA 的 chunk 边界位置、DSA 的 indexer 训练与错选例子已补入长�
 按章节继续在浏览器里读，分别记录正文、图片公式和代码读到了哪里，再对照本站的定义、推导、例子与实现。发现缺口就补进已有章节，确实是独立问题再新开一篇；不会为了对齐别人目录而复制一套重复文章。
 
 如果你发现漏项，可以在 issue 里贴主题、公开来源和你希望讲清楚的问题。维护记录见仓库中的 `CONTENT_COVERAGE.md`；主线清单来自 `site/reference-coverage.toml`，截图与浏览器目录的附录对照来自 `site/appendix-coverage.toml`。
-
-新增[工具、MCP 与 Skills](../10-agents/tools-and-skills.md)和重写的[模型选择与路由](../10-agents/model-choice.md)，用笔记检查和 4 条假设请求解释调用、权限、预算与取舍；没有真实模型或服务性能测量。

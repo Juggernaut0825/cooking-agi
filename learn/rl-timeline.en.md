@@ -36,7 +36,7 @@ Direct probability updates do not make a single sample a reliable direction esti
 
 Atari screens cannot be handled by filling out a small state table. Early DQN estimated action values with a neural network and sampled stored transitions through experience replay, addressing correlated observations and changing data distributions. This entry covers the 2013 report, not every design added in later versions.
 
-More expressive representations expanded the tasks an agent could tackle while complicating estimation and stability. Replay, targets, and data distributions are more useful lessons than a game score alone. [Original paper, §2–3](https://arxiv.org/html/1312.5602) · [DQN and Double DQN](../05-post-training/deep-rl/dqn.en.md)
+More expressive representations expanded the tasks an agent could tackle while complicating estimation and stability. Replay, targets, and data distributions are more useful lessons than a game score alone. [Original paper, §§2 and 4](https://arxiv.org/html/1312.5602) · [DQN and Double DQN](../05-post-training/deep-rl/dqn.en.md)
 
 ### 2015 · TRPO: large changes make old-policy evidence unreliable {#trpo}
 
@@ -88,7 +88,7 @@ Saving some Critic overhead shifts attention to group-sampling cost and signal q
 
 ### 2025 · DeepSeek-R1: verifiable feedback for reasoning training {#r1}
 
-R1-Zero demonstrated RL without an initial SFT stage in its base-model and task setting. The full R1 pipeline also includes cold-start data and multiple training stages. These are not interchangeable “RL only” claims. The work first appeared in 2025; the link here is the later v2 report.
+R1-Zero demonstrated RL without an initial SFT stage in its base-model and task setting. The full R1 pipeline also includes cold-start data and multiple training stages. The two should not be merged into a single “RL only” claim. The work first appeared in 2025; the link here is the later v2 report.
 
 Verifiable mathematics and coding feedback is useful, but it does not establish that open-ended tasks can use the same recipe. Comparisons also need fixed inference sampling and length budgets. [Report, §2–3](https://arxiv.org/html/2501.12948v2) · [RL for LLMs and agents](../05-post-training/deep-rl/llm-bridge.en.md)
 
@@ -100,7 +100,7 @@ Ask what gets saved—generation, computation, or waiting—and which objective 
 
 ### 2026 · Current checkpoint: engineering limits have not disappeared {#current-checkpoint}
 
-This is the site’s review checkpoint as of 2026-10-11, not a new algorithm called “2026 RL.” [Current verl documentation](https://verl.readthedocs.io/en/latest/algo/rollout_corr.html) still distinguishes training/inference distribution gaps; [AReaL’s asynchronous guide](https://areal-ai.io/docs/en/algorithms/async.html) still controls policy staleness.
+This is the site’s review checkpoint as of 2026-10-11, not a new algorithm called “2026 RL.” [Current verl documentation](https://verl.readthedocs.io/en/latest/algo/rollout_corr.html) still describes correcting for the gap between training and inference distributions; [AReaL’s asynchronous guide](https://areal-ai.io/docs/en/algorithms/async.html) still describes how to bound policy staleness.
 
 A usable framework does not imply a reliable recipe for every task. Future updates should identify what new work changes, not attach a new year to an old method. [How to investigate a run](../05-post-training/deep-rl/why-rl-is-hard.en.md#diagnosis)
 

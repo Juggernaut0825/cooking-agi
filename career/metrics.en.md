@@ -26,7 +26,7 @@ The same goes for applications. If none are getting a response, another hundred 
 
 Those questions are less convenient to track, but they give me a better idea of what to do next.
 
-## I expect this comes up after hiring too
+## I expect this comes up on the job too
 
 Someone can do a lot of work and still not be promoted. Their performance may be part of it; so may the role, available openings, or organizational decisions. I don't have enough experience to offer a rule, but “work harder” doesn't seem like a sufficient explanation for every case.
 

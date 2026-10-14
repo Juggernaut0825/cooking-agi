@@ -1446,7 +1446,7 @@
     roPeak.set(flash ? 'O(n)  ·  ' + TX.t('one block of', '一个 block，') + ' ' + B * B + ' ' + TX.t('scores', '个分数') : 'O(n²)  ·  2 × ' + N * N + ' ' + TX.t('cells', '个元素'));
     roSkip.set(flash ? (NB * NB - schedule.length) + ' / ' + NB * NB : '—');
     TX.bi(caption,
-      flash ? 'For each block of queries, stream through the key/value blocks it is allowed to see, keep a running max and normaliser per row, and write only the finished output rows. The n × n matrix never exists.' : 'Compute all of S, write it to HBM, read it back for the softmax, write P, read it back again to multiply by V. The arithmetic is cheap; moving n² numbers twice is not.',
+      flash ? 'For each block of queries, stream through the key/value blocks it is allowed to see, keep a running max and normalizer per row, and write only the finished output rows. The n × n matrix never exists.' : 'Compute all of S, write it to HBM, read it back for the softmax, write P, read it back again to multiply by V. The arithmetic is cheap; moving n² numbers twice is not.',
       flash ? '对每个 query block，依次扫过它能看到的 key/value block，每行维护一个 running max 和归一化因子，最后只写回算完的输出行。n × n 矩阵从头到尾都不存在。' : '先算出整个 S 写进 HBM，做 softmax 时读回来，写出 P，再读回来乘以 V。算术本身很便宜，贵的是把 n² 个数搬两遍。');
   }
   TX.onLang(render);
@@ -1509,10 +1509,10 @@
       en: 'Stage 2 · reward model. People see two answers to one prompt and pick the better one; a Bradley–Terry loss pushes r_φ to score the chosen answer above the rejected one. It only learns the gap, never an absolute score.',
       zh: '第二阶段 · 奖励模型。同一个 prompt 的两个回答，人标出哪个更好；Bradley–Terry 损失让 r_φ 给 chosen 打得比 rejected 高。它只学分差，不学绝对分。' },
     { stage: 3, on: ['actor', 'critic', 'reward', 'ref'], edges: [], upd: t('will train: Actor, Critic · frozen: Reward, Reference', '会训练：Actor、Critic · 冻结：Reward、Reference'),
-      en: 'Stage 3 begins with four models. Actor and Reference start as two copies of the SFT model; Reward is the model from stage 2; the Critic is often initialised from the reward model.',
+      en: 'Stage 3 begins with four models. Actor and Reference start as two copies of the SFT model; Reward is the model from stage 2; the Critic is often initialized from the reward model.',
       zh: '第三阶段开始时有四个模型：Actor 和 Reference 是 SFT 模型的两份副本，Reward 是第二阶段训好的奖励模型，Critic 常从奖励模型初始化。' },
     { stage: 3, on: ['prompt', 'actor'], edges: ['prompt-actor', 'actor-reward'], upd: t('none, forward pass only', '无，只做前向'),
-      en: '① The Actor reads a prompt x and samples an answer y, one token at a time. The Actor is the policy being optimised.',
+      en: '① The Actor reads a prompt x and samples an answer y, one token at a time. The Actor is the policy being optimized.',
       zh: '① Actor 读一个 prompt x，一枚一枚 token 采样出回答 y。它就是要被优化的策略。' },
     { stage: 3, on: ['reward'], edges: ['actor-reward'], upd: t('none, forward pass only', '无，只做前向'),
       en: '② The frozen Reward model scores the whole answer, r_φ(x, y): one number, given only when the answer ends.',
@@ -1521,8 +1521,8 @@
       en: '③ The frozen Reference measures how far the Actor has drifted: total reward = r_φ − β · KL(π_θ ‖ π_ref).',
       zh: '③ 冻结的 Reference 衡量 Actor 跑了多远：总奖励 = r_φ − β · KL(π_θ ‖ π_ref)。' },
     { stage: 3, on: ['critic'], edges: ['actor-critic'], upd: t('none, forward pass only', '无，只做前向'),
-      en: '④ The Critic estimates V_t for each prefix. The advantage A_t = R_t − V_t says how much better than expected each token turned out.',
-      zh: '④ Critic 估计每个前缀的 V_t；优势 A_t = R_t − V_t 说明每个 token 比预期好了多少。' },
+      en: '④ The Critic estimates V_t, the return expected after each prefix. The advantage A_t = G_t − V_t, with G_t the return actually collected from token t on, says how much better than expected each token turned out.',
+      zh: '④ Critic 估计每个前缀之后的期望回报 V_t；优势 A_t = G_t − V_t（G_t 是从第 t 个 token 起实际拿到的回报）说明每个 token 比预期好了多少。' },
     { stage: 3, on: ['actor', 'critic', 'update'], edges: ['update-actor', 'update-critic'], upd: t('Actor and Critic, nothing else', 'Actor 和 Critic，仅此两个'), update: true,
       en: '⑤ One PPO step updates only the Actor and the Critic; Reward and Reference only ever run forward. Then back to ①, sampling again from the new Actor.',
       zh: '⑤ 一次 PPO 更新只改 Actor 和 Critic 的参数；Reward 和 Reference 全程只做前向。然后回到 ①，用新的 Actor 重新采样。' }
@@ -1688,7 +1688,7 @@
 })();
 
 /* 11 · MoE router. One token, eight experts: router logits → softmax → keep the top k →
-   renormalise over the kept ones → the output is the gated sum of the chosen experts. */
+   renormalize over the kept ones → the output is the gated sum of the chosen experts. */
 (function () {
   'use strict';
   var TX = window.TX;
@@ -1746,7 +1746,7 @@
     // probability bars, one per expert
     var X0 = 268, COL = 45, BASE = 190, HMAX = 150;
     svg.appendChild(s('line', { class: 'pc-axis', x1: X0 - 6, y1: BASE, x2: X0 + N * COL, y2: BASE }));
-    svg.appendChild(s('text', { class: 'pc-tick', x: X0 - 6, y: 22, bi: ['softmax over all 8, kept ones renormalised', '8 个一起 softmax，留下的再归一化'] }));
+    svg.appendChild(s('text', { class: 'pc-tick', x: X0 - 6, y: 22, bi: ['softmax over all 8, kept ones renormalized', '8 个一起 softmax，留下的再归一化'] }));
     for (var i = 0; i < N; i++) {
       var on = w[i] != null, x = X0 + i * COL, bh = Math.max(2, p[i] * HMAX);
       svg.appendChild(s('rect', { class: on ? 'mr-bar on' : 'mr-bar', x: x + 6, y: BASE - bh, width: COL - 14, height: bh, rx: 3 }));
@@ -1952,7 +1952,7 @@
   render();
 })();
 
-/* 14 · Why loops help with multi-hop problems: an idealised chain where one pass of the block
+/* 14 · Why loops help with multi-hop problems: an idealized chain where one pass of the block
    can follow one hop. A fixed-depth model stops at its depth; a looped one keeps going. */
 (function () {
   'use strict';
@@ -2177,7 +2177,7 @@
     sl('gpuHr', '$ per GPU-hour', '每 GPU 小时', 0.5, 10, 0.1, function (v) { return '$' + v.toFixed(1); }),
     sl('gpus', 'GPUs per replica', '每组副本的 GPU 数', 1, 16, 1, function (v) { return String(v); }),
     sl('tps', 'tokens/s per replica', '每组副本每秒 token', 500, 30000, 500, function (v) { return v.toLocaleString('en-US'); }),
-    sl('util', 'average utilisation', '平均利用率', 0.1, 0.9, 0.05, function (v) { return Math.round(v * 100) + '%'; }),
+    sl('util', 'average utilization', '平均利用率', 0.1, 0.9, 0.05, function (v) { return Math.round(v * 100) + '%'; }),
     sl('ops', 'people and ops per month', '每月人力与运维', 0, 60000, 1000, function (v) { return fmt$(v); })])]);
   fig.stage.appendChild(h('div', { class: 'ctl-row ac-panels' }, [usage, apiBox, selfBox]));
   var svg = s('svg', { viewBox: '0 0 640 260', role: 'img' });

@@ -38,7 +38,7 @@ When we moved to broader ML fundamentals, including some classical models, I sta
 
 This was my first interview with a large Chinese tech company. I'd heard that the questions could be broad, but hadn't prepared thoroughly enough. One experience doesn't describe every company. It did tell me that reviewing only the topics closest to my project wasn't enough for the next round.
 
-I want to get past recognizing an answer when I see it. I need to explain the basic idea, when I'd use it, and where it can fail without looking at the notes. Otherwise, a differently phrased question is likely to expose the same gap.
+I want to get past recognizing an answer when I see it. Without looking at my notes, I need to explain the basic idea, when I'd use it, and where it can fail. Otherwise, a differently phrased question is likely to expose the same gap.
 
 ## Explaining technical work in Chinese takes practice too
 

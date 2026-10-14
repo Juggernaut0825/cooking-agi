@@ -64,7 +64,7 @@ Allocate two slots to each source and obtain `[A,B,C,E]`: hits rise from one to 
 
 Establish complementarity, then test allocation. Different sources do not automatically justify a complex router. Compare fixed quotas, simple rules, and learned routing; a router relying on thin user histories may make unstable decisions.
 
-Overlap also consumes nominal slots. Refill fewer than four unique results from later candidates in a deterministic order and record extra work. Don't mix raw scores such as 0.8 and 12 without calibration. The [RAG RRF example](../rag/data-and-retrieval.en.md) shows a rank-based baseline, which still needs evaluation on this task.
+Overlap also consumes nominal slots. If merging leaves fewer than four unique results, refill from later candidates in a deterministic order and record the extra reads. Don't mix raw scores such as 0.8 and 12 without calibration. The [RAG RRF example](../rag/data-and-retrieval.en.md) shows a rank-based baseline, which still needs evaluation on this task.
 
 ## Self-check
 

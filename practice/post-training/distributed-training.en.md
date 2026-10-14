@@ -70,4 +70,4 @@ Report both non-pad input tokens/s and valid target tokens/s, plus step time, pe
 | Avoid OOM | Length tails, first optimizer step, and saving peaks |
 | Preserve training semantics | Sample IDs, target denominators, and a small gradient comparison |
 
-The project's [standard-library checks](code/training_contracts.py) recompute batch and padding quantities; tests also verify unequal-length normalization using analytic gradients. They are not NCCL/FSDP benchmarks. Next: [checkpointing and recovery](checkpoint-and-resume.en.md). A distributed run that starts is not necessarily one that can resume.
+The project's [standard-library checks](code/training_contracts.py) recompute batch and padding quantities; tests also verify unequal-length normalization with an optional CPU PyTorch gradient check. They are not NCCL/FSDP benchmarks. Next: [checkpointing and recovery](checkpoint-and-resume.en.md). A distributed run that starts is not necessarily one that can resume.

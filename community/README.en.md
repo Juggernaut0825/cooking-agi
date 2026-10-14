@@ -13,7 +13,7 @@ For a concrete small task, see the [roadmap](roadmap.en.md). This version focuse
 | What you want to do | First step |
 | --- | --- |
 | Fix a typo, reference, or translation | Open a small PR; no permission needed first |
-| Question an explanation or add an example | Use “Discuss & contribute” below the article; you don't need to know the answer yet |
+| Question an explanation or add an example | Use “How could this page be better?” at the bottom of the note to open a prefilled issue; you don't need to know the answer yet |
 | Write a new note or interactive diagram | Open a [proposal](https://github.com/tianyi-zhang-02/cooking-agi/issues/new?template=proposal.yml) with the problem, location, and approach, then a draft PR |
 | Help maintain a topic | Propose a scope and rough availability; daily attendance is not expected |
 | Add a credit or an optional map location | Use the [contribution record](https://github.com/tianyi-zhang-02/cooking-agi/issues/new?template=add-me-to-the-crew.yml) and link an issue or PR |

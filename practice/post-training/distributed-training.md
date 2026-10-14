@@ -70,4 +70,4 @@ $B_{\mathrm{micro}}$ 是每个数据并行副本每次处理的样本数，$A$ �
 | 避免 OOM | 检查长度尾部、首个 optimizer step 和保存峰值 |
 | 保持训练语义 | 对照样本 ID、有效 token 分母和一小步梯度 |
 
-项目的[标准库检查](code/training_contracts.py)可复算 batch 与 padding；测试还用解析梯度验证不等长分母。它们不是 NCCL / FSDP 性能测试。下一步是[保存与恢复](checkpoint-and-resume.md)：分布式能跑，不代表中断后能接着跑。
+项目的[标准库检查](code/training_contracts.py)可复算 batch 与 padding；测试还用可选的 CPU PyTorch 梯度检查验证不等长分母。它们不是 NCCL / FSDP 性能测试。下一步是[保存与恢复](checkpoint-and-resume.md)：分布式能跑，不代表中断后能接着跑。

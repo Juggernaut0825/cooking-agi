@@ -2,7 +2,7 @@
 
 **中文** · [English](choose-your-path.en.md)
 
-按你现在的目标找资料：从基础入门、复习面试、读论文，或者动手做项目。每条路线都列了起点和建议练习。
+按你现在的目标找资料：基础入门、复习面试、读论文、动手做项目、补一个专题，或者安排求职准备。每条路线都列了起点和建议练习。
 
 <nav class="study-route goal-route" aria-label="按目标选择阅读路线">
 <a href="#getting-started"><small>先建立理解</small><strong>我刚开始学 ML / LLM</strong><span>从一个预测问题，到 Transformer</span></a>
@@ -91,4 +91,4 @@
 
 全部内容分在[基础与原理](README.md)、[面试准备](../interview/README.md)、[工程实践](../practice/README.md)、[编年史](technology-timeline.md)和[求职记录](../career/README.md)中。路线只是不同的阅读顺序，指向同一份文章。
 
-右上角 **中文 / EN** 切换同一篇。“我的阅读”可以收藏和找回最近读过的页面，记录只在当前浏览器；换设备前可以导出收藏。内容还在继续补，哪些已写、哪些待核对，见[覆盖与待办](coverage.md)。
+右上角 **中文 / EN** 切换同一篇。点标题下的「收藏本页」收藏文章，之后在「我的阅读」里找回收藏和最近读过的页面；记录只在当前浏览器，换设备前可以在「设置」里导出备份。内容还在继续补，哪些已写、哪些待核对，见[覆盖与待办](coverage.md)。

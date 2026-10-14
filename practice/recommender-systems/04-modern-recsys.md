@@ -29,14 +29,14 @@ flowchart LR
 | 方向 | 改了什么 | 读资料时追问 |
 | --- | --- | --- |
 | 长序列用户建模 | 怎样表示过去的行为与顺序 | 历史是否可用？重计算放在哪里？ |
-| 更强的候选交互 | 用户上下文怎样影响每条候选的预测 | 候选能否互相看到？换 batch 会不会变分？ |
+| 更强的候选交互 | 用户上下文怎样影响每条候选的预测 | 候选能否互相看到？换 batch 后分数会不会变？ |
 | 多模态内容表示 | 图片、文字等提供什么可用信息 | 信息是否增量？模型是否真的使用了该模态？ |
 | 生成式检索 | 直接生成内容标识，而非只做向量近邻 | ID 合法性、新内容、解码成本怎样处理？ |
 
 ## 三份资料，三个不同问题
 
-1. **X Phoenix：预测会不会被同批候选干扰？** 文档强调 candidate isolation：候选读取用户上下文，而不是互相 attend。我的理解是，这让单候选打分与列表多样性更容易分开分析；不等于跨请求、跨用户的预测都可无条件缓存。[架构说明](https://github.com/xai-org/x-algorithm/blob/77d431aabf409ca1c1eed9bec7e2183f7c914e23/phoenix/README.md)
-2. **Meta 多阶段序列模型：重计算放在哪儿？** 2026 年公开文章把较重的用户建模与轻量在线排序分开。这里值得带走的是计算复用与新鲜度的取舍，而不是照搬它的规模或效果数字。[官方工程文章](https://engineering.fb.com/2026/08/05/ml-applications/from-user-sequences-to-scaling-laws-a-multi-stage-architecture-for-metas-ads-ranking/)
+1. **X Phoenix：预测会不会被同批候选干扰？** 文档强调候选隔离（candidate isolation）：候选读取用户上下文，而不是互相 attend。我的理解是，这让单候选打分与列表多样性更容易分开分析；不等于跨请求、跨用户的预测都可无条件缓存。[架构说明](https://github.com/xai-org/x-algorithm/blob/77d431aabf409ca1c1eed9bec7e2183f7c914e23/phoenix/README.md)
+2. **Meta 广告排序的多阶段序列模型：重计算放在哪儿？** 2026 年公开文章把较重的用户建模与轻量在线排序分开。这里值得带走的是计算复用与新鲜度的取舍，而不是照搬它的规模或效果数字。[官方工程文章](https://engineering.fb.com/2026/08/05/ml-applications/from-user-sequences-to-scaling-laws-a-multi-stage-architecture-for-metas-ads-ranking/)
 3. **TIGER：检索能否变成生成标识？** 论文用 Semantic ID 与序列模型生成下一物品标识。这是一个研究路线，不代表所有平台都已替换 ANN，也不是“让聊天机器人写推荐理由”。[论文](https://arxiv.org/abs/2305.05065v3)
 
 还有一个容易混的地方：**用了 Semantic ID，不等于在做生成式检索。** 上面的 Phoenix 快照把 SID 当作内容侧输入，检索仍然比较向量；TIGER 则把 ID 序列作为生成目标。关键不是有没有 SID，而是模型最后输出向量，还是逐步生成标识。

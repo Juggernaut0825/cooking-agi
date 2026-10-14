@@ -26,7 +26,7 @@ I'm now looking for full-time roles and keeping those notes in [26-27 new-grad s
 
 ## August 2025: starting from scratch
 
-I was starting the MSCS at GT and had no industry internship experience. Most of college had been spent doing research. I wanted to try industry, but knew little about the roles or interviews.
+I was starting my MSCS at Georgia Tech and had no industry internship experience. Most of college had been spent doing research. I wanted to try industry, but knew little about the roles or interviews.
 
 I started LeetCode, behavioral preparation, and applications at the same time. At first I didn't filter much by company size or role: QR, QT, MLE, SDE, DS—I applied to all of them.
 

@@ -15,7 +15,7 @@ We follow a **document search product**. A user submits a question and optionall
 | What belongs in a complete project? | This page's system map and handoffs |
 | How do data become models, indexes, and releases? | [Data to model](data-to-model.en.md) |
 | What happens during a request or an incident? | [Serving and feedback](serving-and-feedback.en.md) |
-| Where do FSDP, vLLM, and SGLang fit? | This map, then [training stacks](../../06-systems/training-frameworks.en.md) and [inference engines](../../06-systems/inference-frameworks.en.md) |
+| Where do FSDP, vLLM, and SGLang fit? | FSDP in [data to model](data-to-model.en.md#training), vLLM / SGLang in [after deployment](serving-and-feedback.en.md#generation), then [training stacks](../../06-systems/training-frameworks.en.md) and [inference engines](../../06-systems/inference-frameworks.en.md) |
 | How do image and text retrieval connect? | [CLIP](../../03-multimodal-learning/clip.en.md) → [SigLIP](../../03-multimodal-learning/siglip.en.md), then index compatibility |
 
 ## Separate three timelines {#three-loops}
@@ -50,7 +50,7 @@ These responsibilities do not each require a platform. A first version can use a
 
 ## Who owns what? {#ownership}
 
-This is **one possible division of work**, not a universal organization chart. A small team may combine roles; a large organization may divide them further. MLE, SWE, and RS titles alone do not establish ownership.
+This is **one possible division of work**, not a universal organization chart. A small team may combine roles; a large organization may divide them further. MLE, SWE, and research scientist (RS) titles alone do not establish ownership.
 
 | Boundary | Possible lead | Deliverable | Joint acceptance |
 | --- | --- | --- | --- |
@@ -72,7 +72,7 @@ For an embedding service:
 | What goes in? | Authorized text or image references with content revisions |
 | What comes out? | Fixed-dimension vectors, encoder revision, normalization contract |
 | How is correctness checked? | Fixed reference examples and offline/online preprocessing parity |
-| When does it return? | Load-dependent targets, deadlines, timeout codes |
+| When does it return? | A target under normal load, a deadline, timeout error codes |
 | What happens on failure? | Explicit error; the caller decides whether keyword fallback is acceptable |
 | Who manages changes? | Named owner, compatibility window, migration and rollback plan |
 

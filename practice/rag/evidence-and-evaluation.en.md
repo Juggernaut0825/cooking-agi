@@ -34,7 +34,7 @@ Retrieved documents are **external data**. A passage saying “ignore previous i
 
 ## Change one piece of evidence and inspect the answer
 
-Keep the question fixed and vary its evidence. This is often more revealing than inspecting ten fluent answers.
+Keep the question fixed and vary only the evidence. For example, change Wednesday to Tuesday: if the answer never changes, check whether the model actually used the evidence retrieved for this request.
 
 | Test change | Expected behavior | First suspects if it fails |
 | --- | --- | --- |

@@ -18,7 +18,7 @@ The other routes cover recommendation, a RAG knowledge assistant, and post-train
 
 ## Pick a question
 
-| What went wrong? | Start here | What to look for |
+| What do you want to understand? | Start here | What to look for |
 | --- | --- | --- |
 | You know models but not the surrounding product | [An ML system end to end](ml-system/README.en.md) | Three timelines, data and service contracts, acceptance, and ownership |
 | You've written code but haven't connected a page, server, and automated checks | [Build something small](web-lab/README.en.md) | Static hosting, CI/CD, requests, persistence, and useful errors |
@@ -27,7 +27,7 @@ The other routes cover recommendation, a RAG knowledge assistant, and post-train
 | Documents were retrieved, but the answer is wrong | [A RAG knowledge assistant](rag/README.en.md) | Whether evidence was current, reached the model, and was used correctly |
 | Loss fell, but task performance didn't improve | [Post-training experiments](post-training/README.en.md) | A mismatched training objective or gaps in evaluation |
 
-All three involve data, cost, and evaluation, but the checks differ. No click doesn't necessarily mean dislike in recommendation; missing evidence prevents a knowledge assistant from confidently supporting an answer. Keep those differences in mind as you read.
+Recommendation, RAG, and post-training all involve data, cost, and evaluation, but the checks differ. No click doesn't necessarily mean dislike in recommendation; missing evidence prevents a knowledge assistant from confidently supporting an answer. Keep those differences in mind as you read.
 
 ## System design: make the choices yourself {#system-design}
 

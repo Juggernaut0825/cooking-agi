@@ -43,7 +43,7 @@ Long-term memory needs more than single-answer accuracy: evaluate consistency ac
 
 ## Challenge the design
 
-<details><summary>Is deleting the vector-index entry enough?</summary><p>Not necessarily. Source records, summaries, caches, or rebuild jobs can reintroduce the information. Define the data flow, deletion scope, and verification.</p></details>
+<details><summary>Is deleting the vector-index entry enough?</summary><p>No. The source record still exists, and summaries, caches, or rebuild jobs can reintroduce the information. Define the data flow, deletion scope, and verification.</p></details>
 
 <details><summary>Should a new statement automatically overwrite conflicting memory?</summary><p>Check identity, fact type, and validity time first. It may be a temporary exception. Confirm when needed and preserve version relationships rather than silently overwriting.</p></details>
 

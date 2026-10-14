@@ -15,7 +15,7 @@ This version addresses a practical problem: a growing library still doesn't tell
 - **One save button, one reading panel:** “Save this page” sits under a note's title. “My reading” at the top right shows which notes you read today and how often, alongside saved notes, settings, and backups. The separate study dashboard tried earlier is folded into it, and old links lead to the interview-prep page.
 - **Two starting points:** introductory and review routes for ML / LLMs, post-training, inference systems, and algorithms. Eight sets hold 24 exercises, collected in the [study plan](../interview/study-plan.en.md#routes); timings are planning aids.
 - **Portable records:** saved notes, reading history, and reading positions in one JSON backup; importing merges, keeping the newer copy of each record.
-- **Technology world tree:** how power, chips, software, data and models each developed and where they met, with 143 milestones and 59 sourced connections arranged by period. Hover to see connections, or select a field to follow one line. It is a scoped selection, not a complete history.
+- **Technology world tree:** how power, chips, software, data and models each developed and where they met, with 143 milestones and 59 sourced connections arranged by period. Open a milestone to see its connections, or select a field to follow one line. It is a scoped selection, not a complete history.
 - **New notes:** data and supervision, RL methods and costs, and inference framework internals. These are scoped learning materials, not measured GPU benchmarks.
 - **A way to contribute:** bilingual usage guides, a public roadmap, categorized feedback, contribution and licensing guidance. Optional AI review assistance does not approve or publish changes.
 
@@ -25,7 +25,7 @@ This version addresses a practical problem: a growing library still doesn't tell
 
 This version keeps the existing version-1 progress format and stable chapter IDs. Routine site updates or a source pull do not deliberately reset records at the same browser origin. The site version and backup-format version are different things.
 
-This is not cloud sync. Export and import when changing devices, browsers, or origins, or clearing site data. Unsaved forms do not survive a reload, and simultaneous edits in multiple tabs do not have transactional guarantees. Confirm your records were saved before exporting and retain the original backup. **Do not upload private backups to issues or the repository.**
+This is not cloud sync. Export and import when changing devices, browsers, or origins, or clearing site data. Simultaneous edits in multiple tabs do not have transactional guarantees. Confirm your records were saved before exporting and retain the original backup. **Do not upload private backups to issues or the repository.**
 
 ### Known limits
 

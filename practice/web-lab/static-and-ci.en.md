@@ -2,7 +2,7 @@
 
 [中文](static-and-ci.md) · **English**
 
-> Reviewed 2026-10 · Based on this repository's current `site/build.py` and `.github/workflows/site.yml`. Installed action versions are not described as the latest releases. Use your own fork for the exercise.
+> Reviewed 2026-10 · Based on this repository's current `site/build.py` and `.github/workflows/site.yml`. The pinned action versions are not described as the latest releases. Use your own fork for the exercise.
 
 You improve a sentence and it looks fine locally. After merging, the English link no longer opens. “I remember checking it” is easy to get wrong. CI repeats the checks you can automate for each change.
 
@@ -49,7 +49,7 @@ These check different things: the reading-list behavior, reviewer configuration,
 
 ## Step 2: check a PR without publishing it {#ci}
 
-Read [the existing workflow](../../.github/workflows/site.yml) rather than copying another one. It runs for PRs targeting main, pushes to main, manual dispatch, and a schedule. The `build` job gets the source, installs dependencies, tests, checks, and builds. `deploy` depends on a successful `build`.
+Read [the existing workflow](../../.github/workflows/site.yml) rather than copying another one. It runs for PRs targeting main, pushes to main, manual dispatch, and a schedule. The `build` job checks out the source, installs dependencies, runs the collaboration, test, leak, and parity checks, builds, then scans the generated `_site/` with `site/htmlcheck.py`; only non-PR runs on main upload the artifact. `deploy` depends on a successful `build`.
 
 | Event | What runs | What it doesn't mean |
 | --- | --- | --- |
@@ -64,7 +64,7 @@ Try an intentional failure on your practice branch: in `test_web_lab.py`, change
 
 `needs: build` orders workflow jobs. Preventing a failing PR from merging requires maintainers to configure required checks in branch protection or a ruleset. YAML alone doesn't set repository merge policy.
 
-Before publishing your fork as your own site, check `repo`, `origin`, and `base_url` in `site/nav.toml`: these identify source links, the canonical site address, and the project path. Inspect generated links so your Suggest an edit button doesn't still target upstream. Adapt maintainer and credit configuration to the actual people involved, preserving attribution rather than copying this site's review assignments.
+Before publishing your fork as your own site, check `repo` and `origin` in `site/nav.toml`: `repo` sets where the Edit this page and feedback links go; `origin` sets the canonical and share-image URLs. Pages link to each other with relative paths, and `build.py` does not currently read `base_url`, so the project path needs no separate setting. Inspect generated links so your Edit this page link doesn't still target upstream. Adapt maintainer and credit configuration to the actual people involved, preserving attribution rather than copying this site's review assignments.
 
 ## Step 3: know what shipped and how to undo it {#delivery}
 

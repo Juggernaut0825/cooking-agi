@@ -49,7 +49,7 @@ Fixing the starting checkpoint and comparison settings **does not mean freezing 
 
 For LoRA versus full fine-tuning, use comparable documented tuning budgets and report actual tokens, time, and resources—not just equal epochs. Different sequence lengths can make an epoch very different computationally.
 
-## Continue with the actual checks
+## Where to go next
 
 In order, these notes follow one experiment from method selection to delivery. For a specific problem, jump to the relevant chapter; learning every distributed framework is not a prerequisite.
 

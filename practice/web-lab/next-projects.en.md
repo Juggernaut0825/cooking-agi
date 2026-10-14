@@ -10,10 +10,10 @@ Once the reading list works, it doesn't need to become a large AI platform. Pick
 | --- | --- | --- | --- |
 | Requests and storage | Paginate the reading list | Fetch the next page by ID, without accounts | Insert new rows between pages; don't repeat or skip existing rows |
 | Why search fails | Search ten chosen notes | Keyword search over titles and summaries, without an LLM | Write five queries with expected results; observe missed synonyms |
-| Evaluation in engineering | [Run the report](eval-report.en.md), then add a slice-specific gate | Fixed examples, paired old/new outputs | Apply an agreed rule even when the overall score improves |
+| Evaluation in engineering | [Run the report](eval-report.en.md), then add a slice-specific gate | Fixed examples, paired old/new outputs | Block the change under a pre-agreed rule when the overall score rises but one slice regresses |
 | Background work | Import a document list | A local queue and one worker, no paid API | Restart midway without inserting completed work twice |
 
-This isn't a difficulty ladder. Stop at CI/CD if publishing a website was your question. Go straight to the evaluation report if that's closer to your ML work.
+This isn't a difficulty ladder. Stop at [CI/CD](static-and-ci.en.md) if publishing a website was your question. Go straight to the evaluation report if that's closer to your ML work.
 
 ## Search: make the mistakes visible first {#search}
 
@@ -27,7 +27,7 @@ Crawling external sites adds licensing, access restrictions, versions, and untru
 
 The [evaluation-report chapter](eval-report.en.md) turns “two improvements, one regression” into a runnable CLI and page. Missing cases, duplicate IDs, and incorrect label types fail validation. Start there rather than with an empty file.
 
-A useful next step is a slice-specific gate: hold the change when `no-evidence` regresses even if the overall score holds. Write a failing example first, change the decision, and update the report's explanation of the rule too. Don't change the exit code while the page still describes the old policy.
+A useful next step is a slice-specific gate: hold the change when the non-required `evidence` slice regresses even if the overall score holds. (Both `no-evidence` cases are required, so the current rule already blocks any regression there.) Write a failing example first, change the decision, and update the report's explanation of the rule too. Don't change the exit code while the page still describes the old policy.
 
 You could also add runtime and token usage, but don't add quantities with different units into an unexplained “combined score.” For reliability beyond the teaching examples, read [evaluation protocols](../../07-evaluation/benchmark-protocols.en.md). One small-sample gain is not proof of better model quality.
 

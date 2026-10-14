@@ -21,7 +21,7 @@ Where possible, authorization should constrain candidate eligibility. Post-filte
 | Failure | Possible fallback | Required check |
 | --- | --- | --- |
 | Vector service times out | Keyword results only | Mark degraded mode rather than pretending fusion completed |
-| Reranker times out | Initial ranking | Preserve access, deduplication, and eligibility |
+| Reranker times out | Initial ranking | Keep access checks, deduplication, and basic eligibility filters |
 | New encoder and index are incompatible | Complete previous bundle | Never mix spaces simply to return something |
 | Authorization service is unavailable | Predefined rejection or demonstrably public content | Security is not an optional latency optimization |
 
@@ -64,7 +64,7 @@ Load matters too. Near capacity, queueing can become substantial; multiplying a 
 
 ## 5 · Release a compatible bundle {#release}
 
-Validate artifacts and fixed inputs before shadowing or a canary. Shadow traffic helps compare outputs and execution, but shadow results did not receive real user reactions. Do not duplicate side-effecting tool calls. A canary changes some live traffic and needs predefined stop or rollback gates.
+Validate artifacts and run fixed-input regressions before shadow traffic or a canary. Shadow traffic helps compare outputs and execution, but shadow results did not receive real user reactions. Do not duplicate side-effecting tool calls. A canary changes some live traffic and needs predefined stop or rollback gates.
 
 Models, processors, prompts, ranking configuration, and indexes need not all change together, but the release manifest must capture compatibility. Roll back a compatible combination, isolate cache versions, and confirm the previous version still has capacity.
 

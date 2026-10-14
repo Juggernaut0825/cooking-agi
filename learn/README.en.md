@@ -4,15 +4,15 @@
 
 [中文](README.md) · **English**
 
-Not sure where to begin? [Choose a route for your goal](choose-your-path.en.md). You don't need to finish this section before practicing for interviews or applying.
+Not sure where to begin? [Choose a route for your goal](choose-your-path.en.md).
 
-For interviews, go straight to [Interview prep](../interview/README.en.md): choose a quick review or a gradual study plan. The full explanations stay here in Foundations whenever you want to go deeper.
+For interviews, go straight to [Interview prep](../interview/README.en.md): choose “Quick review” or “Study at your pace”. The full explanations stay here in Foundations whenever you want to go deeper.
 
 This section explains how models work, why training methods take the forms they do, and how to judge their results. Start with examples, then explore derivations and implementations as needed. You do not need every prerequisite or every new model; go straight to the subject you care about.
 
 - **New to the subject?** Follow the examples and computations first. Return to derivations on a second pass.
 - **Already have the basics?** Start with your question and fill in missing concepts as needed.
-- **Ready to build?** Check the implementation assumptions, run a small experiment, then see how the pieces fit in Engineering practice.
+- **Ready to build?** Check the implementation assumptions, run a small experiment, then see how the pieces fit in [Engineering practice](../practice/README.en.md).
 
 <span id="how-the-sections-fit-together"></span>
 
@@ -92,4 +92,4 @@ For the history behind these methods, use the separate [Tech history](technology
 
 Use **EN / 中文** at the top right to switch the current article. Chinese pages retain useful English terminology; English pages contain the full examples, derivations, and code.
 
-Search at the top or press `/` for a concept. “My reading” keeps bookmarks and recent articles in this browser only. The [coverage and remaining-work list](coverage.en.md) tracks gaps. Reference material helps identify missing topics, but the reading order here follows the concepts.
+Search at the top or press `/` for a concept. “My reading” keeps your saved notes and recently read articles in this browser only. The [coverage and remaining-work list](coverage.en.md) tracks gaps. Reference material helps identify missing topics, but the reading order here follows the concepts.
