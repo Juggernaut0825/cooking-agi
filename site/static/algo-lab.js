@@ -464,8 +464,12 @@
   const s = (tag, values, kids = []) => { const node = attrs(document.createElementNS(SVGNS, tag), values); node.append(...kids); return node; };
 
   /* A stepper inside the figure shell build.py emits.
-     draw = setup(svg) -> update(frame, index) */
-  function stepper(name, source, {width = 640, height = 220, setup}) {
+     setup(svg) -> update(frame, index); optional readouts(frame) -> [[label, value, tone?], ...]
+     shown as the Transformer lab's readout cards under the drawing.
+     The drawing is cropped to what any frame draws (every frame is laid out once,
+     invisibly, before the first is shown), so figures fill the width without
+     hand-tuned margins; fit: false keeps the given viewBox. */
+  function stepper(name, source, {width = 640, height = 220, setup, readouts, fit = true}) {
     const root = document.querySelector('[data-widget="' + name + '"]');
     const body = root && root.querySelector('.widget-body');
     if (!body) return;
@@ -475,45 +479,72 @@
     let list = modes ? modes[0].frames : source;
     const svg = s('svg', {viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': root.querySelector('.widget-title')?.textContent || ''});
     const update = setup(svg);
-    const caption = h('p', {class: 'fig-caption algo-caption', 'aria-live': 'polite'});
-    const count = h('span', {class: 'algo-count'});
-    const button = (label, aria, on) => h('button', {type: 'button', class: 'tx-btn algo-btn', 'aria-label': aria, text: label, on: {click: on}});
-    // one frame and no modes: a still diagram, no controls; one frame per mode: only the switch
+    // one frame and no modes: a still diagram; one frame per mode: only the switch
     const still = !modes && list.length === 1;
     const flat = Boolean(modes) && modes.every(mode => mode.frames.length === 1);
-    let index = 0, timer = null;
-    const play = button('▶', t('播放', 'Play'), () => (timer ? stop() : start()));
-    const prev = button('◀', t('上一步', 'Previous step'), () => { stop(); go(index - 1); });
-    const next = button('▶|', t('下一步', 'Next step'), () => { stop(); go(index + 1); });
-    const reset = button('↺', t('从头开始', 'Start over'), () => { stop(); go(0); });
+    const stepping = !still && !flat;
+
+    const caption = h('p', {class: 'fig-caption algo-caption', 'aria-live': 'polite'});
+    const badge = h('span', {class: 'algo-step-num', 'aria-hidden': 'true'});
+    const card = h('div', {class: 'algo-step' + (stepping ? '' : ' is-plain')}, stepping ? [badge, caption] : [caption]);
+    const board = readouts ? h('div', {class: 'readouts algo-readouts'}) : null;
+
+    const button = (label, aria, cls, on) => h('button', {type: 'button', class: 'tx-btn algo-btn ' + cls, 'aria-label': aria, text: label, on: {click: on}});
+    let index = 0, timer = null, ticks = [];
+    const reset = button('↺', t('从头开始', 'Start over'), 'algo-icon', () => { stop(); go(0); });
+    const prev = button(t('‹ 上一步', '‹ Back'), t('上一步', 'Previous step'), 'algo-prev', () => { stop(); go(index - 1); });
+    const next = button(t('下一步 ›', 'Next ›'), t('下一步', 'Next step'), 'algo-next', () => { stop(); go(index + 1); });
+    const play = button(t('▶ 播放', '▶ Play'), t('播放', 'Play'), 'algo-play', () => (timer ? stop() : start()));
+    const track = h('div', {class: 'algo-track', role: 'group', 'aria-label': t('步骤', 'Steps')});
+    const count = h('span', {class: 'algo-count'});
+    function buildTicks() {
+      track.textContent = '';
+      ticks = list.map((_, i) => h('button', {type: 'button', class: 'algo-tick', 'aria-label': t(`第 ${i + 1} 步`, `Step ${i + 1}`), on: {click: () => { stop(); go(i); }}}));
+      track.append(...ticks);
+    }
+    function showReadouts(items) {
+      board.textContent = '';
+      (items || []).forEach(([label, value, tone]) => board.append(h('div', {class: 'ro' + (tone ? tone.split(' ').map(x => ' is-' + x).join('') : '')},
+        [h('span', {class: 'ro-label', text: label}), h('span', {class: 'ro-val', text: value})])));
+      board.hidden = !(items && items.length);
+    }
     function go(i) {
       index = Math.max(0, Math.min(list.length - 1, i));
       update(list[index], index);
       caption.textContent = list[index][LANG];
+      badge.textContent = String(index + 1);
       count.textContent = `${index + 1} / ${list.length}`;
       prev.disabled = index === 0;
       next.disabled = index === list.length - 1;
+      ticks.forEach((tick, k) => {
+        tick.classList.toggle('is-done', k < index);
+        tick.classList.toggle('is-now', k === index);
+        if (k === index) tick.setAttribute('aria-current', 'step'); else tick.removeAttribute('aria-current');
+      });
       root.classList.toggle('is-last', index === list.length - 1);
+      if (board) showReadouts(readouts(list[index], index));
     }
     function start() {
       if (index === list.length - 1) go(0);
-      play.textContent = '❚❚';
+      play.textContent = t('❚❚ 暂停', '❚❚ Pause');
       play.setAttribute('aria-label', t('暂停', 'Pause'));
-      timer = scope.setInterval(() => { if (index >= list.length - 1) stop(); else go(index + 1); }, 1300);
+      timer = scope.setInterval(() => { if (index >= list.length - 1) stop(); else go(index + 1); }, 1500);
     }
     function stop() {
       if (timer) scope.clearInterval(timer);
       timer = null;
-      play.textContent = '▶';
+      play.textContent = t('▶ 播放', '▶ Play');
       play.setAttribute('aria-label', t('播放', 'Play'));
     }
-    if (!still) root.tabIndex = -1;
-    if (!still) root.addEventListener('keydown', event => {
-      if (event.target.closest('button') && event.key === ' ') return;
-      if (event.key === 'ArrowRight') { stop(); go(index + 1); event.preventDefault(); }
-      if (event.key === 'ArrowLeft') { stop(); go(index - 1); event.preventDefault(); }
-    });
-    const controls = h('div', {class: 'fig-controls algo-controls'}, [reset, prev, play, next, count]);
+    if (stepping) {
+      root.tabIndex = -1;
+      root.addEventListener('keydown', event => {
+        if (event.target.closest('button') && event.key === ' ') return;
+        if (event.key === 'ArrowRight') { stop(); go(index + 1); event.preventDefault(); }
+        if (event.key === 'ArrowLeft') { stop(); go(index - 1); event.preventDefault(); }
+      });
+    }
+    const top = [];
     if (modes) {
       const group = h('div', {class: 'seg', role: 'group', 'aria-label': t('选一种', 'Choose one')});
       const buttons = modes.map((mode, i) => h('button', {type: 'button', class: 'seg-btn', 'aria-pressed': String(i === 0), text: mode[LANG], on: {click: () => {
@@ -521,18 +552,54 @@
         buttons.forEach(other => other.setAttribute('aria-pressed', String(other === buttons[i])));
         list = mode.frames;
         update.reset?.(mode, i);
+        buildTicks();
         go(0);
       }}}));
       group.append(...buttons);
-      controls.prepend(group);
-      if (flat) [reset, prev, play, next, count].forEach(node => node.remove());
+      top.push(h('div', {class: 'fig-controls algo-controls'}, [group]));
     }
     root.classList.toggle('is-still', still);
-    body.append(
-      ...(still ? [] : [controls]),
-      h('div', {class: 'fig-stage'}, [h('div', {class: 'fig-scroll algo-scroll'}, [svg])]),
-      h('div', {class: 'fig-foot'}, [caption]));
+    const nav = stepping ? [h('div', {class: 'algo-nav'}, [reset, prev, h('div', {class: 'algo-progress'}, [track, count]), next, play])] : [];
+    body.append(...top,
+      h('div', {class: 'fig-stage algo-stage'}, [h('div', {class: 'fig-scroll algo-scroll'}, [svg])]),
+      h('div', {class: 'fig-foot algo-foot'}, [card, ...(board ? [board] : []), ...nav]));
+    buildTicks();
+    if (fit) fitView(root, svg, modes ? modes.map(mode => mode.frames) : [list], update, width);
+    if (modes) list = modes[0].frames;
     go(0);
+    scope.requestAnimationFrame(() => scope.requestAnimationFrame(() => root.classList.remove('is-measuring')));
+  }
+
+  // Lay every frame out once with transitions off and crop the viewBox to what is visible.
+  // Each drawn element is measured on its own so hidden helpers parked far away do not count.
+  function fitView(root, svg, lists, update, width) {
+    root.classList.add('is-measuring');
+    let box = null;
+    const grow = (x0, y0, x1, y1) => {
+      box = box ? {x0: Math.min(box.x0, x0), y0: Math.min(box.y0, y0), x1: Math.max(box.x1, x1), y1: Math.max(box.y1, y1)} : {x0, y0, x1, y1};
+    };
+    try {
+      lists.forEach(frames => frames.forEach((frame, i) => {
+        update(frame, i);
+        const inverse = svg.getScreenCTM().inverse();
+        const point = (x, y) => { const p = svg.createSVGPoint(); p.x = x; p.y = y; return p.matrixTransform(inverse); };
+        svg.querySelectorAll('rect, circle, ellipse, line, path, polyline, polygon, text').forEach(node => {
+          if (node.closest('defs, .is-hidden, .is-hidden-layer')) return;
+          if (node.tagName === 'text' && !node.textContent.trim()) return;
+          const r = node.getBoundingClientRect();
+          if (!r.width && !r.height) return;
+          const a = point(r.left, r.top), b = point(r.right, r.bottom);
+          grow(a.x, a.y, b.x, b.y);
+        });
+      }));
+    } catch (error) { box = null; }
+    if (!box) return;
+    const pad = 14, minWidth = Math.min(width, 560);
+    const w = Math.max(box.x1 - box.x0 + 2 * pad, minWidth), h0 = box.y1 - box.y0 + 2 * pad;
+    const x = (box.x0 + box.x1) / 2 - w / 2;
+    svg.setAttribute('viewBox', `${x.toFixed(1)} ${(box.y0 - pad).toFixed(1)} ${w.toFixed(1)} ${h0.toFixed(1)}`);
+    // narrow drawings should not blow their text up past ~1.25x
+    svg.style.maxWidth = Math.round(w * 1.25) + 'px';
   }
 
   /* drawing vocabulary */
@@ -611,7 +678,11 @@
     };
   }});
 
-  FIGURES['algo-window-max'] = name => stepper(name, F.windowMax(), {height: 236, setup(svg) {
+  FIGURES['algo-window-max'] = name => stepper(name, F.windowMax(), {height: 236, readouts: f => {
+    const removed = [...(f.expired || []).map(i => `${i}·${f.values[i]} ${t('过期', 'expired')}`), ...(f.popped || []).map(i => `${i}·${f.values[i]} ${t('出局', 'out')}`)];
+    return [[t('刚删掉', 'just dropped'), removed.length ? removed.join(t('，', ', ')) : '—', removed.length ? 'bad' : ''],
+      [t('窗口最大值', 'window maxima'), f.maxima.length ? f.maxima.join(', ') : '—', f.done ? 'good' : '']];
+  }, setup(svg) {
     const values = [4, 1, 3, 5, 2, 5];
     const band = s('rect', {x: 0, y: 32, width: 0, height: 84, rx: 10, class: 'algo-band'});
     svg.append(band);
@@ -624,7 +695,6 @@
       svg.append(rect, label);
       return {rect, label};
     });
-    const gone = V.text(svg, 250, 176, '', 'algo-warn');
     V.text(svg, 420, 28, t('窗口最大值', 'Window maxima'), 'algo-head');
     const outs = [0, 1, 2, 3].map(k => {
       const x = 420 + k * 50;
@@ -649,8 +719,6 @@
         slot.rect.setAttribute('class', 'algo-cell' + (i == null ? ' is-out' : k === 0 && (frame.full || frame.done) ? ' is-keep' : ' is-look'));
         slot.label.textContent = i == null ? '' : `${i}·${values[i]}`;
       });
-      const removed = [...(frame.expired || []).map(i => `${i}·${values[i]} ${t('过期', 'expired')}`), ...(frame.popped || []).map(i => `${i}·${values[i]} ${t('出局', 'out')}`)];
-      gone.textContent = removed.length ? t('删掉：', 'dropped: ') + removed.join(t('，', ', ')) : '';
       outs.forEach((out, k) => {
         const v = frame.maxima[k];
         out.label.textContent = v == null ? '' : v;
@@ -660,15 +728,14 @@
   }});
 
   // a row of values with up to three named pointers underneath
-  function pointerFigure(name, list, {values, extra = 0, labels}) {
-    return stepper(name, list, {height: 210, setup(svg) {
+  function pointerFigure(name, list, {values, extra = 0, labels, readouts}) {
+    return stepper(name, list, {height: 210, readouts, setup(svg) {
       const n = values.length + extra, size = 52, gap = 12, x0 = (640 - (n * size + (n - 1) * gap)) / 2;
       const band = s('rect', {x: 0, y: 36, width: 0, height: 92, rx: 11, class: 'algo-band is-hidden'});
       svg.append(band);
       const row = V.row(svg, values.concat(Array(extra).fill('')), {x: x0, y: 50, size, gap});
       if (extra) row.cells.slice(values.length).forEach(cell => cell.rect.classList.add('algo-ghost'));
       const pointers = labels.map(([key, label, cls], k) => [key, V.pointer(svg, label, cls, {y: 128 + k * 0})]);
-      const status = V.text(svg, 320, 196, '', 'algo-strong', 'middle');
       return frame => {
         row.cells.forEach((cell, i) => {
           cell.rect.setAttribute('class', 'algo-cell' + (i >= values.length ? ' algo-ghost' : ''));
@@ -695,23 +762,18 @@
           const group = at[i], k = group.indexOf(key), spread = group.length > 1 ? (k - (group.length - 1) / 2) * 18 : 0;
           pointer.at(row.x(i) + spread, false, k * 15);
         });
-        frame.render?.(band, row, status);
-        status.textContent = frame.status || '';
+        frame.render?.(band, row);
       };
     }});
   }
 
-  FIGURES['algo-two-pointers'] = name => pointerFigure(name, F.twoPointers().map(frame => Object.assign(frame, {
-    status: frame.sum != null ? `${frame.values[frame.left]} + ${frame.values[frame.right]} = ${frame.sum}${frame.found ? ' ✓' : frame.sum > 11 ? ' > 11' : ' < 11'}` : ''})),
-    {values: [1, 3, 5, 8, 12], labels: [['left', 'left', 'p-blue'], ['right', 'right', '']]});
+  FIGURES['algo-two-pointers'] = name => pointerFigure(name, F.twoPointers(),
+    {values: [1, 3, 5, 8, 12], labels: [['left', 'left', 'p-blue'], ['right', 'right', '']], readouts: f => [
+      [t('当前和', 'sum'), f.sum != null ? `${f.values[f.left]} + ${f.values[f.right]} = ${f.sum}` : '—', f.found ? 'good' : ''],
+      [t('目标', 'target'), '11'],
+      [t('怎么动', 'next move'), f.sum == null ? '—' : f.found ? t('找到了 ✓', 'found ✓') : f.sum > 11 ? t('太大：right 左移', 'too big: right moves left') : t('太小：left 右移', 'too small: left moves right'), f.found ? 'good' : '']]});
 
   FIGURES['algo-sliding-window'] = name => pointerFigure(name, F.slidingWindow().map(frame => Object.assign(frame, {
-    status: (() => {
-      const inside = frame.chars.slice(frame.left, frame.dup != null ? frame.right : frame.right + 1).join('');
-      const view = inside ? `${t('窗口', 'window')} "${inside}"` : t('窗口为空', 'window empty');
-      const wait = frame.dup != null ? ` · ${t('等着放进', 'waiting')} ${frame.chars[frame.dup]}` : '';
-      return `${view}${wait} · ${t('目前最长', 'longest')} ${frame.best}`;
-    })(),
     windowed: true,
     render(band, row) {
       // while a repeat waits to come in, the window is everything before it
@@ -720,20 +782,29 @@
       if (has) { const l = row.x(frame.left) - row.size / 2 - 7, r = row.x(last) + row.size / 2 + 7; band.setAttribute('x', l); band.setAttribute('width', r - l); }
     },
     left: frame.right >= frame.left ? frame.left : null})),
-    {values: ['a', 'b', 'b', 'a'], labels: [['left', 'left', 'p-blue'], ['right', 'right', '']]});
+    {values: ['a', 'b', 'b', 'a'], labels: [['left', 'left', 'p-blue'], ['right', 'right', '']], readouts: f => {
+      const inside = f.chars.slice(f.left ?? f.right + 1, f.dup != null ? f.right : f.right + 1).join('');
+      return [[t('窗口', 'window'), inside ? `"${inside}"` : t('空', 'empty')],
+        [t('等着进来', 'waiting to enter'), f.dup != null ? f.chars[f.dup] : '—', f.dup != null ? 'bad' : ''],
+        [t('目前最长', 'longest so far'), String(f.best), f.done ? 'good' : '']];
+    }});
 
-  FIGURES['algo-binary-search'] = name => pointerFigure(name, F.lowerBound().map(frame => Object.assign(frame, {lower: true,
-    status: frame.done ? `${t('答案', 'answer')} = ${frame.answer}` : frame.middle != null ? `values[${frame.middle}] = ${frame.values[frame.middle]} ${frame.values[frame.middle] >= 3 ? '≥' : '<'} 3` : `[left, right) = [${frame.left}, ${frame.right})`})),
-    {values: [1, 3, 3, 7, 9], extra: 1, labels: [['left', 'left', 'p-blue'], ['middle', 'mid', 'p-green'], ['right', 'right', '']]});
+  FIGURES['algo-binary-search'] = name => pointerFigure(name, F.lowerBound().map(frame => Object.assign(frame, {lower: true})),
+    {values: [1, 3, 3, 7, 9], extra: 1, labels: [['left', 'left', 'p-blue'], ['middle', 'mid', 'p-green'], ['right', 'right', '']], readouts: f => [
+      ['[left, right)', `[${f.left}, ${f.right})`],
+      ['values[middle]', f.middle != null ? `values[${f.middle}] = ${f.values[f.middle]} ${f.values[f.middle] >= 3 ? '≥' : '<'} 3` : '—'],
+      [t('答案', 'answer'), f.done ? String(f.answer) : '—', f.done ? 'good' : '']]});
 
-  FIGURES['algo-prefix-count'] = name => stepper(name, F.prefixCount(), {height: 246, setup(svg) {
+  FIGURES['algo-prefix-count'] = name => stepper(name, F.prefixCount(), {height: 246, readouts: f => [
+    [t('当前前缀', 'current prefix'), f.prefix != null ? String(f.prefix) : '—'],
+    [t('要查的前缀', 'look up'), f.want != null ? `${f.prefix} − 1 = ${f.want}` : '—'],
+    [t('累计答案', 'count so far'), String(f.total), f.done ? 'good' : '']], setup(svg) {
     const values = [1, -1, 1];
     const row = V.row(svg, values, {x: 70, y: 92, size: 52, gap: 14});
     V.text(svg, 22, 184, t('前缀', 'prefix'), 'algo-head');
     const prefixLabels = [0, 1, 2, 3].map(k => V.text(svg, k === 0 ? row.x(0) - 33 : row.x(k - 1) + 33, 184, '', 'algo-note', 'middle'));
     const brackets = s('g');
     svg.append(brackets);
-    const status = V.text(svg, 70, 226, '', 'algo-strong');
     V.text(svg, 420, 50, t('前缀 → 次数', 'prefix → count'), 'algo-head');
     const mapRows = [0, 1, 2].map(k => {
       const y = 62 + k * 44;
@@ -760,7 +831,6 @@
         r.label.textContent = entry ? `${entry[0]} → ${entry[1]}` : '';
         r.rect.setAttribute('class', 'algo-cell' + (!entry ? ' is-out' : entry[0] === frame.want ? ' is-look' : entry[0] === frame.stored ? ' is-change' : ''));
       });
-      status.textContent = frame.done ? `${t('答案', 'answer')} = ${frame.total}` : frame.want != null ? `${t('查', 'look up')} ${frame.prefix} − 1 = ${frame.want} · ${t('累计', 'total')} ${frame.total}` : `${t('累计', 'total')} ${frame.total}`;
     };
   }});
 
@@ -892,7 +962,7 @@
     };
   }});
 
-  FIGURES['algo-reverse-list'] = name => stepper(name, F.reverseList(), {height: 206, setup(svg) {
+  FIGURES['algo-reverse-list'] = name => stepper(name, F.reverseList(), {readouts: f => (f.done ? [[t('反转后', 'reversed'), f.order.join(' → '), 'good']] : []), height: 206, setup(svg) {
     const values = [1, 2, 3], xs = [200, 320, 440], y = 74, noneLeft = 70, noneRight = 570;
     const arrow = name + '-arrow';
     svg.append(V.markers(arrow));
@@ -906,7 +976,6 @@
     const at = i => (i == null ? null : xs[i]);
     const pointers = [['previous', 'previous', 'p-blue', 0], ['current', 'current', '', 1], ['following', 'following', 'p-green', 2]]
       .map(([key, label, cls, k]) => [key, V.pointer(svg, label, cls, {y: 112 + k * 0})]);
-    const result = V.text(svg, 320, 196, '', 'algo-strong', 'middle');
     return frame => {
       links.forEach((path, i) => {
         const target = frame.next[i], x1 = xs[i];
@@ -925,11 +994,12 @@
         const x = at(frame[key]) ?? (key === 'previous' ? noneLeft : noneRight), group = spots[x], k = group.indexOf(key);
         pointer.at(x + (group.length > 1 ? (k - (group.length - 1) / 2) * 26 : 0), Boolean(frame.done && key !== 'previous'), k * 15);
       });
-      result.textContent = frame.done ? frame.order.join(' → ') : '';
     };
   }});
 
-  FIGURES['algo-kmp'] = name => stepper(name, F.kmp(), {height: 236, setup(svg) {
+  FIGURES['algo-kmp'] = name => stepper(name, F.kmp(), {readouts: f => [
+    [t('已找到的起点', 'matches start at'), (f.found || []).length ? f.found.join(', ') : '—', f.done ? 'good' : ''],
+    ['matched', f.done ? '—' : String(f.matched)]], height: 236, setup(svg) {
     const text = 'ababab', pattern = 'abab', size = 46, gap = 8, x0 = 60;
     const xAt = i => x0 + i * (size + gap);
     V.text(svg, 14, 62, t('文本', 'text'), 'algo-head');
@@ -949,7 +1019,6 @@
       svg.append(rect, s('text', {x: 484 + j * 34, y: 198, 'text-anchor': 'middle', class: 'algo-note', text: String(v)}));
       return rect;
     });
-    const found = V.text(svg, 60, 214, '', 'algo-strong');
     return frame => {
       pat.style.transform = `translateX(${frame.shift * (size + gap)}px)`;
       textRow.cells.forEach((cell, i) => {
@@ -958,7 +1027,6 @@
       patCells.forEach((rect, j) => rect.setAttribute('class', 'algo-cell' + (frame.done && frame.found.length ? ' is-keep' : j < frame.matched ? (frame.slid ? ' is-keep' : j === frame.compare ? ' is-change' : ' is-keep') : '')));
       pointer.at(frame.index == null ? textRow.x(0) : textRow.x(frame.index), frame.index == null);
       prefixCells.forEach((rect, j) => rect.setAttribute('class', 'algo-cell' + (j === frame.usedPrefix ? ' is-change' : '')));
-      found.textContent = t('起点：', 'starts: ') + ((frame.found || []).length ? frame.found.join(', ') : '—') + (frame.done ? '' : ` · matched = ${frame.matched}`);
     };
   }});
 
@@ -1000,7 +1068,7 @@
     };
   }});
 
-  FIGURES['algo-cooldown'] = name => stepper(name, F.cooldown(), {height: 236, setup(svg) {
+  FIGURES['algo-cooldown'] = name => stepper(name, F.cooldown(), {readouts: f => (f.done ? [[t('最后不持有', 'not holding at the end'), `max(sold, resting) = ${f.answer}`, 'good']] : []), height: 236, setup(svg) {
     const show = v => (v === -Infinity ? '−∞' : String(v).replace('-', '−'));
     const arrow = name + '-arrow';
     svg.append(V.markers(arrow));
@@ -1039,7 +1107,6 @@
         return {rect, label};
       });
     });
-    const answer = V.text(svg, 504, 214, '', 'algo-strong', 'middle');
     return frame => {
       const last = frame.rows[frame.rows.length - 1];
       ['H', 'S', 'R'].forEach((key, r) => {
@@ -1055,14 +1122,14 @@
         path.setAttribute('class', 'algo-edge' + (on ? ' is-change' : ''));
         path.setAttribute('marker-end', `url(#${arrow}${on ? '' : '-blue'})`);
       }
-      answer.textContent = frame.done ? `max(sold, resting) = ${frame.answer}` : '';
     };
   }});
 
   FIGURES['algo-jump'] = name => stepper(name, {modes: [
     {id: 'yes', zh: '[2,3,1,1,4]', en: '[2,3,1,1,4]', frames: F.jump([2, 3, 1, 1, 4])},
     {id: 'no', zh: '[3,2,1,0,4]', en: '[3,2,1,0,4]', frames: F.jump([3, 2, 1, 0, 4])}
-  ]}, {height: 220, setup(svg) {
+  ]}, {height: 220, readouts: f => [['farthest', String(f.farthest)],
+    [t('结果', 'result'), f.done ? (f.ok ? t('能到达 ✓', 'reachable ✓') : t('到不了 ✗', 'unreachable ✗')) : '—', f.done ? (f.ok ? 'good' : 'bad') : '']], setup(svg) {
     const arrow = name + '-arrow';
     svg.append(V.markers(arrow));
     const band = s('rect', {x: 0, y: 70, width: 0, height: 98, rx: 11, class: 'algo-band algo-reach'});
@@ -1072,7 +1139,6 @@
     svg.append(holder);
     const arc = s('path', {class: 'algo-edge is-change', 'marker-end': `url(#${arrow})`});
     svg.append(arc);
-    const status = V.text(svg, 320, 204, '', 'algo-strong', 'middle');
     const draw = jumps => {
       holder.textContent = '';
       row = V.row(holder, jumps, {x: 120, y: 84, size: 56, gap: 22});
@@ -1089,12 +1155,14 @@
         const x1 = row.x(frame.index), x2 = row.x(Math.min(frame.reach, frame.jumps.length - 1)) + (frame.reach > frame.jumps.length - 1 ? 30 : 0);
         arc.setAttribute('d', `M${x1} 80 C${x1} 34 ${x2} 34 ${x2} 78`);
       }
-      status.textContent = frame.done ? (frame.ok ? t('能到达 ✓', 'reachable ✓') : t('到不了 ✗', 'unreachable ✗')) : `farthest = ${frame.farthest}`;
     };
     return update;
   }});
 
-  FIGURES['algo-append'] = name => stepper(name, F.append(8), {height: 236, setup(svg) {
+  FIGURES['algo-append'] = name => stepper(name, F.append(8), {readouts: f => [
+    [t('容量', 'capacity'), String(f.capacity)], [t('已用', 'used'), String(f.size)],
+    [t('这次成本', 'this append'), f.costs.length && !f.done ? String(f.costs[f.costs.length - 1]) : '—', f.grew ? 'key' : ''],
+    [t('累计成本', 'total cost'), f.costs.length ? `${f.total} / ${f.costs.length} ${t('次', 'appends')}` : '—', f.done ? 'good' : '']], height: 236, setup(svg) {
     const size = 50, gap = 8, x0 = 90;
     V.text(svg, 22, 58, t('数组', 'array'), 'algo-head');
     const slots = Array.from({length: 8}, (_, i) => {
@@ -1103,7 +1171,6 @@
       svg.append(rect, label);
       return {rect, label};
     });
-    const capText = V.text(svg, x0, 106, '', 'algo-note');
     V.text(svg, 22, 190, t('成本', 'cost'), 'algo-head');
     const unit = 20;
     const average = s('line', {x1: x0, x2: x0 + 8 * (size + gap) - gap, class: 'algo-edge algo-dash is-hidden'});
@@ -1116,7 +1183,6 @@
       svg.append(rect, label, value);
       return {rect, value};
     });
-    const total = V.text(svg, 600, 150, '', 'algo-strong', 'end');
     const averageText = V.text(svg, x0 + 8 * (size + gap), 0, '', 'algo-note');
     return frame => {
       slots.forEach((slot, i) => {
@@ -1124,7 +1190,6 @@
         slot.label.textContent = filled ? String(i + 1) : '';
         slot.rect.setAttribute('class', 'algo-cell' + (!allocated ? ' algo-ghost' : i === frame.size - 1 && !frame.done ? ' is-look' : frame.grew && i < frame.moved ? ' is-change' : ''));
       });
-      capText.textContent = `${t('容量', 'capacity')} ${frame.capacity} · ${t('已用', 'used')} ${frame.size}`;
       bars.forEach((bar, i) => {
         const c = frame.costs[i];
         const h = c ? c * unit : 0;
@@ -1133,7 +1198,6 @@
         bar.value.setAttribute('y', 209 - h);
         bar.value.textContent = c ? String(c) : '';
       });
-      total.textContent = frame.costs.length ? `${t('累计', 'total')} ${frame.total} / ${frame.costs.length} ${t('次', 'appends')}` : '';
       const mean = frame.done ? frame.total / frame.costs.length : 0;
       average.setAttribute('y1', 212 - mean * unit); average.setAttribute('y2', 212 - mean * unit);
       average.classList.toggle('is-hidden', !frame.done);
@@ -1145,7 +1209,9 @@
   FIGURES['algo-knapsack'] = name => stepper(name, {modes: [
     {id: 'down', zh: '倒着更新（0/1 背包）', en: 'Downward (0/1 knapsack)', frames: F.knapsack('down')},
     {id: 'up', zh: '正着更新', en: 'Upward', frames: F.knapsack('up')}
-  ]}, {height: 232, setup(svg) {
+  ]}, {height: 232, readouts: f => [
+    [t('这一步', 'this step'), f.room != null && !f.done ? `best[${f.room}] = max(${f.old}, best[${f.from}] + 5) = max(${f.old}, ${f.read} + 5) = ${f.best[f.room]}` : '—', 'wide' + (f.reused ? ' bad' : '')],
+    ['best[4]', f.done ? `${f.answer} ${f.wrong ? '✗' : '✓'}` : String(f.best[4]), f.done ? (f.wrong ? 'bad' : 'good') : '']], setup(svg) {
     const capacity = 4, value = 5;
     const arrow = name + '-arrow';
     svg.append(V.markers(arrow));
@@ -1155,7 +1221,6 @@
     const arc = s('path', {class: 'algo-edge is-change algo-arc', 'marker-end': `url(#${arrow})`});
     svg.append(arc);
     const warn = V.text(svg, 0, 196, t('本轮刚写过', 'set this pass'), 'algo-warn', 'middle');
-    const formula = V.text(svg, 320, 220, '', 'algo-strong', 'middle');
     return frame => {
       frame.best.forEach((v, c) => { row.cells[c].label.textContent = v; });
       row.cells.forEach((cell, c) => {
@@ -1176,8 +1241,6 @@
       }
       warn.classList.toggle('is-hidden', !(step && frame.reused));
       if (step) warn.setAttribute('x', row.x(frame.from));
-      formula.textContent = frame.done ? `best[${capacity}] = ${frame.answer} ${frame.wrong ? '✗' : '✓'}`
-        : step ? `best[${frame.room}] = max(${frame.old}, best[${frame.from}] + ${value}) = max(${frame.old}, ${frame.read} + ${value}) = ${frame.best[frame.room]}` : '';
     };
   }});
   for (const [name, build] of Object.entries(FIGURES)) build(name);

@@ -532,7 +532,7 @@
   };
   const show = (node, on) => node.classList.toggle('is-hidden', !on);
 
-  FIGURES['step-contrastive'] = name => stepper(name, F.contrastive(), {height: 250, setup(svg) {
+  FIGURES['step-contrastive'] = name => stepper(name, F.contrastive(), {height: 250, readouts: f => [['Σ e^s', f.stage >= 1 ? fixed(f.total, 2) : '—'], [t('损失 L', 'loss L'), f.stage >= 3 ? `−log ${fixed(f.p[0], 3)} ≈ ${fixed(f.loss, 3)}` : '—', f.stage >= 3 ? 'key' : '']], setup(svg) {
     const xs = [200, 312, 424], w = 96, ht = 28;
     const heads = [t('正例', 'positive'), t('对照 1', 'comparison 1'), t('对照 2', 'comparison 2')];
     heads.forEach((head, j) => V.text(svg, xs[j] + w / 2, 30, head, 'algo-head', 'middle'));
@@ -543,8 +543,6 @@
       return {name, cells: xs.map(x => cell(svg, x, y, w, ht))};
     });
     const bars = xs.map(x => { const bar = s('rect', {x, y: 170, width: 0, height: 6, rx: 3, class: 'algo-bar'}); svg.append(bar); return bar; });
-    const sum = V.text(svg, 536, 111, '', 'algo-note');
-    const loss = V.text(svg, 610, 245, '', 'algo-strong', 'end');
     const arrows = xs.map(() => { const path = s('path', {class: 'algo-edge'}); svg.append(path); return path; });
     return frame => {
       const {stage} = frame;
@@ -554,8 +552,6 @@
       rows[3].cells.forEach((c, j) => c.set(stage >= 4 ? signed(frame.grad[j], 3) : '', stage >= 4 ? (j === 0 ? 'is-look' : 'is-change') : ''));
       rows.forEach((row, r) => row.name.classList.toggle('is-dim', stage < [0, 1, 2, 4][r]));
       bars.forEach((bar, j) => { bar.setAttribute('width', stage >= 2 ? frame.p[j] * w : 0); bar.setAttribute('class', 'algo-bar' + (j === 0 && stage >= 3 ? ' is-now' : '')); });
-      sum.textContent = stage >= 1 ? `Σ = ${fixed(frame.total, 2)}` : '';
-      loss.textContent = stage >= 3 ? `L = −log ${fixed(frame.p[0], 3)} ≈ ${fixed(frame.loss, 3)}` : '';
       arrows.forEach((path, j) => {
         const x = xs[j] + w + 10, mid = rowY[3] + ht / 2, len = 8 + Math.abs(frame.grad[j]) * 40;
         // descent moves against the gradient: a negative gradient raises the score
@@ -567,7 +563,7 @@
     };
   }});
 
-  FIGURES['step-embedding-swap'] = name => stepper(name, F.embeddingSwap(), {height: 250, setup(svg) {
+  FIGURES['step-embedding-swap'] = name => stepper(name, F.embeddingSwap(), {height: 250, readouts: f => { const kind = k => (k === 'old' ? t('旧', 'old') : t('新', 'new')); return [[t('查询', 'query'), `${kind(f.queryKind)} encoder`], [t('索引', 'index'), `${kind(f.docKind)} ${t('文档向量', 'document vectors')}`], ['q · A', String(f.scores[0])], ['q · B', String(f.scores[1])], [t('排第一', 'ranks first'), `${f.top} ${f.bad ? '✗' : '✓'}`, f.bad ? 'bad' : 'good']]; }, setup(svg) {
     const cx = 160, cy = 128, unit = 82;
     const P = ([x, y]) => [cx + x * unit, cy - y * unit];
     svg.append(
@@ -585,7 +581,6 @@
       svg.append(dot);
       return {dot, label};
     });
-    const lines = [0, 1, 2, 3, 4].map(i => V.text(svg, 340, 52 + i * 34, '', i < 2 ? 'algo-note' : 'algo-strong'));
     return frame => {
       const [qx, qy] = P(frame.query);
       query.setAttribute('x2', cx + (qx - cx) * 0.9); query.setAttribute('y2', cy + (qy - cy) * 0.9);
@@ -602,13 +597,6 @@
         doc.label.setAttribute('x', onY ? x + 44 : x); doc.label.setAttribute('y', onY ? y + 5 : y + 30);
         doc.label.textContent = `${frame.docs[i].name} (${frame.docKind === 'old' ? t('旧', 'old') : t('新', 'new')})`;
       });
-      const kind = k => (k === 'old' ? t('旧', 'old') : t('新', 'new'));
-      lines[0].textContent = `${t('查询', 'query')}: ${kind(frame.queryKind)} encoder`;
-      lines[1].textContent = `${t('索引', 'index')}: ${kind(frame.docKind)} ${t('文档向量', 'document vectors')}`;
-      lines[2].textContent = `q · A = ${frame.scores[0]}`;
-      lines[3].textContent = `q · B = ${frame.scores[1]}`;
-      lines[4].textContent = `${frame.top} ${t('排第一', 'ranks first')} ${frame.bad ? '✗' : '✓'}`;
-      lines[4].setAttribute('class', frame.bad ? 'algo-warn' : 'algo-strong');
     };
   }});
 
@@ -616,7 +604,7 @@
     {id: 'both', zh: '两路各取前 3', en: 'Top 3 from both', frames: F.rrf([['A', 'B', 'C'], ['B', 'C', 'D']])},
     {id: 'keyword', zh: '只保留关键词前 3', en: 'Keyword top 3 only', frames: F.rrf([['A', 'B', 'C'], []])},
     {id: 'top1', zh: '两路各取前 1', en: 'Top 1 from both', frames: F.rrf([['A'], ['B']])}
-  ]}, {height: 236, setup(svg) {
+  ]}, {height: 236, readouts: f => [[t('融合后', 'fused order'), f.done ? f.order : '—', f.done ? 'good' : '']], setup(svg) {
     const colX = [30, 150], chipW = 100, chipH = 30, rowY = [52, 92, 132];
     V.text(svg, colX[0], 36, t('关键词', 'keyword'), 'algo-head');
     V.text(svg, colX[1], 36, t('向量', 'dense'), 'algo-head');
@@ -630,7 +618,6 @@
       svg.append(kw, dense);
       return [d, {kw, dense, value}];
     }));
-    const order = V.text(svg, 300, 222, '', 'algo-strong');
     return frame => {
       colX.forEach((_, c) => rowY.forEach((_, r) => {
         const doc = frame.lists[c][r];
@@ -644,7 +631,6 @@
         bar.value.setAttribute('x', barX + (a + b) * scale + 8);
         bar.value.textContent = a + b ? fixed(a + b, 4) : (frame.stage >= 2 ? '0' : '');
       });
-      order.textContent = frame.done ? `${t('融合后', 'fused')}: ${frame.order}` : '';
     };
   }});
 
@@ -684,7 +670,8 @@
     };
   }});
 
-  FIGURES['step-pq'] = name => stepper(name, F.pq(), {height: 250, setup(svg) {
+  FIGURES['step-pq'] = name => stepper(name, F.pq(), {height: 250, readouts: f => (f.done ? f.results.map(([code, total]) => [t(`编码 [${code.join(', ')}]`, `code [${code.join(', ')}]`), `${f.table[0][code[0]]} + ${f.table[1][code[1]]} = ${total}`, total === 2 ? 'good' : ''])
+      : [[t('编码', 'code'), f.code ? `[${f.code.join(', ')}]` : '—'], [t('查表相加', 'lookups added'), f.code ? `${f.picks.join(' + ')} = ${f.total}` : '—', f.code ? 'key' : '']]), setup(svg) {
     V.text(svg, 30, 34, t('查询', 'query'), 'algo-head');
     const q = [1, 2, 3, 4].map((v, i) => cell(svg, 90 + i * 44 + (i >= 2 ? 18 : 0), 14, 38, 30, String(v)));
     const tables = [0, 1].map(m => {
@@ -699,7 +686,6 @@
       });
       return {head, rows};
     });
-    const lines = [0, 1].map(i => V.text(svg, 30, 218 + i * 26, '', 'algo-strong'));
     return frame => {
       q.forEach((c, i) => c.set(String(frame.query[Math.floor(i / 2)][i % 2]), frame.stage === 0 ? (i < 2 ? 'is-look' : 'is-change') : ''));
       tables.forEach((tab, m) => {
@@ -710,11 +696,6 @@
           row.dist.set(frame.stage >= 2 ? `d = ${frame.table[m][c]}` : '', picked ? 'is-keep' : frame.stage === 2 ? 'is-change' : '');
         });
       });
-      if (frame.done) frame.results.forEach(([code, total], i) => { lines[i].textContent = `[${code.join(', ')}] → ${frame.table[0][code[0]]} + ${frame.table[1][code[1]]} = ${total}`; });
-      else {
-        lines[0].textContent = frame.code ? `${t('编码', 'code')} [${frame.code.join(', ')}] → ${frame.picks.join(' + ')} = ${frame.total}` : '';
-        lines[1].textContent = '';
-      }
     };
   }});
 
@@ -753,14 +734,13 @@
   }});
 
   FIGURES['step-qwen-merge'] = name => stepper(name, {modes: [[280, 280], [280, 560], [560, 560]].map(([hh, ww]) => (
-    {id: `${hh}x${ww}`, zh: `${hh} × ${ww}`, en: `${hh} × ${ww}`, frames: F.qwenMerge(hh, ww)}))}, {height: 270, setup(svg) {
-    const scale = 224 / 560, x0 = 30, y0 = 16;
+    {id: `${hh}x${ww}`, zh: `${hh} × ${ww}`, en: `${hh} × ${ww}`, frames: F.qwenMerge(hh, ww)}))}, {height: 270, readouts: f => [[t('14 像素 patch', '14-px patches'), f.stage >= 1 ? `${f.ph} × ${f.pw} = ${f.ph * f.pw}` : '—'], [t('2×2 合并后', 'after the 2×2 merge'), f.stage >= 2 ? `${f.mh} × ${f.mw} = ${f.mh * f.mw}` : '—', f.stage >= 2 ? 'key' : ''], ['N = H/28 · W/28', f.stage >= 3 ? String(f.mh * f.mw) : '—', f.done ? 'good' : '']], setup(svg) {
+    const scale = 176 / 560, x0 = 30, y0 = 16;
     const box = s('rect', {x: x0, y: y0, rx: 4, class: 'algo-cell'});
     const fine = s('g', {class: 'algo-grid-fine'}), coarse = s('g', {class: 'algo-grid-coarse'});
     const group = s('rect', {x: x0, y: y0, width: 28 * scale, height: 28 * scale, class: 'algo-band'});
     svg.append(box, fine, coarse, group);
     const size = V.text(svg, x0, 0, '', 'algo-note');
-    const lines = [0, 1, 2].map(i => V.text(svg, 300, 70 + i * 44, '', i === 2 ? 'algo-strong' : 'algo-note'));
     let drawn = '';
     const grid = (node, step, hh, ww) => {
       node.textContent = '';
@@ -777,9 +757,6 @@
       show(fine, frame.stage >= 1); show(coarse, frame.stage >= 2); show(group, frame.stage === 2);
       size.textContent = `${frame.height} × ${frame.width} px`;
       size.setAttribute('y', y0 + frame.height * scale + 18);
-      lines[0].textContent = frame.stage >= 1 ? `${t('14 像素 patch', '14-px patches')}: ${frame.ph} × ${frame.pw} = ${frame.ph * frame.pw}` : '';
-      lines[1].textContent = frame.stage >= 2 ? `${t('2×2 合并后', 'after 2×2 merge')}: ${frame.mh} × ${frame.mw} = ${frame.mh * frame.mw}` : '';
-      lines[2].textContent = frame.stage >= 3 ? `N = H/28 · W/28 = ${frame.mh * frame.mw}` : '';
     };
   }});
 
@@ -811,7 +788,7 @@
     };
   }});
 
-  FIGURES['step-flow-matching'] = name => stepper(name, F.flow(), {height: 210, setup(svg) {
+  FIGURES['step-flow-matching'] = name => stepper(name, F.flow(), {height: 210, readouts: f => [['x_t', f.stage >= 2 ? String(f.done ? f.next : f.position) : '—'], [t('目标速度 u', 'target velocity u'), f.stage >= 3 ? String(f.velocity) : '—'], [t('预测速度 v̂', 'predicted v̂'), f.stage >= 4 ? String(f.predicted) : '—'], [t('平方误差', 'squared error'), f.stage >= 4 ? `(${f.predicted} − ${f.velocity})² = ${f.loss}` : '—', f.stage >= 4 ? 'bad' : ''], [t('走一步之后', 'after one step'), f.done ? `${f.position} → ${f.next}` : '—', f.done ? 'good' : '']], setup(svg) {
     const x0 = 50, unit = 44, y = 160, X = v => x0 + v * unit;
     svg.append(s('line', {x1: X(0), y1: y, x2: X(12), y2: y, class: 'algo-edge'}));
     for (let v = 0; v <= 12; v++) {
@@ -832,7 +809,6 @@
     const v = s('line', {class: 'algo-edge is-change', 'marker-end': `url(#${arrow})`});
     svg.append(u, v);
     const uLabel = V.text(svg, 0, 0, '', 'algo-note'), vLabel = V.text(svg, 0, 0, '', 'algo-note');
-    const readout = V.text(svg, 600, 30, '', 'algo-strong', 'end');
     const vScale = 20;
     return frame => {
       noise.setAttribute('cx', X(frame.noise)); target.setAttribute('cx', X(frame.target));
@@ -847,11 +823,10 @@
         show(line, on && !frame.done);
         label.setAttribute('x', start + value * vScale + 10); label.setAttribute('y', yy + 4); label.textContent = on && !frame.done ? text : '';
       });
-      readout.textContent = frame.done ? `${frame.position} → ${frame.next}` : frame.stage >= 4 ? `(${frame.predicted} − ${frame.velocity})² = ${frame.loss}` : frame.stage >= 2 ? `x_${frame.time} = ${frame.position}` : '';
     };
   }});
 
-  FIGURES['step-eval-funnel'] = name => stepper(name, F.funnel(), {height: 250, setup(svg) {
+  FIGURES['step-eval-funnel'] = name => stepper(name, F.funnel(), {height: 250, readouts: f => [[t('端到端成功率', 'end-to-end success'), f.done ? '55 / 100 = 0.55' : '—', f.done ? 'good' : ''], [t('最后一行的通过率', 'last row’s pass rate'), f.done ? t('55 / 60，不是端到端', '55 / 60, not end to end') : '—', f.done ? 'bad' : '']], setup(svg) {
     const x0 = 24, unit = 4.4, rowH = 42;
     const rows = F.funnel()[0].stages.map((stage, i) => {
       const y = 14 + i * rowH;
@@ -863,7 +838,6 @@
       const rate = V.text(svg, 616, y + 31, '', 'algo-note', 'end');
       return {label, ghost, bar, count, rate, n: stage[2], prev: i ? F.funnel()[0].stages[i - 1][2] : stage[2]};
     });
-    const total = V.text(svg, 616, 240, '', 'algo-strong', 'end');
     return frame => {
       rows.forEach((row, i) => {
         const on = i < frame.shown;
@@ -875,21 +849,19 @@
         row.count.textContent = on ? String(row.n) : '';
         row.rate.textContent = on && i ? frame.rates[i][LANG] : '';
       });
-      total.textContent = frame.done ? '55 / 100 = 0.55' : '';
     };
   }});
 
   FIGURES['step-bleu'] = name => stepper(name, {modes: [
     {id: 'short', zh: 'the bus leaves', en: 'the bus leaves', frames: F.bleu('the bus leaves')},
     {id: 'wrong', zh: 'the bus leaves at nine', en: 'the bus leaves at nine', frames: F.bleu('the bus leaves at nine')}
-  ]}, {height: 236, setup(svg) {
+  ]}, {height: 236, readouts: f => [['p1', f.stage >= 1 ? `${f.m1}/${f.uni.length}` : '—'], ['p2', f.stage >= 2 ? `${f.m2}/${f.bi.length}` : '—'], ['BP', f.stage >= 3 ? (f.bp === 1 ? '1' : fixed(f.bp, 4)) : '—'], ['BLEU-2', f.stage >= 4 ? `≈ ${fixed(f.score, 4)}` : '—', f.stage >= 4 ? 'key' : '']], setup(svg) {
     const x0 = 100, gap = 8, width = word => word.length * 9 + 18;
     V.text(svg, 20, 42, t('参考', 'reference'), 'algo-head');
     V.text(svg, 20, 94, t('候选', 'candidate'), 'algo-head');
     V.text(svg, 20, 146, 'bigram', 'algo-head');
     const layer = s('g');
     svg.append(layer);
-    const readout = V.text(svg, 20, 210, '', 'algo-strong');
     let drawn = null, refCells = [], candCells = [], biCells = [];
     const chips = (words, y, cls) => {
       let x = x0;
@@ -906,23 +878,16 @@
       refCells.forEach(c => c.set(c.label.textContent, ''));
       candCells.forEach((c, i) => c.set(c.label.textContent, frame.stage >= 1 ? (frame.uni[i].ok ? 'is-keep' : 'is-bad') : ''));
       biCells.forEach((c, i) => c.set(c.label.textContent, frame.stage >= 2 ? (frame.bi[i].ok ? 'is-keep' : 'is-bad') : 'is-hidden'));
-      const parts = [];
-      if (frame.stage >= 1) parts.push(`p1 = ${frame.m1}/${frame.uni.length}`);
-      if (frame.stage >= 2) parts.push(`p2 = ${frame.m2}/${frame.bi.length}`);
-      if (frame.stage >= 3) parts.push(`BP = ${frame.bp === 1 ? '1' : fixed(frame.bp, 4)}`);
-      if (frame.stage >= 4) parts.push(`BLEU-2 ≈ ${fixed(frame.score, 4)}`);
-      readout.textContent = parts.join('   ·   ');
     };
   }});
 
-  FIGURES['step-judge-renorm'] = name => stepper(name, F.renorm(), {height: 236, setup(svg) {
+  FIGURES['step-judge-renorm'] = name => stepper(name, F.renorm(), {height: 236, readouts: f => [[t('直接加权', 'raw weighted sum'), f.stage >= 1 ? String(f.raw) : '—', f.stage === 1 ? 'bad' : ''], [t('评分标签总质量', 'rating-label mass'), f.stage >= 2 ? String(f.mass) : '—'], [t('条件均分', 'conditional mean'), f.stage >= 4 ? `${f.raw} / ${f.mass} = ${f.mean}` : '—', f.stage >= 4 ? 'good' : '']], setup(svg) {
     const x0 = 24, full = 520;
     V.text(svg, x0, 30, t('整个词表上的概率', 'probability over the vocabulary'), 'algo-head');
     const kinds = ['3', '4', '5', 'other'];
     const segs = kinds.map(() => { const r = s('rect', {y: 40, height: 34, class: 'algo-cell'}); const v = s('text', {y: 62, 'text-anchor': 'middle', class: 'algo-note'}); const k = s('text', {y: 92, 'text-anchor': 'middle', class: 'algo-idx'}); svg.append(r, v, k); return {r, v, k}; });
     const head2 = V.text(svg, x0, 124, t('只看 1–5 分，再除以 0.8', 'labels 1–5 only, divided by 0.8'), 'algo-head');
     const segs2 = [0, 1, 2].map(() => { const r = s('rect', {y: 134, height: 34, class: 'algo-cell is-keep'}); const v = s('text', {y: 156, 'text-anchor': 'middle', class: 'algo-note'}); const k = s('text', {y: 186, 'text-anchor': 'middle', class: 'algo-idx'}); svg.append(r, v, k); return {r, v, k}; });
-    const readout = V.text(svg, x0, 222, '', 'algo-strong');
     return frame => {
       const values = [...frame.labels.map(([, p]) => p), frame.other];
       let x = x0;
@@ -943,18 +908,13 @@
         seg.k.setAttribute('x', x2 + w / 2); seg.k.textContent = frame.stage >= 3 ? t(`${frame.scaled[i][0]} 分`, `rating ${frame.scaled[i][0]}`) : '';
         x2 += w;
       });
-      readout.textContent = frame.stage === 1 ? `3×0.08 + 4×0.56 + 5×0.16 = ${frame.raw}` : frame.stage === 2 ? `0.08 + 0.56 + 0.16 = ${frame.mass}`
-        : frame.stage >= 4 ? `${frame.raw} / ${frame.mass} = ${frame.mean}` : '';
     };
   }});
 
-  FIGURES['step-win-rate'] = name => stepper(name, F.winRate(), {height: 200, setup(svg) {
+  FIGURES['step-win-rate'] = name => stepper(name, F.winRate(), {height: 200, readouts: f => { const out = f.out || []; return [[t('弃权', 'abstained'), out.includes('unknown') ? '1' : '—'], [t('双方失败', 'both bad'), out.includes('bad') ? '1' : '—'], [t('分母', 'denominator'), f.stage >= 3 ? '8 + 6 + 4 = 18' : '—'], [t('A 的分子', 'A’s numerator'), f.half ? '8 + 0.5 × 4 = 10' : '—'], ['W_A', f.done ? '10 / 18 ≈ 55.6%' : '—', f.done ? 'good' : '']]; }, setup(svg) {
     const size = 26, gap = 4, x0 = 20, y0 = 30;
     const glyph = {a: 'A', b: 'B', tie: '=', bad: '✗', unknown: '?'};
     const tiles = F.winRate()[0].tiles.map((kind, i) => ({kind, ...cell(svg, x0 + i * (size + gap), y0, size, size, glyph[kind], 'algo-note')}));
-    const bins = [V.text(svg, 20, 96, '', 'algo-note'), V.text(svg, 220, 96, '', 'algo-note')];
-    const formula = V.text(svg, 20, 140, '', 'algo-strong');
-    const result = V.text(svg, 20, 172, '', 'algo-strong');
     const legend = V.text(svg, 616, 96, t('A 胜 · B 胜 · = 平 · ✗ 都不行 · ? 不确定', 'A wins · B wins · = tie · ✗ both bad · ? unknown'), 'algo-idx', 'end');
     return frame => {
       const out = frame.out || [];
@@ -963,15 +923,10 @@
         const cls = gone ? 'is-out' : tile.kind === 'a' ? 'is-look' : tile.kind === 'b' ? 'is-change' : tile.kind === 'tie' ? (frame.half ? 'is-keep' : '') : tile.kind === 'bad' ? 'is-bad' : 'algo-ghost';
         tile.set(glyph[tile.kind], cls);
       });
-      bins[0].textContent = out.includes('unknown') ? t('弃权：1', 'abstained: 1') : '';
-      bins[1].textContent = out.includes('bad') ? t('双方失败：1', 'both failed: 1') : '';
-      formula.textContent = frame.stage >= 3 ? `W_A = (${frame.half ? '8 + 0.5 × 4' : '8 + …'}) / (8 + 6 + 4)` : '';
-      result.textContent = frame.done ? 'W_A = 10 / 18 ≈ 55.6%' : frame.half ? '= 10 / 18' : '';
-      legend.classList.toggle('is-dim', frame.stage > 0);
     };
   }});
 
-  FIGURES['step-weighted-slices'] = name => stepper(name, F.slices(), {height: 236, setup(svg) {
+  FIGURES['step-weighted-slices'] = name => stepper(name, F.slices(), {height: 236, readouts: f => [[t('加权平均', 'weighted average'), f.stage >= 1 ? `${f.before} → ${f.after}` : String(f.before), f.stage >= 1 ? 'good' : ''], [t('充分组的贡献', 'rich group moves it'), f.stage >= 2 ? `+${f.parts[0].toFixed(3)}` : '—'], [t('稀疏组的贡献', 'sparse group moves it'), f.stage >= 2 ? `−${Math.abs(f.parts[1]).toFixed(3)}` : '—', f.stage >= 2 ? 'bad' : '']], setup(svg) {
     const base = 206, unit = 240, x0 = 40, total = 380;
     svg.append(s('line', {x1: x0 - 6, y1: base, x2: x0 + total + 6, y2: base, class: 'algo-edge'}));
     let x = x0;
@@ -988,7 +943,6 @@
     });
     const avg = s('line', {x1: x0, x2: x0 + total, class: 'algo-edge algo-dash'});
     svg.append(avg);
-    const avgLabel = V.text(svg, x0, 22, '', 'algo-strong');
     return frame => {
       cols.forEach((col, i) => {
         const g = frame.groups[i], before = g[3], after = g[4];
@@ -1003,11 +957,10 @@
       });
       const value = frame.stage >= 1 && frame.stage !== 2 ? frame.after : frame.stage === 2 ? frame.after : frame.before;
       avg.setAttribute('y1', base - value * unit); avg.setAttribute('y2', base - value * unit);
-      avgLabel.textContent = `${t('平均', 'average')} ${frame.stage >= 1 ? `${frame.before} → ${frame.after}` : frame.before}`;
     };
   }});
 
-  FIGURES['step-context-staircase'] = name => stepper(name, F.staircase(), {height: 236, setup(svg) {
+  FIGURES['step-context-staircase'] = name => stepper(name, F.staircase(), {height: 236, readouts: f => [[t('累计输入', 'total input'), String(f.running), f.split ? 'key' : ''], [t('拆开看', 'split'), f.split ? `${f.k} × ${f.b} + ${f.a} × ${f.k}(${f.k} − 1)/2 = ${f.k * f.b} + ${f.a * f.k * (f.k - 1) / 2}` : '—']], setup(svg) {
     const base = 206, unit = 0.088, w = 70, xs = [60, 170, 280, 390];
     svg.append(s('line', {x1: 40, y1: base, x2: 480, y2: base, class: 'algo-edge'}));
     const bars = xs.map((x, i) => {
@@ -1018,8 +971,6 @@
       V.text(svg, x + w / 2, base + 18, t(`第 ${i + 1} 次`, `call ${i + 1}`), 'algo-head', 'middle');
       return {fixedPart, history, value};
     });
-    const running = V.text(svg, 40, 20, '', 'algo-strong');
-    const split = V.text(svg, 40, 38, '', 'algo-note');
     return frame => {
       bars.forEach((bar, i) => {
         const on = i < frame.shown, v = frame.inputs[i], hist = v - frame.b;
@@ -1029,8 +980,6 @@
         bar.history.setAttribute('class', 'algo-bar is-tall' + (on && (i === frame.shown - 1 || frame.split) ? ' is-now' : ''));
         bar.value.setAttribute('y', base - v * unit - 8); bar.value.textContent = on ? String(v) : '';
       });
-      running.textContent = `${t('累计输入', 'total input')} ${frame.running}`;
-      split.textContent = frame.split ? `${frame.k} × ${frame.b} + ${frame.a} × ${frame.k}(${frame.k} − 1)/2 = ${frame.k * frame.b} + ${frame.a * frame.k * (frame.k - 1) / 2}` : '';
     };
   }});
 
@@ -1110,7 +1059,7 @@
     return () => {};
   }});
 
-  FIGURES['step-audio-frames'] = name => stepper(name, F.audioFrames(), {height: 236, setup(svg) {
+  FIGURES['step-audio-frames'] = name => stepper(name, F.audioFrames(), {height: 236, readouts: f => [[t('窗口', 'window'), `${f.windowSize} ${t('个样本', 'samples')} · 25 ms`], [t('步长', 'hop'), `${f.hop} ${t('个样本', 'samples')} · 10 ms`], [t('帧数', 'frames'), f.done ? String(f.count) : '—', f.done ? 'good' : '']], setup(svg) {
     const x0 = 30, x1 = 610, samples = 32000, span = 960, zoom = (x1 - x0) / span;
     V.text(svg, x0, 22, t('整段：2 秒', 'whole clip: 2 s'), 'algo-head');
     svg.append(s('rect', {x: x0, y: 30, width: x1 - x0, height: 14, rx: 3, class: 'algo-cell'}));
@@ -1133,7 +1082,6 @@
     const tail = s('rect', {y: 78, height: 112, class: 'algo-cell is-cross'});
     svg.append(tail);
     const tailLabel = V.text(svg, 0, 70, '', 'algo-note', 'middle');
-    const count = V.text(svg, x1, 70, '', 'algo-strong', 'end');
     return frame => {
       const offset = frame.view === 'tail' ? samples - span : 0;
       const rx = x0 + offset / samples * (x1 - x0), rw = Math.max(4, span / samples * (x1 - x0));
@@ -1155,11 +1103,10 @@
       tail.classList.toggle('is-hidden', !showTail);
       tailLabel.setAttribute('x', tx + frame.tail * zoom / 2);
       tailLabel.textContent = showTail ? t(`剩 ${frame.tail}`, `${frame.tail} left`) : '';
-      count.textContent = frame.done ? t(`${frame.count} 帧`, `${frame.count} frames`) : '';
     };
   }});
 
-  FIGURES['step-vl2-layout'] = name => stepper(name, F.vl2Layout(), {height: 268, setup(svg) {
+  FIGURES['step-vl2-layout'] = name => stepper(name, F.vl2Layout(), {height: 268, readouts: f => [[t('全局视图', 'global view'), f.stage >= 1 ? '196 + 14 = 210' : '14 × 14 = 196'], [t('分隔符', 'separator'), f.stage >= 2 ? '1' : '—'], [t('局部块', 'local tiles'), f.stage >= 3 ? `28 × 43 = ${f.local}` : '—'], [t('合计', 'total'), f.done ? String(f.total) : '—', f.done ? 'good' : ''], [t('只算 7 × 196', 'counting 7 × 196'), f.done ? String(f.naive) : '—', f.done ? 'bad' : '']], setup(svg) {
     const unit = 6, y0 = 40;
     const block = (x, rows, cols, tile) => {
       const g = s('g');
@@ -1181,7 +1128,6 @@
     const lLabel = V.text(svg, 178, y0 + 28 * unit + 18, '', 'algo-note');
     V.text(svg, 30, 26, t('全局视图', 'global view'), 'algo-head');
     const localHead = V.text(svg, 178, 26, '', 'algo-head');
-    const sum = V.text(svg, 30, 256, '', 'algo-strong');
     return frame => {
       show(global.g, true); show(global.markers, frame.stage >= 1);
       show(sep, frame.stage >= 2); show(local.g, frame.stage >= 3);
@@ -1189,7 +1135,6 @@
       sLabel.textContent = frame.stage >= 2 ? '+1' : '';
       lLabel.textContent = frame.stage >= 3 ? `28 × 43 = ${frame.local}` : '';
       localHead.textContent = frame.stage >= 3 ? t(`局部块 ${frame.rows} × ${frame.cols}`, `local tiles ${frame.rows} × ${frame.cols}`) : '';
-      sum.textContent = frame.done ? `210 + 1 + ${frame.local} = ${frame.total}  ·  ${t('对照', 'vs')} 7 × 196 = ${frame.naive}  ·  ${t('多出', 'extra')} ${frame.total - frame.naive}` : '';
     };
   }});
 
@@ -1225,7 +1170,7 @@
     };
   }});
 
-  FIGURES['step-ppl-windows'] = name => stepper(name, F.pplWindows(), {height: 216, setup(svg) {
+  FIGURES['step-ppl-windows'] = name => stepper(name, F.pplWindows(), {height: 216, readouts: f => [[t('窗口 1 计分', 'window 1 scores'), f.stage >= 1 ? '3' : '—'], [t('窗口 2 计分', 'window 2 scores'), f.stage >= 2 ? '2' : '—'], [t('合计目标', 'targets in total'), f.done ? '3 + 2 = 5' : '—', f.done ? 'good' : '']], setup(svg) {
     const size = 56, gap = 10, x0 = (640 - (6 * size + 5 * gap)) / 2, y = 82;
     const xs = i => x0 + i * (size + gap);
     const cells = F.pplWindows()[0].tokens.map((tok, i) => cell(svg, xs(i), y, size, size, tok));
@@ -1238,7 +1183,6 @@
       return {path, text};
     };
     const b1 = bracket(0, 3, 68, true, t('窗口 1', 'window 1')), b2 = bracket(2, 5, 168, false, t('窗口 2', 'window 2'));
-    const total = V.text(svg, 616, 30, '', 'algo-strong', 'end');
     return frame => {
       const active = frame.active != null ? frame.windows[frame.active] : null;
       cells.forEach((c, i) => {
@@ -1254,11 +1198,10 @@
         b.path.setAttribute('class', 'algo-edge' + (frame.active === k ? ' is-keep' : '') + (on ? '' : ' is-out'));
         b.text.classList.toggle('is-dim', !on);
       });
-      total.textContent = frame.done ? `3 + 2 = 5 ${t('个目标', 'targets')}` : active ? `${t('本窗计分', 'scored here')}: ${active.scored.length}` : '';
     };
   }});
 
-  FIGURES['step-ivf'] = name => stepper(name, F.ivf(), {height: 262, setup(svg) {
+  FIGURES['step-ivf'] = name => stepper(name, F.ivf(), {height: 262, readouts: f => [['nprobe', f.probe ? String(f.probe) : '—'], [t('扫描的簇', 'clusters scanned'), f.probe ? f.order.slice(0, f.probe).join(', ') : '—'], [t('找到的最近点', 'nearest found'), f.stage >= 3 ? t('在 B，全库最近', 'in B, the true nearest') : f.stage >= 2 ? t('在 A，不是全库最近', 'in A, not the true nearest') : '—', f.stage >= 3 ? 'good' : f.stage >= 2 ? 'bad' : '']], setup(svg) {
     const base = F.ivf()[0];
     const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
     const regions = {}, dots = {}, cross = {};
@@ -1279,7 +1222,6 @@
     const q = s('circle', {cx: base.query[0], cy: base.query[1], r: 7, class: 'algo-cell is-look'});
     svg.append(q);
     V.text(svg, base.query[0], base.query[1] + 24, 'q', 'algo-strong', 'middle');
-    const status = V.text(svg, 24, 250, '', 'algo-strong');
     return frame => {
       const scanned = frame.probe ? frame.order.slice(0, frame.probe) : [];
       lines.forEach(([k, line]) => line.setAttribute('class', 'algo-edge algo-dash' + (frame.stage === 1 ? (k === frame.order[0] ? ' is-look-line' : '') : ' is-hidden')));
@@ -1292,7 +1234,6 @@
         line.setAttribute('x2', hit.p[0]); line.setAttribute('y2', hit.p[1]);
         line.setAttribute('class', 'algo-edge ' + (line === found[1] ? 'is-keep' : 'is-change') + (on ? '' : ' is-hidden') + (faded ? ' is-out' : ''));
       });
-      status.textContent = frame.probe === 1 ? t('nprobe = 1：只扫 A', 'nprobe = 1: scan A only') : frame.probe === 2 ? t('nprobe = 2：扫 A 和 B', 'nprobe = 2: scan A and B') : frame.stage === 1 ? t('先比较到各簇中心的距离', 'compare with the centres first') : '';
     };
   }});
 
