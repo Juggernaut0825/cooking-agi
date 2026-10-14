@@ -1377,6 +1377,25 @@ def wrap_tables(h):
         "</table>", "</table></div>")
 
 
+CJK = "\u3000-\u303f\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff00-\uffef"
+CJK_BREAKS = re.compile(rf"(?<=[{CJK}])[ \t]*\n[ \t]*(?=[{CJK}\u201c\u2018])"
+                        rf"|(?<=[{CJK}\u201d\u2019])[ \t]*\n[ \t]*(?=[{CJK}])")
+RAW_BLOCKS = re.compile(r"<(pre|code|script|style|textarea)\b.*?</\1>", re.S | re.I)
+
+
+def join_cjk_breaks(body):
+    """Hard-wrapped Chinese paragraphs keep their source line breaks, and Chrome draws each one
+    as a space ("是否 退化"). Join breaks that fall between two Chinese characters; a break next
+    to Latin text stays a space, and code, preformatted blocks and scripts are left alone."""
+    out, last = [], 0
+    for block in RAW_BLOCKS.finditer(body):
+        out.append(CJK_BREAKS.sub("", body[last:block.start()]))
+        out.append(block.group(0))
+        last = block.end()
+    out.append(CJK_BREAKS.sub("", body[last:]))
+    return "".join(out)
+
+
 def render_markdown(text):
     text, math_stash = protect_math(text)
     md = markdown.Markdown(extensions=[
@@ -1384,7 +1403,7 @@ def render_markdown(text):
         TocExtension(anchorlink=False, permalink=False, toc_depth="2-3"),
         "codehilite",
     ], extension_configs={"codehilite": {"guess_lang": False, "css_class": "hl"}})
-    body = md.convert(text)
+    body = join_cjk_breaks(md.convert(text))
     toc = getattr(md, "toc_tokens", [])
     body = restore_math(body, math_stash)
     body, toc = restore_math_toc(body, toc, math_stash)
