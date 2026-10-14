@@ -19,6 +19,8 @@ This is an architecture walkthrough, not a leaderboard. Always record the model 
 
 Sources: [Qwen-VL](https://arxiv.org/abs/2308.12966), [Qwen2-VL](https://qwenlm.github.io/blog/qwen2-vl/), [Qwen2.5-VL](https://qwenlm.github.io/blog/qwen2.5-vl/), [official Qwen3-VL overview](https://github.com/QwenLM/Qwen3-VL).
 
+<!-- paper-figure:qwen25vl-framework -->
+
 ## Fixed queries and dynamic tokens are different budgets
 
 Qwen-VL's learned queries read a visual sequence into a fixed number of vectors. That does not mean the preceding vision encoder processes only 256 patches. [Qwen-VL §2](https://arxiv.org/html/2308.12966v3)

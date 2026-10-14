@@ -19,6 +19,8 @@
 
 依据：[Qwen-VL](https://arxiv.org/abs/2308.12966)、[Qwen2-VL](https://qwenlm.github.io/blog/qwen2-vl/)、[Qwen2.5-VL](https://qwenlm.github.io/blog/qwen2.5-vl/)、[Qwen3-VL 官方说明](https://github.com/QwenLM/Qwen3-VL)。
 
+<!-- paper-figure:qwen25vl-framework -->
+
 ## 固定 query 与动态 token 是两笔不同的账
 
 Qwen-VL 的固定 query 可以把长视觉序列读成固定数量的向量。这不代表前面的视觉编码器也只处理 256 个 patch。[Qwen-VL §2](https://arxiv.org/html/2308.12966v3)

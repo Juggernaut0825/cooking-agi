@@ -17,6 +17,8 @@
 
 Reference-based 是「给什么信息」，不是这张表里的另一种输出。概率加权是「怎么汇总评分分布」，也不是新的质量维度。
 
+<!-- paper-figure:prometheus2-modes -->
+
 ## 交换 A/B，别把位置当答案
 
 <div data-judge-lab="pairwise"><p>交互演示需要 JavaScript。若总选第一个位置，交换顺序后会换成另一份答案；应先映射回稳定的答案 ID，再检查一致性。</p></div>

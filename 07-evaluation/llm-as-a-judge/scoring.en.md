@@ -17,6 +17,8 @@ Checking a violation and choosing between two prompts need not use the same outp
 
 Reference-based evaluation concerns the information supplied, not a competing output format. Probability weighting aggregates a score distribution; it isn't a new quality criterion.
 
+<!-- paper-figure:prometheus2-modes -->
+
 ## Swap A/B without losing answer identity
 
 <div data-judge-lab="pairwise"><p>This interaction needs JavaScript. Always choosing the first slot changes answer identity after a swap. Map choices back to stable IDs before checking consistency.</p></div>

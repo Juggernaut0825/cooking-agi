@@ -49,6 +49,8 @@ A task instruction for the password query might specify retrieving help passages
 
 BGE-M3's 2024 motivation was broader than one benchmark score: languages, input lengths, and retrieval modes often needed separate adaptations. Its unified model addresses those needs together, which helps explain the three outputs. [Original paper §1, §3](https://arxiv.org/html/2402.03216v3) · [Official code](https://github.com/FlagOpen/FlagEmbedding)
 
+<!-- paper-figure:bge-m3-training -->
+
 The 2025 Qwen3 Embedding report uses LLMs as both representation backbones and synthetic-data sources, followed by weak supervision, high-quality fine-tuning, and checkpoint merging. This is not merely an encoder-to-decoder swap; data and training recipes matter. [Original paper §3.2–3.3](https://arxiv.org/html/2506.05176v1#S3.SS2) · [Official code](https://github.com/QwenLM/Qwen3-Embedding)
 
 That background explains design choices, not why a newer model must suit your project better. Cross-paper scores also mix data, scale, output modes, and evaluation settings; they do not isolate architecture. Use the matched experiments in section 7 for an actual selection.

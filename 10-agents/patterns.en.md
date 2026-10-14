@@ -38,6 +38,8 @@ Continue with the booking policy. This is an action record for developers, not a
 
 [ReAct](https://arxiv.org/abs/2210.03629) interleaves reasoning, actions, and environmental observations. It does not require a separate “reasoning model” and “generation model.” A tool timeout is not evidence that no policy exists. Retries need limits, or the loop simply spends money repeatedly.
 
+<!-- paper-figure:react-trajectories -->
+
 ## What do function calling and MCP each do?
 
 | Layer | Responsibility | Not a guarantee |

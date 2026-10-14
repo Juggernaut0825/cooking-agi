@@ -10,6 +10,8 @@ The retriever finds the old notice with an identical title. The model even cites
 
 RAG brings retrieved external material into generation. The original [RAG paper](https://arxiv.org/abs/2005.11401) studied dense retrieval combined with generation. Applications can also retrieve using keywords, structured queries, or a hybrid. This note follows the evidence into the answer rather than choosing a framework.
 
+<!-- paper-figure:rag-overview -->
+
 ## 1. What checks does an answer depend on?
 
 ```text

@@ -49,6 +49,8 @@
 
 BGE-M3 在 2024 年提出时，想解决的不只是单个榜单上的分数：语言、输入长度和检索方式往往需要分别适配。M3 尝试把这几个需求放进同一个模型。因此，要理解它为什么保留三种输出，先看这个问题，而不是只看 dense 向量。[原论文 §1、§3](https://arxiv.org/html/2402.03216v3) · [官方代码](https://github.com/FlagOpen/FlagEmbedding)
 
+<!-- paper-figure:bge-m3-training -->
+
 Qwen3 Embedding 的 2025 年报告，则利用 LLM 同时做表示骨干和合成数据来源，再经过弱监督训练、高质量数据微调与 checkpoint merging。它不是简单把 encoder 换成 decoder；数据和训练配方也是设计的一部分。[原论文 §3.2–3.3](https://arxiv.org/html/2506.05176v1#S3.SS2) · [官方代码](https://github.com/QwenLM/Qwen3-Embedding)
 
 这些背景解释了设计取向，不代表后来发布的模型必然更适合你的项目。跨论文的分数也不能直接拿来证明架构优劣：数据、模型规模、输出路径和评测设置都可能不同。实际选型仍要做第 7 节的同条件实验。

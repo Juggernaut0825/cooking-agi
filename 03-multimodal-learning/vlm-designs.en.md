@@ -12,6 +12,8 @@ We follow that problem from connectors to resolution, visual sequence length, an
 
 Original LLaVA projects visual features into the LLM input space. Connector alignment precedes visual instruction tuning; the latter updates the projector and LLM while freezing the vision encoder. Generating instructions from captions and boxes does not mean the data-generating model directly saw the image. [Original paper](https://arxiv.org/abs/2304.08485)
 
+<!-- paper-figure:llava-arch -->
+
 Think of one example: the image supplies the menu, the question specifies what to read, and the answer supplies supervision. More captions saying “a restaurant menu” may not teach price reading. Examine the interface and the data together.
 
 | Version | Connector and visual-input emphasis | Important distinction |
@@ -46,6 +48,8 @@ Tiling is not free accuracy. With a limited budget, compare a thumbnail, a thumb
 
 Original DeepSeek-VL combines lower-resolution SigLIP semantics with higher-resolution SAM-B detail in a fixed visual sequence. VL2 instead uses dynamically tiled SigLIP features, spatial compression, and an MoE language model. MLA addresses language-side KV cache, not image preprocessing. [VL report](https://arxiv.org/abs/2403.05525), [VL2 report](https://arxiv.org/abs/2412.10302)
 
+<!-- paper-figure:dsvl2-overview -->
+
 This changes more than a model name. Fixed length simplifies budgeting. Dynamic length allocates more space to difficult images, but complicates batching, admission control, and tail latency.
 
 | Approach | What it saves | What it costs |
@@ -66,6 +70,8 @@ The 210 positions contain the global view and its row markers; 1 separates views
 A two-row, three-column layout yields 1415, not $7\times196=1372$. The remaining 43 positions carry structure.
 
 <!-- widget:step-vl2-layout -->
+
+<!-- paper-figure:dsvl2-tiling -->
 
 ```python
 def vl2_sequence_length(tile_rows, tile_columns):

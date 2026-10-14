@@ -8,6 +8,8 @@ In a street photo, you notice cars, people, and traffic lights. A model initiall
 
 Keep patching separate from understanding. After this note, [CLIP](clip.en.md) shows why an image encoder's architecture and its training objective are different choices.
 
+<!-- paper-figure:vit-overview -->
+
 ## First count the tokens
 
 Assume a $224\times224$ RGB image, $16\times16$ non-overlapping patches, and no padding:

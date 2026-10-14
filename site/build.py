@@ -65,7 +65,8 @@ NOGLOSS_CLASSES = {"lesson-recipe", "taste-check", "widget", "mermaid",
                    "study-atlas", "study-route", "chapter-context", "worked-update", "engine-map", "technology-tree", "tree-eras", "rl-budget", "prep-hub", "prep-progress", "prep-note", "study-workspace",
                    "home-block", "term", "curriculum-card", "curriculum-hero",
                    "learning-path", "lab-matrix", "bilingual-intro",
-                   "drl-flow", "drl-paths", "drl-lab", "interview-roles", "method-map"}
+                   "drl-flow", "drl-paths", "drl-lab", "interview-roles", "method-map",
+                   "paper-fig", "paper-fig-link"}
 
 GLOSS_BLOCKS = {"p", "li", "td", "th", "dd"}
 GLOSSARY_COMPOUND_EXCLUSIONS = {"方差": ("平方差", "立方差")}
@@ -1063,6 +1064,47 @@ def localize_shell(shell: str, page) -> str:
     return re.sub(r'data-zh="([^"]*)"\s+data-en="([^"]*)"([^>]*)>\s*</', fill, shell)
 
 
+def load_paper_figures():
+    """site/paper_figures.toml: figures from papers, each with its credit and licence."""
+    f = SITE / "paper_figures.toml"
+    entries = tomllib.loads(f.read_text(encoding="utf-8")).get("figure", []) if f.exists() else []
+    return {entry["id"]: entry for entry in entries}
+
+
+PAPER_FIGURES = load_paper_figures()
+
+
+def paper_figure_html(name: str, page=None) -> str:
+    """A paper's own figure: embedded with its credit and licence when the licence allows
+    copying (an `image` is registered), otherwise a card that opens the figure in the paper."""
+    fig = PAPER_FIGURES.get(name)
+    if fig is None:
+        raise SystemExit(f"unknown paper figure {name!r}: register it in site/paper_figures.toml")
+    zh = page is None or page.lang == "zh"
+    esc = lambda value: html.escape(str(value), quote=True)
+    caption = esc(fig["zh"] if zh else fig["en"])
+    source = f'{esc(fig["credit"])} · {esc(fig["paper"])} · Figure {fig["figure"]}'
+    label = "原文图" if zh else "From the paper"
+    if "image" in fig:
+        # relative to the note's source, like any markdown image; rewrite_links maps site/static/ to the built asset
+        src = f'site/static/paper-figures/{fig["image"]}'
+        src = page.rel(src) if page is not None else src
+        changes = {"resized": ("缩小尺寸并转为 WebP", "resized and converted to WebP"),
+                   "converted": ("转为 WebP", "converted to WebP")}[fig["changes"]]
+        tall = " is-tall" if fig["height"] > 0.8 * fig["width"] else ""
+        credit = (f'图源：<a href="{esc(fig["url"])}">{source}</a> · <a href="{esc(fig["license_url"])}">{esc(fig["license"])}</a> · {changes[0]}'
+                  if zh else
+                  f'Source: <a href="{esc(fig["url"])}">{source}</a> · <a href="{esc(fig["license_url"])}">{esc(fig["license"])}</a> · {changes[1]}')
+        return (f'<figure class="paper-fig{tall}" id="pf-{esc(name)}">'
+                f'<a class="pf-image" href="{esc(src)}"><img src="{esc(src)}" width="{fig["width"]}" height="{fig["height"]}" '
+                f'alt="{caption}" loading="lazy" decoding="async"></a>'
+                f'<figcaption><span class="pf-label">{label}</span>{caption}<span class="pf-credit">{credit}</span></figcaption></figure>')
+    go = "在原论文里看" if zh else "Open in the paper"
+    return (f'<aside class="paper-fig-link" id="pf-{esc(name)}"><a href="{esc(fig["url"])}">'
+            f'<span class="pf-label">{label}</span><span class="pf-title">{source}</span>'
+            f'<span class="pf-desc">{caption}</span><span class="pf-go">{go} ↗</span></a></aside>')
+
+
 def expand_widgets(md_text: str, page=None) -> str:
     def expand(m):
         name = m.group(1)
@@ -1070,6 +1112,7 @@ def expand_widgets(md_text: str, page=None) -> str:
             return DYNAMIC_WIDGETS[name](page)
         shell = WIDGETS.get(name, "")
         return localize_shell(shell, page) if page is not None else shell
+    md_text = re.sub(r"<!--\s*paper-figure:([a-z0-9_.-]+)\s*-->", lambda m: paper_figure_html(m.group(1), page), md_text)
     return re.sub(r"<!--\s*widget:([a-z0-9_-]+)\s*-->", expand, md_text)
 
 
@@ -2057,7 +2100,9 @@ def assemble(page, sections, people, nav, built, template):
     card = f"{origin}/static/og.png" if origin else f"{prefix}static/og.png"
     image_url, image_dims = card, '<meta property="og:image:width" content="1200">\n<meta property="og:image:height" content="630">\n'
     if page.kind != "home":
-        image_match = re.search(r'<img\s+[^>]*src="([^"]+\.(?:png|jpe?g|webp))"', page.body, re.I)
+        # a paper's figure is shared with its credit on the page, never as a bare card image
+        own_images = re.sub(r'<figure class="paper-fig.*?</figure>', "", page.body, flags=re.S)
+        image_match = re.search(r'<img\s+[^>]*src="([^"]+\.(?:png|jpe?g|webp))"', own_images, re.I)
         if image_match:
             raw_image = image_match.group(1)
             if re.match(r"https?://", raw_image):
@@ -2105,6 +2150,8 @@ def assemble(page, sections, people, nav, built, template):
         template = template.replace('</head>', f'<script defer src="{prefix}static/chronicle.js?v={built}"></script>\n</head>')
         template = template.replace('<canvas class="sky" aria-hidden="true"></canvas>\n', "")
         template = re.sub(r'<script defer src="\{\{prefix\}\}static/sky\.js[^>]*></script>\n?', "", template)
+    if 'class="paper-fig' in page.body:
+        template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/paper-figures.css?v={built}">\n</head>')
     if 'class="method-map"' in page.body:
         template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/method-map.css?v={built}">\n</head>')
     if 'data-bert-story' in page.body:

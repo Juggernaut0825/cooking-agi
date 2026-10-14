@@ -38,6 +38,8 @@
 
 [ReAct](https://arxiv.org/abs/2210.03629)的关键是把推理、行动和环境观察交替起来，不要求一台“推理模型”配一台“生成模型”。工具超时是环境反馈，不是“规则不存在”；重试也要有限次，否则循环只是反复花钱。
 
+<!-- paper-figure:react-trajectories -->
+
 ## Function calling 和 MCP 分别做什么？
 
 | 层 | 负责什么 | 不负责什么 |

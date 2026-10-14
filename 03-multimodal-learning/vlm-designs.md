@@ -12,6 +12,8 @@
 
 原始 LLaVA 把视觉特征投影到 LLM 的输入空间。训练分成连接模块对齐和视觉指令微调，后者更新 projector 与 LLM，视觉编码器保持冻结。用 captions 和位置框生成指令数据，不等于生成数据的模型直接看过原图。[原论文](https://arxiv.org/abs/2304.08485)
 
+<!-- paper-figure:llava-arch -->
+
 可以把训练样本想成：图片提供菜单，问题规定读哪里，答案提供监督。只增加“这是一张菜单”的 caption，未必能教好价格读取。接口和数据必须一起看。
 
 | 版本 | 连接与视觉输入的重点 | 阅读时别混在一起 |
@@ -46,6 +48,8 @@ flowchart TD
 
 DeepSeek-VL 初版采用低分辨率 SigLIP 与高分辨率 SAM-B 的组合，分别提供语义与细节，再融合到固定视觉序列中。VL2 换成动态切块的 SigLIP 编码器，接空间压缩模块和 MoE 语言模型；MLA 处理的是语言侧 KV cache，而不是图片预处理。[VL 报告](https://arxiv.org/abs/2403.05525)、[VL2 报告](https://arxiv.org/abs/2412.10302)
 
+<!-- paper-figure:dsvl2-overview -->
+
 两种设计的区别不只是“一个模型换成另一个”。固定长度容易估预算；动态长度能给复杂图片更多空间，但组 batch、限流与长尾延迟都会更难。
 
 | 方案 | 省在哪里 | 代价在哪里 |
@@ -66,6 +70,8 @@ $$N=210+1+14r(14c+1).$$
 用一个 2 行 3 列布局复算，结果是 1415，不是 $7\times196=1372$；差的 43 个就是结构标记。
 
 <!-- widget:step-vl2-layout -->
+
+<!-- paper-figure:dsvl2-tiling -->
 
 ```python
 def vl2_sequence_length(tile_rows, tile_columns):
