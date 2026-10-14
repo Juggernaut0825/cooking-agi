@@ -46,6 +46,8 @@ If every example uses one venue, the model may treat it as a default. A missing-
 
 The [original CoT paper](https://arxiv.org/abs/2201.11903) studies demonstrations containing intermediate solution steps. This differs from example count: few-shot examples can contain final answers only or worked solutions.
 
+<!-- paper-figure:cot-examples -->
+
 For “check-in is 90 minutes before a 14:00 event,” a calculation helps. For extracting “Saturday afternoon,” a page of reasoning is unnecessary.
 
 For current reasoning models, check model-specific controls rather than universally demanding every private internal thought. **Checkable evidence, calculations, or citations** are more useful outputs. Length does not prove correctness, and agreement among samples is not independent verification. The [current prompting guide](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices) distinguishes thinking controls from ordinary demonstrations.

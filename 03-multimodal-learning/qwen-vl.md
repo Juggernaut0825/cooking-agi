@@ -19,6 +19,8 @@
 
 依据：[Qwen-VL](https://arxiv.org/abs/2308.12966)、[Qwen2-VL](https://qwenlm.github.io/blog/qwen2-vl/)、[Qwen2.5-VL](https://qwenlm.github.io/blog/qwen2.5-vl/)、[Qwen3-VL 官方说明](https://github.com/QwenLM/Qwen3-VL)。
 
+<!-- paper-figure:qwen25vl-framework -->
+
 ## 固定 query 与动态 token 是两笔不同的账
 
 Qwen-VL 的固定 query 可以把长视觉序列读成固定数量的向量。这不代表前面的视觉编码器也只处理 256 个 patch。[Qwen-VL §2](https://arxiv.org/html/2308.12966v3)
@@ -34,6 +36,8 @@ $$N_{visual}=\frac{H}{28}\frac{W}{28}.$$
 | 560 × 560 | 1600 | 400 |
 
 这些是便于手算的输入，不是推荐的线上分辨率。公式不含文字、边界标记或视频的时间维；应以 processor 实际输出的 grid 和序列为准。
+
+<!-- widget:step-qwen-merge -->
 
 ```python
 def merged_image_tokens(height, width, patch_size=14, merge_size=2):
@@ -65,6 +69,8 @@ assert merged_image_tokens(560, 560) == 400
 | 左下 | 7 | 8 | 7 |
 
 一张静态图的时间相同，但行列不同。文本 token 的三个轴使用相同的位置值，**不是整段文本的所有 token 都用同一个位置值**。
+
+<!-- widget:step-mrope -->
 
 例如 2 秒和 4 秒的两帧：若视频采样率变了，帧编号可能变成另一组数字，实际时间却没变。Qwen2.5-VL 把时间位置关联到实际时间；Qwen3-VL 用帧前的文字时间戳表达时间，并交错分配各轴的旋转频率。这两种版本策略不要混写。[2.5 报告](https://arxiv.org/abs/2502.13923)、[3 报告](https://arxiv.org/abs/2511.21631)
 

@@ -10,6 +10,8 @@ The retriever finds the old notice with an identical title. The model even cites
 
 RAG brings retrieved external material into generation. The original [RAG paper](https://arxiv.org/abs/2005.11401) studied dense retrieval combined with generation. Applications can also retrieve using keywords, structured queries, or a hybrid. This note follows the evidence into the answer rather than choosing a framework.
 
+<!-- paper-figure:rag-overview -->
+
 ## 1. What checks does an answer depend on?
 
 ```text
@@ -62,6 +64,8 @@ For one query, suppose the fully judged relevant set is `{A, C, E}`, and the top
 | Reciprocal rank@3 | 1/2 | Where is the first relevant result? |
 
 Precision and recall happen to agree here. Change the relevant set to `{C}`: precision stays at 1/3, while recall becomes 1. Hit@K is not Precision@K. MRR averages reciprocal rank over queries; it is not another name for a single query's score. [Information-retrieval textbook definitions](https://nlp.stanford.edu/IR-book/html/htmledition/evaluation-of-ranked-retrieval-results-1.html)
+
+<!-- widget:step-retrieval-metrics -->
 
 ```python
 def retrieval_metrics(ranked_ids, relevant_ids, cutoff):

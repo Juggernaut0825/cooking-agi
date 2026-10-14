@@ -4,6 +4,8 @@
 
 KV cache 会为历史 token 保留记录。循环模型换了一种做法：每读一个 token，就更新一个固定形状的状态。这样 decode 不必反复扫描完整历史，但也失去了逐条回看的能力。Gated DeltaNet 研究的是：这块有限的状态应该怎么写、怎么改、什么时候忘。
 
+<!-- paper-figure:gated-deltanet-arch -->
+
 ## 把状态当成一个小的关联记忆
 
 设 $S\in\mathbb R^{d_v\times d_k}$。key $k$ 和 query $q$ 是 $d_k$ 维列向量，value $v$ 是 $d_v$ 维。读记忆就是 $Sq$。

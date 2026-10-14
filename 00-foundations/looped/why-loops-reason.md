@@ -22,6 +22,8 @@ $$D_{\text{shared}}=D_{\text{untied}}=kL,\qquad P_{\text{shared block}}=kP_{\tex
 
 这只是相同宽度、忽略额外组件时的参数账，不是准确率公式。该研究在困惑度和部分记忆任务上也观察到取舍，不能概括成“推理只看深度、不看参数”。
 
+<!-- paper-figure:looped-mechanism -->
+
 ## 和 CoT 的关系
 
 Chain-of-thought 靠**生成中间 token**增加计算；使用 KV cache 时，每一步是新位置经过整个网络，不是重算全部前缀。循环是在**隐藏状态里**继续更新，不必为每圈输出一个 token。两者可以一起用；看得见的 CoT 也不自动等于模型真实的决策过程。

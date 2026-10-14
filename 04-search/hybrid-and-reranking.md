@@ -37,6 +37,8 @@ $$
 
 教学例子取 $k=10$：B 的分数为 $1/12+1/11\approx0.1742$，C 为 $1/13+1/12\approx0.1603$，A 为 $1/11\approx0.0909$，D 为 $1/13\approx0.0769$。B、C 得到了两路支持，即使 A 在关键词里排第一，也未必最终排第一。
 
+<!-- widget:step-rrf -->
+
 ```python
 def reciprocal_rank_fusion(rankings, constant=10):
     if constant < 0:

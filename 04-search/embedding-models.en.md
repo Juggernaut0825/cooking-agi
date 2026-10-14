@@ -49,6 +49,8 @@ A task instruction for the password query might specify retrieving help passages
 
 BGE-M3's 2024 motivation was broader than one benchmark score: languages, input lengths, and retrieval modes often needed separate adaptations. Its unified model addresses those needs together, which helps explain the three outputs. [Original paper §1, §3](https://arxiv.org/html/2402.03216v3) · [Official code](https://github.com/FlagOpen/FlagEmbedding)
 
+<!-- paper-figure:bge-m3-training -->
+
 The 2025 Qwen3 Embedding report uses LLMs as both representation backbones and synthetic-data sources, followed by weak supervision, high-quality fine-tuning, and checkpoint merging. This is not merely an encoder-to-decoder swap; data and training recipes matter. [Original paper §3.2–3.3](https://arxiv.org/html/2506.05176v1#S3.SS2) · [Official code](https://github.com/QwenLM/Qwen3-Embedding)
 
 That background explains design choices, not why a newer model must suit your project better. Cross-paper scores also mix data, scale, output modes, and evaluation settings; they do not isolate architecture. Use the matched experiments in section 7 for an actual selection.
@@ -107,6 +109,8 @@ The [Qwen paper](https://arxiv.org/html/2506.05176v1#S2) describes pooling at a 
 Consider two dimensions. An old query is $(1,0)$, relevant document A is $(1,0)$, and document B is $(0,1)$. Their dot products are 1 and 0.
 
 Suppose a new model merely rotates every vector by 90 degrees. Its own retrieval is unchanged: new query $(0,1)$ scores 1 against new A $(0,1)$ and 0 against new B $(-1,0)$. But deploying only the new query encoder against the old index produces **0 for A and 1 for B**.
+
+<!-- widget:step-embedding-swap -->
 
 Real model changes are not just rotations. The example isolates one point: **equal dimensions do not imply compatible coordinates.** Re-encode documents and rebuild the index for the new model. Mixing versions requires a trained and validated compatibility method, not just a shape check.
 

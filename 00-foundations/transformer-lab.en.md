@@ -23,6 +23,8 @@ Start with a few visible choices: where the norm goes, how position is encoded, 
 
 <!-- widget:tx-arch -->
 
+<!-- paper-figure:transformer-arch -->
+
 Three steps are worth comparing: `Transformer ’17 → GPT-2 / 3` (drop the encoder and cross-attention, move the norm inside the residual branch), `GPT-2 / 3 → Llama 3` (LayerNorm → RMSNorm, absolute positions → RoPE, GELU → SwiGLU, MHA → GQA), and `Llama 3 → DeepSeek-V3` (GQA → MLA, dense FFN → MoE).
 
 ## Self-attention, step by step
@@ -57,6 +59,8 @@ numbers, assuming equal K/V dimensions and the same configuration in every layer
 
 <!-- widget:tx-kv-heads -->
 
+<!-- paper-figure:gqa-heads -->
+
 The calculator is a controlled comparison, not a deployment configuration: keep depth, length, and storage precision fixed while replacing the attention scheme. The MLA row fixes a 512-dimensional latent and a 64-dimensional RoPE key. It excludes weights, temporary activations, KV page fragmentation, and cross-device replication, and does not imply that every model supports all four variants.
 
 ## Not every token needs to see every token
@@ -64,6 +68,9 @@ The calculator is a controlled comparison, not a deployment configuration: keep 
 Full causal attention costs $O(n^2)$. **Sliding-window attention** lets each token see only the last $w$ tokens: $O(n\,w)$ compute and a cache capped at $w$. Information still travels further, because every extra layer extends the reach by another window: about $L\,(w-1)+1$ tokens after $L$ layers.
 
 <!-- widget:tx-windows -->
+
+<!-- paper-figure:streamingllm-windows -->
+<!-- paper-figure:mistral-swa -->
 
 Drag “Stacked layers” to expand the possible information paths. Reachability does not guarantee that distant content is remembered. Gemma 3 interleaves five local layers with one global layer; gpt-oss alternates windowed and full attention. StreamingLLM retains initial sink tokens and a recent window to reduce instability from discarding the initial KV. Details evicted from the window do not remain fully available.
 
@@ -81,6 +88,8 @@ A mixture-of-experts layer replaces one FFN with several experts and a router th
 
 <!-- widget:tx-moe -->
 
+<!-- paper-figure:mixtral-moe -->
+
 The grids are drawn at true scale (8, 128 or 256 experts), so the sparsity you see is the real sparsity. DeepSeek-V3 adds one shared expert that every token visits. The router in the figure is random and only there to show how load spreads; a real router is a learned linear layer, kept balanced by an auxiliary loss or a bias term. The full series is in [MoE](moe/README.en.md).
 
 ## FlashAttention: same math, less memory traffic
@@ -88,6 +97,8 @@ The grids are drawn at true scale (8, 128 or 256 experts), so the sparsity you s
 Naive attention materializes full $n\times n$ score and probability matrices in HBM, which can make memory traffic expensive. FlashAttention uses tiling and online softmax to accumulate outputs without storing those two full matrices in HBM. It does not approximate attention by sparsifying it, but floating-point order changes mean results need not be bitwise identical. Speedups depend on shapes, hardware, and kernels; attention is not universally memory-bound.
 
 <!-- widget:tx-flash -->
+
+<!-- paper-figure:flashattention-tiling -->
 
 Switch to “Standard attention” and watch the two $n\times n$ matrices S and P being written out in full; switch back and notice the upper-right blocks that the causal mask lets it skip entirely.
 

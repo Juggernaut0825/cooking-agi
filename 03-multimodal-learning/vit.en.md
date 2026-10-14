@@ -8,6 +8,8 @@ In a street photo, you notice cars, people, and traffic lights. A model initiall
 
 Keep patching separate from understanding. After this note, [CLIP](clip.en.md) shows why an image encoder's architecture and its training objective are different choices.
 
+<!-- paper-figure:vit-overview -->
+
 ## First count the tokens
 
 Assume a $224\times224$ RGB image, $16\times16$ non-overlapping patches, and no padding:
@@ -65,6 +67,8 @@ assert embeddings == [[3.5, 1.0], [5.5, 1.0], [11.5, 1.0], [13.5, 1.0]]
 ```
 
 The example exposes a limitation: different patches can collapse to the same two features. `[1, 2, 5, 6]` and `[2, 3, 4, 5]` both produce `[3.5, 1.0]`. Later attention cannot recover that lost distinction from these two numbers alone.
+
+<!-- widget:step-vit-patches -->
 
 A convolution with kernel size and stride equal to patch size commonly implements patch projection. Without overlap, this corresponds to applying the same linear map to every patch. Follow `embedding`, reshape, `cls`, and `Transformer` in the [official ViT implementation](https://github.com/google-research/vision_transformer/blob/main/vit_jax/models_vit.py) to trace the shapes.
 

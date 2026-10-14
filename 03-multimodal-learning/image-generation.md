@@ -49,6 +49,8 @@ $$
 
 拿一维数值算一次：噪声为 2，目标为 10，在 $t=0.25$ 时位置为 4，目标速度为 8。若模型预测 6，平方误差是 4；按步长 0.1 做一次 Euler 更新，位置变为 4.6。真实模型处理的是高维张量，预测速度也会随位置和时间变化。
 
+<!-- widget:step-flow-matching -->
+
 ```python
 def linear_flow_example(noise, clean, time, prediction, step):
     if not 0 <= time <= 1 or not 0 <= step <= 1 - time:

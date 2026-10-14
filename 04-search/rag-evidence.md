@@ -10,6 +10,8 @@
 
 RAG 把外部检索结果接入生成过程。原始 [RAG 论文](https://arxiv.org/abs/2005.11401)研究了稠密检索与生成模型的组合；工程中不必只用向量，也可以查关键词、结构化数据库或混合检索。下面关注的是证据怎样一路传到答案里，而不是选哪个框架。
 
+<!-- paper-figure:rag-overview -->
+
 ## 1. 一条答案要经过哪些检查？
 
 ```text
@@ -60,6 +62,8 @@ RAG 把外部检索结果接入生成过程。原始 [RAG 论文](https://arxiv.
 | Reciprocal rank@3 | 1/2 | 第一篇相关文档排在哪里？ |
 
 Precision 与 Recall 这次恰好相同。如果相关集合改成 `{C}`，前者仍为 1/3，后者变成 1。Hit@K 不是 Precision@K，MRR 则是多个查询 reciprocal rank 的平均，不是单条查询的另一个名字。[信息检索教材的指标定义](https://nlp.stanford.edu/IR-book/html/htmledition/evaluation-of-ranked-retrieval-results-1.html)
+
+<!-- widget:step-retrieval-metrics -->
 
 ```python
 def retrieval_metrics(ranked_ids, relevant_ids, cutoff):
