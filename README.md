@@ -36,7 +36,7 @@ Choose for the topic, not your job title. You might know systems well and still 
 
 1. **Pick something you want to understand.** Use a route above, or the [topic guide](learn/choose-your-path.en.md). You don't need to read the site in order.
 2. **Follow the example, then try it.** Work through a calculation or run the code. Continue to the derivation and tradeoffs when you want more detail. We're still improving this progression in some chapters.
-3. **Keep your place.** “My preparation” on each note saves your status and reminders. The [study dashboard](interview/dashboard.en.md) brings your plan and records together. No account or fork is needed. Records stay in this browser; [export a JSON backup](interview/study-plan.en.md#backups) to keep a copy or move devices.
+3. **Keep your place.** Choose “Save this page” under a note's title, and find it later under “My reading” at the top right; a note reopens where you stopped. No account or fork is needed. Records stay in this browser; [export a JSON backup](interview/study-plan.en.md#backups) to keep a copy or move devices.
 
 Time estimates mean focused learning time, not a daily target. Split a session if you need to; there is no streak to maintain.
 
@@ -64,7 +64,7 @@ For practice, head to [ML coding](learn/ml-exercises/README.en.md), [Python](int
 
 **Still being worked on:** some explanations and source comparisons need more review. The [coverage and backlog](learn/coverage.en.md) separates material that exists from material that has been checked. Small tested examples are not claims of full-model training or benchmark reproduction.
 
-**Next up: the v1.0 study workspace.** Planning sessions, keeping notes, and backing up progress are the focus. See [release scope](community/updates.en.md) and the [roadmap](community/roadmap.en.md). CV, autonomous driving, edge deployment, simulation, and robotics are proposed areas for future contributions, not complete courses yet.
+**Next up: v1.0 interview prep.** Preparation routes and exercises are the focus, with simple saved notes and reading history. See [release scope](community/updates.en.md) and the [roadmap](community/roadmap.en.md). CV, autonomous driving, edge deployment, simulation, and robotics are proposed areas for future contributions, not complete courses yet.
 
 <span id="_3"></span>
 

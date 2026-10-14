@@ -9,7 +9,6 @@ from urllib.parse import unquote, urljoin, urlsplit
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import build
 import paritycheck
-import prep_workspace
 
 
 class Markup(HTMLParser):
@@ -44,13 +43,6 @@ class ReleaseRoadmapTests(unittest.TestCase):
         self.assertFalse(any(category['home'] in {'community/roadmap.md', 'community/updates.md'}
                              for category in nav['category']))
 
-    def test_release_route_counts_match_catalog(self):
-        with patch.dict(build.NAV), patch.dict(build.BY_SRC):
-            build.discover(build.load_nav())
-            routes = prep_workspace.load_routes(build.BY_SRC)
-            self.assertEqual(len(routes), 8)
-            self.assertEqual(sum(len(route['steps']) for route in routes), 24)
-
     def test_public_entry_points_link_to_the_version_and_plan(self):
         for filename, suffix in (('README.md', '.en'), ('README.zh.md', '')):
             source = (build.ROOT / filename).read_text()
@@ -64,9 +56,6 @@ class ReleaseRoadmapTests(unittest.TestCase):
             self.assertIn(f'(roadmap{suffix}.md)', source)
             self.assertIn(f'(updates{suffix}.md)', source)
             self.assertIn('<span id="review"></span>', source)
-            dashboard = (build.ROOT / f'interview/dashboard{suffix}.md').read_text()
-            self.assertIn(f'href="../community/roadmap{suffix}.md"', dashboard)
-            self.assertIn(f'href="../community/updates{suffix}.md"', dashboard)
 
     def test_rendered_local_links_and_anchors_resolve_in_both_languages(self):
         with patch.dict(build.NAV), patch.dict(build.BY_SRC):

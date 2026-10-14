@@ -116,12 +116,6 @@
 .reader-hub-button { width: 100%; margin: .2rem 0 .4rem; padding: .7rem .9rem; border: 0; border-radius: 12px; background: var(--ink); color: var(--paper); font: 500 .85rem/1 var(--body); cursor: pointer; }
 
 /* Saved tab: the current page with a save toggle, then the list. */
-.reader-hub-current { display: flex; align-items: center; gap: .8rem; padding: .8rem .85rem; border-radius: 16px; background: var(--rh-surface); box-shadow: inset 0 0 0 1px var(--rh-line); }
-.reader-hub-current .reader-hub-live-text { flex: 1; }
-.reader-hub-save { display: inline-flex; flex: none; align-items: center; gap: .35rem; padding: .48rem .8rem; border: 0; border-radius: 999px; background: var(--ink); color: var(--paper); font: 600 .78rem/1 var(--body); cursor: pointer; }
-.reader-hub-save svg path { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; }
-.reader-hub-save.is-on { background: color-mix(in srgb, var(--rh-accent) 16%, transparent); color: var(--rh-accent-text); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rh-accent) 55%, transparent); }
-.reader-hub-save.is-on svg path { fill: currentColor; }
 
 /* Grouped rows, as in most settings screens. */
 .reader-hub-group-head { display: flex; align-items: baseline; justify-content: space-between; margin: 1.15rem .2rem .45rem; }
@@ -135,12 +129,16 @@
 .reader-hub-setting-text { min-width: 0; }
 .reader-hub-setting strong { display: block; font-weight: 500; font-size: .88rem; }
 .reader-hub-setting small { display: block; margin-top: .2rem; color: var(--muted); font-size: .72rem; line-height: 1.5; }
-.reader-hub-setting.is-link, .reader-hub-setting.is-danger { cursor: pointer; transition: background .15s ease; }
-.reader-hub-setting.is-link:hover, .reader-hub-setting.is-danger:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.reader-hub-setting.is-danger { cursor: pointer; transition: background .15s ease; }
+.reader-hub-setting.is-danger:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+/* backup: export and import sit in the settings row itself */
+.reader-hub-backup { display: flex; flex: none; gap: .4rem; }
+.reader-hub-chip { padding: .45rem .8rem; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--ink); font: 600 .76rem/1 var(--body); cursor: pointer; transition: background .15s ease, color .15s ease; }
+.reader-hub-chip:hover { background: color-mix(in srgb, var(--rh-accent) 16%, transparent); color: var(--rh-accent-text); }
+.reader-hub-chip:focus-visible { outline: 2px solid var(--rh-accent); outline-offset: 2px; }
 .reader-hub-setting.is-danger strong { color: #ff8a6a; }
 :root[data-theme="light"] .reader-hub-setting.is-danger strong { color: #b8361a; }
 .reader-hub-setting.is-armed { background: color-mix(in srgb, #e5532e 10%, transparent); }
-.reader-hub-chevron { flex: none; color: var(--muted); font-size: 1.3rem; line-height: 1; }
 .reader-hub-switch { position: relative; flex: none; width: 42px; height: 24px; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--ink) 22%, transparent); cursor: pointer; transition: background .2s ease; }
 .reader-hub-switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--paper); transition: transform .2s ease; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
 .reader-hub-switch[aria-checked="true"] { background: var(--rh-accent); }

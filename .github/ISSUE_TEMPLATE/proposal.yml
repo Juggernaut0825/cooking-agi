@@ -10,7 +10,7 @@ body:
     attributes:
       label: 方向（可选）· Direction (optional)
       options:
-        - 学习台与面试准备 · Study dashboard & interview prep
+        - 面试准备与阅读记录 · Interview prep & reading records
         - 现有笔记与讲解 · Existing notes & explanations
         - 计算机视觉 · Computer vision
         - 自动驾驶 · Autonomous driving

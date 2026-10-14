@@ -4,7 +4,7 @@ import prep_progress
 
 
 def panel(page, root):
-    if page.kind in {"home", "index", "project"} or page.src.name in {"dashboard.md", "dashboard.en.md"}:
+    if page.kind in {"home", "index", "project"}:
         return ""
     source = page.src.relative_to(root).as_posix().replace(".en.md", ".md")
     note = prep_progress.identifier(source)
@@ -24,15 +24,14 @@ def panel(page, root):
         "These are approximate counts, not unique people. Activity before counting was enabled cannot be recovered.")
     privacy = (
         "默认不参与。开启后，只提交后续阅读和手动收藏操作，使用每篇独立的随机标识；"
-        "不上传旧阅读记录、学习计划、笔记或备份。关闭后停止提交，不影响本地收藏。"
+        "不上传旧阅读记录、收藏列表或备份。关闭后停止提交，不影响本地收藏。"
         if chinese else
         "Off by default. Opting in sends only subsequent reads and manual save actions, using a separate random identifier for each note. "
-        "Past reading history, study plans, notes, and backups are not uploaded. Turning this off stops submissions without changing local bookmarks.")
+        "Past reading history, saved lists, and backups are not uploaded. Turning this off stops submissions without changing local bookmarks.")
     return (
         f'<section id="note-metrics" class="note-metrics" data-note-metrics="{html.escape(note, quote=True)}" '
         f'aria-label="{"本篇阅读与收藏" if chinese else "Reads and saves for this note"}">'
-        f'<div class="note-metrics-heading"><span>{"阅读与收藏" if chinese else "Reads & saves"}</span>'
-        f'<button type="button" data-side-save aria-pressed="false" hidden>{"收藏本页" if chinese else "Save this page"}</button></div>'
+        f'<div class="note-metrics-heading"><span>{"阅读与收藏" if chinese else "Reads & saves"}</span></div>'
         f'<dl class="note-metrics-values">{values}</dl>'
         f'<p class="note-metrics-status" data-metrics-status role="status" aria-live="polite">'
         f'{"公开统计尚未启用" if chinese else "Public counts are not enabled yet"}</p>'

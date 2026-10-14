@@ -226,3 +226,17 @@ test('the shared store accepts these records and rejects malformed ones', () => 
     assert.throws(() => store.parse(JSON.stringify(value)));
   }
 });
+
+test('an older bookmarks-only file maps known paths to saved notes and touches nothing else', () => {
+  const notes = {[NOTE_A]: {source: 'a.md'}, [NOTE_B]: {source: 'b.md'}};
+  const file = saved => ({format: 'cooking-agi-bookmarks', version: 1, saved});
+  const current = {['bookmark-' + NOTE_A]: {saved: true, updatedAt: AT}};
+  const changes = hub.legacyBookmarks(file(['a.md', 'b.md', 'b.md', 'removed.md', {}, null, '__proto__']), notes, current, AT);
+  assert.deepEqual(changes, {['bookmark-' + NOTE_B]: {saved: true, updatedAt: AT}});
+  assert.deepEqual(current, {['bookmark-' + NOTE_A]: {saved: true, updatedAt: AT}});
+  assert.deepEqual(hub.legacyBookmarks(file(Array(1500).fill('b.md')), notes, {}, AT), {['bookmark-' + NOTE_B]: {saved: true, updatedAt: AT}});
+  assert.deepEqual(hub.legacyBookmarks(file(['a.md']), null, {}, AT), {});
+  for (const other of [null, {}, {format: 'cooking-agi-prep-progress'}, {format: 'cooking-agi-bookmarks', saved: 'a.md'}]) {
+    assert.equal(hub.legacyBookmarks(other, notes, {}, AT), null);
+  }
+});

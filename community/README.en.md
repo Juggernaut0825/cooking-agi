@@ -8,7 +8,7 @@ These started as one person's study notes. We're opening them up for more people
 
 ## Where to start
 
-For a concrete small task, see the [roadmap](roadmap.en.md). This version focuses on interview preparation and the study dashboard; future proposals can cover CV, autonomous driving, Jetson, simulation, and robotics. [Updates](updates.en.md) distinguishes proposed releases from published ones.
+For a concrete small task, see the [roadmap](roadmap.en.md). This version focuses on interview preparation; future proposals can cover CV, autonomous driving, Jetson, simulation, and robotics. [Updates](updates.en.md) distinguishes proposed releases from published ones.
 
 | What you want to do | First step |
 | --- | --- |

@@ -21,7 +21,7 @@ python site/build.py
 git diff --check
 ```
 
-Check generated local links and anchors. Record counts, skips, errors, and the tested commit or local diff in `CONTENT_RELEASE_CHECKLIST.md`; do not reuse a previous run's numbers as evidence for new changes. Follow `STUDY_WORKSPACE.md` for browser checks. Use an isolated origin and synthetic records, never someone's real progress. Include an actual backup round-trip, old backup compatibility, mobile layouts, both themes and languages, and no-JavaScript reading links.
+Check generated local links and anchors. Record counts, skips, errors, and the tested commit or local diff in `CONTENT_RELEASE_CHECKLIST.md`; do not reuse a previous run's numbers as evidence for new changes. Follow the browser checks in `PREP_PROGRESS.md`. Use an isolated origin and synthetic records, never someone's real records. Include an actual backup round-trip, an old backup and an old bookmarks file, mobile layouts, both themes and languages, and no-JavaScript reading links.
 
 No GPU or hardware performance claim follows from these CPU/site tests. Semantic review, rights checks, and current primary sources remain separate tasks. An AI report is advisory, not a CODEOWNER approval.
 
@@ -30,7 +30,7 @@ No GPU or hardware performance claim follows from these CPU/site tests. Semantic
 1. Read the latest remote main, existing PRs, tags, releases, and protection state. Don't append new work to a merged PR, reuse an existing tag, rewrite shared history, or sweep another author's changes into a release.
 2. Open a scoped PR with the proposed version, summary, test results, known limits, and data-compatibility note. Follow the repository's human review rules and required CI. No automatic admin bypass.
 3. Merge through the normal review process. Record the **actual merge SHA**, not the old branch tip. Confirm the Pages workflow for that SHA succeeds, including deploy, rather than checking an unrelated scheduled run.
-4. Check the public dashboard and a paired article at the deployed URL. Create the version tag and GitHub release at that verified SHA, with explicit notes on additions, fixes, limitations, and backup compatibility. Use an explicit target SHA when creating a release. Avoid making `latest` claims for a draft or prerelease.
+4. Check the interview-prep page, the reading drawer and a paired article at the deployed URL. Create the version tag and GitHub release at that verified SHA, with explicit notes on additions, fixes, limitations, and backup compatibility. Use an explicit target SHA when creating a release. Avoid making `latest` claims for a draft or prerelease.
 5. Update both public release pages and README status links to the actual release URL and date in a follow-up docs PR, then verify that deployment too. A short delay in marking a verified release is safer than claiming a pending release shipped.
 
 PR checks, Pages deployment, and a GitHub release are three different states. If any stage is pending or fails, report that state and keep the release marked unreleased. Do not manufacture an approval, hide an exception, or treat this checklist as authorization to publish.
@@ -39,9 +39,9 @@ PR checks, Pages deployment, and a GitHub release are three different states. If
 
 Use patch versions for corrections and compatible fixes; minor versions for complete features and reviewed routes; major versions for incompatible user-facing changes. Ordinary note edits may ship between named releases. Historical release entries describe their snapshot; newer changes get a new entry rather than silently rewriting the old claims.
 
-Progress has its own schema version. A site release must not bump it just to match a tag. Preserve stable note IDs when renaming files and keep old backup fixtures. Schema changes need migration and rollback tests, including unknown chapter records and optional schedule fields. Readers' saved tasks must not be rewritten by route updates.
+Progress has its own schema version. A site release must not bump it just to match a tag. Preserve stable note IDs when renaming files and keep old backup fixtures. Schema changes need migration and rollback tests, including unknown chapter records and the optional fields older builds wrote (statuses, memos, schedules), which are kept even though nothing shows them.
 
-Review `content-updates.json` separately from the release number. A substantive addition or correction increments the content edition and the affected note's revision, with a short bilingual summary. New learning notes also register their introduction edition; the build rejects unregistered notes. Wording, translation polish, layout and navigation changes do not increment a content revision. Test a followed topic against the previous catalog: new notes enter an undated queue, old records retain their status, and cosmetic edits stay quiet. See `PREP_PROGRESS.md` for the data contract and recovery boundaries.
+See `PREP_PROGRESS.md` for the data contract and recovery boundaries.
 
 ## If a release is broken
 

@@ -4,25 +4,22 @@
 
 This page records what belongs to each version. Future work lives in the [roadmap](roadmap.en.md). For edits to a particular article, use its source link and repository history.
 
-## v1.0.0 · Study workspace {#v1-0-0}
+## v1.0.0 · Interview prep {#v1-0-0}
 
 **Unreleased · This is the proposed release scope, not a launch announcement.** Formal versions are identified by tags and commits in [GitHub Releases](https://github.com/tianyi-zhang-02/cooking-agi/releases). Merging a PR, deploying the website, and creating a release are separate steps.
 
-This version addresses a practical problem: a growing library still doesn't tell you what to study today. It connects preparation routes, a personal schedule, and your notes. You can continue using the site purely as a reference if you prefer.
+This version addresses a practical problem: a growing library still doesn't tell you what to study today. It connects preparation routes, practice sets, and your own reading records. You can continue using the site purely as a reference if you prefer.
 
 ### What's included
 
-- **A separate study dashboard:** overview, schedule, routes, updates/settings, and notes with backups, linked to the main library.
-- **Two starting points:** introductory and review routes for ML / LLMs, post-training, inference systems, and algorithms. Eight routes contain 24 suggested exercises; timings are planning aids.
-- **Your own schedule:** nonconsecutive dates, different durations, rescheduling, and optional records of actual study time. No daily check-in requirement.
-- **Portable progress:** study records, sessions, bookmarks, reading positions and settings in one JSON backup, with an import preview and up to three browser recovery copies.
-- **Content updates:** new notes in followed topics join an undated queue by default, with an opt-out. Only substantive revisions trigger notices; presentation edits do not change your schedule or study status.
+- **One save button, one reading panel:** “Save this page” sits under a note's title. “My reading” at the top right shows which notes you read today and how often, alongside saved notes, settings, and backups. The separate study dashboard tried earlier is folded into it, and old links lead to the interview-prep page.
+- **Two starting points:** introductory and review routes for ML / LLMs, post-training, inference systems, and algorithms. Eight sets hold 24 exercises, collected in the [study plan](../interview/study-plan.en.md#routes); timings are planning aids.
+- **Portable records:** saved notes, reading history, and reading positions in one JSON backup; importing merges, keeping the newer copy of each record.
 - **Technology world tree:** how power, chips, software, data and models each developed and where they met, with 143 milestones and 59 sourced connections arranged by period. Hover to see connections, or select a field to follow one line. It is a scoped selection, not a complete history.
-- **Reading history and saved notes:** the "Mine" panel in the top bar shows which notes you read today and how often, alongside saved notes and settings. Records stay in this browser and travel with the progress backup.
 - **New notes:** data and supervision, RL methods and costs, and inference framework internals. These are scoped learning materials, not measured GPU benchmarks.
 - **A way to contribute:** bilingual usage guides, a public roadmap, categorized feedback, contribution and licensing guidance. Optional AI review assistance does not approve or publish changes.
 
-[Open the dashboard](../interview/dashboard.en.md) · [Choose a preparation route](../interview/README.en.md) · [Find a contribution](roadmap.en.md#contribute)
+[Choose a preparation route](../interview/README.en.md) · [Find a contribution](roadmap.en.md#contribute)
 
 ### Records and upgrades
 
@@ -32,16 +29,15 @@ This is not cloud sync. Export and import when changing devices, browsers, or or
 
 ### Known limits
 
-- The dashboard covers the four topics above. CV, autonomous driving, Jetson, physical simulation, and robotics are proposed extensions, not completed routes.
-- Finishing a session does not establish understanding. There is no automatic grading, ability prediction, or offer guarantee.
-- Route updates do not rewrite saved tasks. Whole-route completion tracking is not implemented.
+- Preparation routes cover the four topics above. CV, autonomous driving, Jetson, physical simulation, and robotics are proposed extensions, not completed routes.
+- Reading or saving a note does not establish understanding. There is no automatic grading, ability prediction, or offer guarantee.
 - There are no accounts, cloud sync, offline caching, or paid services. Export promptly if browser storage is unavailable; it is not permanent archival storage.
 - Automated checks and browser spot-checks do not establish independent review of every technical claim or completion of GPU or hardware experiments.
 
 ### Before the release
 
 1. Review the complete diff for private information, unlicensed material, and drafts meant only for social media; confirm the licensing scope of earlier contributions.
-2. Run tests, bilingual, build, and link checks; exercise saving, restoration, language switching, and mobile layout in the dashboard.
+2. Run tests, bilingual, build, and link checks; exercise saving, backup export and import, language switching, and mobile layout.
 3. Complete PR review and resolve outstanding issues. Neither AI review assistance nor passing CI substitutes for human approval.
 4. After merging, verify the Pages deployment for that commit, then create its tag and release and update this page to the published state.
 

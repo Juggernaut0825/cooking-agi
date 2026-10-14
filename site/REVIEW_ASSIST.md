@@ -113,7 +113,7 @@ For a future GitHub integration, start with maintainer-triggered runs on trusted
 
 ## Separate planning system: design only
 
-The shared boundaries and proposed planning contract are in [AGENT_SYSTEMS.md](AGENT_SYSTEMS.md). The dashboard's editable route preview is deterministic; it does not invoke planning agents.
+The shared boundaries and proposed planning contract are in [AGENT_SYSTEMS.md](AGENT_SYSTEMS.md). The preparation routes are plain pages; nothing on the site invokes planning agents.
 
 Content review is implemented first. A future planning system should consume an explicitly supplied goal, time budget, constraints, and public resource catalog—not browser records or inferred personal progress. Keep its roles separate: a prerequisite mapper proposes dependencies with resource references; a sequencer proposes milestones and order; a feasibility critic checks workload, missing prerequisites, and alternatives.
 

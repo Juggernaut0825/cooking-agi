@@ -26,7 +26,7 @@ Default execution is local request preparation. Remote review requires an explic
 
 ## 2. Planning assistance — design, not a live model feature
 
-The dashboard already works without AI. Route selection, editable date/minute previews and explicit saving are deterministic. A model would only be useful for suggesting a route when a person's goals do not fit those choices—not for adding a chat box to every button.
+Preparation already works without AI: the routes and exercises are plain pages, and saving a note is one button. A model would only be useful for suggesting a route when a person's goals do not fit those choices—not for adding a chat box to every button.
 
 | Role | Input | Output | Must not do |
 | --- | --- | --- | --- |
