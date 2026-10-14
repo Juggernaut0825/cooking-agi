@@ -478,6 +478,9 @@
     const caption = h('p', {class: 'fig-caption algo-caption', 'aria-live': 'polite'});
     const count = h('span', {class: 'algo-count'});
     const button = (label, aria, on) => h('button', {type: 'button', class: 'tx-btn algo-btn', 'aria-label': aria, text: label, on: {click: on}});
+    // one frame and no modes: a still diagram, no controls; one frame per mode: only the switch
+    const still = !modes && list.length === 1;
+    const flat = Boolean(modes) && modes.every(mode => mode.frames.length === 1);
     let index = 0, timer = null;
     const play = button('▶', t('播放', 'Play'), () => (timer ? stop() : start()));
     const prev = button('◀', t('上一步', 'Previous step'), () => { stop(); go(index - 1); });
@@ -504,8 +507,8 @@
       play.textContent = '▶';
       play.setAttribute('aria-label', t('播放', 'Play'));
     }
-    root.tabIndex = -1;
-    root.addEventListener('keydown', event => {
+    if (!still) root.tabIndex = -1;
+    if (!still) root.addEventListener('keydown', event => {
       if (event.target.closest('button') && event.key === ' ') return;
       if (event.key === 'ArrowRight') { stop(); go(index + 1); event.preventDefault(); }
       if (event.key === 'ArrowLeft') { stop(); go(index - 1); event.preventDefault(); }
@@ -522,9 +525,11 @@
       }}}));
       group.append(...buttons);
       controls.prepend(group);
+      if (flat) [reset, prev, play, next, count].forEach(node => node.remove());
     }
+    root.classList.toggle('is-still', still);
     body.append(
-      controls,
+      ...(still ? [] : [controls]),
       h('div', {class: 'fig-stage'}, [h('div', {class: 'fig-scroll algo-scroll'}, [svg])]),
       h('div', {class: 'fig-foot'}, [caption]));
     go(0);

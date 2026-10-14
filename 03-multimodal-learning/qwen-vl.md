@@ -35,6 +35,8 @@ $$N_{visual}=\frac{H}{28}\frac{W}{28}.$$
 
 这些是便于手算的输入，不是推荐的线上分辨率。公式不含文字、边界标记或视频的时间维；应以 processor 实际输出的 grid 和序列为准。
 
+<!-- widget:step-qwen-merge -->
+
 ```python
 def merged_image_tokens(height, width, patch_size=14, merge_size=2):
     dimensions = (height, width, patch_size, merge_size)

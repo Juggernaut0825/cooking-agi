@@ -66,6 +66,8 @@ assert embeddings == [[3.5, 1.0], [5.5, 1.0], [11.5, 1.0], [13.5, 1.0]]
 
 The example exposes a limitation: different patches can collapse to the same two features. `[1, 2, 5, 6]` and `[2, 3, 4, 5]` both produce `[3.5, 1.0]`. Later attention cannot recover that lost distinction from these two numbers alone.
 
+<!-- widget:step-vit-patches -->
+
 A convolution with kernel size and stride equal to patch size commonly implements patch projection. Without overlap, this corresponds to applying the same linear map to every patch. Follow `embedding`, reshape, `cls`, and `Transformer` in the [official ViT implementation](https://github.com/google-research/vision_transformer/blob/main/vit_jax/models_vit.py) to trace the shapes.
 
 ## CLS is not a label, and positions are not decoration

@@ -564,14 +564,28 @@ ALGO_LAB = [
     ("algo-append", "摊还：偶尔很贵，平均很便宜", "Amortized: occasionally expensive, cheap on average"),
     ("algo-knapsack", "背包：更新顺序决定能拿几次", "Knapsack: update order decides how many copies"),
 ]
-for _name, _zh, _en in ALGO_LAB:
+# Chapter figures (also static/algo-lab.js): one per idea where a picture helps.
+# kind "step" = a stepper, "still" = a single diagram without controls.
+FIGURE_LAB = [
+    ("step-contrastive", "一次对比训练：分数 → 概率 → 损失 → 梯度", "One contrastive step: scores → probabilities → loss → gradients", "step"),
+    ("step-embedding-swap", "维度一样，坐标不一定对得上", "Same dimension, different coordinates", "step"),
+    ("step-rrf", "RRF：只看名次，把两路结果合起来", "RRF: fuse two lists by rank alone", "step"),
+    ("step-retrieval-metrics", "同一份结果，四个指标各问什么", "One result list, four questions", "step"),
+    ("step-pq", "PQ：查表再相加，得到近似距离", "PQ: look up and add to get an approximate distance", "step"),
+    ("step-vit-patches", "ViT：切块、展平、投影", "ViT: patch, flatten, project", "step"),
+    ("step-qwen-merge", "14 像素切块，再 2×2 合并", "14-pixel patches, then a 2×2 merge", "step"),
+    ("step-qformer-masks", "Q-Former 的三种可见性", "Q-Former's three visibility masks", "still"),
+    ("step-flow-matching", "Flow matching：在数轴上走一步", "Flow matching on a number line", "step"),
+]
+for _name, _zh, _en, _kind in [(name, zh, en, "step") for name, zh, en in ALGO_LAB] + FIGURE_LAB:
+    _kicker = 'data-zh="动画" data-en="Step by step"' if _kind == "step" else 'data-zh="图解" data-en="Diagram"'
     WIDGETS[_name] = f"""
 <figure class="widget tx-lab algo-lab" id="{_name}" data-widget="{_name}">
   <figcaption class="widget-head">
-    <span class="widget-kicker" data-zh="动画" data-en="Step by step"></span>
+    <span class="widget-kicker" {_kicker}></span>
     <span class="widget-title" data-zh="{_zh}" data-en="{_en}"></span>
   </figcaption>
-  <div class="widget-body"><p class="tx-fallback" data-zh="这张动画需要启用 JavaScript。" data-en="This step-by-step figure needs JavaScript."></p></div>
+  <div class="widget-body"><p class="tx-fallback" data-zh="这张图需要启用 JavaScript。" data-en="This figure needs JavaScript."></p></div>
 </figure>
 """
 

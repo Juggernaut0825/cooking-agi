@@ -66,6 +66,8 @@ assert embeddings == [[3.5, 1.0], [5.5, 1.0], [11.5, 1.0], [13.5, 1.0]]
 
 这里也能看到一个限制：只有这两个特征时，一些不同的小块会得到相同结果。例如 `[1, 2, 5, 6]` 和 `[2, 3, 4, 5]` 都输出 `[3.5, 1.0]`。后面的注意力无法从这两个数中恢复被丢掉的差异。
 
+<!-- widget:step-vit-patches -->
+
 实际实现通常用 kernel size 和 stride 都等于 patch size 的卷积完成切块投影；没有重叠时，它与逐块使用同一个线性映射对应。读 [ViT 官方实现](https://github.com/google-research/vision_transformer/blob/main/vit_jax/models_vit.py) 时，可以顺着 `embedding`、reshape、`cls`、`Transformer` 看形状变化。
 
 ## CLS 不是标签，位置向量也不是装饰

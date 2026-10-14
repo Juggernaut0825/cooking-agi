@@ -653,9 +653,10 @@
   }
 
   /* ---- Algorithm lab ---------------------------------------------------------
-     Step-by-step figures for the LeetCode notes (static/algo-lab.js). They reuse the
+     Step-by-step figures for the LeetCode notes (static/algo-lab.js) and the chapter
+     figures built on it (static/figure-lab.js). They reuse the
      Transformer lab's figure chrome, so tx-lab.css comes along. */
-  if ($('[data-widget^="algo-"]')) {
+  if ($('[data-widget^="algo-"], [data-widget^="step-"]')) {
     var algoBase = ((window.SITE && window.SITE.prefix) || "") + "static/";
     var algoVer = "?v=" + ((window.SITE && window.SITE.built) || "");
     ["tx-lab.css", "algo-lab.css"].forEach(function (file) {
@@ -664,9 +665,15 @@
       link.rel = "stylesheet"; link.href = algoBase + file + algoVer;
       document.head.appendChild(link);
     });
-    var algoJs = document.createElement("script");
-    algoJs.src = algoBase + "algo-lab.js" + algoVer;
-    document.body.appendChild(algoJs);
+    // chapter figures draw with algo-lab's stepper, so keep the two scripts in order
+    var algoScripts = ["algo-lab.js"];
+    if ($('[data-widget^="step-"]')) algoScripts.push("figure-lab.js");
+    algoScripts.forEach(function (file) {
+      var script = document.createElement("script");
+      script.src = algoBase + file + algoVer;
+      script.async = false;
+      document.body.appendChild(script);
+    });
   }
 
   $$('[data-widget="xor"]').forEach(function (root) {

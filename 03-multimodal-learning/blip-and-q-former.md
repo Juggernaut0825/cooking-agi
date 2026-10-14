@@ -128,6 +128,8 @@ assert generation_mask[3] == [True, True, True, True, False]
 
 它只演示 query/text 的 self-attention，不包括读图的 cross-attention、padding 和真正的 Transformer。把 ITG 改成全双向后，训练 loss 可能更低，却是在用推理时拿不到的未来文字答题。
 
+<!-- widget:step-qformer-masks -->
+
 ITC 的相似度还要处理“多个 query 对一个文本”。[官方实现](https://github.com/salesforce/LAVIS/blob/main/lavis/models/blip2_models/blip2_qformer.py)先算每个 query 与文本的相似度，再取最大值；ITM 则平均各 query 的二分类 logits。假设两个 query 的配对分数为 `[0.8, 0.1]`：max 是 0.8，mean 是 0.45。它们表达的偏好不同，不能顺手替换；这些分数也不意味着 query 已经学成两个明确的物体槽。
 
 ## InstructBLIP：先告诉它要看什么

@@ -63,6 +63,8 @@ For one query, suppose the fully judged relevant set is `{A, C, E}`, and the top
 
 Precision and recall happen to agree here. Change the relevant set to `{C}`: precision stays at 1/3, while recall becomes 1. Hit@K is not Precision@K. MRR averages reciprocal rank over queries; it is not another name for a single query's score. [Information-retrieval textbook definitions](https://nlp.stanford.edu/IR-book/html/htmledition/evaluation-of-ranked-retrieval-results-1.html)
 
+<!-- widget:step-retrieval-metrics -->
+
 ```python
 def retrieval_metrics(ranked_ids, relevant_ids, cutoff):
     if cutoff <= 0:

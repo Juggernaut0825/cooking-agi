@@ -79,6 +79,8 @@ assert adc_squared_distance(query_parts, codebooks, [2, 1]) == 14.0
 
 Code `[1, 1]` reconstructs `[1, 1, 3, 3]`, giving `0² + 1² + 0² + 1² = 2`. A real scan builds a query-specific table of distances to each subspace's codewords, then sums the entries selected by each stored code.
 
+<!-- widget:step-pq -->
+
 **The IDs themselves carry no geometry.** Relabel a codebook and update the stored IDs consistently: reconstructions and ADC distances stay unchanged, while Hamming distances between the binary IDs may change. [Polysemous Codes](https://arxiv.org/abs/1609.01882) specifically learns a code assignment suitable for Hamming prefiltering. Ordinary PQ IDs do not acquire that property automatically.
 
 ## 4. IVF-PQ introduces two sources of approximation

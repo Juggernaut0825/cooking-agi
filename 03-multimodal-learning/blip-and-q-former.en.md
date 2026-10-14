@@ -128,6 +128,8 @@ assert generation_mask[3] == [True, True, True, True, False]
 
 This covers query/text self-attention only, excluding visual cross-attention, padding, and actual Transformer computation. Making ITG fully bidirectional could lower training loss by exposing words unavailable at inference.
 
+<!-- widget:step-qformer-masks -->
+
 Multiple queries also need a scoring rule. The [official implementation](https://github.com/salesforce/LAVIS/blob/main/lavis/models/blip2_models/blip2_qformer.py) takes the maximum query–text similarity for ITC; ITM averages per-query two-class logits. For invented scores `[0.8, 0.1]`, max gives 0.8 and mean gives 0.45. These aggregation rules express different preferences and are not interchangeable. Neither establishes that queries have become identifiable object slots.
 
 ## InstructBLIP: tell the connector what to look for

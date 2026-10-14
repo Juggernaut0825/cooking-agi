@@ -108,6 +108,8 @@ Consider two dimensions. An old query is $(1,0)$, relevant document A is $(1,0)$
 
 Suppose a new model merely rotates every vector by 90 degrees. Its own retrieval is unchanged: new query $(0,1)$ scores 1 against new A $(0,1)$ and 0 against new B $(-1,0)$. But deploying only the new query encoder against the old index produces **0 for A and 1 for B**.
 
+<!-- widget:step-embedding-swap -->
+
 Real model changes are not just rotations. The example isolates one point: **equal dimensions do not imply compatible coordinates.** Re-encode documents and rebuild the index for the new model. Mixing versions requires a trained and validated compatibility method, not just a shape check.
 
 Keep a comparable configuration record beside the index:

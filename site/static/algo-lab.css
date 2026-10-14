@@ -56,6 +56,10 @@
 .algo-lab .algo-bar{fill:var(--c-q);opacity:.5;transition:y .4s ease,height .4s ease,opacity .3s ease}
 .algo-lab .algo-bar.is-tall{fill:var(--c-k);opacity:.75}
 .algo-lab .algo-bar.is-now{opacity:1}
+.algo-lab svg text.is-dim{opacity:.35}
+.algo-lab .algo-grid-fine line{stroke:var(--tx-line-strong);stroke-width:.6;opacity:.7}
+.algo-lab .algo-grid-coarse line{stroke:var(--c-k);stroke-width:1.4}
+.algo-lab .algo-grid-fine,.algo-lab .algo-grid-coarse{transition:opacity .3s ease}
 @media (prefers-reduced-motion: reduce){
   .algo-lab .algo-slide{transition:none}
   .algo-lab .algo-pointer,.algo-lab .algo-cell,.algo-lab .algo-band{transition:none}

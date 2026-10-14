@@ -35,6 +35,8 @@ $$N_{visual}=\frac{H}{28}\frac{W}{28}.$$
 
 These sizes simplify arithmetic; they are not serving recommendations. The formula excludes text, boundary markers, and video's temporal dimension. Inspect the processor's actual grids and sequences.
 
+<!-- widget:step-qwen-merge -->
+
 ```python
 def merged_image_tokens(height, width, patch_size=14, merge_size=2):
     dimensions = (height, width, patch_size, merge_size)
