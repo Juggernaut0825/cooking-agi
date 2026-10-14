@@ -2,7 +2,7 @@
 
 [中文](load-balancing.md) · **English**
 
-> Reading time: ~12 min · Level: advanced · Last reviewed: 2026-10-09
+> Reading time: ~12 min · Level: advanced · Last reviewed: 2026-10
 
 Top-k controls how many experts each token uses, not how many tokens each expert receives. Eight tokens can all choose the same two experts and leave the rest idle. Load balancing addresses that second problem.
 
@@ -36,7 +36,7 @@ $$\mathcal L_{\text{aux}} = \alpha \cdot N \cdot \sum_{i=1}^{N} f_i P_i$$
 - $P_i$: the mean router probability the batch gives to expert $i$, which does have a gradient;
 - $\alpha = 10^{-2}$.
 
-Multiplied together, the gradient reaches the router through $P_i$, and how hard it pushes is set by the real load $f_i$. At perfect balance $f_i = P_i = 1/N$ and the loss equals $\alpha$; this is a uniform reference value, not a strict lower bound over all routing distributions. [GShard](https://arxiv.org/abs/2006.16668) similarly multiplies assignment fractions by mean gates: one factor of the otherwise nondifferentiable squared fraction is replaced with a differentiable approximation. It does not differentiate the discrete count. The first sparsely-gated MoE used two coefficient-of-variation losses, one on importance and one on load.
+Because the two factors are multiplied, the gradient reaches the router through $P_i$, while the real load $f_i$ sets how hard it pushes. At perfect balance $f_i = P_i = 1/N$ and the loss equals $\alpha$; this is a uniform reference value, not a strict lower bound over all routing distributions. [GShard](https://arxiv.org/abs/2006.16668) similarly multiplies assignment fractions by mean gates: one factor of the otherwise nondifferentiable squared fraction is replaced with a differentiable approximation. It does not differentiate the discrete count. The first sparsely-gated MoE used two coefficient-of-variation losses, one on importance and one on load.
 
 ## A balanced batch can contain unbalanced sequences {#sequence-balance}
 
@@ -129,7 +129,7 @@ Underloaded does not mean idle. If two experts receive `[6, 2]` tokens, their ta
 
 It is not entirely free of balance losses: DeepSeek-V3 keeps a very small sequence-wise balance loss ($\alpha = 0.0001$) to prevent extreme imbalance inside a single sequence.
 
-Another route is Qwen3's global-batch balance loss: balance is computed over the global batch rather than each micro-batch, which lets experts specialise more locally.
+Another route is Qwen3's global-batch balance loss: balance is computed over the global batch rather than each micro-batch, which lets experts specialize more locally.
 
 ## Why can a selection-only bias change the output?
 

@@ -51,11 +51,11 @@ This function checks mixing only, not RMSNorm or query learning. It also exposes
 
 ## Why introduce blocks?
 
-Retaining and reading every preceding sublayer output adds depth-wise memory traffic. Block AttnRes groups consecutive sublayers: updates accumulate within a block, while attention operates across blocks. Sources include the embedding, completed block representations, and the current block's partial accumulation. Current updates do not disappear until the block finishes.
+Retaining and reading every preceding sublayer output adds depth-wise memory traffic. Block AttnRes groups consecutive sublayers: updates accumulate within a block, while attention operates across blocks. Sources include the embedding, completed block representations, and the current block's partial accumulation. Updates inside the current block take effect through that partial sum before the block finishes.
 
 A block here groups **depth**, not consecutive text positions. Attention and MLP count as separate sublayers in the paper; align this convention before comparing depth numbers.
 
-| Simplified cost for $L$ sublayers and $N$ blocks | Full AttnRes | Block AttnRes |
+| Simplified cost for $L$ sublayers, $N$ blocks, and hidden width $d$ | Full AttnRes | Block AttnRes |
 | --- | --- | --- |
 | Depth states retained per token | $O(Ld)$ | $O(Nd)$ |
 | Total mixing computation across layers | $O(L^2d)$ | $O(LNd)$ |

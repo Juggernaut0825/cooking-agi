@@ -2,7 +2,7 @@
 
 [中文](README.md) · **English**
 
-> Reading time: ~5 min · Level: advanced · Last reviewed: 2026-10-10
+> Reading time: ~5 min · Level: advanced · Last reviewed: 2026-10
 
 Suppose a layer stores eight equally sized FFNs but each token uses only two. Different tokens can access different parameters without running all eight each time. The eight sets of weights still need storage, and tokens may travel between devices. To understand MoE, separate what is stored from what is used on one pass.
 
@@ -58,7 +58,7 @@ This MoE does twice the work of a single same-width FFN, but one quarter of the 
 
 ## How this series reads
 
-1. [How the router picks experts](router.en.md): scores, top-k, renormalisation, and why early MoE added noise (interactive)
+1. [How the router picks experts](router.en.md): scores, top-k, renormalization, and why early MoE added noise (interactive)
 2. [Load balancing](load-balancing.en.md): why imbalance can develop; auxiliary losses, capacity, and bias adjustment (interactive)
 3. [Fine-grained and shared experts](fine-grained-and-shared.en.md): DeepSeekMoE's two changes, and what different labs chose
 4. [LatentMoE: must experts be as wide as the backbone?](latent-moe.en.md): distinguish three widths, work out parameter and communication costs, then examine Kimi K3

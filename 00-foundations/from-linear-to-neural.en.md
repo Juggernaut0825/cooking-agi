@@ -4,7 +4,7 @@
 
 Place four points at the corners of a square and give opposite corners the same label. No single line separates the classes. Stacking linear layers alone does not help: they still compose into one linear transform. We use this XOR example to see how nonlinear hidden layers change the representation.
 
-## A linear model's decision boundary is always a hyperplane {#a-linear-models-decision-boundary-is-always-a-hyperplane}
+## The structure first: hidden layers learn features, a linear head reads them out {#a-linear-models-decision-boundary-is-always-a-hyperplane}
 
 Start with a common classification network: **hidden layers learn features, and a linear classification head reads them out**. With a sigmoid for binary classification, this resembles logistic regression on learned features. It is a useful view for this chapter, not a required output structure for every neural network.
 
@@ -78,11 +78,11 @@ This is one reason sigmoid and cross-entropy are a common binary-classification 
 - A far-away, correctly classified point has $\sigma(100) \approx 1$, so $s - y \approx 0$ — it **falls silent on its own**.
 - A misclassified point has $\sigma(-10) \approx 0$ while $y=1$, so $s - y \approx -1$ — the gradient cannot saturate, and the optimizer concentrates on it.
 
-With MSE instead, the gradient carries an extra $\sigma'(z)$ factor that approaches 0 in saturated regions, making misclassified points harder to update. For the linear logistic regression used here, cross-entropy is **convex** in the parameters. That does not automatically guarantee a unique or finite optimum: collinear features can produce multiple solutions, and unregularized parameters can grow without bound on completely separable data. The convexity claim does not extend to a multilayer network.
+If the sigmoid is followed by MSE instead, the gradient carries an extra $\sigma'(z)$ factor that approaches 0 in saturated regions, making misclassified points harder to update. For the linear logistic regression used here, cross-entropy is **convex** in the parameters. That does not automatically guarantee a unique or finite optimum: collinear features can produce multiple solutions, and unregularized parameters can grow without bound on completely separable data. The convexity claim does not extend to a multilayer network.
 
 ![the sigmoid and its derivative](assets/sigmoid.en.svg)
 
-$\sigma'$ is largest at $z=0$ ($0.25$) and goes to $0$ at both ends — this is the origin of **vanishing gradients**, and the reason ReLU later replaced sigmoid as the hidden-layer activation.
+$\sigma'$ is largest at $z=0$ ($0.25$) and goes to $0$ at both ends — this is the origin of **vanishing gradients**, and one of the main reasons hidden layers later moved to ReLU.
 
 ### Python: write it from scratch {#python-write-it-from-scratch}
 
@@ -278,7 +278,7 @@ Three models, same data and same training configuration:
 
 **B and C are the same architecture with the same 33 parameters, one ReLU apart.** B's two weight matrices multiply out to $(1,8)\times(8,2) = (1,2)$, just a single row, identical in form to A — so it is exactly as weak as the 3-parameter logistic regression.
 
-50% is not undertraining: on symmetric XOR the best accuracy any straight line can reach is 50%, with the loss pinned at $\ln 2 \approx 0.693$.
+50% is not undertraining. On symmetric XOR, the cross-entropy optimum is all-zero weights: every point is predicted at 0.5, the loss stays at $\ln 2 \approx 0.693$, and thresholding at 0.5 gives 50% accuracy. Even if you aimed for accuracy directly, the best a straight line can do is cut off one cluster on its own: 75%, with a whole cluster still wrong.
 
 ### What the hidden layer does geometrically {#what-the-hidden-layer-does-geometrically}
 
@@ -290,7 +290,7 @@ Push a square grid on the input space through the hidden layer and see what it g
 
 <!-- widget:xor -->
 
-## From linear models all the way to the Transformer {#from-linear-models-all-the-way-to-the-transformer}
+## One table: from linear models to the Transformer {#from-linear-models-all-the-way-to-the-transformer}
 
 | | Feature map $\phi$ | Final step | Boundary shape |
 | --- | --- | --- | --- |
@@ -301,7 +301,7 @@ Push a square grid on the input space through the hidden layer and see what it g
 | CNN | learned, constrained to be translation-equivariant | linear classifier | same as above |
 | Transformer | learned, $N$ layers of attention + FFN | linear classifier | same as above |
 
-## Connecting to the Transformer {#connecting-to-the-transformer}
+## The Transformer's last layer is a linear classifier too {#connecting-to-the-transformer}
 
 $$\mathbf{h} = \text{TransformerBlocks}\big(\text{Embed}(\mathbf{x})\big), \qquad \text{logits} = W_{\text{head}}\, \mathbf{h}$$
 
@@ -311,7 +311,7 @@ Softmax is the generalization of the sigmoid to many classes (with two classes t
 
 $$\frac{\partial \mathcal{L}}{\partial z_i} = p_i - y_i$$
 
-still **prediction minus target**. `lm_head` is that linear classifier, with the number of classes replaced by vocab_size; the dozens of attention layers beneath it exist for one purpose only: to bend the space until “what is the next token” becomes linearly readable.
+still **prediction minus target**. `lm_head` is that linear classifier, with the number of classes replaced by vocab_size. One way to see the dozens of layers beneath it: they bend the representation space, step by step, until “what is the next token” can be read out by a linear head.
 
 ## Are they all function approximators in the end? {#are-they-all-function-approximators-in-the-end}
 
@@ -427,12 +427,6 @@ These are comparisons to try, not fixed rules by data type. Use the same splits,
 - [Post-Training](../05-post-training/README.en.md) — how you keep changing it after training is done
 - [Representation and memory](../02-memory/README.en.md) — what should be kept in $\mathbf{h}$
 
-## Reference papers {#reference-papers}
-
-- [Learning representations by back-propagating errors](https://www.nature.com/articles/323533a0) — Rumelhart, Hinton & Williams, 1986
-- [Multilayer feedforward networks are universal approximators](https://www.sciencedirect.com/science/article/abs/pii/0893608089900208) — Hornik et al., 1989
-- [Delving Deep into Rectifiers](https://arxiv.org/abs/1502.01852) — He initialization and ReLU
-
 ## Quick learning: from linear readout to learned feature map {#quick-learning-from-linear-readout-to-learned-feature-map}
 
 <details class="interview" markdown="1">
@@ -451,3 +445,9 @@ It only says that, in a sufficiently large function family, parameters **exist**
 
 </details>
 </details>
+
+## Reference papers {#reference-papers}
+
+- [Learning representations by back-propagating errors](https://www.nature.com/articles/323533a0) — Rumelhart, Hinton & Williams, 1986
+- [Multilayer feedforward networks are universal approximators](https://www.sciencedirect.com/science/article/abs/pii/0893608089900208) — Hornik et al., 1989
+- [Delving Deep into Rectifiers](https://arxiv.org/abs/1502.01852) — He initialization and ReLU

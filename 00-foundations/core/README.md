@@ -9,12 +9,13 @@
 1. [文本切分（Tokenization）](tokenization.md)：把文字切成小单元，编号后再映射成模型能计算的向量。
 2. [循环神经网络：RNN 与 LSTM](recurrent-models.md)：边读边更新一份状态；LSTM 用门控决定保留和忘掉哪些信息。
 3. [序列到序列（Seq2Seq）](seq2seq.md)：先理解输入，再逐步生成输出；注意力让模型每一步都能回看相关输入。
-4. [原始 Transformer](vanilla-transformer.md)：不再逐步传递一个状态，改用注意力让不同位置交换信息。
-5. 理解 Transformer 后，按任务选一条：先看 [BERT](bert.md) 怎样利用前后文恢复被遮住的词、再微调做分类；或者直接看 [Decoder-only](decoder-only.md) 怎样从前缀一步步生成。
+4. [多头注意力](multi-head-attention.md)、[残差连接](residual-connections.md) 与 [归一化](normalization.md)：先拆开 Transformer 的零件——attention 怎样在位置之间读信息，残差和归一化怎样让深层网络训练得动。
+5. [原始 Transformer](vanilla-transformer.md)：不再逐步传递一个状态，改用注意力让不同位置交换信息。
+6. 理解 Transformer 后，按任务选一条：先看 [BERT](bert.md) 怎样利用前后文恢复被遮住的词、再微调做分类；或者直接看 [Decoder-only](decoder-only.md) 怎样从前缀一步步生成。
 
 ```mermaid
 flowchart LR
-    A["离散输入<br/>Token"] --> B["递归状态<br/>RNN / LSTM"]
+    A["离散输入<br/>Token"] --> B["循环状态<br/>RNN / LSTM"]
     B --> C["条件生成<br/>Seq2Seq"]
     C --> D["并行注意力<br/>Transformer"]
     D --> E["理解已有文本<br/>BERT"]

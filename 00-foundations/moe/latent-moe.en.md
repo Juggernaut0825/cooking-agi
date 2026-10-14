@@ -2,7 +2,7 @@
 
 [中文](latent-moe.md) · **English**
 
-> Reading time: ~14 min · Level: advanced · Last reviewed: 2026-10-10 · Prerequisites: [Routing](router.en.md), [fine-grained and shared experts](fine-grained-and-shared.en.md)
+> Reading time: ~14 min · Level: advanced · Last reviewed: 2026-10 · Prerequisites: [Routing](router.en.md), [fine-grained and shared experts](fine-grained-and-shared.en.md)
 
 Sending a token to eight experts means moving its representation to those experts. Even small expert computations can spend substantial time reading weights and moving data. What if the experts could work with a narrower representation?
 
@@ -41,7 +41,7 @@ Not necessarily: the router still sees the original input. In a two-dimensional 
 | `[1, 0]` | `1` | A | `[2, 2]` |
 | `[1, 2]` | `1` | B | `[-1, -1]` |
 
-Both experts receive the scalar 1, but different routing decisions produce different outputs. Feeding the compressed representation to the router instead would erase this distinction.
+Both inputs send the same scalar 1 to the experts, but different routing decisions produce different outputs. Feeding the compressed representation to the router instead would erase this distinction.
 
 <details markdown="1">
 <summary>Follow the calculation in a few lines</summary>
@@ -163,9 +163,9 @@ bias = fixed_cutoff_bias(margins, 2)
 assert sum(margin + bias > 0 for margin in margins) == 2
 ```
 
-This is an order-statistic example with a strict threshold, not full QB. Ties can retain fewer assignments than requested; a noninteger $Tk/N$ cannot give every expert an identical integer load. An implementation must also specify quantile interpolation, histogram bins, cross-rank aggregation, and state restoration. Subtracting a common mean from biases preserves ranking; including biases in mixture weights changes the computation.
+This is an order-statistic example with a strict threshold, not full QB. Ties can retain fewer assignments than requested; when the average load $Tk/N$ ($T$ tokens, $k$ experts per token, $N$ experts) is not an integer, experts cannot all receive the same integer load. An implementation must also specify quantile interpolation, histogram bins, cross-rank aggregation, and state restoration. Subtracting a common mean from biases preserves ranking; including biases in mixture weights changes the computation.
 
-Timing matters: if all tokens in a batch set its bias before that same batch is routed, an earlier token can depend on later tokens. Record the bias actually used, update the next-step state after collecting statistics, and save that state in checkpoints.
+Timing matters: if statistics from every token in a batch update the bias before that same batch is routed, an earlier token can depend on later tokens. Record the bias actually used, update the next-step state after collecting statistics, and save that state in checkpoints.
 
 </details>
 

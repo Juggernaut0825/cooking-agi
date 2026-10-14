@@ -2,7 +2,7 @@
 
 [中文](adaptive-depth.md) · **English**
 
-> Reading time: ~5 min · Level: advanced · Last reviewed: 2026-10-10
+> Reading time: ~5 min · Level: advanced · Last reviewed: 2026-10
 
 ## Which positions benefit from more computation? {#a-fixed-number-of-loops-wastes-most-of-them}
 
@@ -60,6 +60,6 @@ In [Ouro-1.4B snapshot `7ea635b`](https://huggingface.co/ByteDance/Ouro-1.4B/blo
 
 ## Mixture-of-Recursions: a router assigns depth
 
-[Mixture-of-Recursions (2025, v1)](https://arxiv.org/html/2507.10524v1) routes tokens to recursion depths. Its recursion-wise cache stores participating tokens at each depth; recursive sharing is a separate policy. Cross-token top-k in expert-choice can leak future information, motivating an auxiliary router or an auxiliary loss on the main router; the paper finds the latter more effective. Token-choice avoids that cross-position selection but faces load imbalance. The maximum 2.06× throughput gain uses 360M-scale models, no prompt prefix, mean output length 256, and maximum batching—not arbitrary serving conditions.
+[Mixture-of-Recursions (2025, v1)](https://arxiv.org/html/2507.10524v1) routes tokens to recursion depths. Its recursion-wise cache stores KV only for the tokens active at each depth; recursive sharing is a separate policy. Cross-token top-k in expert-choice can leak future information, motivating an auxiliary router or an auxiliary loss on the main router; the paper finds the latter more effective. Token-choice avoids that cross-position selection but faces load imbalance. The maximum 2.06× throughput gain uses 360M-scale models, no prompt prefix, mean output length 256, and maximum batching—not arbitrary serving conditions.
 
 Record average depth, accuracy, per-token latency, and peak KV together. A lower selected depth is not a real compute saving if the kernels still execute every loop.

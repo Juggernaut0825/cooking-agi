@@ -2,7 +2,7 @@
 
 **中文** · [English](vanilla-transformer.en.md)
 
-> 阅读时间：约 15 分钟 · 难度：必修 · 最近审阅：2026-10-09
+> 阅读时间：约 15 分钟 · 难度：必修 · 最近审阅：2026-10
 
 仍然以翻译为例：encoder 可以同时读整句原文，decoder 生成下一个词时，却不能偷看尚未写出的译文。原始 Transformer 用不同的 attention 和 mask 处理这两种条件。沿着一句话走过 encoder、decoder，再回来看每个 block，结构就不只是几排重复的方框了。
 
@@ -406,7 +406,7 @@ The original model stacks six identical encoder layers:
 X -> multi-head self-attention -> Add & Norm -> FFN -> Add & Norm
 ```
 
-Self-attention obtains all three interfaces from the current source states:
+In self-attention, Q, K, and V are all computed from the current source states:
 
 $$Q=XW_Q,\qquad K=XW_K,\qquad V=XW_V.$$
 
@@ -421,7 +421,7 @@ $$S=QK^\top,\qquad
 A=\operatorname{softmax}_{\text{key}}(\widetilde S),\qquad
 O=AV.$$
 
-For example, one head at one layer might give the `love` query
+$S_{ij}$ scores the query at source position $i$ against the key at position $j$; softmax runs along each row's key dimension. For example, one head at one layer might give the `love` query
 $A_{\text{love}}=[0.4,0.1,0.5]$, producing
 
 $$o_{\text{love}}=0.4v_I+0.1v_{\text{love}}+0.5v_{\text{you}}.$$
@@ -531,7 +531,7 @@ s_{41}&s_{42}&s_{43}&s_{44}
 $$
 
 因为 $e^{-\infty}=0$，softmax 后被遮住的位置权重严格为 0；第 $i$ 个位置只能
-读取第 1 到 $i$ 个 target position。第一个子层得到
+读取第 1 到 $i$ 个 target position。把 target 一侧的输入（embedding、位置编码和 dropout 之后）记为 $Y\in\mathbb{R}^{T\times512}$，它不是第 2 步里 encoder 层输出的 $Y$。第一个子层得到
 
 $$H_1=\operatorname{LN}\big(Y+
 \operatorname{Dropout}(\operatorname{MaskedMHA}(Y))\big).$$
@@ -583,7 +583,7 @@ s_{41}&s_{42}&s_{43}&s_{44}
 $$
 
 Since $e^{-\infty}=0$, masked positions receive zero probability after softmax.
-Position $i$ can read only positions $1$ through $i$:
+Position $i$ can read only positions $1$ through $i$. Writing $Y\in\mathbb{R}^{T\times512}$ for the target-side input after embedding, positions, and dropout (not the encoder-layer $Y$ from step 2), the first sublayer is
 
 $$H_1=\operatorname{LN}\big(Y+
 \operatorname{Dropout}(\operatorname{MaskedMHA}(Y))\big).$$
@@ -744,12 +744,12 @@ predicted.
 
 接下来可以分两条走：[BERT](bert.md) 把 encoder 用于双向预训练和文本理解；[Decoder-only](decoder-only.md) 则将条件生成、对话与代码写成 token stream 上的自回归预测。不必按模型年代全部读完，先选你关心的任务。本文的原版配置与权重共享约定依据 [Attention Is All You Need](https://arxiv.org/abs/1706.03762)。
 
-## 快速学习：2017 Transformer 一层走一遍 {#2017-transformer}
+## 快速学习：2017 Transformer 从输入到下一个 token {#2017-transformer}
 
 <details class="interview" markdown="1">
 <summary>Encoder、Decoder 与现代 Decoder-only 的分界</summary>
 
-**快速记忆**：Encoder 是 self-attention + FFN；Decoder 多 masked self-attention 与 cross-attention；每段外面都有 residual 与 norm。
+**快速记忆**：Encoder 是 self-attention + FFN；Decoder 把 self-attention 换成 masked self-attention，再多一段 cross-attention；每段外面都有 residual 与 norm。
 
 **面试回答**
 
@@ -758,7 +758,7 @@ predicted.
 <details markdown="1">
 <summary><b>深挖</b>：为什么 target 右移和 causal mask 两个都需要？</summary>
 
-右移决定每个位置的输入是前一个真实 token；causal mask 决定该位置不能在 self-attention 中读取更右侧标签。只右移不 mask，深层 attention 仍能偷看未来；只 mask 不右移，则当前位置直接拿到它要预测的 token embedding。
+右移决定每个位置的输入是前一个真实 token；causal mask 决定该位置不能在 self-attention 中读取更右侧标签。只右移不 mask，从第一层 self-attention 起，位置 $t$ 就能读到右边一格的输入，而那正是它要预测的 token；只 mask 不右移，则当前位置直接拿到它要预测的 token embedding。
 
 </details>
 </details>

@@ -37,7 +37,7 @@
 | 同时预测多个位置 | [Multi-token prediction](multi-token-prediction.md) | 额外目标怎样对齐；训练收益与生成加速分开看 |
 | 训练为什么占显存 | [精度与显存](precision-and-memory.md) | 权重、梯度、优化器状态、激活分别算账 |
 
-需要把这些步骤写出来，配合 [PyTorch 四章](../pytorch/README.md)。它从存储和 shape 开始，最后跑一个完整训练循环，不要求先会分布式训练。
+需要把这些步骤写出来，配合 [PyTorch 五章](../pytorch/README.md)。它从存储和 shape 开始，最后跑一个完整训练循环，不要求先会分布式训练。
 
 ## 模型怎样生成：不要把几种“省”混起来
 

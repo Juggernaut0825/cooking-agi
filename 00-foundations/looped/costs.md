@@ -2,7 +2,7 @@
 
 **中文** · [English](costs.en.md)
 
-> 阅读时间：约 5 分钟 · 难度：进阶 · 最近审阅：2026-10-10
+> 阅读时间：约 5 分钟 · 难度：进阶 · 最近审阅：2026-10
 
 ## 计算和延迟：圈数是串行的
 
@@ -14,7 +14,7 @@
 
 $$\text{bytes/token}=2\times24\times4\times2048\times2=786{,}432$$
 
-这里前一个 2 表示 K 和 V，后一个 2 是每元素字节数。结果为 768 KiB，即约 0.786 MB；单条 4096-token 序列就是 3 GiB。这个账不包含模型权重、临时 activation、allocator 和服务预留，也不能套给 GQA 的 KV 宽度。
+这里前一个 2 表示 K 和 V，后一个 2 是每元素字节数。结果为 768 KiB，即约 0.786 MB；单条 4096-token 序列就是 3 GiB。这个账不包含模型权重、临时 activation、allocator 和服务预留，用 GQA 时要换成实际的 KV 宽度。
 
 如果模型还有只执行一次的 prelude / coda 层，它们的 KV 不随圈数重复。以 [Huginn](models.md) 的 2+4+2 结构为例，在各层 KV 宽度相同、保留完整逐圈缓存时，$R$ 圈需要 $2+4R+2$ 份层级 KV；4 圈相对 1 圈是 $20/8=2.5$ 倍，不是 4 倍。这是存储量推算，不是延迟或准确率测量。
 
@@ -23,8 +23,8 @@ $$\text{bytes/token}=2\times24\times4\times2048\times2=786{,}432$$
 可以研究，但共享通常改变原来的计算，而不是等价的存储压缩。看报告时，要区分 checkpoint、prefill 是否共享、decode 共享规则和输出长度：
 
 - [Ouro](https://arxiv.org/abs/2510.25741)报告了一些 decode-only 共享设置下较小的质量变化；这里减少的是相应 decode KV，不是整张卡的所有显存。
-- [Continuous Depth Batching（v2，2026-09-25）](https://arxiv.org/html/2608.09444v2)表 4：GSM8K-CoT 的 greedy decoding / flexible-match 准确率，Ouro 1.4B（4 圈）的完整缓存 / 单槽共享 / 首圈独立、后续共享分别为 78.09% / 0.23% / 72.40%；Huginn 3.5B（16 圈）为 30.93% / 32.52% / 32.83%。协议不同，不是严格相同设置的直接反证。该文吞吐实验回放预先记录的长度与退出决策，也要与独立的质量评估分开看。
-- [MELT（v3，2026-09-28）](https://arxiv.org/html/2605.07721v3)附录 B、表 6 中，Ouro-1.4B-Thinking 的免训练共享基线严重退化，**不是 MELT 方法本身全得 0**；其主方法加入缓存机制和后训练，再评估质量。不同生成长度和格式可能放大缓存误差。
+- [Continuous Depth Batching（v2，2026-09-25）](https://arxiv.org/html/2608.09444v2)表 4：GSM8K-CoT 的 greedy decoding / flexible-match 准确率，Ouro 1.4B（4 圈）的完整缓存 / 单槽共享 / 首圈独立、后续共享分别为 78.09% / 0.23% / 72.40%；Huginn 3.5B（16 圈）为 30.93% / 32.52% / 32.83%。两者评测协议不同，所以这组数字不能直接否定 Ouro 报告的小幅变化。该文吞吐实验回放预先记录的长度与退出决策，也要与独立的质量评估分开看。
+- [MELT（v3，2026-09-28）](https://arxiv.org/html/2605.07721v3)附录 B、表 6 中，严重退化的是 Ouro-1.4B-Thinking 上的免训练共享基线，**不是 MELT 方法本身**；MELT 的主方法另加缓存机制和后训练，再评估质量。不同生成长度和格式可能放大缓存误差。
 - [Mixture-of-Recursions](https://arxiv.org/abs/2507.10524)比较按圈稀疏存储与跨圈共享，效果依路由方案而变；不能忽略跳过 token 后还剩哪些 keys 可用。
 - [Huginn](https://arxiv.org/abs/2502.05171)研究过循环槽位复用，但实验表现不等于数学等价，更不能推出其他模型也适用。
 

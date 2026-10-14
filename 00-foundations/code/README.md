@@ -2,7 +2,7 @@
 
 **中文** · [English](README.en.md)
 
-> 类型：实验索引 · 运行环境：CPU 即可 · 最近审阅：2026-08
+> 类型：实验索引 · 运行环境：CPU 即可 · 最近审阅：2026-10
 
 我喜欢把同一个东西写两遍。第一遍不用 PyTorch，逼自己看清每一个数字从哪里来；第二遍再交给 tensor、module 和 autograd，让它真的学起来。
 
@@ -35,7 +35,9 @@ python sequence_numpy.py
 | [`test_model.py`](test_model.py) | 因果性、cache 等价、RoPE 相对性、GQA 分组 | `python test_model.py` |
 | [`train.py`](train.py) | 训练 decoder-only 完成 induction / copy task | `python train.py` |
 
-这些实现不调用 `nn.MultiheadAttention` 或 `F.scaled_dot_product_attention`。PyTorch 只负责 tensor、参数管理和自动求导，模型结构仍然显式可见。
+这些实现不调用 `nn.MultiheadAttention` 或 `F.scaled_dot_product_attention`。PyTorch 提供 tensor、自动求导，以及 Linear、Embedding、LayerNorm、cross-entropy 和优化器这类基础件；attention、mask 和整体结构都逐行写出。
+
+单篇笔记还配有更小的检查脚本，从对应笔记的“动手验证”进入，例如 [`attention_numpy.py`](attention_numpy.py)（纯 NumPy 多头注意力）、[`attention_torch.py`](attention_torch.py)（手写版对照 `F.scaled_dot_product_attention` 与 `nn.MultiheadAttention`，所以不受上面那条限制）和 [`norm_compare.py`](norm_compare.py)（三种归一化的统计轴与 batch size 1）。
 
 ## 快速验证
 
@@ -73,4 +75,4 @@ test_model.py → train.py
 3. **RoPE 相对性**：attention score 的位置部分只依赖相对距离。
 4. **GQA 分组**：query heads 必须映射到正确的 KV group。
 
-图表仍由 [`make_figures.py`](make_figures.py) 与 [`make_arch_figures.py`](make_arch_figures.py) 从实际计算生成，避免正文与实现漂移。
+[`make_figures.py`](make_figures.py) 用真实训练的小模型生成决策边界、隐藏空间等图；[`make_norm_figures.py`](make_norm_figures.py) 生成归一化轴示意图和实测的残差梯度图；[`make_arch_figures.py`](make_arch_figures.py) 画的是结构示意图（Transformer block、三处 attention、KV cache），不是测量结果。

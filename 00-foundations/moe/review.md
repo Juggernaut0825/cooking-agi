@@ -2,7 +2,7 @@
 
 **中文** · [English](review.en.md)
 
-> 阅读时间：约 4 分钟 · 难度：进阶 · 最近审阅：2026-10-09
+> 阅读时间：约 4 分钟 · 难度：进阶 · 最近审阅：2026-10
 
 ## 面试常见问题
 
@@ -23,7 +23,7 @@
 <details class="interview" markdown="1">
 <summary>为什么需要负载均衡？Switch 的辅助 loss 为什么是 f_i 乘 P_i？</summary>
 
-更多 token 带来更多训练机会，可能形成自我强化的不均衡，也可能让部分设备等待。Switch 的辅助 loss 是 $\alpha N \sum f_i P_i$：$f_i$ 是不可导的分配比例，$P_i$ 是可导的平均 router 概率。梯度通过 $P_i$ 回传；完全均匀时值为 $\alpha$，但这不是所有路由分布下的严格下界。
+某个 expert 被选得多，就拿到更多 token、得到更多训练，可能越来越常被选，形成自我强化的不均衡，也可能让部分设备等待。Switch 的辅助 loss 是 $\alpha N \sum f_i P_i$：$f_i$ 是不可导的分配比例，$P_i$ 是可导的平均 router 概率。梯度通过 $P_i$ 回传；完全均匀时值为 $\alpha$，但这不是所有路由分布下的严格下界。
 
 </details>
 

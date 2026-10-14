@@ -2,11 +2,11 @@
 
 **中文** · [English](attention-residuals.en.md)
 
-通常讲 attention，我们问的是“这个 token 看哪些 token”。Attention Residuals 换了一个轴：**同一个 token 走到这一层，要怎样组合前面各层留下的信息？** 没有把序列维度和网络深度分开，很容易把它误读成又一种 sparse attention。
+通常讲 attention，我们问的是“这个 token 看哪些 token”。Attention Residuals 换了一个轴：**同一个 token 走到这一层，要怎样组合前面各层留下的信息？** 如果不把序列维度和网络深度分开看，很容易把它误读成又一种 sparse attention。
 
 ## 从普通 residual 开始
 
-普通残差层写成 $h_{l+1}=h_l+f_l(h_l)$。逐层展开，后面的表示包含 embedding 与各层更新的累加。通路很好走，但这些更新进入总和时的系数都固定为 1。
+普通残差层写成 $h_{l+1}=h_l+f_l(h_l)$。逐层展开，后面的表示包含 embedding 与各层更新的累加。这条直连通路让信息和梯度容易穿过很多层，但这些更新进入总和时的系数都固定为 1。
 
 Attention Residuals 对之前的深度表示做加权。用 $v_i$ 表示 embedding 或某个前层输出，省略 batch 与 token 维度：
 
@@ -55,7 +55,7 @@ assert math.isclose(depth_mix([1000, 1000 + math.log(3)], [2, 10]), 8)
 
 这里的 block 是**深度分组**，不是一段连续文本。论文把 attention 与 MLP 当作不同子层计数；比较层数时要对齐口径。
 
-| 简化成本，$L$ 个子层、$N$ 个 block | Full AttnRes | Block AttnRes |
+| 简化成本，$L$ 个子层、$N$ 个 block、隐藏维度 $d$ | Full AttnRes | Block AttnRes |
 | --- | --- | --- |
 | 每个 token 保留的深度状态 | $O(Ld)$ | $O(Nd)$ |
 | 各层混合的总计算 | $O(L^2d)$ | $O(LNd)$ |

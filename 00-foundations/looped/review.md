@@ -2,14 +2,14 @@
 
 **中文** · [English](review.en.md)
 
-> 阅读时间：约 3 分钟 · 难度：进阶 · 最近审阅：2026-10-10
+> 阅读时间：约 3 分钟 · 难度：进阶 · 最近审阅：2026-10
 
 ## 面试常见问题
 
 <details class="interview" markdown="1">
 <summary>Looped Transformer 和 ALBERT 的参数共享有什么区别？</summary>
 
-两者都共享参数。ALBERT 还结合 embedding 因式分解来压缩模型，不能把总参数变化全归于共享。Looped 模型研究在共享权重下调整执行深度；参数不变，不代表计算量、KV 或延迟不变，也不保证深度外推有效。
+两者都共享参数。ALBERT 还结合 embedding 因式分解来压缩模型，不能把总参数变化全归于共享。Looped 模型的重点是共享同一组权重，同时可以调整执行深度；参数不变，不代表计算量、KV 或延迟不变，也不保证深度外推有效。
 
 </details>
 

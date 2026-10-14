@@ -2,7 +2,7 @@
 
 [中文](deepseek.md) · **English**
 
-> Reading time: ~13 min · Type: model family deep dive · Last reviewed: 2026-10-10
+> Reading time: ~13 min · Type: model family deep dive · Last reviewed: 2026-10
 
 <div class="lesson-recipe advanced">
   <div><span>Core question</span><strong>How do you control attention, FFN, and reasoning cost in a high-capacity model?</strong></div>
@@ -93,6 +93,8 @@ Take three invented affinities `[0.6, 0.3, 0.1]` and select two experts. Biases 
 With selected outputs 2 and 10, the correct mixture is `22/7`; the shortcut produces `62/11`. Reusing the wrong scores changes the forward computation.
 
 ```python
+import math
+
 def route_with_bias(affinities, biases, selected_count):
     if len(affinities) != len(biases) or not affinities:
         raise ValueError("affinities and biases must have matching nonzero lengths")
@@ -107,8 +109,6 @@ def route_with_bias(affinities, biases, selected_count):
     )[:selected_count]
     denominator = sum(affinities[index] for index in selected)
     return [(index, affinities[index] / denominator) for index in selected]
-
-import math
 
 routed = route_with_bias([0.6, 0.3, 0.1], [0.0, 0.0, 0.4], 2)
 assert [index for index, _ in routed] == [0, 2]

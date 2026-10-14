@@ -2,7 +2,7 @@
 
 **中文** · [English](normalization.en.md)
 
-> 阅读时间：约 16 分钟 · 难度：必修 · 最近审阅：2026-10-10
+> 阅读时间：约 16 分钟 · 难度：必修 · 最近审阅：2026-10
 
 拿向量 `[1, 3]` 看归一化会比较直观。暂时忽略 epsilon 和可学习参数：LayerNorm 先减均值 2，再除以标准差 1，得到 `[-1, 1]`；RMSNorm 不减均值，而是除以均方根 √5。两者都改变尺度，却没有做同一件事。下面再把这笔计算放回一批序列里，看清到底沿哪个轴统计。
 
@@ -10,7 +10,7 @@
 
 **BatchNorm 沿着「一批样本」求统计量，LayerNorm 沿着「一个样本自己的特征」求。**
 
-先看统计轴，再看 running statistics 与 train / eval 模式，才能判断变长、batch size 为 1 和自回归生成时的行为。轴的选择很重要，但不是唯一的实现约定。
+先看统计轴，再看 running statistics 与 train / eval 模式，才能判断变长、batch size 为 1 和自回归生成时的行为。只看轴还不够，统计状态和 train / eval 模式也会改变结果。
 
 ![三种归一化各自沿哪条轴](../assets/norm-axes.svg)
 
@@ -26,7 +26,7 @@ $$\hat{x}_{ij} = \frac{x_{ij}-\mu_j}{\sqrt{\sigma_j^2+\epsilon}}, \qquad y_{ij} 
 
 **LayerNorm**（对每个样本 $i$，在特征维上统计）：
 
-$$\mu_i = \frac{1}{d}\sum_{j=1}^{d} x_{ij}, \qquad y_{ij} = \gamma_j\,\frac{x_{ij}-\mu_i}{\sqrt{\sigma_i^2+\epsilon}} + \beta_j$$
+$$\mu_i = \frac{1}{d}\sum_{j=1}^{d} x_{ij}, \qquad \sigma_i^2 = \frac{1}{d}\sum_{j=1}^{d}(x_{ij}-\mu_i)^2, \qquad y_{ij} = \gamma_j\,\frac{x_{ij}-\mu_i}{\sqrt{\sigma_i^2+\epsilon}} + \beta_j$$
 
 **RMSNorm**（按均方根缩放，常见写法只保留可学习增益 $\gamma$）：
 
@@ -157,7 +157,7 @@ Transformer 常用的 `LayerNorm(d)` 只统计每个 token 的 hidden features�
 
 必须看张量布局和 reduction axes，不能笼统说“BN 一定泄漏”。
 
-- 若对 $X\in\mathbb R^{B\times T\times d}$ 的每个位置 $t$，只沿 $B$ 统计，那么当前位置不会直接读取同一序列的未来 token；但输出仍依赖同 batch 的其他样本，而且每个位置的有效样本数不同。
+- 若对 $X\in\mathbb R^{B\times T\times d}$ 的每个位置 $t$，只沿 $B$ 统计，那么当前位置不会直接读取同一序列的未来 token；但输出仍依赖同 batch 的其他样本；有 padding 时，每个位置的有效样本数还可能不同。
 - 若像常见的 sequence <code>BatchNorm1d</code> 训练前向那样，从当前输入同时沿 $B$ 和 $T$ 统计，那么 $\mu_j,\sigma_j$ 包含 $t'>t$ 的 token。此时位置 $t$ 的归一化结果已经带有未来信息，causal mask 只限制 attention，挡不住这条旁路。
 - 如果先把 $B\times T$ 展平，再用当前输入做 BN 统计，也会出现同样的问题。
 
@@ -249,7 +249,7 @@ x\longmapsto
 \frac{x}{\sqrt{\frac{1}{d}\sum_jx_j^2+\epsilon}}\odot\gamma.
 $$
 
-它仍能稳定现代 LLM，说明很多场景里最关键的是控制向量长度和子层输入尺度，而不是强制每个 token 的特征均值为 0。
+它在现代 LLM 中效果很好，这提示在很多场景里，控制向量长度和子层输入尺度比强制每个 token 的特征均值为 0 更重要。
 
 **面试版回答**
 
@@ -327,7 +327,7 @@ $$
 
 ## 继续阅读 {#_7}
 
-归一化让每层输入的尺度可控，但深度真正可行还差另一半——[残差连接](residual-connections.md)。
+归一化让每层输入的尺度可控；深度能训练，还要靠[残差连接](residual-connections.md)。两篇都读过后，接着看 [FFN 与 SwiGLU](ffn-and-gates.md)，再把零件拼成[原版 Transformer](vanilla-transformer.md)。
 
 ## 30 秒建立 mental model {#30-mental-model}
 

@@ -2,7 +2,7 @@
 
 **中文** · [English](decoder-only.en.md)
 
-> 阅读时间：约 32 分钟 · 难度：必修 · 最近审阅：2026-10-10
+> 阅读时间：约 32 分钟 · 难度：必修 · 最近审阅：2026-10
 
 模型生成“今天下雨”时，要先有“今天”，才能根据这个前缀决定接下来写什么。训练时完整句子已经给定，所以多个位置的预测可以一起算；生成时后面的字还不存在，只能逐步继续。Decoder-only 的结构、causal mask 和 KV cache，都可以沿着这个区别来理解。
 
@@ -12,7 +12,7 @@
 
 ## 一条序列自己就能当训练数据 {#_2}
 
-给定 token 序列 $x_1,\ldots,x_T$：
+给定 token 序列 $x_1,\ldots,x_T$（下面的例子里 $x_1$ 是 BOS）：
 
 $$
 \mathcal{L}_{\text{LM}}=-\sum_{t=1}^{T-1}\log p_\theta(x_{t+1}\mid x_{\le t})
@@ -35,7 +35,7 @@ target:  [今,  天, 天, 气, 好]
 [system] ... [user] 问题 [assistant] 回答
 ```
 
-回答 token 能通过 self-attention 看见左侧 prompt；prompt token 不需要看见未来回答。原来 encoder–decoder 的条件关系，被 causal sequence 本身表达了。
+回答 token 能通过 self-attention 看见左侧 prompt；prompt token 不需要看见未来回答。原来 encoder–decoder 用两个模块表达的条件关系，现在由这条 causal 序列自己表达。不过 prompt 内部也按 causal 方式读取：前面的 prompt token 看不到后面的 prompt token，不像 encoder 那样双向读完整段输入。
 
 这不代表 encoder 没价值。双向表征、分类和部分检索任务仍常使用 encoder；decoder-only 的优势是**一个目标统一预训练、条件生成与对话**。
 
@@ -222,7 +222,7 @@ $$
 R(\theta)=\begin{bmatrix}\cos\theta&-\sin\theta\\\sin\theta&\cos\theta\end{bmatrix}.
 $$
 
-真实向量会把通道两两成对，并让不同通道对使用不同频率。注意力点积满足
+真实向量会把通道两两成对，第 $i$ 对使用自己的频率 $\theta_i$。$R_m$ 就是把位置 $m$ 的每对通道转过角度 $m\theta_i$，即对第 $i$ 对用 $R(m\theta_i)$。记 $q_m,k_n$ 为上面的列向量 $Q_m,K_n$（位置 $m$ 的 query、位置 $n$ 的 key），注意力点积满足
 
 $$
 \begin{gathered}
@@ -260,7 +260,7 @@ R(\theta)=\begin{bmatrix}\cos\theta&-\sin\theta\\\sin\theta&\cos\theta\end{bmatr
 $$
 
 Real implementations pair channels and use different frequencies across channel
-pairs. Their dot product obeys
+pairs: $R_m$ rotates channel pair $i$ by angle $m\theta_i$, applying $R(m\theta_i)$. Writing $q_m,k_n$ for the column vectors $Q_m,K_n$ above (the query at position $m$ and the key at position $n$), their dot product obeys
 
 $$
 \begin{gathered}
@@ -442,7 +442,7 @@ MQA: Q=32, KV=1
 GQA: Q=32, KV=8   # 每 4 个 Q heads 共享一组 KV
 ```
 
-不同 query heads 即使共享 K/V，仍能因 Q 不同而形成不同的 attention distributions。
+不同 query heads 即使共享 K/V，仍能因 Q 不同而得到不同的注意力分布。
 MQA 最省内存带宽，但可能损失表示能力；GQA 在质量和推理效率之间折中。主要动机是
 缩小推理时需要读取的 K/V 状态，而不是单纯减少总参数。
 
@@ -591,7 +591,7 @@ gain comes from IO-aware tiling, less memory traffic, and smaller intermediate s
 RoPE scaling 调整旋转频率，解决“位置编码怎样延伸到更长序列”；它并不会消除
 full attention 的 $O(L^2)$ 计算。
 
-Sliding-window attention 让每个 token 只看固定邻域，成本接近 $O(Lw)$，但可能丢失
+Sliding-window attention 让每个 token 只看自己前面最近的 $w$ 个 token，成本接近 $O(Lw)$，但可能丢失
 远距离信息。Sparse attention 只保留部分连接；一些架构混合局部层、全局层或特殊
 global tokens 来恢复长距离通路。
 
@@ -609,7 +609,7 @@ global tokens 来恢复长距离通路。
 RoPE scaling changes rotation frequencies to extend positional behavior to longer
 sequences. It does not remove the $O(L^2)$ cost of full attention.
 
-Sliding-window attention limits each token to a neighborhood, approaching $O(Lw)$
+Sliding-window attention limits each token to the $w$ most recent tokens, approaching $O(Lw)$
 cost but potentially losing distant information. Sparse attention keeps only selected
 connections; some architectures mix local and global layers or special global tokens
 to restore long-range paths.
@@ -629,14 +629,14 @@ Diagnose the bottleneck first:
 
 ### 9. MoE：扩大 FFN 容量，而不是注意力头 {#9-moe-ffn}
 
-Mixture-of-Experts 通常替换 FFN。Router 为每个 token 选择少数专家，例如 top-2：
+Mixture-of-Experts 通常替换 FFN。Router 为每个 token 选择少数专家。以 top-2 为例，$E_1,E_2$ 是这个 token 选中的两个专家，$p_1,p_2$ 是 router 给它们的权重：
 
 $$
 y=p_1E_1(x)+p_2E_2(x).
 $$
 
 模型可以拥有很多 expert parameters，但单个 token 只激活少量专家，因此总参数容量
-可以远大于每 token 计算量。代价是 router quality、load balancing、expert capacity、
+可以远大于每个 token 实际用到的参数量。代价是 router 的选择质量、专家间的负载均衡、每个专家的容量上限、
 跨设备 all-to-all communication 和训练稳定性都更复杂。
 
 专家可能形成一定功能分工，但和注意力头一样，不应假设每个 expert 都有清晰、固定、
@@ -648,7 +648,7 @@ $$
 <div class="concept-title-en" role="heading" aria-level="3">9. MoE: scaling FFN capacity, not attention heads</div>
 
 Mixture-of-Experts usually replaces the FFN. A router selects a small number of
-experts for each token, for example top-2 routing:
+experts for each token. With top-2 routing, $E_1,E_2$ are the two experts chosen for this token and $p_1,p_2$ are the router weights assigned to them:
 
 $$
 y=p_1E_1(x)+p_2E_2(x).
@@ -728,7 +728,7 @@ $$
 X_{l+1}=H+F.
 $$
 
-有些模型会把这里的 SwiGLU FFN 换成 MoE。重复 $N$ 层后：
+有些模型会把这里的 SwiGLU FFN 换成 MoE。把 embedding 输出记作 $X_0$，第 $l$ 层（$l=0,\ldots,N-1$）把 $X_l$ 变成 $X_{l+1}$；重复 $N$ 层后：
 
 $$
 \begin{gathered}
@@ -806,7 +806,7 @@ $$
 X_{l+1}=H+F.
 $$
 
-Some models replace this SwiGLU FFN with MoE. After repeating $N$ layers:
+Some models replace this SwiGLU FFN with MoE. Take the embedding output as $X_0$, so layer $l=0,\ldots,N-1$ maps $X_l$ to $X_{l+1}$. After all $N$ layers:
 
 $$
 \begin{gathered}
@@ -826,11 +826,11 @@ optimizes the attention kernel; and MoE replaces the FFN.
 
 ### Prefill {#prefill}
 
-整段 prompt 已知，可以并行计算所有位置，并把每层的 K/V 保存起来。第一枚生成 token，就是从这一步最后有效位置的 logits 中选出的。
+整段 prompt 已知，可以并行计算所有位置，并把每层的 K/V 保存起来。生成的第一个 token，就是从这一步最后一个有效位置的 logits 中选出的。
 
 ### Decode {#decode}
 
-每次只输入新 token，查询历史 KV cache，再产生下一个 token。计算量少，但必须串行，常受内存带宽和 cache 大小限制。
+每次只输入新 token，查询历史 KV cache，再产生下一个 token。每步计算量小，但各步必须串行，常受内存带宽和 cache 大小限制。
 
 ```mermaid
 flowchart LR
@@ -942,7 +942,7 @@ Sampling 决定怎样从模型给出的概率分布中选择 token，但不会�
 | preference learning | 两个回答哪个更好 | pairwise / policy objective |
 | RL | 行为怎样产生更高回报 | trajectory-level objective |
 
-这些阶段通常不改变 decoder-only 的主体结构，改变的是数据分布、loss 和哪些位置直接计入 loss。Prompt 不计分，也仍可能通过后续回答的 attention 路径接收梯度。
+这些阶段通常不改变 decoder-only 的主体结构，改变的是数据分布、loss 和哪些位置直接计入 loss。Prompt 位置即使不计入 loss，也仍可能通过后续回答的 attention 路径收到梯度。
 
 <details markdown="1">
 <summary><b>进阶</b>：为什么 SFT 常把 prompt token mask 掉</summary>
@@ -958,7 +958,7 @@ Sampling 决定怎样从模型给出的概率分布中选择 token，但不会�
 ## 自检 {#_4}
 
 <div class="taste-check">
-  <strong>这一课真正要带走的是：</strong>
+  <strong>如果真的理解了，你应该能解释：</strong>
   <ol>
     <li>为什么输入和标签只需要错开一个 token？</li>
     <li>Prefill 与 decode 使用同一模型，性能特征为什么完全不同？</li>
@@ -979,7 +979,7 @@ Sampling 决定怎样从模型给出的概率分布中选择 token，但不会�
 
 **面试回答**
 
-> Decoder-only 模型把 system、user、assistant 与工具消息序列化到同一上下文中，用 causal self-attention 保证每个位置可以看自己和允许读取的左侧位置，不能看未来。训练对所有位置并行做 next-token prediction；推理先 prefill prompt，再逐 token decode，缓存每层历史 K/V 避免重复投影。
+> Decoder-only 模型把 system、user、assistant 与工具消息序列化到同一上下文中，用 causal self-attention 保证每个位置可以看自己和允许读取的左侧位置，不能看未来。训练对所有位置并行做 next-token prediction；推理先 prefill prompt，再逐 token decode，缓存每层历史 K/V，避免每一步都把整个前缀重新算一遍。
 
 <details markdown="1">
 <summary><b>深挖</b>：KV Cache 缓存什么，为什么不缓存 Q？</summary>

@@ -2,7 +2,7 @@
 
 [中文](qwen-early.md) · **English**
 
-Early Qwen releases provide a useful exercise: when a generation improves, separate tokenizer, architecture, data, and post-training rather than crediting one component. This page covers historical releases; see [Qwen3 and later](qwen.en.md) for the 2026 family.
+Early Qwen releases provide a useful exercise: when a generation improves, separate tokenizer, architecture, data, and post-training rather than crediting one component. This page covers historical releases; Qwen3 (2025) and later models are in [Reading Qwen](qwen.en.md).
 
 ## Identify the exact version first
 

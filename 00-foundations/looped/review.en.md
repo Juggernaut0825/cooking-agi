@@ -2,14 +2,14 @@
 
 [中文](review.md) · **English**
 
-> Reading time: ~3 min · Level: advanced · Last reviewed: 2026-10-10
+> Reading time: ~3 min · Level: advanced · Last reviewed: 2026-10
 
 ## Interview questions
 
 <details class="interview" markdown="1">
 <summary>How does a looped Transformer differ from ALBERT's parameter sharing?</summary>
 
-Both share parameters. ALBERT also factorizes embeddings, so its total reduction cannot be attributed to sharing alone. Looped models study adjustable execution depth with shared weights. Fixed parameters do not mean fixed compute, KV, or latency, or guaranteed depth extrapolation.
+Both share parameters. ALBERT also factorizes embeddings, so its total reduction cannot be attributed to sharing alone. Looped models keep weights shared and let execution depth vary. Fixed parameters do not mean fixed compute, KV, or latency, or guaranteed depth extrapolation.
 
 </details>
 

@@ -2,7 +2,7 @@
 
 [中文](decoder-only.md) · **English**
 
-> Reading time: ~32 min · Level: core · Last reviewed: 2026-10-10
+> Reading time: ~32 min · Level: core · Last reviewed: 2026-10
 
 When generating “It is raining,” the model needs the prefix before choosing what follows it. During training, the complete sentence is available, so predictions at several positions can be computed together. During generation, future tokens do not exist yet. This distinction explains the decoder-only structure, causal mask, and KV cache.
 
@@ -12,7 +12,7 @@ Put the instruction, the context, and the answer into one token sequence, block 
 
 ## A sequence is its own training data {#a-sequence-is-its-own-training-data}
 
-Given a token sequence $x_1,\ldots,x_T$:
+Given a token sequence $x_1,\ldots,x_T$ (in the example below, $x_1$ is BOS):
 
 $$
 \mathcal{L}_{\text{LM}}=-\sum_{t=1}^{T-1}\log p_\theta(x_{t+1}\mid x_{\le t})
@@ -35,7 +35,7 @@ Just chain the “input” and the “output” into the same sequence:
 [system] ... [user] question [assistant] answer
 ```
 
-Answer tokens can see the prompt to their left through self-attention; prompt tokens have no need to see the future answer. The conditioning that encoder–decoder expressed with two modules is now expressed by the causal sequence itself.
+Answer tokens can see the prompt to their left through self-attention; prompt tokens have no need to see the future answer. The conditioning that encoder–decoder expressed with two modules is now expressed by the causal sequence itself. One difference remains: the prompt is also read causally, so an earlier prompt token cannot see a later one, whereas an encoder reads its whole input bidirectionally.
 
 This does not mean encoders have no value. Bidirectional representations, classification, and some retrieval tasks still commonly use an encoder. The advantage of decoder-only is that **one objective unifies pre-training, conditional generation, and dialogue**.
 
@@ -126,7 +126,7 @@ R(\theta)=\begin{bmatrix}\cos\theta&-\sin\theta\\\sin\theta&\cos\theta\end{bmatr
 $$
 
 Real implementations pair channels and use different frequencies across channel
-pairs. Their dot product obeys
+pairs: $R_m$ rotates channel pair $i$ by angle $m\theta_i$, applying $R(m\theta_i)$. Writing $q_m,k_n$ for the column vectors $Q_m,K_n$ above (the query at position $m$ and the key at position $n$), their dot product obeys
 
 $$
 \begin{gathered}
@@ -281,7 +281,7 @@ gain comes from IO-aware tiling, less memory traffic, and smaller intermediate s
 RoPE scaling changes rotation frequencies to extend positional behavior to longer
 sequences. It does not remove the $O(L^2)$ cost of full attention.
 
-Sliding-window attention limits each token to a neighborhood, approaching $O(Lw)$
+Sliding-window attention limits each token to the $w$ most recent tokens, approaching $O(Lw)$
 cost but potentially losing distant information. Sparse attention keeps only selected
 connections; some architectures mix local and global layers or special global tokens
 to restore long-range paths.
@@ -296,7 +296,7 @@ Diagnose the bottleneck first:
 ### 9. MoE: scaling FFN capacity, not attention heads {#9-moe-scaling-ffn-capacity-not-attention-heads}
 
 Mixture-of-Experts usually replaces the FFN. A router selects a small number of
-experts for each token, for example top-2 routing:
+experts for each token. With top-2 routing, $E_1,E_2$ are the two experts chosen for this token and $p_1,p_2$ are the router weights assigned to them:
 
 $$
 y=p_1E_1(x)+p_2E_2(x).
@@ -373,7 +373,7 @@ $$
 X_{l+1}=H+F.
 $$
 
-Some models replace this SwiGLU FFN with MoE. After repeating $N$ layers:
+Some models replace this SwiGLU FFN with MoE. Take the embedding output as $X_0$, so layer $l=0,\ldots,N-1$ maps $X_l$ to $X_{l+1}$. After all $N$ layers:
 
 $$
 \begin{gathered}
@@ -522,7 +522,7 @@ A training example contains both the prompt and the response, but the goal is us
 ## Self-check {#self-check}
 
 <div class="taste-check">
-  <strong>What this lesson really wants you to take away:</strong>
+  <strong>If you really understand this, you should be able to explain:</strong>
   <ol>
     <li>Why do inputs and labels only need to be offset by one token?</li>
     <li>Prefill and decode use the same model, so why are their performance characteristics completely different?</li>
@@ -543,12 +543,12 @@ Continue with [language-model objectives and generation](../deep-dives/language-
 
 **Interview answer**
 
-> A decoder-only model serializes system, user, assistant, and tool messages into one context and uses causal self-attention so that every position can see itself and permitted earlier positions, but not the future. Training does next-token prediction at all positions in parallel; inference first prefills the prompt and then decodes token by token, caching each layer's historical K/V to avoid repeating the projections.
+> A decoder-only model serializes system, user, assistant, and tool messages into one context and uses causal self-attention so that every position can see itself and permitted earlier positions, but not the future. Training does next-token prediction at all positions in parallel; inference first prefills the prompt and then decodes token by token, caching each layer's historical K/V so that each step does not recompute the whole prefix.
 
 <details markdown="1">
 <summary><b>Deep dive</b>: what does the KV cache store, and why not Q?</summary>
 
-The K/V of historical tokens are read again by every future query, so once they are cached, K/V only have to be computed once, for the new token. A query is used only by the current token to issue its read; the next step produces a new query, so there is nothing to reuse across steps. The cache optimizes computation without changing attention semantics, and the incremental result must be equivalent to a full causal forward pass.
+The K/V of historical tokens are read again by every future query, so caching them means each token's K/V is computed only once, at the step where that token is added. A query is used only by the current token to issue its read; the next step produces a new query, so there is nothing to reuse across steps. The cache optimizes computation without changing attention semantics, and the incremental result must be equivalent to a full causal forward pass.
 
 </details>
 </details>

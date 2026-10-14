@@ -45,7 +45,7 @@ There is also an optimization interpretation: starting from $\bar S_t$, take one
 
 ## Work through a two-slot state
 
-Take $S=[2,10]$, $k=[1,0]^\top$, new value $v=6$, and gates $\alpha=0.5,\beta=0.25$.
+Take $d_v=1$ and $d_k=2$, so $S=[2,10]$ is a single row; let $k=[1,0]^\top$, new value $v=6$, and gates $\alpha=0.5,\beta=0.25$.
 
 | Step | Result |
 | --- | --- |
@@ -83,9 +83,9 @@ assert state == [[2.25, 5.0]]
 assert gated_delta_step([[2.0, 10.0]], [1.0, 0.0], [6.0], 1.0, 1.0) == [[6.0, 10.0]]
 ```
 
-This is a reproducible recurrence, not input projections, short convolutions, normalization, output gating, or a GPU kernel. Endpoints 0 and 1 illustrate limiting behavior; inspect each model's actual parameterization. Some extensions permit a larger writing range, where this interpolation interpretation no longer applies directly.
+This reproduces only the recurrence; it omits input projections, short convolutions, normalization, output gating, and the GPU kernel. Endpoints 0 and 1 illustrate limiting behavior; inspect each model's actual parameterization. Some extensions permit a larger writing range, where this interpolation interpretation no longer applies directly.
 
-## Recurrent decode does not require a Python loop for training
+## Decode is recurrent; training does not need a per-token Python loop
 
 Each step is $S_t=S_{t-1}A_t+B_t$. Combining two steps gives:
 
@@ -99,7 +99,7 @@ Check agreement among single-step recurrence, chunked prefill, and save-state/re
 
 ## What does fixed state actually save?
 
-A hypothetical layer with 16 heads, each retaining a $128\times128$ FP32 state, uses 1 MiB regardless of prefix length. Another hypothetical attention layer with 16 KV heads, dimension 128, and 8,192 BF16 K/V entries uses 64 MiB.
+A hypothetical layer with 16 heads, each retaining a $128\times128$ FP32 state, uses 1 MiB regardless of prefix length. Another hypothetical attention layer with 16 KV heads, dimension 128, storing BF16 K and V for 8,192 positions uses 64 MiB.
 
 This is not an equal-capability performance comparison. It illustrates different storage growth. Recurrent state still occupies memory; training stores or recomputes activations; full-attention layers in a hybrid still retain length-dependent KV caches.
 

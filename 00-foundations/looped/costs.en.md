@@ -2,7 +2,7 @@
 
 [中文](costs.md) · **English**
 
-> Reading time: ~5 min · Level: advanced · Last reviewed: 2026-10-10
+> Reading time: ~5 min · Level: advanced · Last reviewed: 2026-10
 
 ## Compute and latency: loops are serial
 
@@ -23,8 +23,8 @@ A prelude or coda that runs once adds fixed KV storage. For [Huginn](models.en.m
 Sharing usually changes the computation rather than merely storing it more compactly. Compare checkpoint, prefill policy, decode policy, and output length before comparing results:
 
 - [Ouro](https://arxiv.org/abs/2510.25741) reports small quality changes in some decode-only sharing settings. The reduction concerns that decode KV, not all GPU memory.
-- [Continuous Depth Batching (v2, 2026-09-25)](https://arxiv.org/html/2608.09444v2), Table 4: GSM8K-CoT accuracy with greedy decoding and flexible matching is 78.09% / 0.23% / 72.40% for Ouro 1.4B (4 loops), using full / single-shared / first-then-shared caches. Huginn 3.5B (16 loops) scores 30.93% / 32.52% / 32.83%. Protocols differ, so this is not an identical-setting refutation. Its throughput experiments replay recorded lengths and exits; task quality is evaluated separately.
-- [MELT (v3, 2026-09-28)](https://arxiv.org/html/2605.07721v3), Appendix B and Table 6, shows severe degradation for untrained sharing baselines on Ouro-1.4B-Thinking, **not all-zero performance of MELT itself**. The proposed method adds a cache mechanism and post-training. Generation length and format can affect accumulated cache errors.
+- [Continuous Depth Batching (v2, 2026-09-25)](https://arxiv.org/html/2608.09444v2), Table 4: GSM8K-CoT accuracy with greedy decoding and flexible matching is 78.09% / 0.23% / 72.40% for Ouro 1.4B (4 loops), using full / single-shared / first-then-shared caches. Huginn 3.5B (16 loops) scores 30.93% / 32.52% / 32.83%. Protocols differ from Ouro's, so these numbers do not directly refute Ouro's reported small quality changes. Its throughput experiments replay recorded lengths and exits; task quality is evaluated separately.
+- [MELT (v3, 2026-09-28)](https://arxiv.org/html/2605.07721v3), Appendix B and Table 6, shows severe degradation for training-free sharing baselines on Ouro-1.4B-Thinking; **the degradation belongs to those baselines, not to MELT itself**. The proposed method adds a cache mechanism and post-training. Generation length and format can affect accumulated cache errors.
 - [Mixture-of-Recursions](https://arxiv.org/abs/2507.10524) compares sparse per-depth storage and cross-loop sharing, with routing-dependent outcomes. Skipping tokens also changes which keys remain available.
 - [Huginn](https://arxiv.org/abs/2502.05171) explores recurrent cache slots. Empirical tolerance is not exact equivalence or evidence that arbitrary models support the same policy.
 

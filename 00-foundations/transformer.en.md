@@ -2,12 +2,12 @@
 
 [中文](transformer.md) · **English**
 
-> Reading time: ~15 min · Level: intro → advanced · Last reviewed: 2026-10-09
+> Reading time: ~15 min · Level: intro → advanced · Last reviewed: 2026-10
 >
-> The main line is enough on its own. Collapsed blocks marked **deeper** hold derivations and edge cases; skipping them does not affect understanding.
+> The main line is enough on its own. Collapsed blocks marked **Deeper** hold derivations and edge cases; skipping them does not affect understanding.
 
 <div class="lesson-recipe advanced">
-  <div><span>What we are dissecting</span><strong>the Transformer, from block diagram back down to matrices and invariants</strong></div>
+  <div><span>What we are dissecting</span><strong>the Transformer, from block diagram back down to matrix operations and properties you can check</strong></div>
   <div><span>Prerequisites</span><strong>matrix multiplication · softmax · residuals · causal LM</strong></div>
   <div><span>Main mechanism</span><strong>Q/K/V · norm · RoPE · GQA · KV cache</strong></div>
   <div><span>What you must be able to prove</span><strong>the implementation satisfies causality, relative position, and cache equivalence</strong></div>
@@ -102,8 +102,10 @@ def attention(q, k, v, mask=None):
     return attn @ v, attn
 ```
 
+This code uses `True` for blocked positions and assumes finite scores at allowed positions. Set blocked scores to `-inf` before softmax; setting them to zero still assigns weight. Zeroing weights afterwards without renormalizing is also not equivalent. See the worked example in [multi-head attention](core/multi-head-attention.en.md).
+
 <details markdown="1">
-<summary><b>follow-up</b>: what does attention become if $Q=K$?</summary>
+<summary><b>Follow-up</b>: what does attention become if $Q=K$?</summary>
 
 In that case the score matrix before scaling is the Gram matrix $QQ^\top$, so it is
 symmetric and positive semidefinite. After row-wise softmax, however, it is generally
@@ -129,7 +131,7 @@ For the self-attention input $X$, the model learns
 
 $$Q=XW_Q,\qquad K=XW_K,\qquad V=XW_V.$$
 
-The intuition has to be split into two levels:
+The answer has two levels:
 
 - **A single parameter value or a single coordinate usually has no fixed human meaning.**
   With a different random seed, the coordinate axes and weight values can be completely
@@ -171,8 +173,6 @@ the function completely unchanged. Interpreting an isolated entry such as $W_Q[1
 therefore usually meaningless; what is meaningful is the function implemented by the whole
 projection, its causal effect on the output, and the interface constraints among Q, K, and V.
 
-This code uses `True` for blocked positions and assumes finite scores at allowed positions. Set blocked scores to `-inf` before softmax; setting them to zero still assigns weight. Zeroing weights afterwards without renormalizing is also not equivalent. See the worked example in [multi-head attention](core/multi-head-attention.en.md).
-
 ## One module, three uses: changing where Q/K/V come from {#one-module-three-uses-changing-where-qkv-come-from}
 
 This is the part of the original paper's (2017) encoder-decoder structure most worth keeping an eye on. `self_attn(x, x, x)` and `cross_attn(x, memory, memory)` are the same class; only the three tensors fed in differ:
@@ -185,7 +185,7 @@ This is the part of the original paper's (2017) encoder-decoder structure most w
 
 ![where Q, K and V come from at each of the three attention sites](assets/attention-sites.en.svg)
 
-Cross-attention is the only place the two towers touch: at every generation step, the decoder takes its current state as the query and looks things up once in the encoder's output.
+Cross-attention is the only place where the encoder and decoder exchange information: at every generation step, each decoder layer uses its current state as the query and looks things up in the encoder's output.
 
 [`code/vanilla_demo.py`](code/vanilla_demo.py) trains a sequence-reversal task and prints cross-attention weights. The following is an intuitive reverse-alignment sketch, not the only valid pattern: encoder positions already mix context, so correct outputs do not require a particular head to form an anti-diagonal.
 
@@ -202,7 +202,7 @@ Cross-attention is the only place the two towers touch: at every generation step
   ^ decoder step
 ```
 
-Use the script's separate generation check to evaluate outputs rather than judging only this picture. Even a perfect small batch does not establish generalization to arbitrary lengths or unseen distributions.
+Denser characters mean larger weights: `@` is close to 1, and the `#` and `:` at step 4 show the weight split between two neighboring positions. Use the script's separate generation check to evaluate outputs rather than judging only this picture. Even a perfect small batch does not establish generalization to arbitrary lengths or unseen distributions.
 
 ## Multi-head attention: why not one big attention {#multi-head-attention-why-not-one-big-attention}
 
@@ -259,7 +259,7 @@ $$\tilde{\mathbf{q}}_m = R_m \mathbf{q}, \qquad R_m = \begin{pmatrix} \cos m\the
 With fixed q/k content and rotary frequencies, the **explicit positional factor** introduced by RoPE depends only on $n-m$. Actual q/k also depend on context and masks, so the model does not simply operate on distances. Common implementations do not apply this rotation to V; its contextual representation can still carry positional information.
 
 <details markdown="1">
-<summary><b>deeper</b>: where the relative property comes from</summary>
+<summary><b>Deeper</b>: where the relative property comes from</summary>
 
 Rotation matrices are orthogonal, and rotations in the same plane add: $R_m^\top = R_{-m}$ and $R_a R_b = R_{a+b}$. So
 
@@ -342,7 +342,7 @@ Sources: [original Transformer](https://arxiv.org/abs/1706.03762), [RoFormer](ht
   <strong>After finishing this chapter, you should be able to explain at least four key questions:</strong>
   <ol>
     <li>Why is the attention score divided by $\sqrt{d_k}$?</li>
-    <li>Which gradient highway does pre-norm change?</li>
+    <li>Once pre-norm moves the norm inside the residual branch, what direct path does the gradient gain?</li>
     <li>Why does RoPE's relative property require rotating both Q and K?</li>
     <li>How do you prove that a KV cache is implemented correctly, rather than the generations merely "not looking broken"?</li>
   </ol>
@@ -353,14 +353,6 @@ Sources: [original Transformer](https://arxiv.org/abs/1706.03762), [RoFormer](ht
 - [From linear models to neural networks](from-linear-to-neural.en.md) — why the last layer is always a linear classifier
 - [Post-training](../05-post-training/README.en.md) — how these parameters keep being changed afterwards
 - [Systems overview](../06-systems/README.en.md) — where this sits in the whole system
-
-## Reference papers {#reference-papers}
-
-- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — the original
-- [On Layer Normalization in the Transformer Architecture](https://arxiv.org/abs/2002.04745) — why pre-norm can drop warmup
-- [RoFormer](https://arxiv.org/abs/2104.09864) — RoPE
-- [GQA](https://arxiv.org/abs/2305.13245) — grouped-query attention
-- [GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202) — SwiGLU
 
 ## Quick learning: what does a Transformer actually do? {#quick-learning-what-does-a-transformer-actually-do}
 
@@ -392,3 +384,11 @@ So $A(X)XW_V$ is already an input-dependent nonlinear map, and the FFN activatio
 </details>
 
 </details>
+
+## Reference papers {#reference-papers}
+
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — the original
+- [On Layer Normalization in the Transformer Architecture](https://arxiv.org/abs/2002.04745) — why Post-LN depends on warmup, and why Pre-LN could drop it in the paper's setting
+- [RoFormer](https://arxiv.org/abs/2104.09864) — RoPE
+- [GQA](https://arxiv.org/abs/2305.13245) — grouped-query attention
+- [GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202) — SwiGLU

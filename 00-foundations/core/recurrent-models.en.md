@@ -2,7 +2,7 @@
 
 [中文](recurrent-models.md) · **English**
 
-> Reading time: ~10 min · Level: core · Last reviewed: 2026-10-10
+> Reading time: ~10 min · Level: core · Last reviewed: 2026-10
 
 In “It is raining; remember your umbrella,” the final word depends on earlier information. An RNN updates a hidden state as it reads each position. An LSTM adds controls for keeping, writing, and reading its state. First we follow the information forward, then examine why learning long dependencies is difficult.
 
@@ -12,7 +12,7 @@ An RNN updates a fixed-size hidden state rather than storing every token it has 
 
 ## The state update of a vanilla RNN {#the-state-update-of-a-vanilla-rnn}
 
-$$h_t = \tanh(W_x x_t + W_h h_{t-1} + b), \qquad y_t = W_o h_t$$
+$$h_t = \tanh(W_x x_t + W_h h_{t-1} + b), \qquad y_t = W_y h_t$$
 
 Each step receives only the current token vector $x_t$ and the previous state $h_{t-1}$. The parameters are shared across all time steps, which is why it can handle sequences of different lengths.
 
@@ -29,7 +29,7 @@ flowchart LR
 
 ## Why early information gradually disappears {#why-early-information-gradually-disappears}
 
-During training, gradients to earlier states pass through a sequence of Jacobians. The weights are shared, but each Jacobian also depends on the current inputs, hidden state, and tanh derivative. Repeated contraction along a direction can shrink the gradient toward zero; repeated expansion can make it explode. Gating changes this propagation path rather than merely adding parameters.
+During training, gradients to earlier states pass through a sequence of Jacobians: the derivative matrices $\partial h_t/\partial h_{t-1}$ of each state with respect to the previous one. The weights are shared, but each Jacobian also depends on the current inputs, hidden state, and tanh derivative. Repeated contraction along a direction can shrink the gradient toward zero; repeated expansion can make it explode. Gating changes this propagation path rather than merely adding parameters.
 
 So this is not just a matter of “a few more parameters would fix it.” The real trouble is that **both information and gradients have to cross the same narrow state path over and over**; the farther apart two positions are, the more easily something is lost on the way.
 
@@ -97,7 +97,7 @@ Then change delay to 64 while keeping length = 96; require `0 < delay < length`.
 <div class="taste-check">
   <strong>If you really understand this, you should be able to explain:</strong>
   <ol>
-    <li>Why does stacking many layers of linear recurrence not automatically solve long-term memory?</li>
+    <li>Why does adding parameters or stacking more RNN layers not automatically solve long-term memory?</li>
     <li>Why does the LSTM cell state pass gradients more easily than a plain hidden state?</li>
     <li>An LSTM mitigates forgetting, so why is it still unsuited to large-scale parallel training?</li>
   </ol>
@@ -112,7 +112,7 @@ An RNN can read a sequence, but how do we turn an input sequence into an output 
 <details class="interview" markdown="1">
 <summary>Remember the state recurrence first, then see why gradients vanish</summary>
 
-**Quick memory**: an RNN compresses history by recurring over one state. An LSTM uses an additive cell-state path and sigmoid gates to control what is kept, written, and read.
+**Quick memory**: an RNN compresses history into one hidden state, updated by the same rule at every step. An LSTM uses an additive cell-state path and sigmoid gates to control what is kept, written, and read.
 
 **Interview answer**
 

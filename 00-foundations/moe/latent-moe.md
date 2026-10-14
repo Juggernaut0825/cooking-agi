@@ -2,7 +2,7 @@
 
 **中文** · [English](latent-moe.en.md)
 
-> 阅读时间：约 14 分钟 · 难度：进阶 · 最近审阅：2026-10-10 · 前置：[Router](router.md)、[细粒度与共享专家](fine-grained-and-shared.md)
+> 阅读时间：约 14 分钟 · 难度：进阶 · 最近审阅：2026-10 · 前置：[Router](router.md)、[细粒度与共享专家](fine-grained-and-shared.md)
 
 一个 token 要交给 8 个专家处理，就得把它的表示送到这些专家那里。即使每个专家只算一点，搬数据和读权重也可能很贵。既然专家不一定需要主干的全部维度，能不能先把表示缩窄，再交给它们？
 
@@ -109,7 +109,7 @@ assert [row["mac_per_token"] for row in (base, small, more)] == [196608, 114688,
 assert [row["slot_bytes"] for row in (base, small, more)] == [32768, 16384, 32768]
 ```
 
-`slot_bytes` 按每个 token–expert 槽位分别发送输入、返回输出来记账。32 个 token、每元素 2 bytes 时，前后两程分别合计 32、16、32 KiB。这不是网卡上的实测流量：同卡专家、本地计算、同目的地合并、padding、元数据和通信拓扑都会改变网络账本。`latent == width` 在这个教学函数中表示普通 MoE，省去两次投影。
+`slot_bytes` 按每个 token–expert 槽位分别发送输入、返回输出来记账。32 个 token、每元素 2 bytes 时，三个方案的往返合计分别为 32、16、32 KiB。这不是网卡上的实测流量：同卡专家、本地计算、同目的地合并、padding、元数据和通信拓扑都会改变网络账本。`latent == width` 在这个教学函数中表示普通 MoE，省去两次投影。
 
 </details>
 
@@ -163,7 +163,7 @@ bias = fixed_cutoff_bias(margins, 2)
 assert sum(margin + bias > 0 for margin in margins) == 2
 ```
 
-这是严格阈值下的次序统计量示例，不是完整 QB。并列分数可能使留下的数量少于目标；$Tk/N$ 不是整数时也不能要求每个专家完全相同。实际实现还要定义分位数插值、histogram bins、跨 rank 汇总与状态恢复。减去所有 bias 的共同均值不改变排序，但把 bias 混进 gate 权重会改变计算。
+这是严格阈值下的次序统计量示例，不是完整 QB。并列分数可能使留下的数量少于目标；平均负载 $Tk/N$（$T$ 个 token、每个选 $k$ 个专家、共 $N$ 个专家）不是整数时，也不能要求每个专家完全相同。实际实现还要定义分位数插值、histogram bins、跨 rank 汇总与状态恢复。减去所有 bias 的共同均值不改变排序，但把 bias 混进 gate 权重会改变计算。
 
 最需要防住的是时间顺序：先拿本批所有 token 的统计改 bias，再回头路由本批，早期 token 就可能受后面 token 影响。应记录本步实际使用的 bias，完成统计后更新下一步状态，并随 checkpoint 保存。
 

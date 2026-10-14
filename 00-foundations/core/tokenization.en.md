@@ -2,7 +2,7 @@
 
 [中文](tokenization.md) · **English**
 
-> Reading time: ~12 min · Level: core · Last reviewed: 2026-08
+> Reading time: ~12 min · Level: core · Last reviewed: 2026-10
 
 The same sentence can become different ID sequences under different tokenizers. If a toy tokenizer splits `playing` into `play` and `ing`, the model receives two IDs, not one English word. That choice affects sequence length, compute, and how unfamiliar words are represented. We will follow the text through tokenization and the embedding lookup.
 
@@ -54,7 +54,7 @@ Assume each word occurs once. In the first round, `(l, o)` and `(o, w)` both occ
 For two worked merges and the differences between BPE, WordPiece, Unigram, and byte fallback, continue to [tokenizer algorithms](../deep-dives/tokenizer-algorithms.en.md). This page first completes the input pipeline.
 
 <details markdown="1">
-<summary><b>deeper</b>: why token boundaries affect model behavior</summary>
+<summary><b>Deeper</b>: why token boundaries affect model behavior</summary>
 
 If the same concept is 1 token in one language and 5 tokens in another, the latter takes up more context, more attention compute, and more prediction steps. How digits, whitespace, and code are split also changes the difficulty of arithmetic and copying tasks.
 

@@ -2,7 +2,7 @@
 
 **中文** · [English](deepseek.en.md)
 
-> 阅读时间：约 13 分钟 · 类型：模型家族精读 · 最近审阅：2026-10-10
+> 阅读时间：约 13 分钟 · 类型：模型家族精读 · 最近审阅：2026-10
 
 <div class="lesson-recipe advanced">
   <div><span>核心问题</span><strong>怎样在大容量模型里控制 attention、FFN 与 reasoning 的成本？</strong></div>
@@ -93,6 +93,8 @@ V3 用原始 affinity 加负载 bias 来选 routed expert，但混合输出仍�
 如果两个选中 expert 的输出分别是 2 和 10，正确混合为 `22/7`，错误混合为 `62/11`。一次看似无关紧要的“复用分数”，改变了模型的前向结果。
 
 ```python
+import math
+
 def route_with_bias(affinities, biases, selected_count):
     if len(affinities) != len(biases) or not affinities:
         raise ValueError("affinities and biases must have matching nonzero lengths")
@@ -107,8 +109,6 @@ def route_with_bias(affinities, biases, selected_count):
     )[:selected_count]
     denominator = sum(affinities[index] for index in selected)
     return [(index, affinities[index] / denominator) for index in selected]
-
-import math
 
 routed = route_with_bias([0.6, 0.3, 0.1], [0.0, 0.0, 0.4], 2)
 assert [index for index, _ in routed] == [0, 2]

@@ -72,7 +72,7 @@ $G(X)\odot O(X)$ adds input-dependent multiplicative nonlinearity. Reading infor
 
 The gate also changes optimization. Sigmoid's derivative is $g(1-g)$, largest near 0.5 and small near either endpoint. Very large initial logits approximate an identity gate but can make the gate harder to train.
 
-The [paper](https://arxiv.org/abs/2505.06708) compares placements and gate forms and studies attention sinks and training stability. Those results are evidence for its training settings, not a guarantee that attaching a gate to any checkpoint removes attention sinks. One attention heatmap is insufficient evidence either.
+The [paper](https://arxiv.org/abs/2505.06708) compares placements and gate forms and studies attention sinks and training stability. Those results are evidence for its training settings, not a guarantee that attaching a gate to any checkpoint removes attention sinks. Nor can a single attention heatmap show whether a sink is present.
 
 ## What makes a useful comparison?
 
