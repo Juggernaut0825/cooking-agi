@@ -2,7 +2,7 @@
 
 [中文](after-ppo.md) · **English**
 
-> Reading time: ~18 min · Type: chapter · Last reviewed: 2026-10-10
+> Reading time: ~18 min · Type: chapter · Last reviewed: 2026-10
 
 ## Start with how feedback enters training {#start-with-what-each-algorithm-removes}
 
@@ -28,7 +28,7 @@ One sentence each: PPO asks “how much better was the result than the Critic ex
 
 ## In PPO, which models learn and which ones score? {#what-ppo-has-available-to-delete}
 
-A classic PPO-RLHF diagram has four conceptual roles, two of them training:
+A classic PPO-RLHF diagram has four conceptual roles, two of which are trained:
 
 | Model | Training? | Job |
 | --- | --- | --- |
@@ -137,7 +137,7 @@ This checks the first update, omitting clipping before it takes effect. The acco
 
 </details>
 
-### When should the initial loss not be zero? {#zero-loss-assumptions}
+### When might the initial loss not be zero? {#zero-loss-assumptions}
 
 The cancellation depends on **a complete group, centered advantages, matching ratios, and the chosen reduction**. It is not a universal GRPO assertion:
 
@@ -167,7 +167,7 @@ Dividing by within-group standard deviation changes prompt weights; averaging wi
 PPO flattens surrogate gains on selected branches rather than hard-constraining actual ratios. The same multiplicative ceiling corresponds to a smaller absolute change for a low-probability token. Raising it may affect exploration, but entropy decline has multiple causes; one curve does not establish which one applies.
 
 **Four: sequence-level loss dilutes long answers.**
-Averaging within each response and then across responses gives a 1000-token answer the same total weight as a 50-token answer. Each token in the longer answer gets 1/20 of the loss weight; actual gradients also depend on advantages and the model. This deserves inspection if important reasoning steps occur in longer answers, but length alone does not make reasoning better.
+Averaging within each response and then across responses gives a 1000-token answer the same total weight as a 50-token answer. Each token in the longer answer gets 1/20 the weight of a token in the shorter one; actual gradients also depend on advantages and the model. This deserves inspection if important reasoning steps occur in longer answers, but length alone does not make reasoning better.
 
 DAPO combines changes to sampling, clipping, token weighting, and overlong responses. Soft length penalties do not remove the generation cap or within-group standardization. Work through [DAPO's sampling, length, and clipping examples](dapo.en.md).
 
@@ -211,7 +211,7 @@ $$
 r(x,y)=\beta\log\frac{\pi^*(y\mid x)}{\pi_{\mathrm{ref}}(y\mid x)}+C(x).
 $$
 
-Substitute this relation into the preference probability: $C(x)$ cancels in the reward difference for the same prompt, so a policy/reference log-ratio directly represents the implicit reward difference. Reward has not vanished; it has been **absorbed into the policy objective**. See [the three stages of RLHF](rlhf/after-rlhf.en.md) for the full derivation.
+Substitute this relation into the preference probability: $C(x)$ cancels in the reward difference for the same prompt, so a policy/reference log-ratio directly represents the implicit reward difference. Reward has not vanished; it has been **absorbed into the policy objective**. See the DPO section of [GRPO, DPO, RLVR: which part does each change?](rlhf/after-rlhf.en.md) for the full derivation.
 
 ### DPO versus SFT {#dpo-versus-sft}
 
@@ -237,7 +237,7 @@ Consider three categories of output:
 | rejected | 0.3 | 0.1 |
 | all other outputs | 0.3 | 0.6 |
 
-Chosen becomes less likely, but rejected falls further. The ratio of their odds relative to Reference is $(0.3/0.1)/(0.4/0.3)=2.25$. With illustrative $\beta=1$, this pair's DPO loss falls from $\log 2\approx0.6931$ to $\log(1+1/2.25)\approx0.3677$.
+Chosen becomes less likely, but rejected falls further. Dividing the current chosen-to-rejected probability ratio by the Reference's ratio gives $(0.3/0.1)/(0.4/0.3)=2.25$. With illustrative $\beta=1$, this pair's DPO loss falls from $\log 2\approx0.6931$ to $\log(1+1/2.25)\approx0.3677$.
 
 These are two valid distributions, not a claimed gradient-step trajectory. They show that **a lower preference loss does not ensure higher absolute chosen probability**, unlike an objective that only imitates chosen. See the objective in [DPO §4](https://arxiv.org/html/2305.18290v2#S4).
 
@@ -370,16 +370,6 @@ No. Ask where data comes from and when feedback is refreshed. Offline DPO does n
 - [Evaluation](../07-evaluation/): telling whether alignment actually helped
 - [Clipping and gradients](clipping-variants.en.md): compare Dual-clip, CISPO, and SAPO on identical inputs; optional on a first pass
 
-## Starting papers {#starting-papers}
-
-- [PPO](https://arxiv.org/abs/1707.06347) — clipped objective and trust region
-- [DeepSeekMath](https://arxiv.org/abs/2402.03300) — GRPO
-- [DAPO](https://arxiv.org/abs/2503.14476) — four fixes for four GRPO failure modes
-- [Understanding R1-Zero-Like Training](https://arxiv.org/abs/2503.20783) — Dr. GRPO, the length bias from normalization
-- [Back to Basics](https://arxiv.org/abs/2402.14740) — RLOO
-- [REINFORCE++](https://arxiv.org/abs/2501.03262) — drop the Critic, keep PPO's stabilizers
-- [DPO](https://arxiv.org/abs/2305.18290) · [IPO](https://arxiv.org/abs/2310.12036) · [KTO](https://arxiv.org/abs/2402.01306)
-
 ## Back to the choice: what feedback do you have? {#quick-learning-what-do-ppo-grpo-and-dpo-remove}
 
 <details class="interview" markdown="1">
@@ -394,10 +384,20 @@ No. Ask where data comes from and when feedback is refreshed. Offline DPO does n
 <details markdown="1">
 <summary><b>Deep dive</b>: why does an all-correct or all-wrong GRPO group carry no signal?</summary>
 
-Group-normalized advantage uses $(r_i-\bar r)/s_r$. If every reward is equal, centering makes every advantage zero; adding epsilon to the denominator cannot create a relative ordering. Many homogeneous groups indicate that rollout difficulty or sampling diversity needs adjustment.
+Group-normalized advantage uses $(R_i-\mu_R)/\sigma_R$. If every reward is equal, centering makes every advantage zero; adding epsilon to the denominator cannot create a relative ordering. Many homogeneous groups indicate that rollout difficulty or sampling diversity needs adjustment.
 
 </details>
 </details>
+
+## Starting papers {#starting-papers}
+
+- [PPO](https://arxiv.org/abs/1707.06347) — clipped objective and trust region
+- [DeepSeekMath](https://arxiv.org/abs/2402.03300) — GRPO
+- [DAPO](https://arxiv.org/abs/2503.14476) — four fixes for four GRPO failure modes
+- [Understanding R1-Zero-Like Training](https://arxiv.org/abs/2503.20783) — Dr. GRPO, the length bias from normalization
+- [Back to Basics](https://arxiv.org/abs/2402.14740) — RLOO
+- [REINFORCE++](https://arxiv.org/abs/2501.03262) — drop the Critic, keep PPO's stabilizers
+- [DPO](https://arxiv.org/abs/2305.18290) · [IPO](https://arxiv.org/abs/2310.12036) · [KTO](https://arxiv.org/abs/2402.01306)
 
 ## Further reading (Chinese) {#further-reading-chinese}
 

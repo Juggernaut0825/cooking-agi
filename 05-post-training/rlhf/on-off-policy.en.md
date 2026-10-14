@@ -2,7 +2,7 @@
 
 [中文](on-off-policy.md) · **English**
 
-> Reading time: ~14 min · Level: core · Last reviewed: 2026-10-10
+> Reading time: ~14 min · Level: core · Last reviewed: 2026-10
 
 Generating long answers is expensive. Throwing them away immediately feels wasteful, but reusing them indefinitely creates another problem: **the model that generated them is no longer the model being updated.**
 
@@ -51,7 +51,7 @@ What matters is **how far the generating policy has drifted, how long the batch 
 | Step | What happens | What must not silently change |
 |---|---|---|
 | 1. Generate | Save policy v7; generate $G$ answers per prompt | Record the generating version, sampling settings, and corresponding log-probabilities |
-| 2. Score | Compute rewards, group means, and advantages within each prompt's group | Do not combine unrelated prompts into a group or assume the old mean remains zero after filtering |
+| 2. Score | Compute rewards, group means, and advantages within each prompt's group | Do not combine unrelated prompts into a group or assume the group's advantages still average to zero after some answers are filtered out |
 | 3. Update | Use these answers to update the model to v8 and v9 | The ratio denominator still corresponds to v7; keep the batch's advantages and training masks well defined |
 | 4. Refresh | Finish these updates and generate a new batch with the updated policy | Refreshing the old policy does not automatically refresh the Reference |
 
@@ -138,7 +138,7 @@ This single-step result does not mean that token-level weighting fully corrects 
 
 If the behavior policy never chooses B, we only observe A's reward of 1. B could pay 0 or 3. Both worlds agree with the logs, but imply target-policy values of $0.5$ and $2$ respectively.
 
-Adding a tiny denominator prevents a numerical error without creating missing observations. We need exploration, additional assumptions, or more conservative decisions. See [offline RL and OPE](../deep-rl/offline-and-ope.en.md) and [Levine et al.'s offline RL tutorial](https://arxiv.org/abs/2005.01643) for a deeper treatment.
+Adding a tiny constant to the denominator prevents a numerical error but cannot create the missing observations. We need exploration, additional assumptions, or more conservative decisions. See [offline RL and OPE](../deep-rl/offline-and-ope.en.md) and [Levine et al.'s offline RL tutorial](https://arxiv.org/abs/2005.01643) for a deeper treatment.
 
 ### 2. Small token-level differences can multiply
 
@@ -233,4 +233,4 @@ Truncated sampling such as top-p can set some actual token probabilities to zero
 
 Old answers are not unusable. We need to know where they came from, what they cover, and which bias we accept. Reuse can reduce generation cost, but losing track of the estimator's assumptions can make even “did training help?” hard to answer.
 
-Next, [Reference and Critic](reference-and-critic.en.md) separates reference KL, the old-policy ratio, and the baseline.
+Next, [Three stages and four models](three-stages.en.md) lays out the full pipeline; [Reference and Critic](reference-and-critic.en.md) then separates reference KL, the old-policy ratio, and the baseline.

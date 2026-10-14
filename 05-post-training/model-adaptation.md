@@ -125,7 +125,7 @@ $$
 N_{\text{prefix}}\approx2Lmd_{KV}.
 $$
 
-标准 MHA 中 $d_{KV}=d_{model}$，因此就是你记的 $2\times L\times m\times d_{model}$。
+标准 MHA 中 $d_{KV}=d_{model}$，因此就是常见的 $2\times L\times m\times d_{model}$。
 例如 $L=24,m=4,d_{model}=1024$，大约是 $196{,}608$ 个 prefix KV 参数。GQA / MQA
 因为 KV heads 更少，应当使用 $d_{KV}$，不能直接套 $d_{model}$。
 
@@ -156,7 +156,7 @@ Soft prompt 只能让正确标签更可能，**不能单独保证输出 schema**
 
 ### 方法一：直接给固定标签打分 {#_4}
 
-不让模型自由生成，而是比较候选标签的 sequence log-probability：
+不让模型自由生成，而是比较候选标签的 sequence log-probability（条件里的 $P$ 是前面学到的 soft prompt，$c_j$ 是标签 $c$ 的第 $j$ 个 token）：
 
 $$
 \hat c=\arg\max_{c\in\mathcal C}\log P(c\mid P,x),
@@ -245,7 +245,7 @@ p_S(\cdot\mid x,y_{<t};T)
 \right).
 $$
 
-温度 $T$ 把分布变平，让次优 token 之间的关系也成为监督。大词表下保存全部 logits 很
+温度 $T$（不要和下标 $T$、$S$ 混淆：下标分别表示 Teacher 和 Student）把分布变平，让次优 token 之间的关系也成为监督。大词表下保存全部 logits 很
 贵，因此系统常只保存 Teacher top-$k$ logits；但这要求明确处理其余概率质量、不同
 tokenizer 的映射，以及 mask 和 normalization 的一致性。
 
@@ -263,9 +263,9 @@ LoRA。Teacher 通常冻结；Student 才是被优化和最终部署的模型。
 | 目标 | 更自然的起点 | 原因 |
 | --- | --- | --- |
 | 多个简单任务共享同一超大模型 | Prompt / Prefix Tuning | 每个任务只保存少量参数 |
-| 需要明显改变内部行为，但资源有限 | LoRA-SFT | 比 soft prompt 自由度高，成本远低于 full FT |
+| 需要明显改变内部行为，但资源有限 | LoRA-SFT | 比 soft prompt 自由度高；可训练参数、optimizer state 和 checkpoint 远小于 full FT |
 | 数据充分、任务差异大、追求最高适配上限 | Full Fine-Tuning | 参数约束最少，但成本和回归风险最高 |
-| 把大模型能力迁到小模型 | Distillation | Teacher 提供比 hard label 更密的监督 |
+| 把大模型能力迁到小模型 | Distillation | Teacher 可以大量生成示范；logit 蒸馏还能提供比 hard label 更密的监督 |
 | 固定枚举分类 | Label scoring 或 classification head | 不需要承担自由生成的不确定性 |
 | 缺少会变化的外部事实 | Retrieval / tool use | 不应指望微调参数充当实时数据库 |
 
@@ -290,7 +290,7 @@ LoRA。Teacher 通常冻结；Student 才是被优化和最终部署的模型。
 
 ## 继续阅读 {#_8}
 
-- [SFT：模仿能到哪儿，到哪儿为止](sft-and-its-ceiling.md)
+- [SFT：一条对话怎样变成训练信号](sft-and-its-ceiling.md)
 - [后训练基础设施](post-training-infrastructure.md)
 
 ## 快速学习：先把两条轴分开 {#_1}

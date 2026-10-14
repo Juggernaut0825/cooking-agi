@@ -2,7 +2,7 @@
 
 [中文](value-and-advantage.md) · **English**
 
-> Reading time: ~2 min · Level: core · Last reviewed: 2026-09
+> Reading time: ~2 min · Level: core · Last reviewed: 2026-10
 
 ## Reward, return, and credit assignment
 
@@ -26,7 +26,7 @@ Their difference is the **advantage**:
 
 $$A^\pi(s,a)=Q^\pi(s,a)-V^\pi(s).$$
 
-It asks not whether the total score is high, but how much better this action was than the normal expectation at that state. The same return of $0.6$ is disappointing if the Critic predicted $0.8$ and encouraging if it predicted $0.2$. Subtracting this baseline leaves the expected policy gradient unchanged while greatly reducing its variance.
+It asks not whether the total score is high, but how much better this action was than the normal expectation at that state. The same return of $0.6$ is disappointing if the Critic predicted $0.8$ and encouraging if it predicted $0.2$. Subtracting this baseline leaves the expected policy gradient unchanged and, when the baseline is accurate, usually reduces its variance substantially.
 
 ## Bellman equations update value, not reward
 
@@ -49,15 +49,15 @@ When $0<\gamma<1$, distant rewards receive less weight. The discount also define
 One observed transition gives a one-step TD target:
 
 $$
-y_t=r_t+\gamma V_\phi(s_{t+1}),
+y_t=r_t+\gamma V_\psi(s_{t+1}),
 \qquad
-\delta_t=y_t-V_\phi(s_t).
+\delta_t=y_t-V_\psi(s_t).
 $$
 
-$\delta_t$ is the **temporal-difference error**: the difference between the new target—one-step reward plus future value—and the old estimate. Monte Carlo uses the complete $G_t$, giving low bias but high variance. TD bootstraps from a value estimate, reducing variance while introducing approximation bias. PPO commonly uses GAE to interpolate between these behaviours.
+$\delta_t$ is the **temporal-difference error**: the difference between the new target—one-step reward plus future value—and the old estimate. Monte Carlo uses the complete $G_t$, giving low bias but high variance. TD bootstraps from a value estimate, reducing variance while introducing approximation bias. PPO commonly uses GAE to interpolate between these behaviors.
 
 The central policy-gradient expression is therefore
 
 $$\nabla_\theta J(\theta)\approx\mathbb E\left[\nabla_\theta\log\pi_\theta(a_t\mid s_t)\,\hat A_t\right].$$
 
-When $\hat A_t>0$, increase the probability of the sampled action; when it is negative, decrease it. The expression directly updates sampled tokens, with shared parameters carrying the effect to other states. The Critic regresses $V_\phi(s_t)$ toward returns or bootstrapped targets. Its main job is **variance reduction**, not choosing the Actor's next token.
+When $\hat A_t>0$, increase the probability of the sampled action; when it is negative, decrease it. The expression directly updates sampled tokens, with shared parameters carrying the effect to other states. The Critic regresses $V_\psi(s_t)$ toward returns or bootstrapped targets. Its main job is **variance reduction**, not choosing the Actor's next token.

@@ -8,7 +8,7 @@ A model produces four solutions to a coding task. Two pass the tests, one passes
 
 All of these may appear under the label rejection sampling. They are not the same algorithm. Two questions usually clear things up: **What determines which answers survive? Are those answers returned at inference time, or used to update the model?**
 
-For the training workflow, read the first two sections and [the data records](#data-records). The three small calculations in between explain how selection changes a distribution. Basic probability and [SFT](sft-and-its-ceiling.en.md) are enough to follow them.
+For the training workflow, read the first two sections and [the data records](#data-records). The four small calculations in between explain how selection changes a distribution. Basic probability and [SFT](sft-and-its-ceiling.en.md) are enough to follow them.
 
 ## One name, several procedures {#four-uses}
 
@@ -66,7 +66,7 @@ This requires $Z(x)>0$. It is a conditional distribution, not a guarantee that f
 
 ## Classical rejection sampling needs an envelope {#classical-rejection}
 
-Suppose the aim is specifically to sample from a known target p. Generate from an easier proposal q and accept y with probability $a(y)=p(y)/(M q(y))$. A finite M must satisfy $p(y)\le Mq(y)$ across the target support. Wherever p is positive, q must also be positive. See the classical derivation in [CMU's Monte Carlo lecture, slide 8](https://www.cs.cmu.edu/~epxing/Class/10708/lectures/lecture16-MC.pdf#page=8).
+Suppose the aim is specifically to sample from a known target p. Generate from an easier proposal q and accept y with probability $a(y)=p(y)/(M q(y))$. Here M is the envelope constant, unrelated to the token count M in the previous section. A finite M must satisfy $p(y)\le Mq(y)$ across the target support. Wherever p is positive, q must also be positive. See the classical derivation in [CMU's Monte Carlo lecture, slide 8](https://www.cs.cmu.edu/~epxing/Class/10708/lectures/lecture16-MC.pdf#page=8).
 
 Take $p=(0.6,0.3,0.1)$ and $q=(1/3,1/3,1/3)$. The smallest valid M is 1.8:
 
@@ -125,7 +125,7 @@ The [standard-library teaching script](code/selection_and_entropy.py) checks fil
 python3 05-post-training/code/selection_and_entropy.py
 ```
 
-It prints an acceptance rate of 0.65, retained probabilities near `[0.769231, 0.230769, 0]`, and best-of-2 probabilities `[0.25, 0.39, 0.36]`. Try giving C the lowest score instead. Does extra sampling now help a correct answer, or amplify the scorer's mistake?
+The first three lines show an acceptance rate of 0.65 with retained probabilities near `[0.769231, 0.230769, 0]`, the classical accept–reject rate of about 0.5556 (5/9) with distribution `(0.6, 0.3, 0.1)`, and best-of-2 probabilities `(0.25, 0.39, 0.36)`. The remaining lines (entropy, sorting checks, and so on) belong to other notes. Try giving C the lowest score instead. Does extra sampling now help a correct answer, or amplify the scorer's mistake?
 
 ## Where to go next {#next}
 

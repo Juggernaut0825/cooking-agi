@@ -101,7 +101,7 @@ $$
 
 ## 从这一步走向哪里
 
-REINFORCE 不需要学环境，机制直接；代价是 return 方差和样本开销。引入 Critic 是为了更好地估计更新方向，接着读 [Actor–Critic 与 GAE](actor-critic-gae.md)。
+上面这种直接用采样回报给 log-prob 加权的做法就是 REINFORCE。它不需要学环境，机制直接；代价是 return 方差和样本开销。引入 Critic 是为了更好地估计更新方向，接着读 [Actor–Critic 与 GAE](actor-critic-gae.md)。
 
 步长为什么不能只靠一个 learning rate？接着看 [Natural Gradient 与 TRPO](trust-region.md)，从一个硬币策略推到 KL 约束下的更新。
 

@@ -106,7 +106,7 @@ $$
 
 两个 Target Q 初始复制当前 Q，通常每轮 Critic 更新后做 Polyak 同步；这个版本没有 Target Actor，也不额外加入 TD3 的 smoothing 噪声。真实终止时 $y=r$；若只是外部时间上限截断，仍从 reset 前的最后状态构造 soft bootstrap。
 
-策略梯度那篇的 score-function 更新，把已经采到的动作当作固定样本；这里则让梯度穿过动作回到 Actor。区别在估计方法，不单在动作是否连续：连续策略也可以使用 score-function。两条路径不能照搬彼此的 detach 位置。
+策略梯度那篇用 $\nabla\log\pi$ 乘回报的更新（即 score-function 估计），把已经采到的动作当作固定样本；这里则让梯度穿过动作回到 Actor。区别在估计方法，不单在动作是否连续：连续策略也可以使用 score-function。两条路径不能照搬彼此的 detach 位置。
 
 ## 自动温度，不等于不用做选择
 

@@ -105,7 +105,7 @@ p=0.2 时，提高正确答案概率会让分布靠近均匀，熵上升；p=0.8
 
 [The Entropy Mechanism of RL（2025，v1）§2–4](https://arxiv.org/html/2505.22617v1)研究了数学、代码任务中的早期熵下降和性能平台，并提出 Clip-Cov / KL-Cov。论文也明确讨论了不同模型、数据条件下可能出现不同曲线；不能把实验中的步数或拟合关系当作所有训练的定律。
 
-KL-Cov 在该版式 14 中约束的是 rollout old policy 与当前 policy，不是固定 SFT Reference；也不是把选中 token 的 log-prob 差取绝对值就等于 KL。实现前要核对分布、方向、采样和有效位置，不能只照着名称拼 loss。[KL 估计笔记](rlhf/kl-estimators.md)继续讲这部分。
+KL-Cov 在该版本的式 (14) 中约束的是 rollout old policy 与当前 policy，不是固定 SFT Reference；也不是把选中 token 的 log-prob 差取绝对值就等于 KL。实现前要核对分布、方向、采样和有效位置，不能只照着名称拼 loss。[KL 估计笔记](rlhf/kl-estimators.md)继续讲这部分。
 
 ## 固定什么、比较什么？ {#entropy-diagnostics}
 
@@ -147,7 +147,7 @@ KL-Cov 在该版式 14 中约束的是 rollout old policy 与当前 policy，不
 
 ## 一个实践上的建议 {#_7}
 
-在训练开始之前，先在基座模型上把上面这些量测一遍，**存成一条基线**。
+在训练开始之前，先在这一步的起点模型（基座或上一阶段的 checkpoint）上把上面这些量测一遍，**存成一条基线**。
 
 评估退化需要一个有意义的对照，通常是这一步训练之前的 checkpoint，也可以是受控的消融版本。提前保留它和评估配置，比发现输出千篇一律后再设法重建基线省事得多。
 

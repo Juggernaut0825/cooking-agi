@@ -36,7 +36,7 @@ With a nonconvex neural function class, projection may also be nonunique and opt
 
 ## A two-state counterexample
 
-Consider an original value-iteration example: both states transition deterministically to state 2, all rewards are zero, and $\gamma=0.9$. There is one action per state, so Q and V are equivalent and the true values are both zero.
+Consider a value-iteration counterexample that follows Tsitsiklis and Van Roy's classic construction (with $\varepsilon=0$; Sutton & Barto §11.2 also covers it): both states transition deterministically to state 2, all rewards are zero, and $\gamma=0.9$. There is one action per state, so Q and V are equivalent and the true values are both zero.
 
 Restrict the representation to $V_\theta=[\theta,2\theta]$ and give the states equal fixed regression weight. Bellman labels are $[1.8\theta_k,1.8\theta_k]$. Exact least squares gives:
 
@@ -111,4 +111,4 @@ A larger model mainly changes representation capacity, not missing data. More gr
 | Double Q | Selection bias from maximizing noisy estimates | More accurate Q everywhere or no underestimation |
 | Independent rollout evaluation | Training loss diverging from actual behavior | Coverage of every failure with finite evaluation |
 
-Reference: [A classic batch fitted Q-iteration method](https://jmlr.org/papers/v6/ernst05a.html). The two-state calculation above is an independently constructed example, not an experimental result from that paper. Continue with [DQN implementation and checks](dqn.en.md).
+Reference: [A classic batch fitted Q-iteration method](https://jmlr.org/papers/v6/ernst05a.html). The two-state calculation above follows Tsitsiklis and Van Roy's classic counterexample; it is not an experimental result from that paper. Continue with [DQN implementation and checks](dqn.en.md).

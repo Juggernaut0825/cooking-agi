@@ -114,16 +114,16 @@ $$
 
 如果 $\hat A_t=2$、$\epsilon=0.2$，$\rho_t$ 从 1.2 增到 1.5，这一项仍为 2.4。它停止继续奖励这个方向，却**没有把实际比值强制拉回 1.2**。其他样本共享参数，多轮更新也会互相影响。
 
-[PPO 官方教学实现](https://spinningup.openai.com/en/latest/algorithms/ppo.html)明确提醒：clipping 后策略仍可能走得过远，所以还会监控 KL 并提前停止更新。不要把 PPO-Clip 说成严格执行了 TRPO 的 KL 约束。
+[OpenAI Spinning Up 的 PPO 教学实现](https://spinningup.openai.com/en/latest/algorithms/ppo.html)明确提醒：clipping 后策略仍可能走得过远，所以还会监控 KL 并提前停止更新。不要把 PPO-Clip 说成严格执行了 TRPO 的 KL 约束。
 
 ## 6. 真正实现时，我会先检查这些
 
 | 检查项 | 容易发生的错误 | 怎么查 |
 | --- | --- | --- |
-| 比值的分母 | 每次更新都重算旧概率，或误用 Reference | 同一 rollout 的 old log-prob 固定，首次同策略比值应接近 1 |
+| 比值的分母 | 每次更新都重算旧概率，或误用 Reference | 同一 rollout 的 old log-prob 固定；第一次更新前当前策略与 old policy 相同，比值应接近 1 |
 | 回答 mask | prompt、padding 也混进 loss | 手算一个两条、不同长度的 batch |
 | KL 的单位 | token 均值与序列求和混用 | 同时记录长度、序列和与 token 均值 |
 | 回报尺度 | 奖励乘十倍却把原 $\beta$ 当成同样约束 | 明确归一化位置，再比较系数 |
 | Critic 目标 | 回报与优势混淆，或 bootstrap 越过终止 | 用短轨迹核对 value target 与 advantage |
 
-继续读[数据由谁采出来](on-off-policy.md)，再看[GRPO、DPO、RLVR 的取舍](after-rlhf.md)。这三个问题分别是：目标是什么，梯度怎么估，数据从哪里来；它们需要一起说清楚。
+下一篇看 [PPO clipping](ppo-clipping.md)，再看[GRPO、DPO、RLVR 的取舍](after-rlhf.md)。目标是什么、梯度怎么估、数据从哪里来（见[数据由谁采出来](on-off-policy.md)），这三个问题需要一起说清楚。

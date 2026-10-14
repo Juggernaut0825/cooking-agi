@@ -16,7 +16,7 @@ $$
 D_{\rm KL}(q\|p)=\mathbb E_{x\sim q}\left[\log\frac{q(x)}{p(x)}\right].
 $$
 
-Initially assume strictly positive probabilities on the same finite vocabulary, and define $r(x)=p(x)/q(x)$. This is **reference divided by current policy**, not PPO's current/old ratio. The names $k_1,k_2,k_3$ are common conventions, not mandatory library names.
+Initially assume strictly positive probabilities on the same finite vocabulary, and define $r(x)=p(x)/q(x)$. On this page $x$ is the next token and $r$ is a probability ratio, not the prompt $x$ or reward $r$ of earlier notes. This is **reference divided by current policy**, not PPO's current/old ratio. The names $k_1,k_2,k_3$ are common conventions, not mandatory library names.
 
 | Estimator | Can one sample be negative? | Expectation under $x\sim q$ |
 | --- | --- | --- |

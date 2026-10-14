@@ -18,7 +18,7 @@
 | 奖励（reward） | 偏好、测试、任务结果 | 能优化的分数未必代表用户目标 |
 | 一轮任务（episode） | 一次回答或多轮任务 | EOS、超时、工具失败不是同一种结束 |
 
-单段生成中，拼接 token 的转移近乎确定，但采样与奖励不一定确定。工具 agent 的下一观察还来自外部世界，可能延迟、有权限限制或发生失败。
+单段生成中，拼接 token 的状态转移是确定的，但采样与奖励不一定确定。工具 agent 的下一观察还来自外部世界，可能延迟、有权限限制或发生失败。
 
 ## PPO 与 GRPO 各估计了什么
 
@@ -32,7 +32,7 @@ GRPO 常用同一 prompt 下多个回答的相对奖励构造组内 advantage，
 
 ## 用三个 token 看清训练到底在改什么
 
-假设 prompt 后生成三个 token，最后一个是 EOS，完整回答得到奖励 1。生成过程可以静态地拆成：
+假设 prompt 后生成三个 token，最后一个是 EOS，完整回答得到奖励 1。生成过程可以拆成下面几步：
 
 <div class="drl-flow drl-sequence" aria-label="文本生成与奖励归因">
 <span>Prompt<small>不是本轮动作</small></span><b>→</b><span>Token 1、2<small>每步保存 log-prob</small></span><b>→</b><span>EOS<small>完整答案得到评分</small></span><b>→</b><span>更新<small>奖励归因到有效动作</small></span>

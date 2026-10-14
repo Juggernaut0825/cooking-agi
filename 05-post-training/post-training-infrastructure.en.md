@@ -98,7 +98,7 @@ Take hypothetical durations: 30 seconds sampling, 10 scoring, 20 training, and 5
 
 | Design | What is easier or cheaper? | What must be managed? |
 | --- | --- | --- |
-| Collect synchronously, then update | Clear policy versions and batch boundaries | Stages can wait on one another; the same GPUs may also be reused |
+| Collect synchronously, then update | Clear policy versions and batch boundaries; generation and training can take turns on the same GPUs | Stages can wait on one another |
 | Bounded asynchronous queue | Overlap some generation and training | Policy lag, discard rules, and backpressure |
 | Deep queue with continuous sampling | Absorb bursts and slow tasks | Potentially older data and greater memory use, not guaranteed faster useful updates |
 
@@ -143,7 +143,7 @@ These choices affect completion, answer quality, and latency—not just whether 
 
 ## Trace a small batch before scaling up {#what-the-three-have-in-common}
 
-You do not need the most elaborate asynchronous system first. Fix a small set of tasks and trace sampling through loss: reconcile action counts, explain stop reasons, and verify rewards before optimizing waits. This is not a ranking of algorithms below engineering. It checks whether the code executes the intended objective at all.
+You do not need the most elaborate asynchronous system first. Fix a small set of tasks and trace sampling through loss: reconcile action counts, explain stop reasons, and verify rewards before optimizing waits. The point is not that algorithms matter less than engineering; it is to rule out code that does not implement the objective you think it does.
 
 Nor are these changes all objective-preserving. Changing truncated-response rewards, filtering, or sampling transformations can change the training distribution, estimator, or task definition. Record what changed rather than grouping everything under “performance optimization.”
 

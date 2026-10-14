@@ -74,7 +74,7 @@ Two facts do the work: the difference of maxima is bounded by the largest pointw
 
 Value iteration applies the optimal Bellman backup each round. Policy iteration first evaluates $V^\pi$, then chooses the action maximizing $Q^\pi(s,a)$ at each state, producing $\pi'$.
 
-Why can this not worsen the exact solution? An average under the old policy cannot exceed the maximum:
+Why can this step not make the policy worse? An average under the old policy cannot exceed the maximum:
 
 $$
 T_{\pi'}V^\pi(s)=\max_aQ^\pi(s,a)\ge V^\pi(s).

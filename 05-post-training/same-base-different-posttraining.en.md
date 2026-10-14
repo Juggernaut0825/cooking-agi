@@ -4,7 +4,7 @@
 
 > Reading time: ~8 min · Type: case study · Last reviewed: 2026-10
 
-## What this comparison can actually tell us {#what-this-comparison-can-actually-tell-us}
+## What to look for in this comparison {#what-this-comparison-can-actually-tell-us}
 
 [The vendor describes GLM-5.3 and 5.2 as sharing a base](https://z.ai/blog/glm-5.3). If that holds, it removes one possible difference in starting conditions, but does not identify which post-training change contributed most.
 
@@ -45,7 +45,7 @@ These percentages retain the release's wording rather than adding a more specifi
 
 ## But read that first row carefully {#but-read-that-first-row-carefully}
 
-Separate relative increases from percentage-point changes, then examine difficulty and scoring. **A low baseline does not diagnose missing training coverage, and a mid-range baseline on another benchmark is not stronger causal evidence by itself.** The [GLM-5.2 release](https://z.ai/blog/glm-5.2) already describes long-horizon coding training; a low score on a new benchmark cannot establish its absence.
+Separate relative increases from percentage-point changes, then examine difficulty and scoring. **A low baseline does not diagnose missing training coverage, and DeepSWE's mid-range 46.2% baseline is not, by itself, stronger evidence about which change caused the gain.** The [GLM-5.2 release](https://z.ai/blog/glm-5.2) already describes long-horizon coding training; a low score on a new benchmark cannot establish its absence.
 
 A synthetic counterexample: suppose a task has 25 independent steps, each with the same success probability, and all must succeed. Raising per-step success from about 88.41% to 95.08% can raise overall success from 4.6% to 28.3%:
 
@@ -124,6 +124,13 @@ First establish the mean's definition and measurement sample, then inspect quant
 - [The three stages of RLHF](rlhf/three-stages.en.md): training roles and data sources
 - [Dual-encoder retrieval](../04-search/dual-encoder.en.md): checking training and candidate-pool definitions
 
+## Sources {#sources}
+
+- [GLM-5.3 vendor release, 2026-08-14](https://z.ai/blog/glm-5.3): tables, budgets, and release scope.
+- [GLM-5.2 vendor release, 2026-06-16](https://z.ai/blog/glm-5.2): earlier training and inherited mechanisms.
+
+Checked 2026-10-10 using indexed text from official pages, not secondary reporting. No model, private evaluation, or training system was reproduced; these tables are not a complete evaluation protocol. The probability and arithmetic counterexamples are independently constructed, not vendor experiments.
+
 ## Quick learning: what can a same-base comparison prove? {#quick-learning-what-can-a-same-base-comparison-prove}
 
 <details class="interview" markdown="1">
@@ -142,10 +149,3 @@ Choose a factor, such as a scheduling strategy. Fix initial weights, training da
 
 </details>
 </details>
-
-## Sources {#sources}
-
-- [GLM-5.3 vendor release, 2026-08-14](https://z.ai/blog/glm-5.3): tables, budgets, and release scope.
-- [GLM-5.2 vendor release, 2026-06-16](https://z.ai/blog/glm-5.2): earlier training and inherited mechanisms.
-
-Checked 2026-10-10 using indexed text from official pages, not secondary reporting. No model, private evaluation, or training system was reproduced; these tables are not a complete evaluation protocol. The probability and arithmetic counterexamples are independently constructed, not vendor experiments.

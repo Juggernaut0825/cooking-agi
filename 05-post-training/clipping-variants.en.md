@@ -15,7 +15,7 @@ Hold a sampled response and its prefixes fixed. Write $\rho=\pi_\theta(a\mid s)/
 | Method | Main change | Look for in code |
 | --- | --- | --- |
 | PPO / common GRPO | Flatten the term after enough movement in the advantage-favored direction | Which branch `min` selects |
-| DAPO's Clip-Higher | Set upper and lower thresholds separately | Not necessarily wider in both directions |
+| DAPO's Clip-Higher | Set upper and lower thresholds separately | Not widening both bounds at once |
 | Dual-clip PPO | Also cap the extreme penalty for negative advantages | The second `max` applies only for $A<0$ |
 | CISPO | Cap the weight multiplying log-probability | Detach the weight, not log-probability |
 | SAPO | Smoothly attenuate updates away from the sampling policy | The derivative, not just the objective value |

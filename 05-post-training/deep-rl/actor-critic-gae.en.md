@@ -23,7 +23,7 @@ The networks can share an encoder, but then their losses interact through shared
 
 ## From a TD residual to advantage
 
-If the Critic were exactly $V^\pi$, the expected one-step TD residual conditional on $(s_t,a_t)$ would equal $A^\pi(s_t,a_t)$:
+The advantage $A^\pi(s,a)=Q^\pi(s,a)-V^\pi(s)$ measures how much better this action is than the policy's average choice at that state. If the Critic were exactly $V^\pi$, the expected one-step TD residual conditional on $(s_t,a_t)$ would equal $A^\pi(s_t,a_t)$:
 
 $$
 \delta_t=r_t+\gamma V^\pi(s_{t+1})-V^\pi(s_t),\qquad
@@ -89,7 +89,7 @@ One mask asks **whether the next state has future value**. The other asks **whet
 | External timeout followed by reset | Yes | No | Final observation before reset |
 | Full buffer, unfinished environment | Yes | Stop in this segment | Next state at the buffer tail |
 
-If running out of time defines task completion, that is true termination; remaining time should generally be part of a finite-horizon task's state. External truncation here means the task could continue but the collector stopped.
+If the task itself is defined to end when time runs out, that is true termination; remaining time should generally be part of a finite-horizon task's state. External truncation here means the task could continue but the collector stopped.
 
 ```python
 def gae(rewards, values, next_values, terminated, truncated,
@@ -136,7 +136,7 @@ Suppose trajectory A contributes valid token losses $[1,1,1]$ and B contributes 
 | Per-device normalization | Differs from normalization over the valid global batch |
 | Rollout-time values | Fix targets before updating; do not silently recompute them with the current Critic |
 
-Centering $[1,2]$ gives $[-0.5,0.5]$. This is a within-batch relative transformation, not the true $Q-V$ of each action. It may aid optimization, but is not an unexplained identity.
+Centering $[1,2]$ gives $[-0.5,0.5]$. This is a within-batch relative transformation, not the true $Q-V$ of each action. It may help optimization, but it changes the numbers, so do not treat it as a harmless identity transformation.
 
 ## Separate the Actor and Critic updates
 

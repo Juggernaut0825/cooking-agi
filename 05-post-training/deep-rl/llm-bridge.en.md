@@ -18,7 +18,7 @@ We will start with an update over 3 tokens, then look at group comparisons, Crit
 | Reward | Preference, tests, task outcomes | Optimizable does not mean aligned with the user goal |
 | Episode | One answer or a multi-turn task | EOS, timeout, and tool failure are different boundaries |
 
-Appending a token is nearly deterministic in ordinary generation, but sampling and reward need not be. Tool agents receive observations from an external world with delays, permissions, and failures.
+In ordinary generation, the state transition of appending a token is deterministic, but sampling and reward need not be. Tool agents receive observations from an external world with delays, permissions, and failures.
 
 ## What PPO and GRPO estimate
 
@@ -32,7 +32,7 @@ If advantages and probability ratios are still unfamiliar, start with [PPO clipp
 
 ## Follow three tokens through an update
 
-Suppose a prompt produces three tokens, ending in EOS, and the completed answer earns reward 1. The process is readable without playing an animation:
+Suppose a prompt produces three tokens, ending in EOS, and the completed answer earns reward 1. The process breaks down into these steps:
 
 <div class="drl-flow drl-sequence" aria-label="Text generation and reward attribution">
 <span>Prompt<small>Not this rollout’s action</small></span><b>→</b><span>Tokens 1, 2<small>Save per-step log-prob</small></span><b>→</b><span>EOS<small>Score the full answer</small></span><b>→</b><span>Update<small>Credit valid actions</small></span>

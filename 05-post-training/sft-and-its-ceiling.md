@@ -117,7 +117,7 @@ assistant answer / end-of-message      → m_t = 1
 </div>
 <div class="concept-face concept-en" data-concept-en markdown="1">
 
-<div class="concept-title-en" role="heading" aria-level="3">2. Label shifting remains, but only selected targets contribute loss</div>
+<div class="concept-title-en" role="heading" aria-level="3">2. Next-token prediction does not require scoring every token</div>
 
 The conversation passes through the
 [chat template and tokenizer](../00-foundations/core/tokenization.md) to produce
@@ -186,7 +186,7 @@ target, its special-token ID in the tokenizer, and the inference engine's stop
 configuration.
 
 A maximum-length limit remains a necessary safety fallback, but it is not the same as
-teaching natural termination. One forcibly truncates the system; the other makes the
+teaching natural termination. One is a cut-off the system imposes; the other makes the
 model assign high probability to “the answer is complete.”
 
 </div>
@@ -292,7 +292,7 @@ Attention mask 是另一件事：它控制可见位置，例如不看未来 toke
 
 真正难的是示范要和可见信息匹配。同一问题，给足证据时应当回答，缺关键信息时应当追问。只加一批统一的拒答模板，又可能让模型在能回答时也回避。
 
-偏好训练或 RL 可以比较不同选择的代价，但也依赖奖励是否合理。没有哪个训练名字能单独保证诚实。
+偏好训练或 RL 可以比较不同选择的代价，但也依赖奖励是否合理。没有哪种训练方法本身就能保证诚实。
 
 ## 知识是否学到了，怎么检查？ {#sft_4}
 

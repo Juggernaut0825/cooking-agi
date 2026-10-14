@@ -145,7 +145,7 @@ Each measure answers a different question. Applications that can try several tim
 
 ## One practical recommendation {#one-practical-recommendation}
 
-Before training starts, measure all of the above on the base model and **save it as a baseline.**
+Before training starts, measure all of the above on this stage's starting model (the base model or the previous stage's checkpoint) and **save it as a baseline.**
 
 A regression needs a meaningful control: often the checkpoint immediately before this training stage, or a controlled ablation. Keeping that checkpoint and its evaluation configuration is easier than trying to reconstruct the comparison after outputs start feeling repetitive.
 
@@ -167,12 +167,6 @@ This is the same point as [freezing the evaluation protocol](../07-evaluation/):
 - [How far one base model can go](same-base-different-posttraining.en.md): a live case of "no regressions mentioned" not meaning "no regressions"
 - [Evaluation](../07-evaluation/): measure task improvements and regressions separately
 
-## Starting papers {#starting-papers}
-
-- [A General Language Assistant as a Laboratory for Alignment](https://arxiv.org/abs/2112.00861) — one origin of the term "alignment tax"
-- [Understanding the Effects of RLHF on LLM Generalisation and Diversity](https://arxiv.org/abs/2310.06452) — the systematic generalization-up, diversity-down comparison
-- [Learning to summarize from human feedback](https://arxiv.org/abs/2009.01325) — early evidence on KL penalties and over-optimization
-
 ## Quick learning: alignment tax is not one score {#quick-learning-alignment-tax-is-not-one-score}
 
 <details class="interview" markdown="1">
@@ -191,3 +185,9 @@ Compare controlled system prompts and decoding settings. If a different prompt r
 
 </details>
 </details>
+
+## Starting papers {#starting-papers}
+
+- [A General Language Assistant as a Laboratory for Alignment](https://arxiv.org/abs/2112.00861) — one origin of the term "alignment tax"
+- [Understanding the Effects of RLHF on LLM Generalisation and Diversity](https://arxiv.org/abs/2310.06452) — the systematic generalization-up, diversity-down comparison
+- [Learning to summarize from human feedback](https://arxiv.org/abs/2009.01325) — early evidence on KL penalties and over-optimization

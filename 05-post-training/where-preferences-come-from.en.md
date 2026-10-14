@@ -2,7 +2,7 @@
 
 [中文](where-preferences-come-from.md) · **English**
 
-> Reading time: ~7 min · Type: chapter · Last reviewed: 2026-08
+> Reading time: ~7 min · Type: chapter · Last reviewed: 2026-10
 
 ## Preference data provides relative order {#preference-data-provides-relative-order}
 
@@ -32,7 +32,7 @@ Training maximizes the likelihood of the observed preferences:
 
 $$\mathcal{L}_{\text{RM}} = -\mathbb{E}_{(x,y_w,y_l)}\left[\log \sigma\big(r(x,y_w) - r(x,y_l)\big)\right]$$
 
-In practice this is a pretrained model with a scalar head that reads the whole response and emits one number.
+In practice this is usually a pretrained model with a scalar head that reads the whole response and emits one number.
 
 ## Score offsets and scale {#a-consequence-the-reward-model-learns-order-not-scale}
 
@@ -74,12 +74,6 @@ When reading a preference-training experiment, I look for the annotation criteri
 - [The alignment tax](alignment-tax.en.md): what the bias in preferences grows into downstream
 - [Data and feedback](../01-data-and-feedback/): label quality in general
 
-## Starting papers {#starting-papers}
-
-- [Deep RL from Human Preferences](https://arxiv.org/abs/1706.03741) — the origin of training a reward model from pairwise preferences
-- [Learning to summarize from human feedback](https://arxiv.org/abs/2009.01325) — early evidence on KL penalties and reward hacking
-- [InstructGPT](https://arxiv.org/abs/2203.02155) — the three-stage pipeline and annotation guidelines
-
 ## Quick learning: the boundary between preference data and a reward model {#quick-learning-the-boundary-between-preference-data-and-a-reward-model}
 
 <details class="interview" markdown="1">
@@ -98,3 +92,9 @@ The RM learns to discriminate outputs from an older policy distribution. As the 
 
 </details>
 </details>
+
+## Starting papers {#starting-papers}
+
+- [Deep RL from Human Preferences](https://arxiv.org/abs/1706.03741) — an influential early deep-RL example of training a reward model from pairwise preferences
+- [Learning to summarize from human feedback](https://arxiv.org/abs/2009.01325) — early evidence on KL penalties and reward hacking
+- [InstructGPT](https://arxiv.org/abs/2203.02155) — the three-stage pipeline and annotation guidelines

@@ -41,9 +41,9 @@ $$
 \operatorname{Attn}\left(Q,[K_P;K_x],[V_P;V_x]\right).
 $$
 
-正常 token 的 query 可以读这些位置。它不是只在输入前放一段 embedding，影响模型的入口更深。[Prefix-Tuning](https://arxiv.org/abs/2101.00190)的训练参数化还可以使用额外网络，不能把最终 prefix 状态大小当作所有实现的训练参数总量。
+正常 token 的 query 可以读这些位置。它不只是在输入前放一段 embedding，而是直接进入每一层的 attention。[Prefix-Tuning](https://arxiv.org/abs/2101.00190)的训练参数化还可以使用额外网络，不能把最终 prefix 状态大小当作所有实现的训练参数总量。
 
-若有 $L=6$ 层、每层 K/V 总宽度均为 $d=512$，直接存储的 prefix 为 $2Lmd=98,304$ 个标量。GQA 下应使用实际 KV 宽度，不要把 query 宽度硬代进去。
+若有 $L=6$ 层、$m=16$、每层 K/V 总宽度均为 $d=512$，直接存储的 prefix 为 $2Lmd=98,304$ 个标量。GQA 下应使用实际 KV 宽度，不要把 query 宽度硬代进去。
 
 它不需要生成这些虚拟位置的普通输出，但它们仍参与 attention 和缓存。初始化、prefix 长度和层间参数化都值得做对照，而不是只调学习率。
 

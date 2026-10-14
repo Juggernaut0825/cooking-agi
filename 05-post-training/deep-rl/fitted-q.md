@@ -36,7 +36,7 @@ Bellman 算子 $\mathcal T$ 在最大值范数 $\|\cdot\|_\infty$ 下是 $\gamma
 
 ## 两个状态，就能看到问题
 
-这是一个自拟的 value-iteration 反例：两个状态都确定性转移到状态 2，奖励全为 0，$\gamma=0.9$，每个状态只有一个动作。因此真实 value 全为 0，Q 与 V 在这里等价。
+这个 value-iteration 反例沿用 Tsitsiklis 与 Van Roy 的经典构造（取 $\varepsilon=0$；Sutton & Barto 第 11.2 节也讲了这个例子）：两个状态都确定性转移到状态 2，奖励全为 0，$\gamma=0.9$，每个状态只有一个动作。因此真实 value 全为 0，Q 与 V 在这里等价。
 
 我们限制表示为 $V_\theta=[\theta,2\theta]$，固定给两个状态相同回归权重。Bellman 更新产生标签 $[1.8\theta_k,1.8\theta_k]$。精确做一次最小二乘：
 
@@ -111,4 +111,4 @@ $$
 | Double Q | max 对估值噪声的选择偏差 | Q 一定更准，或没有低估 |
 | 独立 rollout 评估 | 训练 loss 与实际行为脱节 | 有限评估样本足以覆盖所有失败 |
 
-参考：[Fitted Q-iteration 的经典批量方法](https://jmlr.org/papers/v6/ernst05a.html)。上面的两状态计算是独立构造的算例，不是该论文的实验结果。接着读 [DQN 的实现与检查](dqn.md)。
+参考：[Fitted Q-iteration 的经典批量方法](https://jmlr.org/papers/v6/ernst05a.html)。上面的两状态计算沿用 Tsitsiklis 与 Van Roy 的经典反例，不是该论文的实验结果。接着读 [DQN 的实现与检查](dqn.md)。

@@ -76,7 +76,7 @@ $$
 \mathbb E_\epsilon[Q(a+\epsilon)]=-(a-a^*)^2-\sigma^2.
 $$
 
-Smoothing evaluates a neighborhood, not just a point. Neural-network peaks can have more complex shapes; noise truncation and action clipping change the distribution. Interpret noise relative to action range rather than copying a scale between environments.
+Smoothing evaluates a neighborhood, not just a point. For a peak $Q(a)=-k(a-a^*)^2$, smoothing subtracts $k\sigma^2$: the sharper the peak (larger $k$), the larger the penalty, so narrow spikes are less able to dominate the target. Neural-network peaks can have more complex shapes; noise truncation and action clipping change the distribution. Interpret noise relative to action range rather than copying a scale between environments.
 
 ## Trace one update round
 

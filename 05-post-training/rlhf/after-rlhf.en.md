@@ -227,7 +227,7 @@ RLVR uses verifiable outcomes as rewards, such as answer matching, compilation r
 |---|---|---|
 | `[3, 1, 2]` | `[1, 2, 3]` | This case passes; sorting ability is not established |
 | `[8, 4]` | `[1, 2, 3]` | Exposes the hard-coded answer |
-| `[2, 2, 1]` | `[1, 2, 3]` | Exposes incorrect handling of duplicates |
+| `[2, 2, 1]` | `[1, 2, 3]` | Also fails (expected `[1, 2, 2]`); the cause is still hard-coding, but duplicate-value edge cases are worth keeping |
 
 Other gaps can lie in answer extraction, empty test sets, exception handling, or timeouts. **An optimizer receives the score you implemented, not the requirements you forgot to implement.** A deterministic verifier can remove some subjective scoring errors without eliminating specification gaming. [Anthropic's controlled study](https://www.anthropic.com/research/reward-tampering) illustrates how gaps between reward and intent can be exploited; it does not establish that every training run will do so.
 
@@ -246,4 +246,4 @@ Separate training checks from independent evaluation: reserve unseen problems an
 
 Before asking which name is newer, sketch where data comes from, who scores it, how the loss is computed, and who independently checks the result. Those four questions tell you what an algorithm change actually changes.
 
-Continue with [on-policy and off-policy learning](on-off-policy.en.md) to understand data reuse, then use the [evaluation checklist](evaluation-and-review.en.md) to test whether a higher score supports your claim.
+Next, use the [evaluation checklist](evaluation-and-review.en.md) to test whether a higher score supports your claim; for data reuse, revisit [on-policy and off-policy learning](on-off-policy.en.md).

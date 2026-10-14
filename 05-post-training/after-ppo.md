@@ -2,7 +2,7 @@
 
 **中文** · [English](after-ppo.en.md)
 
-> 阅读时间：约 18 分钟 · 类型：教学 · 最近审阅：2026-10-10
+> 阅读时间：约 18 分钟 · 类型：教学 · 最近审阅：2026-10
 
 <span id="ppo"></span>
 
@@ -57,7 +57,7 @@ RLOO 的基线写出来是这样，$k$ 是同一提示下的采样数：
 
 $$\hat A_i = r_i - \frac{1}{k-1}\sum_{j \neq i} r_j$$
 
-[RLOO 原论文 §2.2–2.3](https://arxiv.org/html/2402.14740v1#S2.SS2)把整条生成当作一个动作，但不等于 token 不接收梯度：整条回答的 log-prob 是各 token 条件 log-prob 的和，同一个优势会乘到这些项上。它没有单独估计“哪一步比预期更好”。留一基线的无偏性还依赖同 prompt 下独立采样等条件，不能套到任意相关样本上。
+[Back to Basics §2.2–2.3](https://arxiv.org/html/2402.14740v1#S2.SS2)把整条生成当作一个动作，但不等于 token 不接收梯度：整条回答的 log-prob 是各 token 条件 log-prob 的和，同一个优势会乘到这些项上。它没有单独估计“哪一步比预期更好”。留一基线的无偏性还依赖同 prompt 下独立采样等条件，不能套到任意相关样本上。
 
 该论文在特定的预训练模型和偏好任务上比较了这些简化，不意味着所有任务都不需要 Critic 或 GAE。
 
@@ -141,7 +141,7 @@ assert abs(theta.grad.item() + 0.5) < 1e-12
 
 ### 哪些条件变了，初始 loss 就未必是 0？ {#zero-loss-assumptions}
 
-上面的抵消依赖于**完整组、组内中心化、相同 ratio 和所用的平均方式**，不是 GRPO 的运行断言：
+上面的抵消依赖于**完整组、组内中心化、相同 ratio 和所用的平均方式**，不是 GRPO 每次运行都会成立的性质：
 
 | 情况 | 会发生什么 |
 | --- | --- |
@@ -213,7 +213,7 @@ $$
 r(x,y)=\beta\log\frac{\pi^*(y\mid x)}{\pi_{\mathrm{ref}}(y\mid x)}+C(x).
 $$
 
-代回偏好概率后，$C(x)$ 在同一个 prompt 的 reward difference 中抵消，reward difference 就能直接用 policy/reference log-ratio 表示。因此奖励概念没有消失，而是被**隐式吸收进 policy objective**。完整推导见 [RLHF 的三个阶段](rlhf/after-rlhf.md)。
+代回偏好概率后，$C(x)$ 在同一个 prompt 的 reward difference 中抵消，reward difference 就能直接用 policy/reference log-ratio 表示。因此奖励概念没有消失，而是被**隐式吸收进 policy objective**。完整推导见 [GRPO、DPO、RLVR：它们到底改了哪一环？](rlhf/after-rlhf.md) 的 DPO 一节。
 
 ### DPO 和 SFT 到底差在哪 {#dpo-sft}
 
@@ -386,7 +386,7 @@ Learned Reward Model 要监控 reward hacking、长度偏好、风格捷径以�
 <details markdown="1">
 <summary><b>深挖</b>：GRPO 组内全对或全错为什么没有梯度信号？</summary>
 
-组标准化 advantage 使用 $(r_i-\bar r)/s_r$。若整组 reward 相同，去均值后全部为 0；实现即使给分母加 epsilon，也没有相对优劣可学。高比例的 homogeneous groups 说明 rollout 难度或采样多样性需要调整。
+组标准化 advantage 使用 $(R_i-\mu_R)/\sigma_R$。若整组 reward 相同，去均值后全部为 0；实现即使给分母加 epsilon，也没有相对优劣可学。高比例的 homogeneous groups 说明 rollout 难度或采样多样性需要调整。
 
 </details>
 </details>

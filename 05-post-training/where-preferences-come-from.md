@@ -2,7 +2,7 @@
 
 **中文** · [English](where-preferences-come-from.en.md)
 
-> 阅读时间：约 7 分钟 · 类型：教学 · 最近审阅：2026-08
+> 阅读时间：约 7 分钟 · 类型：教学 · 最近审阅：2026-10
 
 <span id="_1"></span>
 
@@ -65,7 +65,7 @@ $$\mathcal{L}_{\text{RM}} = -\mathbb{E}_{(x,y_w,y_l)}\left[\log \sigma\big(r(x,y
 
 KL 惩罚能限制相对 Reference 的漂移，但它不保证新回答落在 RM 的可靠区域。独立人工复核、任务检查和新分布上的测试仍然需要。
 
-## 构建偏好数据时检查什么 {#_7}
+## 读偏好训练实验时先找什么 {#_7}
 
 读一个偏好训练实验时，我会先找三个信息：标注者拿什么标准比较，奖励模型是否评过当前策略的输出，最终结论有没有用训练奖励之外的证据核对。如果只报告 RM 分数，暂时还不知道用户是否真的更满意。
 
@@ -81,7 +81,7 @@ KL 惩罚能限制相对 Reference 的漂移，但它不保证新回答落在 RM
 <details class="interview" markdown="1">
 <summary>成对比较提供了什么，分数差又代表什么？</summary>
 
-**快速记忆**：Chosen / rejected 记录的是两个回答中更偏好哪一个。Reward Model 学着给出符合这个顺序的分数，但某个分数本身不代表固定程度的好坏。
+**快速记忆**：Chosen / rejected 记录的是两个回答中更偏好哪一个。Reward Model 拟合这些选择，给出的分数不是通用的效用单位：所有分数同加一个常数，Bradley–Terry 概率不变；同乘一个系数，概率就会变。
 
 **面试回答**
 
@@ -97,6 +97,6 @@ RM 学习的是旧 policy 生成的回答。Actor 更新后，可能生成训练
 
 ## 参考论文 {#_9}
 
-- [Deep RL from Human Preferences](https://arxiv.org/abs/1706.03741) — 成对偏好训奖励模型的起点
+- [Deep RL from Human Preferences](https://arxiv.org/abs/1706.03741) — 深度强化学习里用成对偏好训练奖励模型的代表性早期工作
 - [Learning to summarize from human feedback](https://arxiv.org/abs/2009.01325) — KL 惩罚与 reward hacking 的早期实证
 - [InstructGPT](https://arxiv.org/abs/2203.02155) — 三阶段流程与标注规范

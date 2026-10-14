@@ -27,7 +27,7 @@ python3 05-post-training/deep-rl/code/torch_updates.py
 
 [算术与边界检查](code/rl_checks.py)验证 Bellman、return、GAE、Double DQN 和 ESS；[PyTorch 检查](code/torch_updates.py)验证 Actor 梯度方向、target 无梯度、连续动作的梯度路径，并训练一个两动作 bandit。
 
-Bandit 奖励是 $[1,3]$。初始概率各 0.5，固定随机种子，采样动作并用 REINFORCE 更新 logits。预期是第二个动作概率上升，而不是要求每一步 reward 都单调增长。**它只检查一阶段机制，不是 DQN / SAC 的完整复现或性能 benchmark。**
+Bandit 奖励是 $[1,3]$。初始概率各 0.5，固定随机种子，采样动作，并用以当前期望奖励为 baseline 的 REINFORCE 更新 logits。预期是第二个动作概率上升，而不是要求每一步 reward 都单调增长。**它只检查单步 bandit 上的更新机制，不是 DQN / SAC 的完整复现或性能 benchmark。**
 
 ## 每个阶段留一个可检查的量
 

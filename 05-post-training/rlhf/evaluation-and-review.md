@@ -30,7 +30,7 @@
 
 一个小例子：如果每次独立采样的答对概率都是 $0.5$，尝试四次至少答对一次的概率就是 $1-(1-0.5)^4=0.9375$。**模型没有变，预算变了。**这是假定各次独立、每次成功率固定的教学计算；真实题目难度不同，不能把全体平均成功率直接代入这个式子。评估时要分别说明单次生成和多次尝试的结果；如果需要从多个回答里选出正确答案，还要把选择器的误差与成本算进去。
 
-选择偏好式 judge 时，随机交换 A/B 顺序，并检查它是否只是偏爱长回答。人类标注与 judge 的分歧也别简单删掉：它可能说明 rubric 还不清楚。具体例子见 [LLM-as-a-Judge](../../07-evaluation/llm-as-a-judge/README.md)；配对比较与样本混合问题见[指标靠得住吗](../../07-evaluation/metric-robustness.md)。
+使用偏好式 judge 时，随机交换 A/B 顺序，并检查它是否只是偏爱长回答。人类标注与 judge 的分歧也别简单删掉：它可能说明 rubric 还不清楚。具体例子见 [LLM-as-a-Judge](../../07-evaluation/llm-as-a-judge/README.md)；配对比较与样本混合问题见[指标靠得住吗](../../07-evaluation/metric-robustness.md)。
 
 ## 面试常见问题
 
@@ -39,7 +39,7 @@
 
 常见的四个角色是 Actor、Critic、Reward、Reference。它们不等于「必须同时常驻四份完整模型」。
 
-**只有 Actor 和 Critic 在更新参数。** Reward 是第二阶段训好后冻结的，Reference 是 SFT 模型的冻结副本。Actor 和 Reference 初始权重相同，训练中 Actor 逐渐偏离，Reference 停在原地作为 KL 的参照。
+**在这个典型设置里，只有 Actor 和 Critic 更新参数。** Reward 是第二阶段训好后冻结的，Reference 是 SFT 模型的冻结副本。Actor 和 Reference 初始权重相同，训练中 Actor 逐渐偏离，Reference 停在原地作为 KL 的参照。
 
 </details>
 

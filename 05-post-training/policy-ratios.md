@@ -2,13 +2,13 @@
 
 **中文** · [English](policy-ratios.en.md)
 
-> 最近审阅：2026-10-10 · 先读：[PPO clipping](rlhf/ppo-clipping.md)与 [GRPO](rlhf/after-rlhf.md)
+> 最近审阅：2026-10 · 先读：[PPO clipping](rlhf/ppo-clipping.md)与 [GRPO](rlhf/after-rlhf.md)
 
 一段回答整体答对了，其中某个 token 的概率却下降了。训练时，是把整段回答一起推高，还是单独照顾那个 token？GSPO 和 ASPO 从不同方向处理这个问题。先别背缩写，看看它们把权重放在哪里。
 
 ## 先分清 3 个策略
 
-| 角色 | 这次用来做什么 | 能不能混用 |
+| 角色 | 这次用来做什么 | 为什么要分开 |
 | --- | --- | --- |
 | 当前策略 $\pi_\theta$ | 正在求梯度的模型 | 随 optimizer step 改变 |
 | 采样 / 旧策略 $\pi_b$ | 生成训练回答；提供分母 | 同步训练常用冻结的 old policy；异步时应记录实际采样版本 |

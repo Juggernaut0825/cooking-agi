@@ -2,9 +2,9 @@
 
 [中文](rl-for-language-models.md) · **English**
 
-> Reading time: ~3 min · Level: core · Last reviewed: 2026-09
+> Reading time: ~3 min · Level: core · Last reviewed: 2026-10
 
-The cleanest way to understand RL is to separate two layers: the **environment layer** describes how the world changes, while the **learning layer** describes how an agent improves its policy from experience. Supervised learning usually supplies a target answer. Reinforcement learning (**RL**) instead evaluates the outcome of a sequence of behaviour. The model can learn the score of a rollout without being told which individual step caused it or what the correct replacement action was.
+The cleanest way to understand RL is to separate two layers: the **environment layer** describes how the world changes, while the **learning layer** describes how an agent improves its policy from experience. Supervised learning usually supplies a target answer. Reinforcement learning (**RL**) instead evaluates the outcome of a sequence of behavior. The model can learn the score of a rollout without being told which individual step caused it or what the correct replacement action was.
 
 ## Environment layer: how the world works
 
@@ -31,7 +31,7 @@ $$
 
 **State need not equal observation.** State is the complete information needed to determine how the world evolves; observation is the signal available to the agent. Textbook MDPs often assume $o_t=s_t$. Robots, games, and conversational agents are often partially observed and closer to POMDPs. Their policies must act from observations or a summary of history rather than an inaccessible true state.
 
-## Learning layer: how policy behaviour is judged
+## Learning layer: how policy behavior is judged
 
 | Quantity | Question it answers |
 | --- | --- |
@@ -60,4 +60,4 @@ The Actor is not a separate controller wrapped around the language model: **the 
 
 $$a_t=y_t\sim\pi_\theta(\cdot\mid x,y_{<t}).$$
 
-Appending that token creates the next state. In plain text generation this transition is almost deterministic concatenation; tool-using or interactive agents also receive search results, execution outputs, or other observations from the environment.
+Appending that token creates the next state. In plain text generation this transition is deterministic token concatenation; tool-using or interactive agents also receive search results, execution outputs, or other observations from the environment.

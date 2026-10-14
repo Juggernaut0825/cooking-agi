@@ -8,7 +8,7 @@ Having a replay buffer does not make a method offline RL. Online off-policy lear
 
 ## Check support before choosing an algorithm
 
-Suppose logs at state A contain only a conservative action, never an aggressive one. A Q-network can assign the aggressive action a high value, and the Bellman maximum can propagate that value backward. This is not evidence of a better policy; the estimate is untested.
+Suppose logs at some state $s$ contain only a conservative action, never an aggressive one. A Q-network can assign the aggressive action a high value, and the Bellman maximum can propagate that value backward. This is not evidence of a better policy; the estimate is untested.
 
 More data from the same distribution can reduce estimation variance within covered regions. But repeating the same behavior a million times does not reveal the outcome of an action that behavior never takes. This is a support problem: the target policy needs states or actions outside the behavior distribution's support. An action missing from finite logs need not have zero probability under the behavior policy, but low probabilities and sparse samples can still make estimates unreliable. Also ask whether observations omit variables affecting both action choice and outcomes.
 
@@ -72,7 +72,7 @@ $$
 \alpha\left[\log\sum_a\exp Q(s,a)-\mathbb E_{a\sim\mathcal D(\cdot\mid s)}Q(s,a)\right].
 $$
 
-Optimize it alongside Bellman fitting. The first term presses down high Q values while the second relatively supports data actions; it is not a constant subtraction from every Q. With only A observed, $Q(A)=1,Q(B)=5$ gives about 4.018 inside the brackets. Lowering unseen B to 0 gives about 0.313. This illustrates regularization pressure, not knowledge that B is actually bad.
+Optimize it alongside Bellman fitting. The first term pushes down large Q values, while the second pushes data-action values back up relative to the others; it does not just subtract a constant from every Q. With only A observed, $Q(A)=1,Q(B)=5$ gives about 4.018 inside the brackets. Lowering unseen B to 0 gives about 0.313. This illustrates regularization pressure, not knowledge that B is actually bad.
 
 IQL instead fits an expectile value from data-action Q values. For equally weighted values 0 and 4 with $\tau=0.8$, the optimum satisfies $0.8(4-V)=0.2V$, giving $V=3.2$. The mean is 2 and this distribution’s 0.8 quantile is 4: expectiles are different from quantiles.
 

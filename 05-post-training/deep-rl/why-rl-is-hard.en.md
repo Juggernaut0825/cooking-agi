@@ -33,7 +33,7 @@ Data construction and evaluation matter enormously, but getting them right does 
 
 | What you want to save | What to compare | A common mistake |
 | --- | --- | --- |
-| Interaction samples | Interactions, attempts, or annotations needed to reach the same fixed evaluation target | Fewer optimizer steps need not mean fewer interactions |
+| Interaction samples (sample efficiency) | Interactions, attempts, or annotations needed to reach the same fixed evaluation target | Fewer optimizer steps need not mean fewer interactions |
 | Training tokens | Tokens generated, scored, and trained on, separately, for the same quality target | Counting only loss-bearing tokens and omitting discarded rollouts |
 | Tokens at use time | Total generated tokens, attempts, and tool calls under the same test set and quality requirement | Shorter individual answers may require more attempts to succeed |
 | Compute and time | GPU-hours, cost, wall-clock time, and time to target quality | Higher tokens/s can accompany worse quality or greater total cost |
@@ -134,4 +134,4 @@ The practical response is to isolate failures and run controlled comparisons, no
 
 When quality stalls, a more complex loss is not automatically the next step. Better tests or a different difficulty mix may matter more. When the signal is clear but training still collapses, investigate estimation, updates, and systems behavior. **The difficulty is their interaction, not a permanent ranking of which component matters most.**
 
-Run `python 05-post-training/deep-rl/code/rl_tradeoffs.py` to check the budget and objective examples. These local calculations do not simulate full training or establish faster convergence for any method.
+Run `python3 05-post-training/deep-rl/code/rl_tradeoffs.py` to check the budget and objective examples. These local calculations do not simulate full training or establish faster convergence for any method.

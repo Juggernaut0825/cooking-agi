@@ -2,7 +2,7 @@
 
 **中文** · [English](value-and-advantage.en.md)
 
-> 阅读时间：约 2 分钟 · 难度：必修 · 最近审阅：2026-09
+> 阅读时间：约 2 分钟 · 难度：必修 · 最近审阅：2026-10
 
 ## Reward、Return 和奖励归因
 
@@ -26,7 +26,7 @@ $$Q^\pi(s,a)=\mathbb E_\pi[G_t\mid s_t=s,a_t=a].$$
 
 $$A^\pi(s,a)=Q^\pi(s,a)-V^\pi(s).$$
 
-它问的不是「这次总分高不高」，而是「这个动作相对当前状态下的正常预期，好了多少」。同样拿到 $0.6$ 的回报：如果 Critic 原本预测 $0.8$，它低于预期；如果原本只预测 $0.2$，它就明显高于预期。减去这个 baseline 不会改变期望中的策略梯度，却能显著降低方差。
+它问的不是「这次总分高不高」，而是「这个动作相对当前状态下的正常预期，好了多少」。同样拿到 $0.6$ 的回报：如果 Critic 原本预测 $0.8$，它低于预期；如果原本只预测 $0.2$，它就明显高于预期。减去这个 baseline 不会改变期望中的策略梯度；baseline 估得准时，通常能明显降低方差。
 
 ## Bellman equation：更新的是 value，不是 reward
 
@@ -49,9 +49,9 @@ $$
 使用一次实际 transition，可以构造 one-step TD target：
 
 $$
-y_t=r_t+\gamma V_\phi(s_{t+1}),
+y_t=r_t+\gamma V_\psi(s_{t+1}),
 \qquad
-\delta_t=y_t-V_\phi(s_t).
+\delta_t=y_t-V_\psi(s_t).
 $$
 
 $\delta_t$ 是 **temporal-difference error**（时序差分误差）：新观察到的“一步 reward 加未来估值”与旧估值相差多少。Monte Carlo 直接使用完整 $G_t$，偏差低但方差高；TD 会 bootstrap，方差低但引入 value approximation bias。PPO 常用 GAE 在两者之间调节。
@@ -60,4 +60,4 @@ $\delta_t$ 是 **temporal-difference error**（时序差分误差）：新观察
 
 $$\nabla_\theta J(\theta)\approx\mathbb E\left[\nabla_\theta\log\pi_\theta(a_t\mid s_t)\,\hat A_t\right].$$
 
-$\hat A_t>0$ 时，提高这次采样动作的概率；$\hat A_t<0$ 时，降低它。这个公式只直接更新实际采样到的 token，并通过共享参数影响其他状态下的分布。Critic 则用 return 或 bootstrapped target 回归 $V_\phi(s_t)$；它的主要作用是**降低估计方差**，不是替 Actor 决定下一个 token。
+$\hat A_t>0$ 时，提高这次采样动作的概率；$\hat A_t<0$ 时，降低它。这个公式只直接更新实际采样到的 token，并通过共享参数影响其他状态下的分布。Critic 则用 return 或 bootstrapped target 回归 $V_\psi(s_t)$；它的主要作用是**降低估计方差**，不是替 Actor 决定下一个 token。
