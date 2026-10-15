@@ -2,7 +2,7 @@
 
 **中文** · [English](frameworks.en.md)
 
-> 阅读时间：约 15 分钟 · 草稿，待审核
+> 阅读时间：约 13 分钟 · 草稿，待审核
 
 写下 `y = torch.relu(x @ w + b)`，Python 立刻返回，GPU 却可能还在算；套上 `torch.compile`，同一行又快了一截。中间到底经过了哪几层？**在 eager 模式下，这一行会变成 3 个独立的 ATen 算子、至少 3 个 kernel 和两次本可以省掉的显存往返；编译器主要省的不是乘法，而是每个算子的 CPU 调度开销和中间结果的读写。**
 
@@ -36,7 +36,7 @@ y = torch.relu(x @ w + b)
 | Stream | 这些 kernel 按顺序排进当前 stream；Python 不等 GPU 算完就返回 | 同上 |
 | Autograd | 记下 `ReluBackward0 → AddBackward0 → MmBackward0`，以及反向要用的张量 | [autograd mechanics](https://docs.pytorch.org/docs/2.14/notes/autograd.html) |
 
-**Dispatcher 先分层，再分设备。** 官方的 dispatcher 教程（作为自定义算子指南，自 PyTorch 2.4 起标为过时，但对 dispatcher 的描述仍可参考）说，一个算子按 dispatch key 拆成多个 kernel，例如 CPU、CUDA、Autograd；调用时先执行 Autograd 那一层，再按输入所在设备转发给后端 kernel。2.14 文档里 Dynamo 打印的 guard 也能看到这一点：一个 CPU 张量的 key 集合里同时有 `CPU` 和 `AutogradCPU`。
+**Dispatcher 先分层，再分设备。** 官方的 [dispatcher 教程](https://docs.pytorch.org/tutorials/advanced/dispatcher.html)（作为自定义算子指南自 PyTorch 2.4 起标为过时，但对 dispatcher 的描述仍可参考）说，一个算子按 dispatch key 拆成多个 kernel，例如 CPU、CUDA、Autograd；调用时先执行 Autograd 那一层，再按输入所在设备转发给后端 kernel。
 
 **`matmul` 自己没有反向公式。** 它在 `native_functions.yaml` 里注册为 `CompositeImplicitAutograd`，意思是由别的算子拼出来，梯度也由那些算子提供。两个二维输入走 `mm`，所以反向图里出现的是 `MmBackward0`，而不是某个 matmul 节点。输入是三维的 `[batch, seq, hidden]` 时，`matmul` 可能把前两维折成一维再调 `mm`，具体条件见上面链接的 `_matmul_impl`。
 
@@ -124,11 +124,11 @@ y = compiled(x, w, b)
 
 **JAX 和 XLA。** [`jax.jit`](https://docs.jax.dev/en/latest/jit-compilation.html) 用 tracer 对象包住参数，记录下来的运算组成 jaxpr；按 [AOT 文档](https://docs.jax.dev/en/latest/aot.html)，jaxpr 再降到 XLA 的输入语言 StableHLO，然后编译成 CPU、GPU 或 TPU 上的可执行程序，并缓存起来。被追踪的值只能通过 shape、dtype 这类静态属性影响控制流，依赖数值的 Python `if` 在 jit 里会报错；标成 static 的参数，每换一个值就重新编译一次。和 Dynamo 遇到不支持的代码就 graph break、回退到 Python 不同，jit 要求整个函数能被追踪。[XLA 架构文档](https://openxla.org/xla/architecture)说，它先做与硬件无关的优化（公共子表达式消除、算子融合、buffer 分析），再由后端按硬件优化；CPU 和 GPU 后端用 LLVM 生成代码，NVIDIA GPU 走 LLVM 的 NVPTX 后端。
 
-**TensorRT。** 它是 NVIDIA 的推理 SDK，分两个阶段：[构建阶段](https://docs.nvidia.com/deeplearning/tensorrt/latest/architecture/how-trt-works.html)由 builder 编译网络，在目标 GPU 上计时，为每一层挑最快的可用 kernel，输出序列化的 engine（也叫 plan 文件）；运行阶段加载 engine 执行。文档说，默认情况下 engine 只保证在构建时相同的操作系统、CPU 架构、GPU 型号和 TensorRT 版本上正确运行，可以通过版本兼容和硬件兼容选项放宽。最常见的入口是先导出 ONNX、再用 ONNX parser 建网络，也可以用 Torch-TensorRT 在进程内编译（[能力说明](https://docs.nvidia.com/deeplearning/tensorrt/latest/inference-library/capabilities.html)）；`torch.compile` 的 backend 列表里也有仅用于推理的 `"tensorrt"`。实际含义是：engine 是和硬件绑定的构建产物，换卡型或升级版本后要重新构建或验证。截至 2026-10-15，TensorRT 文档侧栏显示的最新版本是 11.4.0。
+**TensorRT。** 它是 NVIDIA 的推理 SDK，分两个阶段：[构建阶段](https://docs.nvidia.com/deeplearning/tensorrt/latest/architecture/how-trt-works.html)由 builder 在目标 GPU 上计时，为每一层挑最快的 kernel，输出序列化的 engine（plan 文件）；运行阶段加载 engine 执行。文档说，默认情况下 engine 只保证在构建时相同的操作系统、CPU 架构、GPU 型号和 TensorRT 版本上正确运行，可用版本兼容和硬件兼容选项放宽。常见入口是先导出 ONNX 再用 ONNX parser 建网络，也可以用 Torch-TensorRT 在进程内编译（[能力说明](https://docs.nvidia.com/deeplearning/tensorrt/latest/inference-library/capabilities.html)），`torch.compile` 也有仅用于推理的 `"tensorrt"` backend。所以 engine 是和硬件绑定的构建产物，换卡型或升级版本后要重新构建或验证。截至 2026-10-15，文档列出的最新版本是 11.4.0。
 
 ## 多卡：NCCL 和分布式 API 只画地图 {#nccl-map}
 
-[NCCL](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/overview.html)（2026-10-15 核对的文档版本为 2.32.3）实现 AllReduce、Broadcast、Reduce、AllGather、ReduceScatter、AlltoAll、Gather、Scatter 八种集合通信，以及点对点的 send/recv；支持 PCIe、NVLink、InfiniBand Verbs 和 IP sockets 等互联。PyTorch 的[分布式文档](https://docs.pytorch.org/docs/2.14/distributed.html)建议 CUDA GPU 训练使用 NCCL 后端。NCCL 调用会排进调用方传入的 CUDA stream，在设备上异步执行（[stream 语义](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/usage/streams.html)），所以通信既会和计算争资源，也可以和计算重叠；排查挂起时，NCCL 的 [`NCCL_DEBUG`](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html) 环境变量控制调试输出。
+[NCCL](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/overview.html)（2026-10-15 核对的文档版本为 2.32.3）实现 AllReduce、AllGather、ReduceScatter、AlltoAll 等集合通信和点对点 send/recv，可走 PCIe、NVLink、InfiniBand Verbs 和 IP sockets；PyTorch 的[分布式文档](https://docs.pytorch.org/docs/2.14/distributed.html)建议 CUDA GPU 训练用 NCCL 后端。NCCL 调用排进调用方传入的 CUDA stream，在设备上异步执行（[stream 语义](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/usage/streams.html)），所以通信既会和计算争资源，也可以和计算重叠；排查挂起时用 [`NCCL_DEBUG`](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html) 打开调试输出。
 
 | PyTorch API | 切什么 | 主要通信 | 本站在哪里讲 |
 | --- | --- | --- | --- |
@@ -149,7 +149,7 @@ y = compiled(x, w, b)
 | SGLang | v0.5.21（2026-10-02） | 同上 |
 | TensorRT-LLM | GitHub 上最新正式版 v1.2.1（2026-04-20）；1.3、1.4 仍是 release candidate | 本站暂未单独展开 |
 
-[TensorRT-LLM 的 README](https://github.com/NVIDIA/TensorRT-LLM)（2026-10-15 核对）把它描述为在 NVIDIA GPU 上优化 LLM 推理的开源库：提供 attention、GEMM、MoE 等定制 kernel，以及 prefill/decode 分离、推测解码等运行时优化，并说它“Architected on PyTorch”，对外提供 Python 的 LLM API。名字里有 TensorRT，但不要只凭名字就认定它的每条路径都会先构建 TensorRT engine。两套开源引擎是否默认启用 `torch.compile`，[已有笔记](../06-systems/inference-frameworks.md#bottlenecks)按固定版本核对过。
+[TensorRT-LLM 的 README](https://github.com/NVIDIA/TensorRT-LLM)（2026-10-15 核对）说它是在 NVIDIA GPU 上优化 LLM 推理的开源库，提供 attention、GEMM、MoE 等定制 kernel 和推测解码等运行时优化，并写着“Architected on PyTorch”。名字里有 TensorRT，但不要凭名字认定它的每条路径都先构建 TensorRT engine。两套开源引擎是否默认启用 `torch.compile`，[已有笔记](../06-systems/inference-frameworks.md#bottlenecks)按固定版本核对过。
 
 ## 出了问题，先查哪一层
 

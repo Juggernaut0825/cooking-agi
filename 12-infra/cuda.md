@@ -2,7 +2,7 @@
 
 **中文** · [English](cuda.en.md)
 
-> 阅读时间：约 15 分钟 · 草稿，待审核
+> 阅读时间：约 13 分钟 · 草稿，待审核
 
 在 PyTorch 里写一句 `c = a + b`，GPU 上到底发生了什么？CPU 把一个叫 kernel 的函数交给 GPU，GPU 一次启动成千上万个线程，每个线程只算一两个元素。加法本身很便宜；**一个 kernel 快不快，多半看每个 warp 搬来的字节有没有用上，以及同一份数据有没有被反复从显存读出来。** 这一篇用一个 vector add 和一个 4×4 的矩阵乘法把这两件事算清楚，再接到 cuBLAS、CUTLASS 和 Triton。
 
@@ -218,7 +218,7 @@ for regs, smem in [(32, 0), (64, 0), (32, 48), (80, 0)]:
     print(regs, smem, blocks, blocks * 256 // 32 / 64)
 ```
 
-这个估算省掉了两处细节。第一，寄存器按 warp 以 256 个为粒度分配（BPG [§11.1.1](https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html#calculating-occupancy) 在 compute capability 7.0 的例子里说明）；上面选的寄存器数让每个 warp 的用量正好是 256 的倍数。第二，每个 block 还有 1 KB shared memory 留给系统（[CUDA 12.4 版 Guide](https://docs.nvidia.com/cuda/archive/12.4.0/cuda-c-programming-guide/index.html#compute-capability-9-0) 对 compute capability 9.0 的说明）；把 48 KB 换成 49 KB 仍是 4 个 block，结论不变。实际 kernel 先用 `nvcc --resource-usage` 看寄存器和 shared 用量，再用 Nsight Compute 的 occupancy calculator 或 `cudaOccupancyMaxActiveBlocksPerMultiprocessor` 核对。
+这个估算省掉了两处细节。第一，寄存器按 warp 以 256 个为粒度分配（BPG [§11.1.1](https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html#calculating-occupancy) 在 compute capability 7.0 的例子里说明）；上面选的寄存器数让每个 warp 的用量正好是 256 的倍数。第二，每个 block 能用的 shared memory（227 KB）比每个 SM 的上限（228 KB）少 1 KB，[CUDA 12.4 版 Guide](https://docs.nvidia.com/cuda/archive/12.4.0/cuda-c-programming-guide/index.html#compute-capability-9-0) 说明这 1 KB 留给系统使用；按每个 block 多占 1 KB 算（49 KB），仍是 4 个 block，结论不变。实际 kernel 先用 `nvcc --resource-usage` 看寄存器和 shared 用量，再用 Nsight Compute 的 occupancy calculator 或 `cudaOccupancyMaxActiveBlocksPerMultiprocessor` 核对。
 
 Occupancy 不是越高越好。BPG 写明，超过某个点后提高 occupancy 不会再变快；少驻留几个 warp、让每个线程多用寄存器，有时能靠指令级并行把等待藏住（[BPG §11.1](https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html#occupancy)）。Occupancy 回答的是“有没有足够的 warp 可以切换”，不是“这个 kernel 快不快”。
 

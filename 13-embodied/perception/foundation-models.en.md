@@ -71,7 +71,7 @@ Where can a known distance come from?
 - A known camera height: assume the point is on a flat road, and the camera's height above it is the known distance. The [camera geometry](camera-geometry.en.md) note works out 10 m with a camera 1.5 m above the ground, and how far that number moves if the pitch is off by 1°.
 - A stereo baseline, several frames plus an IMU, or another metric model. The Nested version of [Depth Anything 3](https://arxiv.org/abs/2511.10647) uses a multi-view model for pose and depth and a monocular metric model for scale (README).
 
-A monocular model that outputs metric depth directly also has to deal with focal length. From $u-c_x=fX/Z$, doubling $f$ and every point's $Z$ leaves the pixels unchanged: a long lens filming a scene stretched along the optical axis produces the same image as a short lens filming the original. Without the focal length, metric depth is missing one condition. That is why [Depth Pro](https://arxiv.org/abs/2410.02073) (Apple, 2024-10) also estimates the focal length, [Metric3D v2](https://arxiv.org/abs/2404.15506) first transforms images into a canonical camera space, [UniDepth](https://arxiv.org/abs/2403.18913) has a module that estimates its own camera, and [MoGe-2](https://arxiv.org/abs/2507.02546) adds metric scale.
+A monocular model that outputs metric depth directly also has to deal with focal length. From $u-c_x=fX/Z$, doubling $f$ and every point's $Z$ leaves the pixels unchanged: a long lens filming a scene stretched along the optical axis produces the same image as a short lens filming the original. Without the focal length, metric depth is missing one condition. That is why [Depth Pro](https://arxiv.org/abs/2410.02073) (Apple, 2024-10) also estimates the focal length, [Metric3D v2](https://arxiv.org/abs/2404.15506) first transforms images into a canonical camera space, [UniDepth](https://arxiv.org/abs/2403.18913) has a module that estimates its own camera, and [MoGe-2](https://arxiv.org/abs/2507.02546) adds metric scale. The monocular metric version of Depth Anything 3 leaves the focal length to the user: its [README](https://github.com/ByteDance-Seed/Depth-Anything-3) gives "metric depth = focal length (pixels) × network output / 300", so a wrong focal length scales every distance by the same wrong factor.
 
 ## Pointmap: a 3D point for every pixel
 
@@ -94,11 +94,11 @@ The classical route matches features, runs structure-from-motion to get cameras,
 | 2023-12 | [DUSt3R](https://arxiv.org/abs/2312.14132) | Two uncalibrated images → two pointmaps | More than two needs a separate global alignment (optimisation) |
 | 2024-06 | [MASt3R](https://arxiv.org/abs/2406.09756) | DUSt3R plus dense local features and fast matching | Same |
 | 2025-01 | [Fast3R](https://arxiv.org/abs/2501.13928) | N images → pointmaps | One forward pass, no global alignment; the authors report 1000+ images in one pass |
-| 2025-03 | [VGGT](https://arxiv.org/abs/2503.11651) | One to hundreds of images → intrinsics and extrinsics, depth maps, pointmaps, 3D point tracks | One forward pass; the authors report reconstruction in under 1 second; CVPR 2025 Best Paper |
+| 2025-03 | [VGGT](https://arxiv.org/abs/2503.11651) | One to hundreds of images → intrinsics and extrinsics, depth maps, pointmaps, 3D point tracks | One forward pass; the authors report reconstruction in under 1 second; CVPR 2025 Best Paper ([README](https://github.com/facebookresearch/vggt)) |
 | 2025-07 | [$\pi^3$](https://arxiv.org/abs/2507.13347) | No reference view; permutation-equivariant in the input order | One forward pass |
 | 2025-09 | [MapAnything](https://arxiv.org/abs/2509.13414) | Images plus optional intrinsics, poses or depth → metric depth, ray maps, poses and a scale factor | One forward pass; one model covers 12+ reconstruction tasks |
 | 2025-11 | [Depth Anything 3](https://arxiv.org/abs/2511.10647) | Any number of images, posed or not → consistent depth and rays | A plain DINO-style transformer with a single depth-ray target |
-| 2025-12 | [D4RT](https://arxiv.org/abs/2512.08924) | One video → depth, spatio-temporal correspondence and cameras, with things in the scene allowed to move | A query-based decoder can ask about any point at any time; CVPR 2026 Best Paper |
+| 2025-12 | [D4RT](https://arxiv.org/abs/2512.08924) | One video → depth, spatio-temporal correspondence and cameras, with things in the scene allowed to move | A query-based decoder can ask about any point at any time; CVPR 2026 Best Paper ([closing page](https://cvpr.thecvf.com/Conferences/2026/News/Closing)) |
 
 A few things worth pausing on:
 
@@ -145,7 +145,6 @@ Licences really do change: VGGT added a commercial checkpoint on 2025-07-29 ([RE
 
 ## As of October 2026
 
-- Awards: VGGT won the CVPR 2025 Best Paper ([README](https://github.com/facebookresearch/vggt)); the CVPR 2026 Best Paper went to D4RT ([CVPR 2026 closing page](https://cvpr.thecvf.com/Conferences/2026/News/Closing)). D4RT's project page publishes no code, weights or licence.
 - Successors: [VGGT-Ω](https://arxiv.org/abs/2605.15195) (2026-05) scales VGGT up and handles static and dynamic scenes; its arXiv comment says CVPR 2026 oral. As of 2026-10-15 we found no public release of a DINOv4 or a Depth Anything 4; not finding one does not prove there is none.
 - Downstream use: DINOv3 is already used as an off-the-shelf backbone, for example by the DEIMv2 detector and the SAM 3D Body checkpoints; DINO-WM uses frozen DINOv2 patch features as a world-model representation (see the [JEPA note](../../11-frontier/world-models/jepa.en.md)).
 

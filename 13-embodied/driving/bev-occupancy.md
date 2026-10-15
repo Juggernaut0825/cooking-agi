@@ -53,7 +53,7 @@ $$
 
 ## 论文里的真实设置与开销
 
-LSS 论文 §4.1 的设置：深度限定在 4 m 到 45 m 之间，每 1 m 一档；输入图像缩放、裁剪到 128×352；BEV 网格 200×200。一张 $H\times W$ 的特征图会生成 $|D|\cdot HW$ 个点（这里 $|D|$ 约 40），再乘以相机数，点数很大。论文 §4.2 用一个 “cumsum trick” 做 sum pooling：按格子编号把点排序，对特征做累加和，再在每段边界处相减；他们推了这一层的解析梯度，训练快了 2 倍。论文报告整个前向在一块 Titan V 上跑 35 Hz，这是 2020 年硬件上的作者测量。
+LSS 论文 §4.1 的设置：深度限定在 4 m 到 45 m 之间，每 1 m 一档；输入图像缩放、裁剪到 128×352；BEV 网格 200×200。一张 $H\times W$ 的特征图会生成 $|D|\cdot HW$ 个点（这里 $|D|=41$），再乘以相机数，点数很大。论文 §4.2 用一个 “cumsum trick” 做 sum pooling：按格子编号把点排序，对特征做累加和，再在每段边界处相减；他们推了这一层的解析梯度，训练快了 2 倍。论文报告整个前向在一块 Titan V 上跑 35 Hz，这是 2020 年硬件上的作者测量。
 
 名字里的 **shoot** 是规划：网络在 BEV 上输出一张代价图，把 1,000 条模板轨迹（对专家轨迹做 K-means 得到）“打”到代价图上，沿轨迹累加代价，训练时当作分类，测试时取代价最低的那条。这是第 2 篇“候选轨迹加打分”的一个学习版本。
 
@@ -82,13 +82,13 @@ Tesla 在 2021-08-19 的 AI Day 上介绍过同一类思路：用铺满位置编
 
 [BEVFusion](https://arxiv.org/abs/2205.13542)（ICRA 2023）把相机特征和 lidar 特征放进同一张 BEV 里再融合，服务多个任务。摘要报告：nuScenes 三维检测的 mAP 和 NDS 各高 1.3%，BEV 地图分割的 mIoU 高 13.6%，计算量低 1.9 倍；优化 BEV pooling 后，视角转换的延迟降低 40 倍以上。放回上面的例子：lidar 直接测出 16 m，特征就不必靠 $\alpha$ 去猜。
 
-工业界两种立场都有。Waymo 2025-12 的 Foundation Model 用一个 Sensor Fusion Encoder 融合相机、lidar 和 radar（[博客](https://waymo.com/blog/2025/12/demonstrably-safe-ai-for-autonomous-driving)）；Tesla 在 2025 年第一季度股东信中描述的是纯视觉架构。
+工业界两种立场都有。Waymo 2025-12 的 Foundation Model 用一个 Sensor Fusion Encoder 融合相机、lidar 和 radar（[博客](https://waymo.com/blog/2025/12/demonstrably-safe-ai-for-autonomous-driving)）；Tesla 在 [2025 年第一季度股东信](https://digitalassets.tesla.com/tesla-contents/image/upload/IR/TSLA-Q1-2025-Update.pdf)中描述的是纯视觉、端到端神经网络的架构。
 
 ## 占用：先问占没占，不先问是什么
 
 一个 3D 框通常是中心 3 个数、尺寸 3 个数、朝向 1 个数，再加一个类别。横在车道上的梯子、伸出来的树枝、形状不规则的货物，框都描述不好；类别表里没有的东西，检测器也可能直接漏掉。[Occ3D](https://arxiv.org/abs/2304.14365)（NeurIPS 2023）的摘要把占用预测定义为估计场景中每个位置的占用状态和语义，用来弥补框在细粒度几何和词表外物体上的不足。
 
-[CVPR 2023 占用预测挑战赛](https://github.com/CVPR2023-3D-Occupancy-Prediction/CVPR2023-3D-Occupancy-Prediction)用 Occ3D-nuScenes：体素 0.4 m，网格 200×200×16，18 个类别，只用相机，按 mIoU 排名。算一下：水平方向 $200\times0.4=80$ m 见方，竖直方向 $16\times0.4=6.4$ m 高；每帧 $200\times200\times16=640{,}000$ 个体素，每个都要给一个类别。按[技术报告](https://arxiv.org/abs/2307.01492)的摘要，冠军 FB-OCC 的 mIoU 是 54.19%。
+[CVPR 2023 占用预测挑战赛](https://github.com/CVPR2023-3D-Occupancy-Prediction/CVPR2023-3D-Occupancy-Prediction)用 Occ3D-nuScenes：体素 0.4 m，网格 200×200×16，18 个类别（其中一类是“空”，free），推理时只用相机，按 mIoU 排名。算一下：水平方向 $200\times0.4=80$ m 见方，竖直方向 $16\times0.4=6.4$ m 高；每帧 $200\times200\times16=640{,}000$ 个体素，每个都要给一个类别。按[技术报告](https://arxiv.org/abs/2307.01492)的摘要，冠军 FB-OCC 的 mIoU 是 54.19%。
 
 mIoU 先对每个类别算交并比，再对类别取平均。比如“车”这一类，预测了 120 个体素，真值 100 个，重合 80 个：
 
@@ -107,11 +107,11 @@ Tesla 在 2022 年两次介绍过占用网络，都是演讲，下面据自动�
 - **把稀疏的 lidar 补成稠密体素。** Occ3D 的摘要列出三步：体素稠密化、遮挡推理、用图像引导细化体素，得到“考虑可见性”的标签。[SurroundOcc](https://arxiv.org/abs/2303.09551)（ICCV 2023）按摘要用多帧 lidar 加 Poisson 重建生成稠密真值。
 - **离线自动标注。** 车载模型只能看过去；离线标注可以看整段序列的前后帧，用更大的模型。Waymo 的 [3D Auto Labeling](https://arxiv.org/abs/2103.05073)（Qi 等，2021）就是从整段点云序列离线检测物体。
 
-这样得到的标签继承了 lidar 的盲区：被挡住、没扫到的体素没有可靠真值。所以评测常常只在“可见”体素上算分，读结果时要看清楚是哪一种。
+这样得到的标签继承了 lidar 的盲区：被挡住、没扫到的体素没有可靠真值。所以评测常常只在“可见”体素上算分：CVPR 2023 挑战赛的 README 写明，只在当前相机看得到的体素上算 mIoU，看不见的体素不计入。读别的结果时要看清楚用的是哪一种。
 
 ## 进了端到端栈，它们变成了什么
 
-Tesla 在 ICCV 2025 演讲中说，显式感知现在是可选的辅助输出，同一个模型可以被要求输出占用、物体等（[视频](https://www.youtube.com/watch?v=IRu-cPkpiFk)，据演讲自动字幕）。Waymo 的 Foundation Model 仍有一个 World Decoder 输出其他交通参与者的行为、地图和轨迹。[Bench2Drive](https://github.com/Thinklab-SJTU/Bench2Drive) 0.0.4（2026-08）新增了占用模态。BEV 和占用没有消失：它们成了辅助监督、调试视图，以及安全检查能读懂的中间结果。
+Tesla 在 2025 年 10 月的 ICCV 演讲中说，显式感知现在是可选的辅助输出，同一个模型可以被要求输出占用、物体等（[视频](https://www.youtube.com/watch?v=IRu-cPkpiFk)，据演讲自动字幕）。Waymo 的 Foundation Model 仍有一个 World Decoder 输出其他交通参与者的行为、地图和轨迹。[Bench2Drive](https://github.com/Thinklab-SJTU/Bench2Drive) 0.0.4（2026-08）新增了占用模态。BEV 和占用没有消失：它们成了辅助监督、调试视图，以及安全检查能读懂的中间结果。
 
 ## 复现和排错时看什么
 

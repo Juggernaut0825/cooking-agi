@@ -2,7 +2,7 @@
 
 [中文](tracking.md) · **English**
 
-> Reading time: ~12 min · Draft, pending review
+> Reading time: ~10 min · Draft, pending review
 
 A detector produces a pile of boxes every frame, each frame on its own. A planner needs something else: "the car ahead is at 12.75 m, moves about 2 m per frame, and here is how uncertain that is", and "this pedestrian is the same one as in the last frame". **Tracking splits into two jobs: predict with a motion model, then correct with a measurement weighted by both uncertainties (the Kalman filter); and decide which measurement belongs to which track (data association). The first has a closed-form optimal answer under linear-Gaussian assumptions; many identity switches come from the second.**
 
@@ -12,7 +12,7 @@ A detector produces a pile of boxes every frame, each frame on its own. A planne
 
 Prerequisites: [conditional probability](../../quant/probability/conditional.en.md) and the Gaussian distribution from the [probability notes](../../quant/probability/README.en.md), and projection from [note 1](camera-geometry.en.md).
 
-Tracking does not store a number; it stores a distribution. The mean is the most likely position and the variance says how unsure you are. Under linear models with Gaussian noise the distribution stays Gaussian, so only two quantities need updating. In the notation of [Barfoot, *State Estimation for Robotics*, 2nd ed.](https://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser24.pdf), eq. (3.1), in one dimension:
+Tracking does not store a number; it stores a distribution. The mean is the most likely position and the variance says how unsure you are. Under linear models with Gaussian noise the distribution stays Gaussian, so only two quantities need updating. Take the one-dimensional case of eq. (3.1) in [Barfoot, *State Estimation for Robotics*, 2nd ed.](https://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser24.pdf) (the book writes the known input as $v_k$; here it is $u_k$):
 
 $$
 x_k=x_{k-1}+u_k+w_k,\quad w_k\sim\mathcal N(0,Q);\qquad
@@ -57,7 +57,7 @@ The corrected variance is smaller than either the prediction's or the measuremen
 | Set $Q$ to 0 (trust the motion model completely) | $K$ over 4 frames: 0.67, 0.40, 0.29, 0.22 | $P$ keeps shrinking and the filter listens less and less | Smaller $Q$ is more accurate (when the car ahead brakes, the estimate lags) |
 | Measurement $y=18$ (maybe a different car) | Without a gate, the estimate is pulled to 16.5 | Innovation 6, $6^2/S=36/2=18$ | A gate prevents wrong matches (two targets close together can both pass it) |
 
-In the last row, $S=\check P+R=2$ is the innovation's variance. $e^2/S$ is the normalised innovation squared (NIS); when the model is right it follows a $\chi^2$ distribution with 1 degree of freedom (Barfoot, Section 5.1.2), whose 95% quantile is about 3.84. 18 is far above 3.84, so you can reject this measurement. That is gating.
+In the last row, $S=\check P+R=2$ is the innovation's variance. $e^2/S$ is the normalised innovation squared (NIS); when the model is right it follows a $\chi^2$ distribution with 1 degree of freedom, whose 95% quantile is about 3.84. Barfoot, Section 5.1.2, uses NIS to test whether a filter is consistent; using it to screen measurements one at a time is gating: 18 is far above 3.84, so this measurement is rejected.
 
 ## From one dimension to SORT: a box has a state too
 

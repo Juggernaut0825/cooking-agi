@@ -27,32 +27,32 @@ Also keep monitoring and experiments apart. Monitoring answers "did quality chan
 
 [Agent observability](../06-systems/agent-observability.en.md) already covers how a trace links model, retrieval and tool calls, and how to replay and redact it. Here the only question is: **which fields must survive so this request can be evaluated later?** In other words, whatever a judge or a person needs to understand the answer again: which prompt template and version, which model and parameters, what was retrieved, which tools were called, what came out, how much time and how many tokens it took, and what the user did afterwards.
 
-OpenTelemetry (OTel) defines GenAI semantic conventions for these fields. First, their status as of October 2026:
+OpenTelemetry (OTel) defines GenAI semantic conventions for these fields. The names are still moving, so first their status as of 2026-10-15:
 
-- The conventions have status **Development**; OTel used to call this level Experimental. Per [OTel's versioning and stability document](https://opentelemetry.io/docs/specs/otel/versioning-and-stability/), this level allows breaking changes and long-term dependencies should not be taken on it.
-- The [GenAI page on opentelemetry.io](https://opentelemetry.io/docs/specs/semconv/gen-ai/) is now only a notice that the content moved. Starting with core semantic conventions [v1.42.0](https://github.com/open-telemetry/semantic-conventions/releases/tag/v1.42.0) (2026-06-12), all `gen_ai.*` definitions are deprecated in the core repository and moved to the separate [semantic-conventions-genai repository](https://github.com/open-telemetry/semantic-conventions-genai). As of 2026-10-15 that repository has no formal release, and its main branch has accumulated several breaking renames.
+- The conventions have status **Development** (OTel used to call this level Experimental). Per [OTel's versioning and stability document](https://opentelemetry.io/docs/specs/otel/versioning-and-stability/), this level allows breaking changes and long-term dependencies should not be taken on it.
+- Starting with core semantic conventions [v1.42.0](https://github.com/open-telemetry/semantic-conventions/releases/tag/v1.42.0) (2026-06-12), all `gen_ai.*` definitions are deprecated and moved to the separate [semantic-conventions-genai repository](https://github.com/open-telemetry/semantic-conventions-genai); from v1.42.0 through the latest core release, v1.44.0 (2026-08-04), both the core repository and the [GenAI page on opentelemetry.io](https://opentelemetry.io/docs/specs/semconv/gen-ai/) carry only a "moved" notice.
+- As of 2026-10-15 the new repository has no release or tag at all; its CHANGELOG has only an "Unreleased" section, which already holds about 10 breaking changes.
 
-The last core releases that contain the GenAI documents are v1.41.x. The names below come from v1.41.0 ([spans](https://github.com/open-telemetry/semantic-conventions/blob/v1.41.0/docs/gen-ai/gen-ai-spans.md), [metrics](https://github.com/open-telemetry/semantic-conventions/blob/v1.41.0/docs/gen-ai/gen-ai-metrics.md), [events](https://github.com/open-telemetry/semantic-conventions/blob/v1.41.0/docs/gen-ai/gen-ai-events.md); v1.41.1 left these documents unchanged), with known changes on the new repository's main branch noted.
+So the table below has two kinds of information: the names in v1.41.0, the last core release with complete GenAI documents ([spans](https://github.com/open-telemetry/semantic-conventions/blob/v1.41.0/docs/gen-ai/gen-ai-spans.md), [metrics](https://github.com/open-telemetry/semantic-conventions/blob/v1.41.0/docs/gen-ai/gen-ai-metrics.md), [events](https://github.com/open-telemetry/semantic-conventions/blob/v1.41.0/docs/gen-ai/gen-ai-events.md); v1.41.1 left these documents unchanged), and, in the notes column, known changes on the new repository's main branch (as of 2026-10-14, unreleased).
 
-| What to record | Name in v1.41.0 | Notes |
+| What to record | Name in v1.41.0 | Notes (including changes on main) |
 | --- | --- | --- |
-| Operation type, provider | `gen_ai.operation.name`, `gen_ai.provider.name` | Operation values include `chat`, `retrieval`, `execute_tool` and others |
+| Operation type, provider | `gen_ai.operation.name`, `gen_ai.provider.name` | Operation values include `chat`, `retrieval`, `execute_tool`, `invoke_agent`, `embeddings` and others |
 | Requested model, model that actually answered | `gen_ai.request.model`, `gen_ai.response.model` | The spec's examples are `gpt-4` and `gpt-4-0613`; record both, or you cannot see a version change behind an alias |
 | Generation parameters | `gen_ai.request.temperature`, `gen_ai.request.top_p`, `gen_ai.request.max_tokens` | Record the values actually sent |
-| Prompt template and version | Not in v1.41.0 | Main adds `gen_ai.prompt.name` and `gen_ai.prompt.version`, not yet released; use custom attributes until then |
+| Prompt template and version | `gen_ai.prompt.name` exists only in the attribute registry and is not attached to any span | Main adds `gen_ai.prompt.version`; use custom attributes until it is released |
 | Conversation | `gen_ai.conversation.id` | Cluster multi-turn analysis by conversation |
 | System instructions, input and output text | `gen_ai.system_instructions`, `gen_ai.input.messages`, `gen_ai.output.messages` | All Opt-In; the spec says they should not be captured by default |
 | Retrieval | Span for the `retrieval` operation; `gen_ai.data_source.id`; `gen_ai.retrieval.documents` | Document content is Opt-In |
 | Tool calls | Span for the `execute_tool` operation; `gen_ai.tool.name`, `gen_ai.tool.call.id` | Arguments and results, `gen_ai.tool.call.arguments` and `gen_ai.tool.call.result`, are Opt-In |
 | Finish reason | `gen_ai.response.finish_reasons` | A rising share of `length` often means truncation |
-| Tokens | `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`; metric `gen_ai.client.token.usage` | On main this histogram is replaced by separate per-direction metrics |
-| Latency | Span duration; metrics `gen_ai.client.operation.duration`, `gen_ai.client.operation.time_to_first_chunk` | On main, inference calls use `gen_ai.client.inference.*` latency metrics, and `gen_ai.client.operation.duration` is no longer for inference |
+| Tokens | `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`; histogram `gen_ai.client.token.usage` | Main removes this histogram in favour of per-direction metrics such as `gen_ai.client.inference.usage.input_tokens` and `…output_tokens` |
+| Latency | Span duration; metrics `gen_ai.client.operation.duration`, `gen_ai.client.operation.time_to_first_chunk` | On main, inference calls use `gen_ai.client.inference.duration` and `gen_ai.client.inference.time_to_first_chunk` instead |
 | Errors | `error.type` | This attribute is Stable |
-| Cost | No standard attribute | Compute downstream from token counts and a dated price table |
 | Evaluation result | Event `gen_ai.evaluation.result`: `gen_ai.evaluation.name`, `gen_ai.evaluation.score.value`, `gen_ai.evaluation.score.label`, `gen_ai.evaluation.explanation` | Parent it to the evaluated span; when the span is unavailable, correlate via `gen_ai.response.id` |
-| User feedback | No standard attribute | Custom event, linked by trace id or response id |
+| Cost, user feedback | No standard attribute | Compute cost downstream from token counts and a dated price table; record feedback as a custom event linked by trace id or response id |
 
-Three practical points. First, record which version of the conventions you emit, and keep a mapping layer between dashboard queries and raw fields; names may change when you upgrade instrumentation. The v1.41.0 text says instrumentations that already emitted v1.36.0 or earlier keep the old names by default and switch to the latest experimental version only when `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental` is set. Second, capture model name, parameters and prompt version when the request is sent; reconstructing them from configuration afterwards tends to go wrong. Third, a judge call is itself a GenAI call: record its model, parameters and rubric version too. The section on drift relies on this.
+Three practical points. First, record which version of the conventions you emit, and keep a mapping layer between dashboard queries and raw fields; names may change when you upgrade instrumentation (v1.41.0 says instrumentations that already emitted v1.36.0 or earlier keep the old names by default and switch to the latest experimental version only when `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental` is set). Second, capture model name, parameters and prompt version when the request is sent; reconstructing them from configuration afterwards tends to go wrong. Third, a judge call is itself a GenAI call: record its model, parameters and rubric version too, which the section on drift relies on.
 
 ## How online evaluation runs: from sampling to a regression set
 
@@ -93,13 +93,11 @@ The first three select samples that "look problematic", so they only tell you ho
 
 A failure confirmed by a reviewer enters the offline set in these steps:
 
-1. Pin what reproduces it: the input, a context snapshot or reference, and the version of each component;
-2. Redact it and confirm it may be copied out of production;
-3. Write the expected behavior, preferably as a checkable condition such as "must cite the 2026 policy", not just a reference answer;
-4. Tag the slice and failure type, and remove duplicates;
-5. Put part of it in the CI regression set and keep part as a holdout that is never used for tuning.
+1. Pin what reproduces it (the input, a context snapshot or reference, the version of each component), redact it, and confirm it may be copied out of production;
+2. Write a checkable expected behavior, such as "must cite the 2026 policy", not just a reference answer; tag the slice and failure type, and deduplicate;
+3. Put part of it in the CI regression set and keep part as a holdout that is never used for tuning.
 
-Do not delete the item after the fix; its job is to stop the same problem from returning. Watch the other side as well: tuning prompts against the same regression items again and again slowly turns the regression set into a training set. For how to split data, see [judge calibration](llm-as-a-judge/calibration.en.md); for a CI gate that blocks regressions, see [eval reports and CI](../practice/web-lab/eval-report.en.md).
+Do not delete the item after the fix; but tuning prompts against the same items again and again slowly turns the regression set into a training set. For how to split data, see [judge calibration](llm-as-a-judge/calibration.en.md); for a CI gate that blocks regressions, see [eval reports and CI](../practice/web-lab/eval-report.en.md).
 
 ## Compute it once: how large a regression can 1% sampling see?
 
@@ -167,7 +165,7 @@ The table shows three things.
 
 **Small slices are nearly invisible.** A slice with 2% of traffic, say one language or one new feature, gets only 20 judged samples a day at 1% sampling, and the normal approximation breaks down: with 17 of 20 passing, the Wilson 95% interval for the judge pass rate runs from 64% to 95%. Suppose this slice falls from 90% to 60%. The overall pass rate drops by only $0.02\times30=0.6$ points, far below an MDE of 5.3 or even 2.4, and the overall curve stays almost flat. This is the problem from [population mixtures](metric-robustness.en.md#population-mix) and [weighted slices](ablation-and-slices.en.md), as it shows up in production.
 
-**Stratified sampling puts the budget where it matters.** Sample this slice separately at 25% (500 a day) and the other 98% of traffic at 1% (980 a day): 1,480 judge calls a day in total, and the slice's MDE drops to about 7.4 points. The price is that the overall pass rate must be weighted by true traffic shares: the slice is one third of the sample but only 2% of traffic, so averaging the 1,480 samples directly inflates it more than tenfold.
+**Stratified sampling puts the budget where it matters.** Sample this slice separately at 25% (500 a day) and the other 98% of traffic at 1% (980 a day): 1,480 judge calls a day in total, and the slice's MDE drops to about 7.4 points. The price is that the overall pass rate must be weighted by true traffic shares: the slice is about one third of the sample but only 2% of traffic, so averaging the 1,480 samples directly gives it about 17 times its real weight.
 
 These numbers cover sampling error only. Not yet included:
 
@@ -176,25 +174,21 @@ These numbers cover sampling error only. Not yet included:
 - Requests from the same user or conversation are correlated, so the effective sample is smaller than the count; estimate with clustering by user or conversation, see [metric robustness](metric-robustness.en.md).
 - Watch 20 slices and 5 metrics at once and a few will look "significant" every day even when nothing changed.
 
-An alternative does not rely on fixed $s,t$: in each reporting period, have people label a small part of the random sample, and subtract the judge's average error on that small labeled part from the judge's average on the large sample. This is the mean estimator of [prediction-powered inference](https://arxiv.org/abs/2301.09633) (Angelopoulos et al., 2023). The paper's main setting assumes the human-labeled samples and the judged traffic are i.i.d. from the same distribution (a random audit satisfies this); under that assumption the intervals are valid without assuming anything about how accurate the judge is. Interval width is driven mainly by how much the judge differs from humans: the closer the judge is to humans, the narrower the interval. The cost is fresh human labels every period.
+An alternative does not rely on fixed $s,t$: in each reporting period, have people label a small part of the random sample, and subtract the judge's average error on that small labeled part from the judge's average on the large sample. This is the mean estimator of [prediction-powered inference](https://arxiv.org/abs/2301.09633) (Angelopoulos et al., 2023); the paper's setting has the human-labeled samples and the judged traffic drawn independently from the same distribution (a random audit satisfies this), and under that assumption the intervals are valid without assuming anything about how accurate the judge is. The closer the judge is to humans, the narrower the interval. The cost is fresh human labels every period.
 
-## Metrics and alerting
+## Which signals should alert, and how fast
 
 | Signal | Computed on how much traffic | How to alert |
 | --- | --- | --- |
-| Error rate (grouped by `error.type`) | All | Minute-level thresholds |
+| Error rate (grouped by `error.type`), format and tool-argument validation failures | All | Minute-level thresholds |
 | Latency p50/p95, time to first chunk when streaming | All | Minute-level, split by model and route |
-| Tokens and cost per request | All | Hourly; also track cost per successful task |
+| Tokens and cost per request | All | Hourly; also track cost per successful task, which rises when retries increase |
 | Share of `length` finish reasons | All | A rise often means truncation or longer outputs |
-| Format and tool-argument validation failure rate | All | Deterministic checks, minute-level is fine |
-| Refusal rate | All (rules or a small classifier) or sampled (judge) | Two-sided: too high is over-refusal, too low may mean a failing safety guard |
-| Safety flag rate | All or sampled | Rare and costly; a single case may need human review |
+| Refusal rate, safety flag rate | All (rules or a small classifier) or sampled (judge) | Two-sided: too high is over-refusal, too low may mean a failing guard; a single safety flag may need human review |
 | Judge pass rate (corrected) | Sampled | Daily or weekly windows, thresholds from the MDE in the previous section |
-| Share of thumbs-down and regenerate | All, but sparse and biased | Watch the trend; not an absolute quality measure |
+| Share of thumbs-down and regenerate | All, but sparse and biased | Watch the trend; no thumbs-down does not mean satisfied, see [from feedback to training objectives](../01-data-and-feedback/feedback-to-objectives.en.md) |
 
 Signals computed on every request can alert quickly. Quality signals from a judge are sampled and delayed, so their thresholds should come from the calculation in the previous section, not from a round number. Every slice you want to watch on its own needs its own sample-size calculation; otherwise its alert is noise.
-
-A few easy misreadings. Cost per request can fall while cost per successful task rises, because retries increased. Refusal rate needs watching in both directions. User feedback is valuable, but few users click thumbs-down and they do not represent everyone; no thumbs-down does not mean satisfied, see [from feedback to training objectives](../01-data-and-feedback/feedback-to-objectives.en.md).
 
 ## Judges drift too
 
@@ -209,29 +203,16 @@ What you can do:
 
 ## Privacy and retention: what not to log
 
-The OTel GenAI conventions take a conservative default: system instructions, user inputs and model outputs are treated as sensitive and large, instrumentations **should not capture them by default** and should let users opt in, and in production the recommended pattern is to store content separately, under its own access controls, and record only references on spans (see the section on capturing instructions, inputs and outputs in the v1.41.0 [spans spec](https://github.com/open-telemetry/semantic-conventions/blob/v1.41.0/docs/gen-ai/gen-ai-spans.md)). [OTel's guidance on sensitive data](https://opentelemetry.io/docs/security/handling-sensitive-data/) likewise asks you to collect only data that serves an observability purpose.
+The OTel GenAI conventions take a conservative default: system instructions, user inputs and model outputs are treated as sensitive and large, and instrumentations **should not capture them by default** but let users opt in; for production environments with high telemetry volume or sensitive data, the recommended pattern is to store content externally and record only references on spans (see the section on capturing instructions, inputs and outputs in the v1.41.0 [spans spec](https://github.com/open-telemetry/semantic-conventions/blob/v1.41.0/docs/gen-ai/gen-ai-spans.md)). [OTel's guidance on sensitive data](https://opentelemetry.io/docs/security/handling-sensitive-data/) likewise asks you to collect only data that serves an observability purpose.
 
 In online evaluation, the common traps are:
 
-- **What should not be logged.** Credentials, session tokens and API keys, which often hide in tool arguments, request headers and URLs; payment and identity-document data; contact and health details unrelated to the evaluation. Filtering top-level fields is not enough, because tool arguments and results are free text.
-- **The judge is also a data recipient.** Sending a user's conversation to a judge model sends it to one more model service, and the judge's explanation may quote personal data verbatim. Judge call records need the same rules.
-- **Show reviewers only what they need.** Redact inside the annotation queue first, and limit who can see raw text per task.
-- **Tiered retention.** Aggregate metrics can be kept for a long time; raw text and full traces for a short time. Samples copied into a regression set escape the original retention clock, so redact them before copying and record their origin and permission. When a user asks for deletion, traces, judge events, annotation queues and regression sets must all be findable and deletable.
-- **Check what your tools actually do.** For example, as of October 2026 Langfuse's [licensing page](https://langfuse.com/self-hosting/license-key) lists data retention policies and server-side masking as self-hosted features that require an enterprise license; with the open-source edition, those must be handled in the application or SDK.
+- **What should not be logged.** Credentials, session tokens and API keys (often hidden in tool arguments, request headers and URLs), payment and identity-document data, and contact or health details unrelated to the evaluation. Tool arguments and results are free text, so filtering top-level fields is not enough.
+- **Judges and reviewers are data recipients too.** Sending a conversation to a judge sends it to one more model service, and its explanation may quote personal data verbatim; redact inside the annotation queue, and limit who can see raw text per task.
+- **Tiered retention.** Keep aggregate metrics long and raw text and full traces short. Samples copied into a regression set escape the original retention clock, so redact them first and record their origin; when a user asks for deletion, traces, judge events, annotation queues and regression sets must all be findable.
+- **Check what your tools actually do.** For example, as of October 2026 Langfuse's [licensing page](https://langfuse.com/self-hosting/license-key) lists Data Retention Policies and Server-Side Data Masking as self-hosted features that require an enterprise license; with the open-source edition, those must be handled in the application or SDK.
 
-## The tooling landscape, by category
-
-What follows only describes what each category does, with no ranking. The open-source examples were checked against their official docs (as of October 2026); listing them is not a recommendation.
-
-| Category | What it does | Open-source example |
-| --- | --- | --- |
-| Instrumentation and collection | Produces spans, metrics and events in the application and exports them via OTLP | OTel SDKs for each language and the Collector |
-| General tracing backend | Stores, queries and visualizes traces; does not understand judge scores or annotations | [Jaeger](https://www.jaegertracing.io/docs/latest/): a CNCF graduated project; v2 is built on the OTel Collector |
-| LLM-specific trace and evaluation platform | Shows prompt, output and tokens per trace; runs judges on production traces by rule; human scoring | [Langfuse](https://langfuse.com/docs/evaluation/get-started/online): accepts OTLP; an evaluation rule combines filters, a sampling rate and evaluators; the core is MIT-licensed, some features need an enterprise license |
-| Offline eval runner | Runs prompts or models on a fixed test set, checks assertions, plugs into CI | [promptfoo](https://www.promptfoo.dev/docs/intro/): open-source CLI and library, declarative test cases, usable in CI/CD |
-| Annotation queue | Assigns selected traces to reviewers who score them against a scoring config | Langfuse [annotation queues](https://langfuse.com/docs/evaluation/evaluation-methods/annotation-queues); or build your own |
-
-When choosing, start with questions you can verify: which version of the GenAI conventions does it accept? Where is content stored, who can see it, and for how long? Can the judge sampling rate be set per slice? Can annotation results be exported as a regression set?
+When choosing tools, first separate the categories: instrumentation and collection (OTel SDKs and the Collector), a general tracing backend (such as [Jaeger](https://www.jaegertracing.io/docs/latest/)), an LLM platform that runs judges on sampled production traces (such as [Langfuse](https://langfuse.com/docs/evaluation/get-started/online)), and an offline eval runner that plugs into CI (such as [promptfoo](https://www.promptfoo.dev/docs/intro/)); these are examples, not recommendations. Then ask questions you can verify: which version of the GenAI conventions does it accept? Where is content stored, who can see it, and for how long? Can the judge sampling rate be set per slice? Can annotation results be exported as a regression set?
 
 ## Finally: what each signal can and cannot tell you
 
@@ -243,10 +224,6 @@ When choosing, start with questions you can verify: which version of the GenAI c
 | Random human audit | The judge's miss and false-alarm rates; an unbiased quality estimate | Anything cheap, fast, or covering every slice |
 | Triggered human review | How many flagged samples are truly bad | The overall failure rate, or what the judge missed |
 | Thumbs-down, regenerate | That some users are unhappy, and the trend | Whether the silent majority is satisfied |
-| Refusal rate, safety flag rate | That refusals and flags are changing in frequency | Whether the refusals were right; needs sampled review |
-| Latency, tokens, cost | The system got slower or more expensive | Whether quality changed along with it |
-| `error.type`, `length` finish reason | Calls failed or were truncated | Whether the successful answers were good |
-| Requested model differs from responding model | A version changed behind the alias | Whether the new version is better or worse |
 | One complete trace of a failure | Which steps this failure went through, and a hypothesis for why | How common this kind of failure is |
 
 Read next: [Agent observability](../06-systems/agent-observability.en.md) · [Judge calibration](llm-as-a-judge/calibration.en.md) · [Metric robustness](metric-robustness.en.md) · [Evaluation overview](README.en.md)

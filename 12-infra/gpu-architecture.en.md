@@ -98,7 +98,7 @@ Capacities and official bandwidths for each level of the H100 SXM5 (whitepaper V
 | NVLink (4th gen) | — | Other GPUs | 900 GB/s total per GPU |
 | PCIe Gen5 | — | CPU and host memory | 128 GB/s |
 
-Note a discrepancy between sources: the 2022 Hopper architecture blog gives HBM3 bandwidth as 3,000 GB/s, a preliminary figure; whitepaper V1.04 gives the final value of 3,352 GB/s, consistent with the product page's 3.35 TB/s. This note uses the final value.
+Note a discrepancy between sources: the 2022 Hopper architecture blog gives HBM3 bandwidth as 3,000 GB/s, a preliminary figure; whitepaper V1.04 gives 3,352 GB/s, consistent with the product page's 3.35 TB/s. In the V1.04 spec table the memory bandwidth row label still carries an old "Not Finalized for H100" note, but the cover says the final memory clocks are included, so this note uses 3,352 GB/s.
 
 NVIDIA does not publish absolute on-chip bandwidths for the H100, but the public A100 material is enough for an order-of-magnitude check. The A100 whitepaper gives an L2 read bandwidth of 5,120 bytes per clock and a boost clock of 1,410 MHz; the [CUDA guide](https://docs.nvidia.com/cuda/cuda-programming-guide/02-basics/writing-cuda-kernels.html#shared-memory-bank-conflicts) says shared memory has 32 banks of 32 bits per cycle each, i.e. 128 bytes per SM per cycle. The A100 has 108 SMs:
 
@@ -191,7 +191,7 @@ The H100 SXM5 has 18 fourth-generation NVLink links at 25 GB/s per direction eac
 | NVLink 5 (GB200 NVL72) | 1.8 TB/s per GPU, 130 TB/s across 72 GPUs | One rack |
 | NICs (HGX B200) | 0.8 TB/s for 8 GPUs, about 100 GB/s per GPU | Between machines |
 
-The last two rows come from the [GB200 NVL72 page](https://www.nvidia.com/en-us/data-center/gb200-nvl72/) and the [HGX page](https://www.nvidia.com/en-us/data-center/hgx/). For the same Blackwell generation, NVLink bandwidth is about 18× the off-machine network (1.8 TB/s versus about 0.1 TB/s). That is why tensor parallelism, the most communication-heavy split, usually stays inside an NVLink domain, while only lighter-communication splits cross machines; see [Tensor parallelism](../06-systems/tensor-parallel.en.md) and [Distributed training](../06-systems/distributed-training.en.md). NVL72 stretches the NVLink domain from one 8-GPU machine to a whole rack.
+The last two rows come from the [GB200 NVL72 page](https://www.nvidia.com/en-us/data-center/gb200-nvl72/) and the [HGX page](https://www.nvidia.com/en-us/data-center/hgx/). Both numbers add the two directions: HGX B200 has 8 NICs at 400 Gb/s (the [DGX B200 page](https://www.nvidia.com/en-us/data-center/dgx-b200/) lists 8 single-port ConnectX-7), 400 GB/s per direction in total, 0.8 TB/s counting both. Compared on the same basis, NVLink bandwidth in the same Blackwell generation is about 18× the off-machine network (1.8 TB/s versus about 0.1 TB/s per GPU). That is why tensor parallelism, the most communication-heavy split, usually stays inside an NVLink domain, while only lighter-communication splits cross machines; see [Tensor parallelism](../06-systems/tensor-parallel.en.md) and [Distributed training](../06-systems/distributed-training.en.md). NVL72 stretches the NVLink domain from one 8-GPU machine to a whole rack.
 
 ## What this note leaves out
 

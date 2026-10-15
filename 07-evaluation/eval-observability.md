@@ -27,32 +27,32 @@
 
 [Agent 可观测性](../06-systems/agent-observability.md)已经讲了 trace 怎样串起模型、检索和工具调用，以及怎样回放和脱敏。这里只问一件事：**为了事后能评估这条请求，必须留下哪些字段？** 也就是能让 judge 或人重新看懂这次回答的条件：哪个 prompt 模板和版本、哪个模型和参数、检索到了什么、调用了哪些工具、输出了什么、花了多少时间和 token，以及用户之后做了什么。
 
-OpenTelemetry（OTel）为这些字段定义了 GenAI 语义约定（semantic conventions）。先说状态，截至 2026-10：
+OpenTelemetry（OTel）为这些字段定义了 GenAI 语义约定（semantic conventions）。字段名还在变，所以先说状态，截至 2026-10-15：
 
-- 这套约定的状态是 **Development**；OTel 以前把这一级叫 Experimental。按 [OTel 的版本与稳定性说明](https://opentelemetry.io/docs/specs/otel/versioning-and-stability/)，这一级可能有 breaking change，不应对它建立长期依赖。
-- [opentelemetry.io 上的 GenAI 页面](https://opentelemetry.io/docs/specs/semconv/gen-ai/)现在只剩一条迁移说明。核心语义约定从 [v1.42.0](https://github.com/open-telemetry/semantic-conventions/releases/tag/v1.42.0)（2026-06-12）起弃用全部 `gen_ai.*` 定义，迁到独立的 [semantic-conventions-genai 仓库](https://github.com/open-telemetry/semantic-conventions-genai)。截至 2026-10-15，这个新仓库还没有正式发布版本，main 分支上已经积累了多项 breaking 改名。
+- 这套约定的状态是 **Development**（OTel 以前把这一级叫 Experimental）。按 [OTel 的版本与稳定性说明](https://opentelemetry.io/docs/specs/otel/versioning-and-stability/)，这一级可能有 breaking change，不应对它建立长期依赖。
+- 核心语义约定从 [v1.42.0](https://github.com/open-telemetry/semantic-conventions/releases/tag/v1.42.0)（2026-06-12）起弃用全部 `gen_ai.*` 定义，迁到独立的 [semantic-conventions-genai 仓库](https://github.com/open-telemetry/semantic-conventions-genai)；从 v1.42.0 到目前最新的 v1.44.0（2026-08-04），核心仓库和 [opentelemetry.io 上的 GenAI 页面](https://opentelemetry.io/docs/specs/semconv/gen-ai/)都只剩“已迁移”的说明。
+- 新仓库截至 2026-10-15 没有任何 release 或 tag，CHANGELOG 只有“Unreleased”，其中已攒下约 10 条 breaking 变更。
 
-最后包含 GenAI 文档的核心发布是 v1.41.x。下表的名字取自 v1.41.0（[spans](https://github.com/open-telemetry/semantic-conventions/blob/v1.41.0/docs/gen-ai/gen-ai-spans.md)、[metrics](https://github.com/open-telemetry/semantic-conventions/blob/v1.41.0/docs/gen-ai/gen-ai-metrics.md)、[events](https://github.com/open-telemetry/semantic-conventions/blob/v1.41.0/docs/gen-ai/gen-ai-events.md)；v1.41.1 没有改动这几份文档），并标出新仓库 main 分支上已知的变化。
+所以下表分两列：左边是最后一个带完整 GenAI 文档的核心发布 v1.41.0 里的名字（[spans](https://github.com/open-telemetry/semantic-conventions/blob/v1.41.0/docs/gen-ai/gen-ai-spans.md)、[metrics](https://github.com/open-telemetry/semantic-conventions/blob/v1.41.0/docs/gen-ai/gen-ai-metrics.md)、[events](https://github.com/open-telemetry/semantic-conventions/blob/v1.41.0/docs/gen-ai/gen-ai-events.md)；v1.41.1 没有改动这几份文档），右边注明新仓库 main 分支（2026-10-14，未发布）上已知的变化。
 
-| 要记的内容 | v1.41.0 中的名字 | 注意 |
+| 要记的内容 | v1.41.0 中的名字 | 注意（含 main 上的变化） |
 | --- | --- | --- |
-| 操作类型、提供方 | `gen_ai.operation.name`、`gen_ai.provider.name` | 操作取值包括 `chat`、`retrieval`、`execute_tool` 等 |
+| 操作类型、提供方 | `gen_ai.operation.name`、`gen_ai.provider.name` | 操作取值有 `chat`、`retrieval`、`execute_tool`、`invoke_agent`、`embeddings` 等 |
 | 请求的模型、实际回答的模型 | `gen_ai.request.model`、`gen_ai.response.model` | 规范示例分别是 `gpt-4` 和 `gpt-4-0613`；两者都记，才看得出别名背后换了版本 |
 | 生成参数 | `gen_ai.request.temperature`、`gen_ai.request.top_p`、`gen_ai.request.max_tokens` | 只记实际发出的值 |
-| Prompt 模板和版本 | v1.41.0 没有 | 新仓库 main 上新增了 `gen_ai.prompt.name`、`gen_ai.prompt.version`，尚未发布；在此之前用自定义属性 |
+| Prompt 模板和版本 | `gen_ai.prompt.name` 只在属性注册表里，没挂到任何 span 上 | main 上新增 `gen_ai.prompt.version`；在发布之前用自定义属性 |
 | 会话 | `gen_ai.conversation.id` | 多轮对话按会话聚类分析 |
 | 系统指令、输入和输出原文 | `gen_ai.system_instructions`、`gen_ai.input.messages`、`gen_ai.output.messages` | 都是 Opt-In，规范写明默认不应采集 |
 | 检索 | `retrieval` 操作的 span；`gen_ai.data_source.id`；`gen_ai.retrieval.documents` | 文档内容是 Opt-In |
 | 工具调用 | `execute_tool` 操作的 span；`gen_ai.tool.name`、`gen_ai.tool.call.id` | 参数和结果 `gen_ai.tool.call.arguments`、`gen_ai.tool.call.result` 是 Opt-In |
 | 结束原因 | `gen_ai.response.finish_reasons` | `length` 的比例上升，常常意味着截断 |
-| Token | `gen_ai.usage.input_tokens`、`gen_ai.usage.output_tokens`；指标 `gen_ai.client.token.usage` | main 上这个直方图被按方向拆开的几个指标取代 |
-| 延迟 | span 时长；指标 `gen_ai.client.operation.duration`、`gen_ai.client.operation.time_to_first_chunk` | main 上推理调用改用 `gen_ai.client.inference.*` 时延指标，`gen_ai.client.operation.duration` 不再用于推理 |
+| Token | `gen_ai.usage.input_tokens`、`gen_ai.usage.output_tokens`；直方图 `gen_ai.client.token.usage` | main 上删掉了这个直方图，换成 `gen_ai.client.inference.usage.input_tokens`、`…output_tokens` 等按方向拆开的指标 |
+| 延迟 | span 时长；指标 `gen_ai.client.operation.duration`、`gen_ai.client.operation.time_to_first_chunk` | main 上推理调用改用 `gen_ai.client.inference.duration`、`gen_ai.client.inference.time_to_first_chunk` |
 | 错误 | `error.type` | 这个属性是 Stable |
-| 费用 | 没有标准属性 | 用 token 数乘以带日期的价目表，在下游计算 |
 | 评估结果 | 事件 `gen_ai.evaluation.result`：`gen_ai.evaluation.name`、`gen_ai.evaluation.score.value`、`gen_ai.evaluation.score.label`、`gen_ai.evaluation.explanation` | 挂在被评估的 span 下；拿不到 span 时用 `gen_ai.response.id` 关联 |
-| 用户反馈 | 没有标准属性 | 自定义事件，用 trace id 或 response id 关联 |
+| 费用、用户反馈 | 没有标准属性 | 费用用 token 数乘以带日期的价目表在下游算；反馈用自定义事件，按 trace id 或 response id 关联 |
 
-三条实用建议。第一，记下自己发的是哪一版约定，在面板查询和原始字段之间放一层映射；升级 instrumentation 时名字可能变。v1.41.0 的说明写明：原来按 v1.36.0 或更早版本发数据的 instrumentation，默认保持旧名字，设置 `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental` 才切换到最新的实验版。第二，模型名、参数和 prompt 版本要在请求发出时记下来，事后从配置推断容易对不上。第三，judge 调用本身也是一次 GenAI 调用，同样要记模型、参数和 rubric 版本，后面讲漂移时会用到。
+三条实用建议。第一，记下自己发的是哪一版约定，在面板查询和原始字段之间放一层映射；升级 instrumentation 时名字可能变（v1.41.0 规定，原来按 v1.36.0 或更早版本发数据的 instrumentation 默认保持旧名字，设置 `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental` 才切到最新实验版）。第二，模型名、参数和 prompt 版本要在请求发出时记下，事后从配置推断容易对不上。第三，judge 调用本身也是 GenAI 调用，同样要记模型、参数和 rubric 版本，讲漂移时会用到。
 
 ## 线上评估怎么跑：从抽样到回归集
 
@@ -73,7 +73,7 @@ OpenTelemetry（OTel）为这些字段定义了 GenAI 语义约定（semantic co
 
 ### 先随机抽样，再按需要补抽
 
-估计“通过率”这类比例，需要和全部流量同分布的样本。OTel 文档里最常见的 head sampling 就是按 trace id 做一致的概率抽样：一条 trace 要么整条被选中，要么整条不选。按错误或慢请求保留的 tail sampling 适合排障，但会改变分布，直接拿来算比率会偏；[Agent 可观测性](../06-systems/agent-observability.md)里 10/19 和 10/100 的例子说的就是这件事。两类样本可以同时存在，只要分开标记，算比率时只用随机那一份。
+估计“通过率”这类比例，需要和全部流量同分布的样本。OTel 文档里最常见的 head sampling 是按 trace id 做一致的概率抽样：一条 trace 要么整条被选中，要么整条不选。按错误或慢请求保留的 tail sampling 适合排障，但会改变分布，直接拿来算比率会偏；[Agent 可观测性](../06-systems/agent-observability.md)里 10/19 和 10/100 的例子说的就是这件事。两类样本可以同时存在，只要分开标记，算比率时只用随机那一份。
 
 抽样单位也要想清楚。同一用户或同一对话的请求互相相关；按请求抽样、按请求算区间，会高估有效样本数。
 
@@ -93,13 +93,11 @@ OpenTelemetry（OTel）为这些字段定义了 GenAI 语义约定（semantic co
 
 人工确认的失败，按这几步进离线集：
 
-1. 固定能复现它的条件：输入、上下文快照或引用、各组件版本；
-2. 脱敏，确认允许复制出生产环境；
-3. 写下期望行为，最好是可检查的条件，例如“必须引用 2026 年的政策”，而不只是一段参考答案；
-4. 标注切片和失败类型，去掉重复；
-5. 一部分进 CI 回归集，一部分留作不参与调参的留出集。
+1. 固定能复现它的条件（输入、上下文快照或引用、各组件版本），脱敏并确认允许复制出生产环境；
+2. 写下可检查的期望行为，例如“必须引用 2026 年的政策”，而不只是一段参考答案；标注切片和失败类型，去重；
+3. 一部分进 CI 回归集，一部分留作不参与调参的留出集。
 
-修好以后不要删掉这道题，它要防止同样的问题再出现。也要提防另一面：反复对着同一批回归题调 prompt，回归集会慢慢变成训练集。划分方法见[人工校准](llm-as-a-judge/calibration.md)，做成能拦截回归的 CI 见[评估报告与 CI](../practice/web-lab/eval-report.md)。
+修好以后不要删掉这道题；但反复对着同一批题调 prompt，回归集会慢慢变成训练集。划分方法见[人工校准](llm-as-a-judge/calibration.md)，做成能拦截回归的 CI 见[评估报告与 CI](../practice/web-lab/eval-report.md)。
 
 ## 算一次：1% 抽样能看见多大的退化？
 
@@ -167,7 +165,7 @@ for n, (p_hat, half_width, mde) in rows.items():
 
 **小切片几乎看不见。** 一个占流量 2% 的切片，比如某种语言或某个新功能，在 1% 抽样下每天只有 20 条，正态近似已经不可靠：20 条里 17 条通过，用 Wilson 区间算，judge 通过率的 95% 区间是 64% 到 95%。假设这个切片从 90% 跌到 60%，总体通过率只降 $0.02\times30=0.6$ 个百分点，远小于 5.3 甚至 2.4 的 MDE，总体曲线几乎是平的。这就是[人群混合](metric-robustness.md#population-mix)和[加权切片](ablation-and-slices.md)讲的问题在线上的样子。
 
-**分层抽样把预算放到关键切片上。** 对这个切片单独抽 25%（每天 500 条），其余 98% 的流量仍抽 1%（980 条），每天一共 1,480 次 judge 调用，切片的 MDE 降到约 7.4 个百分点。代价是算总体通过率时必须按真实流量份额加权：切片在样本里占三分之一，在真实流量里只占 2%，直接把 1,480 条平均会把它放大十几倍。
+**分层抽样把预算放到关键切片上。** 对这个切片单独抽 25%（每天 500 条），其余 98% 的流量仍抽 1%（980 条），每天一共 1,480 次 judge 调用，切片的 MDE 降到约 7.4 个百分点。代价是算总体通过率时必须按真实流量份额加权：切片在样本里约占三分之一，在真实流量里只占 2%，直接把 1,480 条平均会把它的分量放大约 17 倍。
 
 这些数只算了抽样误差，下面几项还没算进去：
 
@@ -176,25 +174,21 @@ for n, (p_hat, half_width, mde) in rows.items():
 - 同一用户或对话的请求相关，有效样本比条数少，应按用户或对话聚类估计，见[指标稳健性](metric-robustness.md)。
 - 同时盯 20 个切片、5 个指标，即使什么都没变，每天也会冒出几个“显著”。
 
-另一种做法不依赖固定的 $s,t$：每个统计周期从随机样本里再抽一小部分请人标注，用 judge 在大样本上的平均，减去 judge 与人工在小样本上的平均差。这就是 [prediction-powered inference](https://arxiv.org/abs/2301.09633)（Angelopoulos 等，2023）的均值估计；论文主体假设人工样本和被评流量独立同分布（随机审计正好满足），在这个前提下区间有效，不需要假设 judge 有多准。区间宽度主要由 judge 与人工的差异决定，judge 越接近人工，区间越窄。代价是每个周期都要有新鲜的人工标签。
+另一种做法不依赖固定的 $s,t$：每个统计周期从随机样本里再抽一小部分请人标注，用 judge 在大样本上的平均，减去 judge 与人工在小样本上的平均差。这就是 [prediction-powered inference](https://arxiv.org/abs/2301.09633)（Angelopoulos 等，2023）的均值估计；正文的设定是人工样本和被评流量来自同一分布、独立抽取（随机审计正好满足），在这个前提下区间有效，不需要假设 judge 有多准。judge 越接近人工，区间越窄。代价是每个周期都要有新鲜的人工标签。
 
-## 指标和告警
+## 哪些信号该告警，多快告警
 
 | 信号 | 在多少流量上算 | 怎样告警 |
 | --- | --- | --- |
-| 错误率（按 `error.type` 分组） | 全部 | 分钟级阈值 |
+| 错误率（按 `error.type` 分组）、格式与工具参数校验失败率 | 全部 | 分钟级阈值 |
 | 延迟 p50/p95、流式首块时间 | 全部 | 分钟级，按模型和路由分开 |
-| 每条请求的 token 与费用 | 全部 | 小时级；同时看每个成功任务的费用 |
+| 每条请求的 token 与费用 | 全部 | 小时级；同时看每个成功任务的费用，重试变多时它会上升 |
 | `length` 结束原因的比例 | 全部 | 上升常意味着截断或输出变长 |
-| 格式与工具参数校验失败率 | 全部 | 确定性检查，可以分钟级 |
-| 拒答率 | 全部（规则或小分类器）或抽样（judge） | 双向：太高是过度拒答，太低可能是安全护栏失效 |
-| 安全标记率 | 全部或抽样 | 频率低、代价高，单条也可能要人看 |
+| 拒答率、安全标记率 | 全部（规则或小分类器）或抽样（judge） | 双向看：太高是过度拒答，太低可能是护栏失效；安全标记单条也可能要人看 |
 | judge 通过率（校正后） | 抽样 | 按天或按周的窗口，阈值来自上一节的 MDE |
-| 点踩、重新生成的比例 | 全部，但稀疏有偏 | 看趋势，不当作质量的绝对值 |
+| 点踩、重新生成的比例 | 全部，但稀疏有偏 | 看趋势；没有点踩不等于满意，见[从反馈到训练目标](../01-data-and-feedback/feedback-to-objectives.md) |
 
 每条请求都能算的信号可以快速告警；judge 给的质量信号是抽样的、有延迟的，阈值应该从上一节的计算来，而不是拍一个整数。每个要单独盯的切片都要单独算样本量，不然它的告警只是噪声。
-
-几处容易看错的地方。每条请求的费用下降，每个成功任务的费用却可能上升，因为重试变多了。拒答率要两个方向都看。用户反馈很有价值，但点踩的人很少，也不代表全部用户；没有点踩不等于满意，见[从反馈到训练目标](../01-data-and-feedback/feedback-to-objectives.md)。
 
 ## Judge 自己也会漂移
 
@@ -209,29 +203,16 @@ for n, (p_hat, half_width, mde) in rows.items():
 
 ## 隐私和保留：哪些东西不该记
 
-OTel GenAI 约定的默认立场是保守的：系统指令、用户输入和模型输出被视为敏感且体积大，instrumentation **默认不应采集**，由使用者主动开启；生产环境推荐把内容放到单独的存储，用单独的访问控制，span 上只记引用（见 v1.41.0 [spans 规范](https://github.com/open-telemetry/semantic-conventions/blob/v1.41.0/docs/gen-ai/gen-ai-spans.md)中采集指令、输入和输出的一节）。[OTel 的敏感数据说明](https://opentelemetry.io/docs/security/handling-sensitive-data/)也要求只收集服务于观测目的的数据。
+OTel GenAI 约定的默认立场是保守的：系统指令、用户输入和模型输出被视为敏感且体积大，instrumentation **默认不应采集**，由使用者主动开启；在遥测量大或涉及敏感数据的生产环境，推荐把内容放到外部存储、span 上只记引用（见 v1.41.0 [spans 规范](https://github.com/open-telemetry/semantic-conventions/blob/v1.41.0/docs/gen-ai/gen-ai-spans.md)中采集指令、输入和输出的一节）。[OTel 的敏感数据说明](https://opentelemetry.io/docs/security/handling-sensitive-data/)也要求只收集服务于观测目的的数据。
 
 放到线上评估里，常见的坑是：
 
-- **不该记的。** 凭证、session token、API key，它们常藏在工具参数、请求头和 URL 里；支付和证件信息；与评估无关的联系方式和健康信息。只过滤顶层字段不够，工具参数和返回都是自由文本。
-- **judge 也是数据接收方。** 把用户对话发给 judge 模型，等于又发给了一个模型服务；judge 的解释文字还可能原样引用个人信息。judge 的调用记录要按同样的规则处理。
-- **人工审核只给需要的部分。** 标注队列里先脱敏，按任务限定谁能看原文。
-- **保留期分层。** 聚合指标可以长期保留，原文和完整 trace 短期保留。复制进回归集的样本会逃出原来的保留期限，所以复制前要脱敏，并记下来源和许可。用户要求删除数据时，trace、judge 事件、标注队列和回归集都要能找到并删掉。
-- **先确认工具实际做了什么。** 例如截至 2026-10，Langfuse 的[许可说明](https://langfuse.com/self-hosting/license-key)把数据保留策略和服务端脱敏列为需要企业许可证的自托管功能；用开源版时，这些要在应用或 SDK 一侧自己做。
+- **不该记的。** 凭证、session token、API key（常藏在工具参数、请求头和 URL 里），支付和证件信息，与评估无关的联系方式和健康信息。工具参数和返回是自由文本，只过滤顶层字段不够。
+- **judge 和审核者也是数据接收方。** 把对话发给 judge，等于又发给一个模型服务，它的解释还可能原样引用个人信息；标注队列里先脱敏，按任务限定谁能看原文。
+- **保留期分层。** 聚合指标长期保留，原文和完整 trace 短期保留。复制进回归集的样本会逃出原来的保留期限，复制前要脱敏并记下来源；用户要求删除时，trace、judge 事件、标注队列和回归集都要能找到。
+- **先确认工具实际做了什么。** 例如截至 2026-10，Langfuse 的[许可说明](https://langfuse.com/self-hosting/license-key)把数据保留策略（Data Retention Policies）和服务端脱敏（Server-Side Data Masking）列为需要企业许可证的自托管功能；用开源版时，这些要在应用或 SDK 一侧自己做。
 
-## 工具版图：按类别看
-
-下面只说每类工具负责什么，不排名次。列出的开源例子都对照过官方文档（截至 2026-10），列出不代表推荐。
-
-| 类别 | 负责什么 | 开源例子 |
-| --- | --- | --- |
-| 埋点与采集 | 在应用里生成 span、指标和事件，用 OTLP 导出 | OTel 各语言 SDK 与 Collector |
-| 通用 tracing 后端 | 存储、查询、可视化 trace；不理解 judge 分数和标注 | [Jaeger](https://www.jaegertracing.io/docs/latest/)：CNCF 毕业项目，v2 基于 OTel Collector 构建 |
-| LLM 专用的 trace 与评估平台 | 按 trace 展示 prompt、输出和 token；按规则在生产 trace 上跑 judge；人工打分 | [Langfuse](https://langfuse.com/docs/evaluation/get-started/online)：可以接收 OTLP；评估规则包含过滤条件、抽样率和 evaluator；核心部分是 MIT 许可，部分功能需要企业许可证 |
-| 离线 eval runner | 在固定测试集上跑 prompt 或模型，检查断言，接入 CI | [promptfoo](https://www.promptfoo.dev/docs/intro/)：开源 CLI 和库，声明式测试用例，可放进 CI/CD |
-| 标注队列 | 把选中的 trace 分给审核者，按评分配置打分 | Langfuse 的 [annotation queues](https://langfuse.com/docs/evaluation/evaluation-methods/annotation-queues)；也可以自建 |
-
-选型时先问几个能核对的问题：它接收哪一版 GenAI 约定的字段？内容存在哪里，谁能看，保留多久？judge 的抽样率能不能按切片设？标注结果能不能导出成回归集？
+选工具时先分清类别：埋点与采集（OTel SDK 与 Collector）、通用 tracing 后端（如 [Jaeger](https://www.jaegertracing.io/docs/latest/)）、能按抽样率在生产 trace 上跑 judge 的 LLM 平台（如 [Langfuse](https://langfuse.com/docs/evaluation/get-started/online)）、接进 CI 的离线 eval runner（如 [promptfoo](https://www.promptfoo.dev/docs/intro/)）；这些只是举例，不是推荐。再问几个能核对的问题：它接收哪一版 GenAI 约定？内容存在哪里、谁能看、留多久？judge 抽样率能否按切片设？标注结果能否导出成回归集？
 
 ## 最后：每种信号能说明什么，不能说明什么
 
@@ -243,10 +224,6 @@ OTel GenAI 约定的默认立场是保守的：系统指令、用户输入和模
 | 随机人工审计 | judge 的漏判与误判率，没有偏的质量估计 | 便宜、快速、能覆盖每个切片 |
 | 触发式人工审核 | 被标记样本里有多少真有问题 | 总体失败率，或 judge 漏掉了什么 |
 | 点踩、重新生成 | 有一部分用户不满意，以及变化趋势 | 沉默的大多数满不满意 |
-| 拒答率、安全标记率 | 拒答和标记的频率在变 | 拒得对不对；需要配合抽样审核 |
-| 延迟、token、费用 | 系统变慢、变贵了 | 质量有没有跟着变 |
-| `error.type`、`length` 结束原因 | 调用失败或被截断 | 成功返回的回答好不好 |
-| 请求模型与响应模型不一致 | 别名背后换了版本 | 新版本更好还是更差 |
 | 一条失败的完整 trace | 这次失败经过了哪些步骤，原因假设是什么 | 这种失败有多常见 |
 
 接着读：[Agent 可观测性](../06-systems/agent-observability.md) · [人工校准](llm-as-a-judge/calibration.md) · [指标稳健性](metric-robustness.md) · [评估总览](README.md)

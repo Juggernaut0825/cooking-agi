@@ -2,7 +2,7 @@
 
 [中文](cuda.md) · **English**
 
-> Reading time: ~15 min · Draft, pending review
+> Reading time: ~13 min · Draft, pending review
 
 When you write `c = a + b` in PyTorch, what actually happens on the GPU? The CPU hands the GPU a function called a kernel, and the GPU starts thousands of threads at once, each computing one or two elements. The addition itself is cheap. **Whether a kernel is fast mostly depends on whether each warp uses the bytes it fetches, and on whether the same data is read from device memory again and again.** This note works through both questions with a vector add and a 4×4 matrix multiply, then connects them to cuBLAS, CUTLASS, and Triton.
 
@@ -218,7 +218,7 @@ for regs, smem in [(32, 0), (64, 0), (32, 48), (80, 0)]:
     print(regs, smem, blocks, blocks * 256 // 32 / 64)
 ```
 
-This estimate leaves out two details. First, registers are allocated per warp in units of 256 (explained in BPG [§11.1.1](https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html#calculating-occupancy) with a compute capability 7.0 example); the register counts above were chosen so that each warp's usage is a multiple of 256. Second, each block also has 1 KB of shared memory reserved for the system (stated for compute capability 9.0 in the [CUDA 12.4 edition of the Guide](https://docs.nvidia.com/cuda/archive/12.4.0/cuda-c-programming-guide/index.html#compute-capability-9-0)); replacing 48 KB with 49 KB still gives 4 blocks, so the conclusion holds. For a real kernel, first read its register and shared memory usage with `nvcc --resource-usage`, then check with the Nsight Compute occupancy calculator or `cudaOccupancyMaxActiveBlocksPerMultiprocessor`.
+This estimate leaves out two details. First, registers are allocated per warp in units of 256 (explained in BPG [§11.1.1](https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html#calculating-occupancy) with a compute capability 7.0 example); the register counts above were chosen so that each warp's usage is a multiple of 256. Second, the shared memory a block can use (227 KB) is 1 KB less than the per-SM maximum (228 KB), and the [CUDA 12.4 edition of the Guide](https://docs.nvidia.com/cuda/archive/12.4.0/cuda-c-programming-guide/index.html#compute-capability-9-0) says that 1 KB is reserved for system use; counting 1 KB more per block (49 KB) still gives 4 blocks, so the conclusion holds. For a real kernel, first read its register and shared memory usage with `nvcc --resource-usage`, then check with the Nsight Compute occupancy calculator or `cudaOccupancyMaxActiveBlocksPerMultiprocessor`.
 
 Higher occupancy is not always better. BPG states that beyond some point more occupancy does not make a kernel faster, and that fewer resident warps with more registers per thread can sometimes hide latency through instruction-level parallelism ([BPG §11.1](https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html#occupancy)). Occupancy answers "are there enough warps to switch between", not "is this kernel fast".
 

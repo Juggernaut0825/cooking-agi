@@ -2,7 +2,7 @@
 
 **中文** · [English](kubernetes.en.md)
 
-> 阅读时间：约 15 分钟 · 草稿，待审核
+> 阅读时间：约 13 分钟 · 草稿，待审核
 
 集群有 24 张 GPU，监控上还空着 16 张，一个要 16 张卡的训练任务却一直 Pending；更糟的是，一半 Pod 起来了，另一半没起，起来的那一半占着卡空等。**Kubernetes 默认一次只给一个 Pod 找节点，而分布式训练要的是“一组 Pod 要么一起放下，要么一个也别占”；GPU 又只能整块、最好按拓扑分配。空闲卡的总数，说明不了大任务能不能跑。**
 
@@ -42,22 +42,11 @@ spec:
         nvidia.com/gpu: 8
 ```
 
-光有插件还不够，节点上还要装驱动、让容器运行时能用 GPU、给节点打上 GPU 型号标签、导出监控指标。[NVIDIA GPU Operator](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/overview.html) 用 operator 把这些组件一起管起来：
-
-| 组件 | 负责什么 |
-| --- | --- |
-| NVIDIA GPU Driver | 安装 CUDA 需要的驱动，默认以容器方式运行，也可以改用节点上预装的驱动 |
-| NVIDIA Container Toolkit | 让容器能使用 GPU |
-| NVIDIA Kubernetes Device Plugin | 上报 `nvidia.com/gpu` 等资源 |
-| GPU Feature Discovery（GFD） | 自动给节点打上 GPU 相关标签 |
-| MIG Manager | 在节点上配置 MIG 切分 |
-| DCGM 与 DCGM Exporter | 采集 GPU 指标，并以 HTTP endpoint 供 Prometheus 抓取 |
-
-截至 2026-10-15，GitHub 上 GPU Operator 的最新版本是 v26.7.2（2026-10-14 发布）。
+光有插件还不够，节点上还要装驱动、让容器运行时能用 GPU、给节点打上 GPU 型号标签、导出监控指标。[NVIDIA GPU Operator](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/overview.html) 用 operator 把这些组件一起管起来：GPU 驱动（默认以容器方式运行，也可用节点上预装的）、Container Toolkit、device plugin、给节点打 GPU 标签的 GPU Feature Discovery、配置 MIG 的 MIG Manager，以及采集指标供 Prometheus 抓取的 DCGM Exporter。截至 2026-10-15，GitHub 上它的最新版本是 v26.7.2（2026-10-14 发布）。
 
 **Dynamic Resource Allocation（DRA）** 是另一条路。它像用 PersistentVolumeClaim 申请存储那样申请设备：驱动发布 ResourceSlice 描述有哪些设备，管理员定义 DeviceClass，工作负载写 ResourceClaim，可以用 CEL 表达式按属性筛选设备、让多个 Pod 引用同一个 claim 共享设备、按 claim 配置设备。和 device plugin 相比，它不再只有“几张卡”这一个整数。
 
-DRA 的状态要说清楚出处。kubernetes.io 的 [DRA 概念页](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/)（2026-10-15 核对）标注为 “Stable since Kubernetes v1.35”，说它最早出现在 v1.30，feature gate 已经锁定为开启；而 [v1.34 的发布公告](https://kubernetes.io/blog/2025/08/27/kubernetes-v1-34-release/)（2025-08-27）写的是 DRA 的核心在 v1.34 进入 GA、`resource.k8s.io/v1` API 默认可用。两份官方材料给出的版本号不同，但都说明在当前的 1.37 里它已是稳定功能。概念页还写了一条限制：scheduler 不支持为 DRA 资源做抢占，高优先级 Pod 只能等占用设备的 Pod 结束。NVIDIA 一侧，GPU Operator 文档介绍了安装 [DRA Driver for NVIDIA GPUs v0.5.1](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/dra-intro-install.html)，作为 device plugin 的较新替代；其中动态 MIG、按份额共享、MPS 等功能仍是 alpha，而且一个集群里，DRA 用的 GPUCluster 和 device plugin 用的 ClusterPolicy 只能有一个。
+DRA 从哪个版本起稳定，官方材料说法不一（2026-10-15 核对）。[v1.34 的发布公告](https://kubernetes.io/blog/2025/08/27/kubernetes-v1-34-release/)（2025-08-27）写的是 DRA 的核心在 v1.34 进入 GA，`resource.k8s.io/v1` API 升为 stable 并默认可用；[DRA 概念页](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/)则标注 “Stable since Kubernetes v1.35”，说它最早出现在 v1.30，feature gate 已锁定、不能再关闭。[feature gate 参考页](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/)把 `DynamicResourceAllocation` 列为 1.30–1.31 alpha、1.32–1.33 beta，1.34 和 1.35 起各有一行 stable；概念页的 v1.35 可能指开关锁定的版本，但页面没有这样说明。可以确定的是：在当前的 1.37 里它是稳定功能。概念页还写了一条限制：scheduler 不支持为 DRA 资源做抢占，高优先级 Pod 只能等占用设备的 Pod 结束。NVIDIA 一侧，GPU Operator 文档介绍了安装 [DRA Driver for NVIDIA GPUs v0.5.1](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/dra-intro-install.html)，作为 device plugin 的较新替代；其中动态 MIG、按份额共享、MPS 等功能仍是 alpha，而且一个集群里，DRA 用的 GPUCluster 和 device plugin 用的 ClusterPolicy 只能有一个。
 
 ## 一张卡给几个任务：MIG、time-slicing、MPS
 
@@ -98,7 +87,7 @@ T16 的 16 个 rank 每步都要做梯度 all-reduce。按理想 ring 算，每�
 | 方案 | 做在哪一层 | 成组怎么实现 | 拓扑 | 状态（2026-10-15 核对） |
 | --- | --- | --- | --- | --- |
 | Kubernetes 核心的 [gang scheduling](https://kubernetes.io/docs/concepts/scheduling-eviction/gang-scheduling/) | kube-scheduler 与 PodGroup / Workload API | 放不下 `minCount` 个 Pod，就一个也不绑定 | [Topology-Aware Workload Scheduling](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-aware-scheduling/) 把整组放进同一拓扑域：v1.36 起 alpha，默认关闭 | v1.37 起 beta，默认关闭，需开启 `GenericWorkload` feature gate |
-| [Kueue](https://kueue.sigs.k8s.io/docs/overview/) | 在 kube-scheduler 之上做作业级排队、配额和准入，不替代它 | `waitForPodsReady`：超时前没全部就绪，就驱逐并重新排队（文档称之为一种简单的 all-or-nothing 实现） | [TAS](https://kueue.sigs.k8s.io/docs/concepts/topology_aware_scheduling/)：v0.14 起 beta，默认开启，可按 rack、block 等层级要求或偏好 | 最新 v0.20.2（2026-10-15） |
+| [Kueue](https://kueue.sigs.k8s.io/docs/overview/) | 在 kube-scheduler 之上做作业级排队、配额和准入，不替代它 | [`waitForPodsReady`](https://kueue.sigs.k8s.io/docs/tasks/manage/setup_wait_for_pods_ready/)：超时前没全部就绪，就驱逐并重新排队（文档称之为一种简单的 all-or-nothing 实现） | [TAS](https://kueue.sigs.k8s.io/docs/concepts/topology_aware_scheduling/)：v0.14 起 beta，默认开启，可按 rack、block 等层级要求或偏好 | 最新 v0.20.2（2026-10-15） |
 | [Volcano](https://volcano.sh/en/docs/podgroup/) | 自己的批调度器，由 actions 和 plugins 组成 | PodGroup 的 `minMember`：资源不够运行这么多 Pod，就一个都不调度 | 本文未核对 | 最新 v1.16.0（2026-10-14） |
 | [JobSet](https://jobset.sigs.k8s.io/docs/overview/) | 把一组 Job 当作一个单元管理的 API | 概览页没说它自己做成组调度；可以与 Kueue 配合排队 | 一个注解让每个子 Job 独占一个拓扑域（如机架） | 最新 v0.13.0（2026-10-12） |
 

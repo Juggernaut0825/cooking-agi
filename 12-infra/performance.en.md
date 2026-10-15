@@ -2,7 +2,7 @@
 
 [中文](performance.md) · **English**
 
-> Reading time: ~15 min · Draft, pending review
+> Reading time: ~13 min · Draft, pending review
 
 `nvidia-smi` shows 100% GPU utilization, yet a 7B model generating one token at a time produces only a couple of hundred tokens per second. Is the card too slow, or is it being used badly? First look at what that 100% measures: NVML defines it as the fraction of the sample period during which at least one kernel was running ([NVML documentation](https://docs.nvidia.com/deploy/nvml-api/api/structnvmlUtilization__t.html)). It says nothing about how much compute is being used. **The more useful question is: for every byte this operation moves from memory, how many operations does it perform? Compare that with the card's "peak compute ÷ memory bandwidth": below it, you need to move fewer bytes; only above it does compute become the limit.** Using the published specifications of one H100, this note puts a large matrix multiply, an elementwise add, and 7B-model decode on the same chart, then works out MFU and multi-GPU communication, and ends with an order for profiling.
 
@@ -88,7 +88,7 @@ $$
 \mathrm{MFU}=\frac{\text{tokens/s}\times(6N+12LHQT)}{n_{\rm GPU}\times P_{\rm peak}}.
 $$
 
-$N$ is the parameter count, $L$ the number of layers, $H$ the number of heads, $Q$ the head dimension, $T$ the sequence length, and $P_{\rm peak}$ the peak matrix-multiply throughput of one device. HFU (hardware FLOPs utilization) counts every operation actually executed, including recomputation; the paper argues it depends on the implementation and is not suited to comparisons across systems. The paper reports an MFU of 46.2% and an HFU of 57.8% for PaLM 540B on 6144 TPU v4 chips.
+$N$ is the parameter count, $L$ the number of layers, $H$ the number of heads, $Q$ the head dimension, $T$ the sequence length, and $P_{\rm peak}$ the peak matrix-multiply throughput of one device. HFU (hardware FLOPs utilization) counts every operation actually executed, including recomputation; the paper argues it depends on the implementation and is not suited to comparisons across systems. The paper reports an MFU of 46.2% (counting attention; 45.7% without it) and an HFU of 57.8% for PaLM 540B on 6144 TPU v4 chips.
 
 **A teaching example.** A 7B dense model ($N=7\times10^9$, $L=32$, $H=32$, $Q=128$), sequence length $T=4096$, 8 H100 SXM5 GPUs, 64 sequences per step (8 per GPU), 262,144 tokens in total. Assume a measured step time of 3.64 s, i.e. 72,018 tokens/s. Counting only $6N$:
 
@@ -172,16 +172,13 @@ The second line captures only the first kernel whose name matches `gemm` and col
 
 | Symptom | Possible cause | What to check first |
 | --- | --- | --- |
-| gaps between kernels on the timeline; the GPU is often idle | the CPU cannot keep up: data loading, Python overhead, host synchronization | what the CPU threads are doing during the gaps; look for synchronizations such as `cudaStreamSynchronize` or `.item()` |
+| gaps between kernels on the timeline; the GPU is often idle | the CPU cannot keep up: data loading, Python overhead, host synchronization | what the CPU threads are doing during the gaps; look for synchronizations such as `cudaStreamSynchronize` or `.item()`; if copies do not overlap computation, check `pin_memory` and `non_blocking` (see [CUDA](cuda.en.md#streams)) |
 | thousands of kernels per step, each running a few microseconds | launch and scheduling overhead dominates | kernels per step and their average duration; try fusion (for example `torch.compile`) or CUDA Graphs, whose main benefit the PyTorch documentation describes as lower CPU overhead |
-| elementwise and normalization kernels take most of the time | bandwidth-bound, with data making several round trips to memory | compute intensity from FLOPs and bytes; in Nsight Compute, check whether memory throughput is already near peak; consider fusion |
+| elementwise and normalization kernels take most of the time | bandwidth-bound, with data making several round trips to memory | compute intensity from FLOPs and bytes; in Nsight Compute, check whether memory throughput is already near peak; consider fusion; for a hand-written memory-bound kernel, also check sectors/request (ideal is 4 for 32-bit accesses; see [CUDA](cuda.en.md#coalescing)) |
 | a large GEMM reaches only a small fraction of Tensor Core peak | wrong dtype (FP32 not using TF32 / BF16), shapes too small or misaligned, tile / wave quantization | print the GEMM's M, N, K and dtype; NVIDIA recommends dimensions that are multiples of 16 bytes (8 elements for FP16 / BF16; 128 bytes on A100) |
-| a hand-written memory-bound kernel gets low bandwidth | uncoalesced or strided accesses | sectors/request in Nsight Compute's Memory Workload Analysis (the ideal for 32-bit accesses is 4) |
 | low occupancy, with warps mostly waiting | heavy register or shared memory usage | `nvcc --resource-usage` and the occupancy section of Nsight Compute; compare with the hand calculation in the CUDA note |
 | NCCL kernels are long on multiple GPUs and do not overlap computation | communication is exposed on the critical path | whether NCCL overlaps the backward pass in Nsight Systems; measure busbw with nccl-tests and compare with the formula above |
-| host-to-device copies run serially with computation | pageable memory, or everything on the default stream | whether the DataLoader has `pin_memory=True` and `.to(..., non_blocking=True)` takes effect |
 | decode throughput saturates quickly as the batch grows | KV reads or memory capacity hit the ceiling first | use this note's byte accounting to split bytes between weights and KV |
-| step time jitters, with occasional slow steps | memory allocator behavior, other jobs on the same machine | look at the distribution over many steps rather than a single one; `torch.cuda.memory_summary()`; what else runs on the machine |
 
 The alignment advice and tile / wave quantization are described in the [NVIDIA matrix multiplication guide](https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html); CUDA Graphs are explained in [PyTorch CUDA semantics](https://docs.pytorch.org/docs/2.14/notes/cuda.html#cuda-graphs). The table only says where to look first; the cause has to be confirmed by measurement.
 

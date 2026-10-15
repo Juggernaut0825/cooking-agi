@@ -8,7 +8,7 @@
 
 > **待审核草稿。** 这一篇还没有经过站主审阅，事实、取舍和措辞都可能修改；引用前请回到文中链接的一手资料核对。
 
-硬件数字以 H100 SXM5 为主，最终规格取自 [H100 架构白皮书 V1.04](https://dam-cdn.nvd.orangelogic.com/AssetLink/705n6ur546g0uk43w0117r17n8042d73.pdf)（它注明收录了最终的频率和 TFLOPS），其余来自 NVIDIA 的产品页、架构博客和 CUDA 文档；手算例子里的周期数和矩阵元素是教学假设，会单独标出。怎么写 kernel 见 [CUDA](cuda.md)，roofline 见[性能](performance.md)，各代参数对比见[英伟达各代 GPU](nvidia-generations.md)。
+硬件数字以 H100 SXM5 为主，最终规格取自 [H100 架构白皮书 V1.04](https://dam-cdn.nvd.orangelogic.com/AssetLink/705n6ur546g0uk43w0117r17n8042d73.pdf)（它注明收录了最终的频率和 TFLOPS），其余来自 NVIDIA 的产品页、架构博客和 CUDA 文档；手算例子里的周期数和矩阵元素是教学假设，会单独标出。怎么写 kernel 见 [CUDA](cuda.md)，roofline 见[性能](performance.md)，各代参数对比见 [NVIDIA 各代 GPU](nvidia-generations.md)。
 
 ## 两种设计目标：少等一会儿，还是同时多做
 
@@ -35,7 +35,7 @@
 | Warp scheduler | 4 个处理块，各一个 | 每个周期挑一个就绪的 warp 发射指令 |
 | 驻留上限 | 64 个 warp、2,048 个线程、32 个 block | 决定能同时挂多少工作 |
 
-"4 个处理块、每块一个 warp scheduler"的结构是 [Volta 白皮书](https://images.nvidia.com/content/volta-architecture/pdf/volta-architecture-whitepaper.pdf)描述的；[Ampere 白皮书](https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf)说明 A100 每个分区一个 Tensor Core，H100 每个 SM 也是 4 个。驻留上限来自[计算能力表](https://docs.nvidia.com/cuda/cuda-programming-guide/05-appendices/compute-capabilities.html)，H100 是 compute capability 9.0。
+“4 个处理块、每块一个 warp scheduler”的结构是 [Volta 白皮书](https://images.nvidia.com/content/volta-architecture/pdf/volta-architecture-whitepaper.pdf)描述的；[Ampere 白皮书](https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf)说明 A100 每个分区一个 Tensor Core，H100 每个 SM 也是 4 个。驻留上限来自[计算能力表](https://docs.nvidia.com/cuda/cuda-programming-guide/05-appendices/compute-capabilities.html)，H100 是 compute capability 9.0。
 
 软件这一侧：一次 kernel launch 产生一个 grid，grid 由 thread block 组成。**一个 block 的所有线程都在同一个 SM 上跑**，所以能用 shared memory 交换数据、互相同步；不同 block 之间不保证顺序。Compute capability 9.0 起还有 thread block cluster：同一 cluster 的 block 被调度到同一个 GPC，可以读写彼此的 shared memory。线程层级的细节见 [CUDA](cuda.md#thread-hierarchy)。
 
@@ -45,7 +45,7 @@ SM 不是一个一个线程地调度，而是 32 个一组，叫 warp。[CUDA �
 
 手算一次代价。一个 warp 遇到 `if`：条件为真走路径 A（10 条指令），否则走路径 B（20 条指令）。指令数是教学假设。
 
-| 情况 | warp 实际占用的指令槽 | 有效的"线程 × 指令" | 利用率 |
+| 情况 | warp 实际占用的指令槽 | 有效的“线程 × 指令” | 利用率 |
 | --- | ---: | ---: | ---: |
 | 32 个线程都走 A | 10 | 32 × 10 = 320 | 100% |
 | 32 个线程都走 B | 20 | 32 × 20 = 640 | 100% |
@@ -53,7 +53,7 @@ SM 不是一个一个线程地调度，而是 32 个一组，叫 warp。[CUDA �
 
 **分支本身不贵，同一个 warp 里分道扬镳才贵**；不同 warp 走不同分支没有这个代价。
 
-两点容易误会。第一，SIMT 不等于"32 个线程永远步调一致"。从 compute capability 7.0（Volta）起有 independent thread scheduling，每个线程有自己的程序计数器，warp 内可以更细地分叉、汇合；依赖隐式同步的老代码要用 `__syncwarp()` 显式同步（[高级 kernel 编程](https://docs.nvidia.com/cuda/cuda-programming-guide/03-advanced/advanced-kernel-programming.html#independent-thread-scheduling)）。第二，SIMT 和 SIMD 的差别在接口：SIMD 把向量宽度暴露给软件，SIMT 让你按单个线程写代码，由硬件把线程编成 warp。
+两点容易误会。第一，SIMT 不等于“32 个线程永远步调一致”。从 compute capability 7.0（Volta）起有 independent thread scheduling，每个线程有自己的程序计数器，warp 内可以更细地分叉、汇合；依赖隐式同步的老代码要用 `__syncwarp()` 显式同步（[高级 kernel 编程](https://docs.nvidia.com/cuda/cuda-programming-guide/03-advanced/advanced-kernel-programming.html#independent-thread-scheduling)）。第二，SIMT 和 SIMD 的差别在接口：SIMD 把向量宽度暴露给软件，SIMT 让你按单个线程写代码，由硬件把线程编成 warp。
 
 ## 延迟隐藏：靠同时挂着很多 warp
 
@@ -98,7 +98,7 @@ H100 SXM5 各层的容量与官方带宽（白皮书 V1.04、[Hopper 博客](htt
 | NVLink（第 4 代） | — | 其他 GPU | 每 GPU 合计 900 GB/s |
 | PCIe Gen5 | — | CPU 与主机内存 | 128 GB/s |
 
-注意出处之间的差异：2022 年的 Hopper 架构博客把 HBM3 带宽写成 3,000 GB/s，标的是初步规格；白皮书 V1.04 给出最终值 3,352 GB/s，与产品页的 3.35 TB/s 一致。本文用最终值。
+注意出处之间的差异：2022 年的 Hopper 架构博客把 HBM3 带宽写成 3,000 GB/s，标的是初步规格；白皮书 V1.04 给出 3,352 GB/s，与产品页的 3.35 TB/s 一致。V1.04 规格表的显存带宽一行，行名后还留着“Not Finalized for H100”的旧注，但封面写明已含最终的显存频率，本文按 3,352 GB/s 用。
 
 片上带宽 NVIDIA 没给 H100 的绝对值，但 A100 的公开资料够算一次数量级。A100 白皮书给出 L2 读带宽每周期 5,120 字节、boost 频率 1,410 MHz；[CUDA 指南](https://docs.nvidia.com/cuda/cuda-programming-guide/02-basics/writing-cuda-kernels.html#shared-memory-bank-conflicts)给出 shared memory 有 32 个 bank、每个 bank 每周期 32 bit，也就是每个 SM 每周期 128 字节。A100 有 108 个 SM：
 
@@ -135,7 +135,7 @@ $$
 
 每个输出元素 4 次乘加，即 4 次 FMA；16 个元素共 $16\times4=64$ 次 FMA，正好是 Volta 一个 Tensor Core 一个时钟的量。一次 FMA 按 2 个 FLOP 计，这一小块是 128 FLOP。
 
-精度上，Volta 的 $A$、$B$ 是 FP16，乘积保留全精度，再用 FP32 累加；$C$、$D$ 可以是 FP16 或 FP32。"输入低精度、累加高精度"一直延续到后来的 FP8 和 FP4。
+精度上，Volta 的 $A$、$B$ 是 FP16，乘积保留全精度，再用 FP32 累加；$C$、$D$ 可以是 FP16 或 FP32。“输入低精度、累加高精度”一直延续到后来的 FP8 和 FP4。
 
 ### 从一小块到整张卡的峰值
 
@@ -149,7 +149,7 @@ $$
 
 V100 一行来自 Volta 白皮书，A100 一行来自 [Ampere 架构博客](https://developer.nvidia.com/blog/nvidia-ampere-architecture-in-depth/)。H100 一行的频率和官方数字来自白皮书 V1.04：Tensor 运算的 boost 频率 1,830 MHz，dense FP16/BF16（FP32 累加）989.4 TFLOPS，稀疏 1,978.9 TFLOPS。每个 Tensor Core 每周期 512 次 FMA 是本文推算的：白皮书说每个 SM 同频下的 MMA 速率是 A100 的 2 倍；代入 $528\times512\times2\times1.83\ \text{GHz}$，正好得到 989.4 TFLOPS。
 
-数据表上的"稀疏"数字来自 Ampere 引入的 2:4 结构化稀疏：每 4 个值里最多 2 个非零时，Tensor Core 吞吐翻倍。普通 dense 模型拿不到这个倍数，所以比较前要先换算成 dense。H100 产品页的 Tensor 行全都注明了"with sparsity"。
+数据表上的“稀疏”数字来自 Ampere 引入的 2:4 结构化稀疏：每 4 个值里最多 2 个非零时，Tensor Core 吞吐翻倍。普通 dense 模型拿不到这个倍数，所以比较前要先换算成 dense。H100 产品页的 Tensor 行全都注明了“with sparsity”。
 
 ### 指令越来越大，发起的线程越来越少
 
@@ -191,10 +191,10 @@ H100 SXM5 有 18 条第 4 代 NVLink，每条每方向 25 GB/s，合计 900 GB/s
 | NVLink 5（GB200 NVL72） | 每 GPU 1.8 TB/s，72 卡合计 130 TB/s | 一个机架 |
 | 网卡（HGX B200） | 8 卡合计 0.8 TB/s，约每卡 100 GB/s | 机器之间 |
 
-后两行出自 [GB200 NVL72 页面](https://www.nvidia.com/en-us/data-center/gb200-nvl72/)和 [HGX 页面](https://www.nvidia.com/en-us/data-center/hgx/)。同一代 Blackwell GPU，NVLink 带宽约是机器外网络的 18 倍（1.8 TB/s 对约 0.1 TB/s）。所以通信最密的 tensor parallel 一般放在 NVLink 域里，跨机器只放通信少一些的切分，见[张量并行](../06-systems/tensor-parallel.md)和[多卡训练](../06-systems/distributed-training.md)。NVL72 把 NVLink 域从一台 8 卡机器扩到了一整个机架。
+后两行出自 [GB200 NVL72 页面](https://www.nvidia.com/en-us/data-center/gb200-nvl72/)和 [HGX 页面](https://www.nvidia.com/en-us/data-center/hgx/)。两个数都是两个方向相加：HGX B200 配 8 张 400 Gb/s 网卡（[DGX B200 页面](https://www.nvidia.com/en-us/data-center/dgx-b200/)列的是 8 张单口 ConnectX-7），每个方向合计 400 GB/s，两个方向 0.8 TB/s。同口径比，同一代 Blackwell GPU 的 NVLink 带宽约是机器外网络的 18 倍（每卡 1.8 TB/s 对约 0.1 TB/s）。所以通信最密的 tensor parallel 一般放在 NVLink 域里，跨机器只放通信少一些的切分，见[张量并行](../06-systems/tensor-parallel.md)和[多卡训练](../06-systems/distributed-training.md)。NVL72 把 NVLink 域从一台 8 卡机器扩到了一整个机架。
 
 ## 这一篇没讲的
 
 - 怎么写 kernel、怎么用 Nsight 看 occupancy 和带宽：见 [CUDA](cuda.md)。
 - Roofline 只提一个数：H100 SXM 的 dense BF16 是 989.4 TFLOPS，HBM 3,352 GB/s，相除约 295 FLOP/字节。一个 kernel 从显存每读 1 字节做不到这么多运算，就先被带宽卡住。判断方法见[性能](performance.md)。
-- 各代参数、70B 模型要几张卡的算例：见[英伟达各代 GPU](nvidia-generations.md)。制程、HBM 和封装：见[芯片怎么造出来](chips-and-fabs.md)。
+- 各代参数、70B 模型要几张卡的算例：见 [NVIDIA 各代 GPU](nvidia-generations.md)。制程、HBM 和封装：见[芯片怎么造出来](chips-and-fabs.md)。

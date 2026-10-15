@@ -2,7 +2,7 @@
 
 **中文** · [English](tracking.en.md)
 
-> 阅读时间：约 12 分钟 · 草稿，待审核
+> 阅读时间：约 10 分钟 · 草稿，待审核
 
 检测器每一帧独立给出一堆框，彼此没有关系。规划器要的却是“前车在 12.75 m 处，每帧前进约 2 m，误差有多大”，以及“这个行人和上一帧那个是同一个人”。**跟踪拆成两件事：用运动模型预测，再按两边的不确定度用观测修正（Kalman filter）；以及决定哪个观测属于哪条轨迹（数据关联）。前者在线性高斯假设下有闭式最优解，很多 ID 跳变出在后者。**
 
@@ -12,7 +12,7 @@
 
 前置知识是[概率](../../quant/probability/README.md)里的[条件概率](../../quant/probability/conditional.md)和高斯分布，以及[第 1 篇](camera-geometry.md)的投影。
 
-跟踪不是记住一个数，而是记住一个分布：均值是最可能的位置，方差是有多不确定。在线性、高斯噪声的假设下，这个分布一直是高斯，只需要更新两个量。用 [Barfoot《State Estimation for Robotics》第 2 版](https://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser24.pdf)式 (3.1) 的写法，一维时：
+跟踪不是记住一个数，而是记住一个分布：均值是最可能的位置，方差是有多不确定。在线性、高斯噪声的假设下，这个分布一直是高斯，只需要更新两个量。取 [Barfoot《State Estimation for Robotics》第 2 版](https://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser24.pdf)式 (3.1) 的一维情形（书里把已知输入记作 $v_k$，这里写成 $u_k$）：
 
 $$
 x_k=x_{k-1}+u_k+w_k,\quad w_k\sim\mathcal N(0,Q);\qquad
@@ -57,7 +57,7 @@ $$
 | $Q$ 设成 0（完全相信运动模型） | 连续 4 帧的 $K$：0.67、0.40、0.29、0.22 | $P$ 越来越小，越来越不听观测 | $Q$ 越小越准（前车一刹车，估计就会滞后） |
 | 观测 $y=18$（可能是别的车） | 不设门限，估计被拉到 16.5 | 创新 6，$6^2/S=36/2=18$ | 设了门限就不会配错（两个目标挨得近时都能过门限） |
 
-最后一行的 $S=\check P+R=2$ 是创新的方差。$e^2/S$ 叫 normalized innovation squared（NIS）；模型正确时它服从自由度为 1 的 $\chi^2$ 分布（Barfoot 5.1.2 节），95% 分位数约 3.84。18 远大于 3.84，可以拒绝这次观测，这就是门限（gating）。
+最后一行的 $S=\check P+R=2$ 是创新的方差。$e^2/S$ 叫 normalized innovation squared（NIS）；模型正确时它服从自由度为 1 的 $\chi^2$ 分布，95% 分位数约 3.84。Barfoot 5.1.2 节用 NIS 检验滤波器是否自洽；拿它逐个筛观测，就是门限（gating）：18 远大于 3.84，拒绝这次观测。
 
 ## 从一维到 SORT：一个框也有状态
 

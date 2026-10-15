@@ -84,7 +84,7 @@ $$
 
 再看三件事：
 
-- **顺序很重要。** 如果排序出错，最远的白色 Gaussian 先叠，权重变成 0.9、0.05、0.02、0.015，颜色是 (0.95, 0.92, 0.915)，几乎全白：远处的东西透到了前面。剩下的透射率还是 0.015，因为 $\prod(1-\alpha_j)$ 和顺序无关；颜色却和顺序有关。3DGS 每个 tile 只排一次序，不逐像素排，论文 §6 承认这时混合是近似的，Gaussian 缩到像素大小时误差可以忽略；局限一节里提到的“popping”，部分原因就是 Gaussian 的前后顺序突然对调。
+- **顺序很重要。** 如果排序出错，第 1 个和第 4 个对调，最远的白色 Gaussian 最先叠，顺序变成白、绿、蓝、红，权重变成 0.9、0.04、0.03、0.015，颜色是 (0.915, 0.94, 0.93)，几乎全白：远处的东西透到了前面。剩下的透射率还是 0.015，因为 $\prod(1-\alpha_j)$ 和顺序无关；颜色却和顺序有关。3DGS 每个 tile 只排一次序，不逐像素排，论文 §6 承认这时混合是近似的，Gaussian 缩到像素大小时误差可以忽略；局限一节里提到的“popping”，部分原因就是 Gaussian 的前后顺序突然对调。
 - **同样的权重也能渲染深度，但结果可能落在空处。** $\sum w_iz_i=0.5\times4+0.2\times6+0.15\times9+0.135\times20=7.25$，除以 0.985 约为 7.36 m。这个位置上什么都没有，它是几个表面的加权平均。把这样的深度当成激光雷达读数用，要先想清楚。
 - **数值细节。** 论文附录写明：$\alpha<1/255$ 的项直接跳过，$\alpha$ 上限截到 0.99，累计不透明度快超过 0.9999 时停止。上例累计到 0.985，四个都会叠进去。
 
@@ -109,7 +109,7 @@ $$
 2. **能按物体编辑。** Street Gaussians 把背景和每辆车分成不同的 Gaussian 组，车跟着跟踪到的位姿走；OmniRe 把车辆、行人（用 SMPL 人体模型驱动的 Gaussian）和骑车人组织成场景图。挪车、删车、插入新车，是造“假如”场景的基础。
 3. **像真实的相机。** [3DGUT](https://arxiv.org/abs/2412.12507)（NVIDIA，2024-12，CVPR 2025）用 unscented transform 代替原版 3DGS 的 EWA splatting 投影近似，支持带畸变和卷帘快门的相机，以及反射、折射这类二次光线，同时保持光栅化的速度。
 4. **建场景只要几秒。** [Instant NuRec](https://arxiv.org/abs/2607.14203)（NVIDIA，2026-07-15）是前馈模型：把 10–20 秒的多相机日志直接变成分层的静态和动态 3DGS，外加天空立方体贴图和每个相机的 ISP 校正，约 1.5 秒；通过 3DGUT 支持非针孔相机，能接 AlpaSim 做闭环仿真。作者报告在 Waymo Open 上 PSNR 比最强基线高 2.01 dB；摘要没说测试视角是否在日志轨迹上。
-5. **成了产品。** NVIDIA Omniverse NuRec 在 2026-03-25 正式发布（[开发者论坛公告](https://forums.developer.nvidia.com/t/nvidia-omniverse-nurec-now-generally-available/364767)）：参考容器、基于 gsplat 的渲染器、NCore 数据格式、基于 Cosmos 的 Fixer 模型（清理新视角里的伪影），并接入 CARLA。NVIDIA 列出的合作方（CARLA、Foretellix、Mcity 等）属公司自报。
+5. **成了产品。** NVIDIA Omniverse NuRec 在 2026-03-25 正式发布（[开发者论坛公告](https://forums.developer.nvidia.com/t/nvidia-omniverse-nurec-now-generally-available/364767)）：参考容器、基于 gsplat 的渲染器、NCore 数据格式、基于 Cosmos 的 Fixer 模型（清理新视角里的伪影），以及生成未观测区域资产的 Asset Harvester。更早的 2025-10-28 [NVIDIA 技术博客](https://developer.nvidia.com/blog/accelerating-av-simulation-with-neural-reconstruction-and-world-foundation-models/)说 CARLA 已接入 NuRec 的渲染接口，并列出 Foretellix、MathWorks、Mcity 等合作方（公司自报）。
 6. **进了评测基准。** [NAVSIM v2](https://arxiv.org/abs/2506.04218)（2025-06，CoRL 2025）的伪仿真分两段：先给规划打分，再在 3DGS 渲染的扰动起点上评测，按离第一段终点的远近加权。[HUGSIM](https://arxiv.org/abs/2412.01718)（2024-12）的摘要称它是建在 3DGS 上的实时闭环仿真器，我们只核对了摘要。
 
 不是每家都公开用的是什么。Wayve 的 [PRISM-1](https://wayve.ai/thinking/prism-1/)（2024-06）做视频的四维重建，给它的 Ghost Gym 重仿真器用，但没说是 Gaussian 还是 NeRF；Wayve 自己写到骑车人很难重建，新场景要靠生成模型 GAIA-1。截至 2026-10-15，我们没有找到 Waymo 公开的 3DGS 流程。
@@ -131,7 +131,7 @@ $$
 | 做法 | 例子 | 补上了什么 | 代价 |
 | --- | --- | --- | --- |
 | 只在日志附近评测 | NAVSIM v2 在 3DGS 渲染的扰动起点上评测，按离第一段终点的远近加权 | 我们的理解：起点离已观测区域近，渲染更可信 | 测不到大幅偏离 |
-| 用生成模型清理新视角 | NuRec 的 Fixer（基于 Cosmos） | 去掉新视角里的伪影 | 补出来的内容没有被观测过 |
+| 用生成模型清理和补全新视角 | NuRec 的 Fixer（基于 Cosmos）和 Asset Harvester | 去掉新视角里的伪影，补上没观测到的物体 | 补出来的内容没有被观测过 |
 | 整个换成生成式世界模型 | Waymo World Model（2026-02-06，在 Genie 3 上后训练，输出相机和 lidar）；Wayve [GAIA-4](https://wayve.ai/thinking/gaia-4/)（2026-08-03） | 任何位置都能给出看起来合理的画面 | 两家都没有公布保真度指标；可能凭空多出或漏掉东西 |
 
 Waymo 的博客称它的模型因为生成能力强，能保持真实和一致，但没有给定量对比，这属于公司自报。还要看清一点：上例的行人在这段日志里从来没被看见过，任何方法都无法从这段日志知道那里有人。生成模型能画出一个合理的行人，也能画出空路面；哪一个对，这段日志核对不了。重建给的是“看到过的地方忠实”，生成给的是“哪里都像样”，两者回答的是不同的问题。世界模型怎样当仿真器和评测器，以及它们自己的验证难题，见[世界模型：给机器人和汽车当模拟器](../../11-frontier/world-models/robotics-driving.md)；为什么规划器必须闭环评测，见[端到端驾驶与闭环评测](../driving/end-to-end.md)。

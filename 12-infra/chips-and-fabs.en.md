@@ -2,7 +2,7 @@
 
 [中文](chips-and-fabs.md) · **English**
 
-> Reading time: ~12 min · Draft, pending review
+> Reading time: ~10 min · Draft, pending review
 
 The news keeps saying "AI chips are in short supply." Short of what, exactly? Is it that the fab cannot make the GPUs? Not quite. **The larger a die, the fewer fit on a wafer and the larger the fraction that is defective; and a single die cannot exceed the exposure limit. So AI chips increasingly package several dies together with HBM, a step that needs advanced packaging and HBM, both of which have limited capacity of their own.** This note starts with the production chain, works through the yield of one wafer, and then looks at packaging and HBM.
 
@@ -93,10 +93,10 @@ TSMC's CoWoS is this kind of packaging. According to TSMC ([CoWoS page](https://
 | Type | What the interposer is | Specification TSMC gives |
 | --- | --- | --- |
 | CoWoS-S | Silicon interposer | Up to about 3.3x the reticle size (~2,700 mm²) |
-| CoWoS-R | RDL interposer of polymer and copper traces, relatively flexible | Minimum 4 µm pitch, in volume production since 2023 |
-| CoWoS-L | RDL interposer with embedded local silicon interconnect (LSI) chips | First version at 3.5x the reticle size, in volume production since 2024; TSMC recommends L or R beyond 3.3x |
+| CoWoS-R | RDL interposer of polymer and copper traces, relatively flexible | Minimum routing pitch 4 µm (2 µm line width and spacing), in volume production since 2023 |
+| CoWoS-L | RDL interposer with embedded local silicon interconnect (LSI) chips | The 3.5x-reticle version in volume production since 2024; TSMC recommends L or R beyond 3.3x |
 
-In CoWoS-L, the LSI chips carry the high-density wiring between dies and between dies and HBM, and the rest uses RDL. As for which one NVIDIA uses: according to a Reuters report of 2025-01-16 ([reprinted by the Taipei Times](https://www.taipeitimes.com/News/biz/archives/2025/01/17/2003830329)), Jensen Huang said Blackwell would largely use CoWoS-L, while Hopper, still in production, uses CoWoS-S. That is a CEO statement in a news report, not a specification sheet.
+In CoWoS-L, the LSI chips carry the high-density wiring between dies and between dies and HBM, and the rest uses RDL. As for which NVIDIA product uses which: none of the NVIDIA whitepapers, architecture blogs or product pages checked for this note say; there is only news. According to a Reuters report of 2025-01-16 ([reprinted by the Taipei Times](https://www.taipeitimes.com/News/biz/archives/2025/01/17/2003830329)), Jensen Huang said Blackwell would largely use CoWoS-L, while Hopper, still in production, uses CoWoS-S. That is a CEO statement relayed by a news report, not a specification.
 
 ## HBM: stacking memory next to the GPU
 
@@ -114,9 +114,9 @@ $$
 | HBM3E (Micron) | 1,024 bits | Over 9.2 Gb/s | Over 1.2 TB/s | 24 GB 8-high, 36 GB 12-high | [Micron product page](https://www.micron.com/products/memory/hbm/hbm3e) |
 | HBM4 | 2,048 bits | Up to 8 Gb/s | Up to 2 TB/s | 16-high × 32 Gb, up to 64 GB | [JEDEC, 2025-04-16](https://www.jedec.org/news/pressreleases/jedec%C2%AE-and-industry-leaders-collaborate-release-jesd270-4-hbm4-standard-advancing) |
 
-Check one row: $1024\times6.4/8=819.2$ GB/s. HBM4 doubles the width, so its per-pin rate need not exceed HBM3E's to deliver more bandwidth. Micron quotes over 1.2 TB/s "per placement," and $1024\times9.2/8\approx1{,}178$ GB/s, which agrees.
+Check one row: $1024\times6.4/8=819.2$ GB/s. HBM4 doubles the width, so its per-pin rate need not exceed HBM3E's to deliver more bandwidth. Micron's two "over"s have to be read together: at exactly 9.2 Gb/s, $1024\times9.2/8\approx1{,}178$ GB/s, slightly under 1.2 TB/s; a pin has to reach about 9.4 Gb/s before one placement (stack) exceeds 1.2 TB/s.
 
-Now work backward from a product: the H100 SXM has 5 HBM3 stacks and a 5,120-bit interface (Hopper architecture blog), and the product page lists 3.35 TB/s. Each pin then runs at about $3.35\times10^{12}\times8/5120\approx5.2$ Gb/s, below the 6.4 Gb/s the standard allows. This is this note's own calculation; NVIDIA does not publish the pin rate. Product bandwidth is not "number of stacks × the standard's maximum"; use the product page.
+Now work backward from a product: the H100 SXM5 has 5 HBM3 stacks and a 5,120-bit interface, and [whitepaper V1.04](https://dam-cdn.nvd.orangelogic.com/AssetLink/705n6ur546g0uk43w0117r17n8042d73.pdf) gives 3,352 GB/s of memory bandwidth. Each pin then runs at about $3.352\times10^{12}\times8/5120\approx5.24$ Gb/s, which matches the memory data rate the whitepaper lists, 2,619 MHz DDR (two transfers per clock, about 5.24 Gb/s), and is below the 6.4 Gb/s the HBM3 standard allows. Product bandwidth is not "number of stacks × the standard's maximum"; check the specification of the specific SKU.
 
 ## Why capacity got stuck at packaging and HBM
 

@@ -2,13 +2,13 @@
 
 [中文](camera-geometry.md) · **English**
 
-> Reading time: ~12 min · Draft, pending review
+> Reading time: ~10 min · Draft, pending review
 
 In the front camera, a pedestrian's foot lands on pixel (860, 690). How far away is the pedestrian? That one pixel cannot tell you: projection throws depth away, and a pixel corresponds only to a ray. **To get depth back you must add one more constraint: the point lies on a known plane, a second view sees it, or a learned depth prior fills it in.** This note follows a single point through forward projection, back-projection, distortion, two views and triangulation. Linear algebra is all you need.
 
 > **Draft, pending review.** The site owner has not reviewed this note yet; facts, emphasis and wording may change. Check the primary sources linked in the text before relying on it.
 
-## Three frames, two transforms
+## Which frames does a point pass through?
 
 A point passes through three coordinate frames:
 
@@ -102,7 +102,7 @@ where $\hat x,\hat x'$ are normalised coordinates in the two images ([HZ chapter
 
 $E\hat x$ is itself the epipolar line in the second image: $0.5\,y'-0.075=0$, i.e. $y'=0.15$, pixel row $v'=690$. You only need to search along row 690, so a 2D search becomes 1D.
 
-This is the simplest case. With rotation, epipolar lines are tilted. Under pure forward translation the epipole $e'=K't$ sits exactly at the principal point (HZ eq. 9.3), and all epipolar lines radiate from the image centre; a monocular camera on a car driving straight is close to this. Without $K$, write the fundamental matrix in pixel coordinates, $F=K'^{-\top}EK^{-1}$, and the constraint becomes $x'^{\top}Fx=0$. HZ chapter 9 gives $F$ 7 degrees of freedom and $E$ 5, and notes that [Longuet-Higgins 1981](https://doi.org/10.1038/293133a0) introduced the essential matrix first; $F$ generalises it by dropping the assumption that the cameras are calibrated.
+This is the simplest case. With rotation, epipolar lines are tilted. Under pure forward translation the epipole $e'=K't$ sits exactly at the principal point (HZ eq. 9.3), and all epipolar lines radiate from the image centre; a monocular camera on a car driving straight is close to this. Without $K$, write the fundamental matrix in pixel coordinates, $F=K'^{-\top}EK^{-1}$, and the constraint becomes $x'^{\top}Fx=0$. HZ chapter 9 gives $F$ 7 degrees of freedom and $E$ 5, and notes that [Longuet-Higgins 1981](https://doi.org/10.1038/293133a0) introduced the essential matrix to computer vision (a similar matrix appeared earlier in the photogrammetry literature); $F$ generalises it by dropping the assumption that the cameras are calibrated.
 
 In practice $E$ or $F$ is estimated from matched points. Each match gives one linear equation in the 9 entries of $F$; with 8 or more matches you can solve linearly (the eight-point algorithm) and then enforce rank 2. [Hartley 1997](https://doi.org/10.1109/34.601246) states in its abstract that a simple normalisation of the matched coordinates (translation and scaling) beforehand makes the eight-point results comparable to the best iterative algorithms of the time. Wrong matches are removed with robust methods such as RANSAC ([Barfoot, 2nd ed.](https://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser24.pdf), Section 5.4.1).
 
@@ -136,6 +136,6 @@ The ground-plane ranging above uses the first row: points on the ground map one-
 
 In 2025–2026, feed-forward 3D models output camera intrinsics and extrinsics, depth and pointmaps in a single forward pass. [VGGT](https://arxiv.org/abs/2503.11651) won the CVPR 2025 Best Paper, and its authors report reconstruction in under one second; the CVPR 2026 Best Paper went to [D4RT](https://arxiv.org/abs/2512.08924), which reconstructs dynamic scenes in 4D ([CVPR 2026 closing page](https://cvpr.thecvf.com/Conferences/2026/News/Closing)). What these models output is still this note's $K$, $[R\mid t]$ and depth; reading, checking and using those outputs still takes this note's geometry. Details are in [note 4](foundation-models.en.md).
 
-This layer is also something job descriptions spell out: of 13 public job descriptions read on 2026-10-15, 5 name 3D geometric vision, SLAM/VIO, sensor fusion or BEV, and one explicitly asks for the pinhole camera model and epipolar geometry.
+This layer is also something public job descriptions spell out: of the 13 public job descriptions for cars and robots we read on 2026-10-15, about 5 name 3D geometric vision, SLAM/VIO, sensor fusion or BEV, and some ask for the pinhole camera model and epipolar geometry by name (an aggregate of knowledge areas only; no company is named).
 
 Further reading: the [HZ sample chapters](https://www.robots.ox.ac.uk/~vgg/hzbook/) (chapter 9 on epipolar geometry is free), [Szeliski, 2nd ed.](https://szeliski.org/Book/) (free download for personal use), and the course pages of CMU [16-385](http://16385.courses.cs.cmu.edu/) and [16-822](https://geometric3d.github.io/). Next: [state estimation and tracking](tracking.en.md).

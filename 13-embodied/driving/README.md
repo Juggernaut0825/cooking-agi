@@ -34,7 +34,7 @@
 “端到端”在不同系统里指的东西不一样，至少有三种：
 
 - **仍有中间任务，但一起训练。** [UniAD](https://arxiv.org/abs/2212.10156)（CVPR 2023 Best Paper）用 query 把跟踪、建图、运动预测、占用和规划串成一个网络，以规划为最终目标；各任务通过 query 相连，可以一起训练。
-- **一个网络从像素到动作。** Tesla 在 [2023 年第四季度股东信](https://digitalassets.tesla.com/tesla-contents/image/upload/IR/TSLA-Q4-2023-Update.pdf)里说，V12 用 AI 产生车辆控制，而不是手写驾驶行为；Tesla 的 Ashok Elluswamy 在 ICCV 2025 的演讲中说，现在是一个大网络把像素映射到下一个动作，显式感知只作为可选的辅助输出（据演讲自动字幕）。
+- **一个网络从像素到动作。** Tesla 在 [2023 年第四季度股东信](https://digitalassets.tesla.com/tesla-contents/image/upload/IR/TSLA-Q4-2023-Update.pdf)里说，V12 用 AI 来影响车辆控制（方向盘、踏板、转向灯等），而不是把每种驾驶行为都手写出来；Tesla 的 Ashok Elluswamy 在 2025 年 10 月 ICCV 的演讲中说，现在是一个大网络把像素映射到下一个动作，显式感知只作为可选的辅助输出（据演讲视频的自动字幕转述）。
 - **大模型加结构化输出。** Waymo 2025-12-09 的[博客](https://waymo.com/blog/2025/12/demonstrably-safe-ai-for-autonomous-driving)描述的 Foundation Model 保留了物体、道路图等结构化输出，加了一个用 Gemini 训练的 Driving VLM，再把车上跑不动的大 Teacher 模型蒸馏成车载 Student，并在车上另设一层独立的验证。
 
 | 对比 | 模块化栈 | 端到端模型 |
@@ -49,44 +49,37 @@
 
 ## 这三篇怎么接起来
 
-- **第 1 篇**回答“东西在哪”：多相机图像怎样变成一张米制的俯视网格，手算一个像素按深度分布摊进鸟瞰格子；再讲 BEV query、稀疏 query、camera–lidar 融合，以及占用网格比框多了什么。
-- **第 2 篇**回答“别人会怎么走、我走哪条”：手算 3 条预测的 minADE / minFDE，再在 4 条候选轨迹里按代价挑一条，看权重怎样改变选择；最后讲为什么规则规划器 PDM-Closed 仍是强基线。
-- **第 3 篇**回答“怎样判断一个把这些都做了的模型好不好”：手算同样的开环误差、完全不同的闭环结局；NAVSIM 的 PDMS / EPDMS、Bench2Drive 和 CARLA 测的是什么；安全论证的几份标准；以及截至 2026 年 10 月的部署情况。
+- **第 1 篇**回答“东西在哪”：多相机图像怎样变成一张米制的俯视网格，占用网格比框多了什么。
+- **第 2 篇**回答“别人会怎么走、我走哪条”：预测为什么要给几种可能，候选轨迹怎样按代价挑，规则规划器为什么仍是强基线。
+- **第 3 篇**回答“怎样判断一个把这些都做了的模型好不好”：为什么开环分数会骗人，闭环和准闭环评测各测什么，上路前要有什么安全论证。
 
 ## 先读什么
 
-- 相机怎样把三维点投成像素：[相机几何](../perception/camera-geometry.md)。本系列第 1 篇直接用它。
-- 检测框怎样输出、怎样打分：[检测与分割](../perception/detection.md)；跟踪：[状态估计与跟踪](../perception/tracking.md)。
-- MPC、误差累积、规划器钻模型漏洞：[Model-based RL](../../05-post-training/deep-rl/model-based.md)；CEM、LQR、约束：[规划与 LQR](../../05-post-training/deep-rl/planning-and-control.md)。
-- 行为克隆为什么误差会累积、DAgger 补什么：[模仿与奖励](../../05-post-training/deep-rl/imitation-and-rewards.md)。第 3 篇的开环、闭环对比建立在它上面。
+- 感知系列的[相机几何](../perception/camera-geometry.md)（本系列第 1 篇直接用它）、[状态估计与跟踪](../perception/tracking.md)和[检测与分割](../perception/detection.md)。
+- MPC 和规划器钻模型漏洞：[Model-based RL](../../05-post-training/deep-rl/model-based.md)；LQR 和约束：[规划与 LQR](../../05-post-training/deep-rl/planning-and-control.md)；行为克隆的误差累积：[模仿与奖励](../../05-post-training/deep-rl/imitation-and-rewards.md)，第 3 篇的开环、闭环对比建立在它上面。
 - 世界模型当驾驶模拟器：[世界模型：机器人与驾驶](../../11-frontier/world-models/robotics-driving.md)。
-- 读 EMMA、Alpamayo 这类驾驶 VLA 之前：[ViT](../../03-multimodal-learning/vit.md)、[VLM 设计](../../03-multimodal-learning/vlm-designs.md)。
 
-想做自动驾驶方向的话，一条顺序是：相机几何 → 状态估计与跟踪 → 本系列第 1、2、3 篇，最后补[三维重建与神经渲染](../perception/reconstruction.md)。
+想做自动驾驶方向的话，一条顺序是：感知系列第 1 篇（相机几何）→ 感知系列第 2 篇（状态估计与跟踪）→ 本系列第 1、2、3 篇，最后补感知系列第 5 篇[三维重建与神经渲染](../perception/reconstruction.md)。
 
 ## 截至 2026-10：领域状态与部署
 
 > **截至 2026-10-15 的状态（变化很快，引用前请核对日期）**
 >
-> - **一个大的学习型驾驶模型成了主流，分歧在内部保留多少显式结构。** Tesla 的 ICCV 2025 演讲描述单一端到端网络（[视频](https://www.youtube.com/watch?v=IRu-cPkpiFk)，据演讲自动字幕）；Waymo 的 Foundation Model 保留结构化输出（2025-12-09）。
-> - **学出来的模拟器成了闭环测试的主要方向。** Tesla 在 ICCV 2025 和 CVPR 2026 演讲中介绍神经世界模拟器（据演讲自动字幕）；[Waymo World Model](https://waymo.com/blog/2026/02/the-waymo-world-model-a-new-frontier-for-autonomous-driving-simulation)（2026-02-06）；Wayve [GAIA-4](https://wayve.ai/thinking/gaia-4/)（2026-08-03）。详见[世界模型系列](../../11-frontier/world-models/robotics-driving.md)。
+> - **学出来的模拟器成了闭环测试的主要方向。** Tesla 在 2025 年 10 月 ICCV 和 2026 年 6 月 CVPR 的演讲中介绍神经世界模拟器（据演讲视频的自动字幕）；[Waymo World Model](https://waymo.com/blog/2026/02/the-waymo-world-model-a-new-frontier-for-autonomous-driving-simulation)（2026-02-06）；Wayve [GAIA-4](https://wayve.ai/thinking/gaia-4/)（2026-08-03）。详见[世界模型系列](../../11-frontier/world-models/robotics-driving.md)。
 > - **nuScenes 开环 L2 和碰撞率基本退场。** [Bench2Drive](https://github.com/Thinklab-SJTU/Bench2Drive) 的维护者已停止报告这两项；2026 年的论文多报告 NAVSIM v1/v2、HUGSIM、nuPlan 和 Bench2Drive。原因见第 3 篇。
 > - **开放权重的驾驶 VLA 出现了。** NVIDIA 的 [Alpamayo 2 Super](https://www.nvidia.com/en-us/solutions/autonomous-vehicles/alpamayo/llm-info/)（34B）在 2026-08-04 发布权重，许可证为 OpenMDW-1.1；它的性能数字都是 NVIDIA 自报。
-> - **模仿学习之外，RL 和 self-play 在增加。** Apple 的 [GigaFlow](https://arxiv.org/abs/2502.03349)（ICML 2025）只用 self-play 训练；Tesla 在 2026 年第一季度股东信（[SEC 副本](https://www.sec.gov/Archives/edgar/data/0001318605/000162828026026551/exhibit991.htm)）中说 v14.3 升级了 RL 阶段。
-> - **驾驶也有了 scaling 证据。** Waymo 2025-06 的[博客](https://waymo.com/blog/2025/06/scaling-laws-in-autonomous-driving/)报告，运动预测和规划质量随算力呈幂律改善，闭环指标也随规模变好（公司自报，基于约 50 万小时内部驾驶数据）。
 
 下面的运营数字全部是公司自报，除非另有说明；它们各自截至不同日期，不能直接横向比较。
 
 | 公司 | 截至 | 公开说法 | 性质 |
 | --- | --- | --- | --- |
-| Waymo | 2026 年春 | 每周超过 50 万次付费 robotaxi 乘车（Waymo 2026-03-27 前后的 X 帖，[据 TechCrunch 报道](https://techcrunch.com/2026/03/27/waymo-skyrocketing-ridership-in-one-chart/)；Alphabet 2026-04-29 的[财报稿](https://www.sec.gov/Archives/edgar/data/0001652044/000165204426000043/googexhibit991q12026.htm)里，Pichai 也说每周超过 50 万次完全自动驾驶乘车） | 公司自报；到 2026-10-15 没有更新的周数据 |
-| Waymo | 2026-10-15 | [更新页](https://waymo.com/updates/)列出 15 个向公众服务的美国城市 | 公司页面 |
+| Waymo | 2026-04-29 | 每周超过 50 万次完全自动驾驶乘车（Pichai 在 Alphabet 第一季度[财报稿](https://www.sec.gov/Archives/edgar/data/0001652044/000165204426000043/googexhibit991q12026.htm)里的说法） | 公司自报；截至 2026-10-15 我们没找到更新的周数据 |
+| Waymo | 2026-10-15 | [更新页](https://waymo.com/updates/)列出 15 个向公众服务的美国城市 | 公司自述 |
 | Waymo | 2026-06 | 累计 2.713 亿英里 rider-only 里程（[Safety Impact](https://waymo.com/safety/impact/)） | 公司自报 |
 | Tesla | 2026-07-22 | 2026 年第二季度[股东信](https://www.sec.gov/Archives/edgar/data/1318605/000162828026049213/exhibit991.htm)说 Robotaxi 已在 7 个大都市区运营：湾区有安全员；Austin、Dallas、Houston、Miami、Orlando、Tampa 标为 “Ramping Unsupervised” | Tesla 自述；信中没有说任何城市已全部无人监督 |
 | Tesla | 2026-09-17 | 加州 DMV [名单](https://www.dmv.ca.gov/portal/vehicle-industry-services/autonomous-vehicles/autonomous-vehicle-testing-permit-holders/)上，Tesla Robotaxi LLC 只持有带安全员的测试许可 | 监管名单 |
 | Zoox | 2026-07-31 | NHTSA 依 Part 555 给予豁免，可商业部署，每 12 个月最多 2,500 辆（[联邦公报](https://public-inspection.federalregister.gov/2026-15485.pdf)） | 监管文件 |
 | 百度 Apollo Go | 2026 Q1 / Q2 | Q1 完成 320 万次全无人乘车（[季度新闻稿](https://www.sec.gov/Archives/edgar/data/0001329099/000119312526228123/d156481dex991.htm)）；Q2 约 100 万次，李彦宏在 2026-08-18 的电话会上归因于部分国内城市的“运营调整” | 公司自报；Q2 数字据报道来自电话会记录 |
-| Pony.ai / WeRide | 2026-06-30 / 2026-07-31 | Pony.ai robotaxi 车队 1,975 辆（[6-K](https://www.sec.gov/Archives/edgar/data/0001969302/000110465926098113/tm2623382d1_ex99-1.htm)）；WeRide 约 3,400 辆 L4 车辆，其中 robotaxi 超过 1,800 辆（[6-K](https://www.sec.gov/Archives/edgar/data/0001867729/000110465926094571/tm2622690d2_ex99-1.htm)） | 公司自报 |
 
 ## 这一组怎么读
 

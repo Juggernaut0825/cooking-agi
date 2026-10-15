@@ -2,23 +2,23 @@
 
 [中文](imitation.md) · **English**
 
-> Reading time: ~13 min · Draft, pending review
+> Reading time: ~11 min · Draft, pending review
 
 A cup sits on the table. You teleoperate a robot arm around it to reach a box behind it and record 100 demonstrations: 50 pass on the left, 50 on the right. Train a policy with mean squared error and it drives straight into the cup. **Imitation learning on robots is hard in three places: one image can have several correct actions, small per-step deviations add up, and demonstrations are expensive and narrow. The common combination today is a generative action head (diffusion or flow matching) to represent "several answers are correct", action chunking to decide a short stretch at once and keep consecutive actions consistent, and cheaper ways to collect more data.**
 
 > **Draft, pending review.** The site owner has not reviewed this note yet; facts, emphasis and wording may change. Check the primary sources linked in the text before relying on it.
 
-## Picking up from two earlier notes
+## What changes on a real robot
 
 The behavior cloning (BC) objective, why errors can accumulate as $O(T^2\epsilon)$ in the worst case, how DAgger asks the expert about states the learner itself reaches, and causal confusion are all covered in [Imitation and rewards](../../05-post-training/deep-rl/imitation-and-rewards.en.md). "One-step mean squared error averages two paths into a wall" appears in [Model-based RL](../../05-post-training/deep-rl/model-based.en.md) for state prediction; the same logic holds for action prediction. This note does not repeat them. It looks at three things that change on a real robot:
 
 | What changes on a robot | Concretely | Section in this note |
 | --- | --- | --- |
-| Actions are continuous, high-dimensional and fast | A single arm commonly has 7 dimensions (end-effector translation, rotation, gripper), two arms 14; commands go out at 20–50 Hz | Generative action heads, action chunking |
+| Actions are continuous, high-dimensional and fast | A single arm commonly has 7 dimensions (end-effector translation, rotation, gripper), a fixed-base two-arm setup 14; commands go out at 20–50 Hz | Generative action heads, action chunking |
 | Human demonstrations naturally have several modes | Same image, the operator passes left this time and right the next | Worked example: left or right around an obstacle |
 | Demonstrations are expensive | Someone has to operate the device, reset the scene and check quality | Where the data comes from |
 
-The dimension and frequency examples come from [OpenVLA](https://arxiv.org/abs/2406.09246v1) (7-D actions) and [π0](https://arxiv.org/abs/2410.24164v1) (14-D for two arms, up to 50 Hz).
+The dimension and frequency examples come from [OpenVLA](https://arxiv.org/abs/2406.09246v1) (7-D actions) and [π0](https://arxiv.org/abs/2410.24164v1) (14-D for fixed-base two-arm robots, up to 50 Hz; its mobile two-arm robots use 16–17-D).
 
 ## Worked example: why mean squared error drives into the obstacle
 
@@ -59,7 +59,7 @@ First formula: the target velocity is $u=a-\epsilon$; substituting $\epsilon=(x-
 
 - **1 step.** At $t=0$, $\tanh 0=0$ and the velocity is $-x$, so one full step gives $x_1=\epsilon-\epsilon=0$. Whatever the noise, the result is the mean 0, into the cup just like MSE regression.
 - **2 steps, from $\epsilon=0.5$.** The first step reaches $0.5-0.5\times0.5=0.25$. The last step size equals the remaining $1-t$, and substituting shows it lands on $\mathbb E[a\mid x_{0.5}=0.25]=\tanh 0.5\approx0.46$, halfway.
-- **10 steps, from $\epsilon=0.5$.** The first steps move toward the middle (0.45, 0.41, 0.37) and only separate after the halfway point; step 9 reaches 0.84, and the last step lands on $\tanh(0.84\times90)\approx1.00$. Starting from $-0.5$ ends symmetrically at $-1.00$.
+- **10 steps, from $\epsilon=0.5$.** The first four steps move toward the middle (0.45, 0.41, 0.37, 0.35) and only separate after the halfway point; step 9 reaches 0.84, and the last step lands on $\tanh(0.84\times90)\approx1.00$. Starting from $-0.5$ ends symmetrically at $-1.00$.
 
 | Euler steps $n$ | End point from $\epsilon=0.5$ | End point from $\epsilon=0.02$ |
 | --- | --- | --- |
@@ -74,7 +74,7 @@ Diffusion-type models are not the only heads that can represent "several answers
 
 | Action head | Can it represent several modes? | Cost |
 | --- | --- | --- |
-| Gaussian mixture | Yes, but the number of modes is fixed in advance | In Diffusion Policy's Fig. 4, the LSTM-GMM baseline leans toward one mode |
+| Gaussian mixture | Yes, but the number of modes is fixed in advance | In Diffusion Policy's Fig. 4, the LSTM-GMM baseline (and IBC) leans toward one mode |
 | Bin each dimension and classify (action tokens) | Yes | Dimensions × steps tokens must be generated one by one; the next note computes the latency |
 | CVAE (ACT's approach) | During training, through a latent $z$ | At test time ACT sets $z$ to the prior mean 0 and decodes deterministically |
 | Diffusion / flow matching | Yes | Inference needs several integration steps; the [OpenVLA-OFT](https://arxiv.org/abs/2502.19645v1) authors also note slower training |
@@ -105,8 +105,8 @@ How real systems handle this tension:
 
 - **ACT's ablation.** With temporal ensembling off and averaged over 4 simulated settings, success is 1% at $k=1$, 44% at $k=100$, and slightly lower at $k=200$ and $400$; the authors attribute the dip to near open-loop control, too little reactivity, and the difficulty of modeling long sequences (§VI-A).
 - **ACT's temporal ensembling.** The policy is queried at every step, so each time step receives predictions from several chunks, which are averaged with weights $w_i=\exp(-m\,i)$, where $w_0$ goes to the oldest prediction. The authors find both chunking and temporal ensembling important for success.
-- **Diffusion Policy's receding horizon.** It reads the latest $T_o$ observation steps, predicts $T_p$ steps, executes $T_a$ of them and then predicts again (§II-C). This is the same idea as [MPC executing only the first action](../../05-post-training/deep-rl/model-based.en.md), with several actions executed at a time. The paper's ablation describes the choice of $T_a$ as a trade-off between temporal consistency and responsiveness.
-- **What π0 does.** It outputs 50 steps at once; 50 Hz robots re-run inference after executing 25 steps (0.5 s), 20 Hz robots after 16. The appendix says temporal ensembling was tried early on and hurt policy performance, so chunks are executed open loop ([appendix A-D](https://arxiv.org/abs/2410.24164v1)).
+- **Diffusion Policy's receding horizon.** It reads the latest $T_o$ observation steps, predicts $T_p$ steps, executes $T_a$ of them and then predicts again (§II-C). This is the same idea as [MPC executing only the first action](../../05-post-training/deep-rl/model-based.en.md), with several actions executed at a time. The paper's ablation in Fig. 6 describes the choice of $T_a$ as a trade-off between temporal consistency and responsiveness.
+- **What π0 does.** It outputs 50 steps at once; 50 Hz robots re-run inference after executing 25 steps (0.5 s), 20 Hz robots after 16 (0.8 s). The appendix says temporal ensembling was tried early on and hurt policy performance, so chunks are executed open loop ([Appendix D](https://arxiv.org/abs/2410.24164v1)).
 
 ACT finds temporal ensembling important and π0 finds it harmful; the two papers differ in model, action head and tasks, so this does not settle which is right. Our inference: if chunks come from a multimodal sampler, averaging one chunk that chose left with one that chose right brings you back to 0, while ACT decodes deterministically at test time, so its chunks are more likely to agree. Neither paper tests this directly.
 
@@ -114,21 +114,21 @@ ACT finds temporal ensembling important and π0 finds it harmful; the two papers
 
 | Date | Dataset / tool | How it is collected | Scale (as reported by each) | Notes |
 | --- | --- | --- | --- | --- |
-| 2023-04 | [ALOHA](https://arxiv.org/abs/2304.13705v1) | Low-cost bimanual teleoperation, recorded at 50 Hz | ACT reaches 80–90% on 6 fine-grained tasks from about 10 minutes of demonstrations (authors) | One platform |
+| 2023-04 | [ALOHA](https://arxiv.org/abs/2304.13705v1) | Low-cost bimanual teleoperation, recorded at 50 Hz | 6 real tasks with about 10 minutes of demonstrations each; success from 20% to 96%, with the abstract's examples (opening a condiment cup, slotting a battery) at 80–90% (authors) | One platform |
 | 2023-08 | [BridgeData V2](https://arxiv.org/abs/2308.12952v1) | Low-cost robot arm | 60,096 trajectories, 24 environments | Open |
-| 2023-10 | [Open X-Embodiment](https://arxiv.org/abs/2310.08864v1) | Pools 60 existing datasets | 1M+ trajectories, 22 embodiments, 527 skills | Contributor count: 21 institutions in the abstract, 34 labs on the project site |
+| 2023-10 | [Open X-Embodiment](https://arxiv.org/abs/2310.08864v1) | Pools 60 existing datasets | 1M+ trajectories, 22 embodiments, 527 skills | Contributor count: 21 institutions in the abstract, 34 labs in the body text |
 | 2024-01 | [Mobile ALOHA](https://arxiv.org/abs/2401.02117v1) | Whole-body teleoperation on a mobile base | 50 demonstrations per task; co-training with static ALOHA data raises success by up to 90% (authors) | |
 | 2024-02 | [UMI](https://arxiv.org/abs/2402.10329v1) | Hand-held gripper used outside the lab; actions stored as relative trajectories, with latency matching | Dynamic, bimanual and long-horizon tasks (authors) | The abstract does not name the camera |
-| 2024-03 | [DROID](https://arxiv.org/abs/2403.12945v1) | 50 collectors on 3 continents with Franka arms over 12 months | 76k trajectories / 350 h, 564 scenes, 84 tasks | Open |
+| 2024-03 | [DROID](https://arxiv.org/abs/2403.12945v1) | 50 collectors on 3 continents with Franka arms over 12 months | 76k trajectories / 350 h, 564 scenes; 84 tasks per the arXiv abstract, 86 in the v1 body text | Open |
 | 2025-03 | [AgiBot World](https://arxiv.org/abs/2503.06669v1) | Large in-house real-robot collection | 1M+ trajectories, 217 tasks; says pretraining beats OXE-only by 30% (self-reported) | Robot count not in the abstract |
 | 2025-05 | [EgoDex](https://arxiv.org/abs/2505.11709v1) | First-person video on Apple Vision Pro, with 3D hand and finger tracking | 829 h, 194 tabletop tasks | No robot actions |
-| 2026-02 | [EgoScale](https://arxiv.org/abs/2602.16710v1) | Action-labelled first-person human video, then a short human–robot alignment stage | 20,854 h; validation loss falls log-linearly with data and moves with real-robot success; +54% over no pretraining on a 22-DoF hand (self-reported) | Feeds GR00T N1.7 |
+| 2026-02 | [EgoScale](https://arxiv.org/abs/2602.16710v1) | Action-labelled first-person human video, then alignment on 50 h of human data plus 4 h of robot data | 20,854 h; validation loss falls log-linearly with data and moves with real-robot success; on a 22-DoF hand, average success over 5 tasks rises from 2% without pretraining to 56% (self-reported) | NVIDIA's [Isaac-GR00T](https://github.com/NVIDIA/Isaac-GR00T) readme says GR00T N1.7 is pretrained on it |
 
 A few numbers you can check yourself. A DROID trajectory averages about $350\times3600/76{,}000\approx16.6$ seconds. EgoScale's 20,854 hours are about 60 times DROID, and about twice π0's own robot data (the paper says about 10,000 hours).
 
-Why the 2025–26 bet is first-person human video: it needs no robot and no teleoperation rig, and covers far more scenes. [Index](https://www.figure.ai/news/introducing-index), introduced by Figure on 2026-08-25, is a paid app in which users record real tasks at home and at work; Figure says it has more than 16 million videos (self-reported). Two costs:
+Why the 2025–26 bet is first-person human video: it needs no robot and no teleoperation rig, and covers far more scenes. [Index](https://www.figure.ai/news/introducing-index), introduced by Figure on 2026-08-25, is an app through which Figure pays users (Creators) to record real tasks at home and at work; Figure says it has more than 16 million videos (self-reported). Two costs:
 
-- **The video has no robot actions.** Hand positions in 3D have to be estimated from the video and used as actions. Physical Intelligence's [human-to-robot](https://www.pi.website/research/human_to_robot) work (2025-12) co-trains π0.5 on human video this way and reports roughly 2x better results across 4 generalization scenarios (self-reported).
+- **The video has no robot actions.** Hand positions in 3D have to be estimated from the video and used as actions. Physical Intelligence's [human-to-robot](https://www.pi.website/research/human_to_robot) work (2025-12) records human video with a head camera and wrist cameras, estimates 3D hand keypoints with visual SLAM as the actions, and mixes this video with robot data when fine-tuning π0.5; it reports roughly 2x better results across 4 generalization scenarios (self-reported).
 - **A human hand is not a gripper.** EgoScale adds a dedicated human–robot alignment stage. PI also reports that transfer from human video improves with more diverse robot pretraining data (self-reported), so human video complements robot data rather than replacing it.
 
 ## Think before you run it

@@ -71,7 +71,7 @@ $f$ 是以像素计的焦距（这里 $f_x=f_y=f$），$(c_x,c_y)$ 是主点。�
 - 已知的相机高度：假设点在平坦路面上，离地高度就是那个已知距离。[相机几何](camera-geometry.md)一篇用离地 1.5 m 的相机算出过 10 m，也算了俯仰偏 1° 时这个数会偏多少。
 - 双目基线、多帧加 IMU，或者另一个米制模型。[Depth Anything 3](https://arxiv.org/abs/2511.10647) 的 Nested 版本就是用多视图模型估位姿和深度，再用单目米制模型给尺度（README）。
 
-直接输出米制深度的单目模型还要面对焦距。由 $u-c_x=fX/Z$，把 $f$ 和每个点的 $Z$ 同时乘 2，像素不变：长焦拍一个沿光轴拉长的场景，和短焦拍原场景，得到同一张图。不知道焦距，米制深度就少一个条件。所以 [Depth Pro](https://arxiv.org/abs/2410.02073)（Apple，2024-10）同时估计焦距，[Metric3D v2](https://arxiv.org/abs/2404.15506) 先把图像变换到一个规范相机空间，[UniDepth](https://arxiv.org/abs/2403.18913) 带一个自己估计相机的模块，[MoGe-2](https://arxiv.org/abs/2507.02546) 也加上了米制尺度。
+直接输出米制深度的单目模型还要面对焦距。由 $u-c_x=fX/Z$，把 $f$ 和每个点的 $Z$ 同时乘 2，像素不变：长焦拍一个沿光轴拉长的场景，和短焦拍原场景，得到同一张图。不知道焦距，米制深度就少一个条件。所以 [Depth Pro](https://arxiv.org/abs/2410.02073)（Apple，2024-10）同时估计焦距，[Metric3D v2](https://arxiv.org/abs/2404.15506) 先把图像变换到一个规范相机空间，[UniDepth](https://arxiv.org/abs/2403.18913) 带一个自己估计相机的模块，[MoGe-2](https://arxiv.org/abs/2507.02546) 也加上了米制尺度。Depth Anything 3 的单目米制版本则把焦距交给用户：[README](https://github.com/ByteDance-Seed/Depth-Anything-3) 给的换算是“米制深度 = 焦距（像素）× 网络输出 / 300”，焦距填错，所有距离按同一比例错。
 
 ## Pointmap：每个像素直接给一个三维点
 
@@ -94,11 +94,11 @@ $$
 | 2023-12 | [DUSt3R](https://arxiv.org/abs/2312.14132) | 两张未标定的图 → 两张 pointmap | 超过两张要另跑全局对齐（优化） |
 | 2024-06 | [MASt3R](https://arxiv.org/abs/2406.09756) | DUSt3R 加稠密局部特征和快速匹配 | 同上 |
 | 2025-01 | [Fast3R](https://arxiv.org/abs/2501.13928) | N 张图 → pointmap | 一次前向，不需要全局对齐；作者称一次可处理 1000 多张 |
-| 2025-03 | [VGGT](https://arxiv.org/abs/2503.11651) | 1 到几百张图 → 内外参、深度图、pointmap、三维点轨迹 | 一次前向；作者称重建不到 1 秒；CVPR 2025 最佳论文 |
+| 2025-03 | [VGGT](https://arxiv.org/abs/2503.11651) | 1 到几百张图 → 内外参、深度图、pointmap、三维点轨迹 | 一次前向；作者称重建不到 1 秒；CVPR 2025 最佳论文（[README](https://github.com/facebookresearch/vggt)） |
 | 2025-07 | [$\pi^3$](https://arxiv.org/abs/2507.13347) | 不指定参考视图，对输入顺序置换等变 | 一次前向 |
 | 2025-09 | [MapAnything](https://arxiv.org/abs/2509.13414) | 图像，外加可选的内参、位姿、深度 → 米制深度、射线图、位姿和尺度因子 | 一次前向；一个模型覆盖 12 类以上重建任务 |
 | 2025-11 | [Depth Anything 3](https://arxiv.org/abs/2511.10647) | 任意张图，有无位姿都行 → 一致的深度和射线 | 普通 DINO 式 Transformer，只用一个 depth-ray 目标 |
-| 2025-12 | [D4RT](https://arxiv.org/abs/2512.08924) | 一段视频 → 深度、时空对应和相机，场景里的东西可以在动 | 查询式解码器，可以问任意时刻、任意点；CVPR 2026 最佳论文 |
+| 2025-12 | [D4RT](https://arxiv.org/abs/2512.08924) | 一段视频 → 深度、时空对应和相机，场景里的东西可以在动 | 查询式解码器，可以问任意时刻、任意点；CVPR 2026 最佳论文（[闭幕页](https://cvpr.thecvf.com/Conferences/2026/News/Closing)） |
 
 几处值得停下来看：
 
@@ -145,7 +145,6 @@ $$
 
 ## 截至 2026 年 10 月
 
-- 奖项：VGGT 获 CVPR 2025 最佳论文（[README](https://github.com/facebookresearch/vggt)）；CVPR 2026 最佳论文是 D4RT（[CVPR 2026 闭幕页](https://cvpr.thecvf.com/Conferences/2026/News/Closing)）。D4RT 的项目页没有公布代码、权重或许可。
 - 继任者：[VGGT-Ω](https://arxiv.org/abs/2605.15195)（2026-05）放大了 VGGT，同时处理静态和动态场景，arXiv 页面的备注是 CVPR 2026 oral。截至 2026-10-15，我们没有找到 DINOv4 或 Depth Anything 4 的公开发布；没找到不等于不存在。
 - 下游用法：DINOv3 已被当作现成骨干，例如 DEIMv2 检测器和 SAM 3D Body 的 checkpoint；DINO-WM 拿冻结的 DINOv2 patch 特征当世界模型的表示（见 [JEPA 一篇](../../11-frontier/world-models/jepa.md)）。
 

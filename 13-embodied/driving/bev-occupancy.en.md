@@ -53,7 +53,7 @@ At the paper's real resolution (0.5 m cells, one depth per 1 m), neighbouring de
 
 ## The paper's real settings and cost
 
-The LSS paper's settings (§4.1): depths limited to between 4 m and 45 m, one every 1 m; input images resized and cropped to 128×352; a 200×200 BEV grid. An $H\times W$ feature map produces $|D|\cdot HW$ points (here $|D|$ is about 40), times the number of cameras, so the point count is large. Section 4.2 does the sum pooling with a "cumsum trick": sort points by cell index, take a cumulative sum over features, and subtract at each segment boundary; the authors derive this layer's analytic gradient, which doubles training speed. The paper reports the full forward pass at 35 Hz on a Titan V, an author measurement on 2020 hardware.
+The LSS paper's settings (§4.1): depths limited to between 4 m and 45 m, one every 1 m; input images resized and cropped to 128×352; a 200×200 BEV grid. An $H\times W$ feature map produces $|D|\cdot HW$ points (here $|D|=41$), times the number of cameras, so the point count is large. Section 4.2 does the sum pooling with a "cumsum trick": sort points by cell index, take a cumulative sum over features, and subtract at each segment boundary; the authors derive this layer's analytic gradient, which doubles training speed. The paper reports the full forward pass at 35 Hz on a Titan V, an author measurement on 2020 hardware.
 
 The **shoot** in the name is planning: the network outputs a cost map in BEV, "shoots" 1,000 template trajectories (from K-means over expert trajectories) onto it, sums the cost along each, trains this as classification, and at test time takes the lowest-cost one. It is a learned version of the "candidate trajectories plus scoring" in note 2.
 
@@ -82,13 +82,13 @@ The gain is that compute grows with the number of queries, not the grid area; th
 
 [BEVFusion](https://arxiv.org/abs/2205.13542) (ICRA 2023) puts camera features and lidar features into the same BEV and fuses them there, serving several tasks. Its abstract reports 1.3% higher mAP and NDS on nuScenes 3D detection, 13.6% higher mIoU on BEV map segmentation, 1.9x lower computation cost, and, after optimising BEV pooling, more than 40x lower latency for the view transformation. Back in the example above: lidar measures 16 m directly, so the feature no longer depends on $\alpha$ guessing right.
 
-Industry holds both positions. Waymo's December 2025 Foundation Model fuses camera, lidar and radar in a Sensor Fusion Encoder ([blog](https://waymo.com/blog/2025/12/demonstrably-safe-ai-for-autonomous-driving)); Tesla's Q1 2025 shareholder letter describes a vision-only architecture.
+Industry holds both positions. Waymo's December 2025 Foundation Model fuses camera, lidar and radar in a Sensor Fusion Encoder ([blog](https://waymo.com/blog/2025/12/demonstrably-safe-ai-for-autonomous-driving)); Tesla's [Q1 2025 shareholder letter](https://digitalassets.tesla.com/tesla-contents/image/upload/IR/TSLA-Q1-2025-Update.pdf) describes a vision-only architecture built on end-to-end neural networks.
 
 ## Occupancy: ask whether it is taken before asking what it is
 
 A 3D box is usually 3 numbers for the centre, 3 for size and 1 for heading, plus a class. A ladder lying across the lane, an overhanging branch or irregularly shaped cargo are poorly described by boxes, and a detector may simply miss things not in its class list. The abstract of [Occ3D](https://arxiv.org/abs/2304.14365) (NeurIPS 2023) defines occupancy prediction as estimating the occupancy state and semantics of every location in a scene, to make up for boxes' weakness on fine geometry and out-of-vocabulary objects.
 
-The [CVPR 2023 occupancy prediction challenge](https://github.com/CVPR2023-3D-Occupancy-Prediction/CVPR2023-3D-Occupancy-Prediction) used Occ3D-nuScenes: 0.4 m voxels in a 200×200×16 grid, 18 classes, cameras only, ranked by mIoU. Work it out: horizontally $200\times0.4=80$ m square, vertically $16\times0.4=6.4$ m tall; each frame has $200\times200\times16=640{,}000$ voxels, each needing a class. Per the abstract of the [technical report](https://arxiv.org/abs/2307.01492), the winner, FB-OCC, reached 54.19% mIoU.
+The [CVPR 2023 occupancy prediction challenge](https://github.com/CVPR2023-3D-Occupancy-Prediction/CVPR2023-3D-Occupancy-Prediction) used Occ3D-nuScenes: 0.4 m voxels in a 200×200×16 grid, 18 classes (one of them "free", meaning empty), cameras only at inference, ranked by mIoU. Work it out: horizontally $200\times0.4=80$ m square, vertically $16\times0.4=6.4$ m tall; each frame has $200\times200\times16=640{,}000$ voxels, each needing a class. Per the abstract of the [technical report](https://arxiv.org/abs/2307.01492), the winner, FB-OCC, reached 54.19% mIoU.
 
 mIoU computes intersection over union per class, then averages over classes. Say for "car" the model predicts 120 voxels, the ground truth has 100, and 80 overlap:
 
@@ -107,11 +107,11 @@ At 640,000 voxels per frame, nobody labels them by hand. Some approaches:
 - **Turn sparse lidar into dense voxels.** The Occ3D abstract lists three steps: voxel densification, occlusion reasoning and image-guided voxel refinement, producing "visibility-aware" labels. Per its abstract, [SurroundOcc](https://arxiv.org/abs/2303.09551) (ICCV 2023) generates dense ground truth from multi-frame lidar plus Poisson reconstruction.
 - **Offboard auto-labelling.** An onboard model can only see the past; offboard labelling can look at the whole sequence, past and future frames, with bigger models. Waymo's [3D Auto Labeling](https://arxiv.org/abs/2103.05073) (Qi et al., 2021) detects objects offboard from entire point-cloud sequences.
 
-Labels made this way inherit lidar's blind spots: voxels that were occluded or never scanned have no reliable ground truth. Evaluation therefore often scores only "visible" voxels; when reading a result, check which one was used.
+Labels made this way inherit lidar's blind spots: voxels that were occluded or never scanned have no reliable ground truth. Evaluation therefore often scores only "visible" voxels: the CVPR 2023 challenge README states that mIoU is computed only on voxels visible in the current camera view, and unobserved voxels are left out. When reading other results, check which convention was used.
 
 ## What they became inside end-to-end stacks
 
-In the ICCV 2025 talk Tesla said explicit perception is now an optional auxiliary output, and the same model can be asked to output occupancy, objects and so on ([video](https://www.youtube.com/watch?v=IRu-cPkpiFk), from auto-captions of the talk). Waymo's Foundation Model still has a World Decoder that outputs other road users' behaviour, maps and trajectories. [Bench2Drive](https://github.com/Thinklab-SJTU/Bench2Drive) 0.0.4 (2026-08) added an occupancy modality. BEV and occupancy have not disappeared: they became auxiliary supervision, debugging views, and intermediate results that safety checks can read.
+In the October 2025 ICCV talk Tesla said explicit perception is now an optional auxiliary output, and the same model can be asked to output occupancy, objects and so on ([video](https://www.youtube.com/watch?v=IRu-cPkpiFk), from auto-captions of the talk). Waymo's Foundation Model still has a World Decoder that outputs other road users' behaviour, maps and trajectories. [Bench2Drive](https://github.com/Thinklab-SJTU/Bench2Drive) 0.0.4 (2026-08) added an occupancy modality. BEV and occupancy have not disappeared: they became auxiliary supervision, debugging views, and intermediate results that safety checks can read.
 
 ## What to look at when reproducing and debugging
 

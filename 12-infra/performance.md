@@ -2,7 +2,7 @@
 
 **中文** · [English](performance.en.md)
 
-> 阅读时间：约 15 分钟 · 草稿，待审核
+> 阅读时间：约 13 分钟 · 草稿，待审核
 
 `nvidia-smi` 显示 GPU 利用率 100%，一个 7B 模型逐个生成 token，却只有每秒两百来个。是卡不够快，还是没用好？先看那个 100% 量的是什么：NVML 把它定义为采样周期里“至少有一个 kernel 在跑”的时间比例（[NVML 文档](https://docs.nvidia.com/deploy/nvml-api/api/structnvmlUtilization__t.html)），它并不说明算力用掉了多少。**更有用的问题是：这个操作每从显存搬 1 字节，要做几次运算？拿它和这张卡的“峰值算力 ÷ 显存带宽”比：低了就该减少搬运，高了才轮到算力。** 下面用同一张 H100 的公开规格，把大矩阵乘、逐元素加法和 7B 模型的 decode 放到同一张图上，再算 MFU、多卡通信，最后排出 profiling 的顺序。
 
@@ -88,7 +88,7 @@ $$
 \mathrm{MFU}=\frac{\text{tokens/s}\times(6N+12LHQT)}{n_{\rm GPU}\times P_{\rm peak}}.
 $$
 
-$N$ 是参数量，$L$ 是层数，$H$ 是 head 数，$Q$ 是 head dimension，$T$ 是序列长度，$P_{\rm peak}$ 是每张卡的峰值矩阵乘算力。HFU（hardware FLOPs utilization）则把实际执行的运算都算进去，包括重算；论文认为它依赖实现，不适合横向比较。论文报告 PaLM 540B 在 6144 块 TPU v4 上的 MFU 为 46.2%，HFU 为 57.8%。
+$N$ 是参数量，$L$ 是层数，$H$ 是 head 数，$Q$ 是 head dimension，$T$ 是序列长度，$P_{\rm peak}$ 是每张卡的峰值矩阵乘算力。HFU（hardware FLOPs utilization）则把实际执行的运算都算进去，包括重算；论文认为它依赖实现，不适合横向比较。论文报告 PaLM 540B 在 6144 块 TPU v4 上的 MFU 为 46.2%（计入 attention；不计时 45.7%），HFU 为 57.8%。
 
 **一个教学算例。** 7B dense 模型（$N=7\times10^9$，$L=32$，$H=32$，$Q=128$），序列长 $T=4096$，8 张 H100 SXM5，每步 64 条序列（每卡 8 条），共 262,144 个 token。假设实测每步 3.64 s，即 72,018 tokens/s。只算 $6N$ 时：
 
@@ -172,16 +172,13 @@ ncu --set full -k regex:gemm -c 1 -o gemm_report python train.py
 
 | 症状 | 可能的原因 | 先查什么 |
 | --- | --- | --- |
-| 时间线上 kernel 之间有空隙，GPU 经常闲着 | CPU 跟不上：数据加载、Python 开销、host 同步 | 空隙期间 CPU 线程在做什么；有没有 `cudaStreamSynchronize`、`.item()` 一类同步 |
+| 时间线上 kernel 之间有空隙，GPU 经常闲着 | CPU 跟不上：数据加载、Python 开销、host 同步 | 空隙期间 CPU 线程在做什么；有没有 `cudaStreamSynchronize`、`.item()` 一类同步；拷贝没和计算重叠时查 `pin_memory` 与 `non_blocking`（见 [CUDA](cuda.md#streams)） |
 | 每步有成千上万个只跑几微秒的小 kernel | launch 和调度开销占主导 | 每步 kernel 数和平均时长；试融合（如 `torch.compile`）或 CUDA Graphs，PyTorch 文档说后者的主要收益是减少 CPU 开销 |
-| 逐元素、归一化 kernel 占了大头 | 带宽受限，且数据多次往返显存 | 按 FLOPs 和字节算强度；Nsight Compute 看显存吞吐是否已接近峰值；考虑融合 |
+| 逐元素、归一化 kernel 占了大头 | 带宽受限，且数据多次往返显存 | 按 FLOPs 和字节算强度；Nsight Compute 看显存吞吐是否已接近峰值；考虑融合。自己写的访存 kernel 还要看 sectors/request（32-bit 访问的理想值是 4，见 [CUDA](cuda.md#coalescing)） |
 | 大 GEMM 只达到 Tensor Core 峰值的很小比例 | dtype 不对（FP32 没走 TF32 / BF16）、shape 太小或没对齐、tile / wave quantization | 打印 GEMM 的 M、N、K 和 dtype；NVIDIA 建议维度是 16 字节的倍数（FP16 / BF16 即 8 个元素；A100 上建议 128 字节） |
-| 自己写的访存 kernel 带宽很低 | 访问没有合并、stride 访问 | Nsight Compute Memory Workload Analysis 里的 sectors/request（32-bit 访问的理想值是 4） |
 | Occupancy 低，warp 大多在等待 | 寄存器或 shared memory 用量大 | `nvcc --resource-usage` 与 Nsight Compute 的 occupancy 一节；对照 CUDA 篇的手算 |
 | 多卡时 NCCL kernel 很长，且和计算没有重叠 | 通信暴露在关键路径上 | Nsight Systems 里 NCCL 与反向是否重叠；用 nccl-tests 测 busbw，和本页公式比 |
-| host 到 device 的拷贝和计算串行 | pageable 内存，或都在默认 stream 上 | DataLoader 是否 `pin_memory=True`，`.to(..., non_blocking=True)` 是否生效 |
 | decode 吞吐随 batch 增长很快就饱和 | KV 读取或显存容量先到顶 | 用本页的字节账算出权重和 KV 各占多少 |
-| 每步耗时抖动、偶尔变慢 | 显存分配器行为、同机其他任务 | 看多步的分布而不是单次；`torch.cuda.memory_summary()`；同一台机器上还跑着什么 |
 
 对齐建议和 tile / wave quantization 见 [NVIDIA 矩阵乘指南](https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html)，CUDA Graphs 的说明见 [PyTorch CUDA semantics](https://docs.pytorch.org/docs/2.14/notes/cuda.html#cuda-graphs)。这张表只给出第一步该看哪里，原因要靠测量确认。
 

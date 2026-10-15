@@ -2,7 +2,7 @@
 
 [中文](README.md) · **English**
 
-> Reading time: ~3 min · Draft, pending review
+> Reading time: ~2 min · Draft, pending review
 
 A camera captures a frame; a car has to decide where to drive, a robot arm where to reach. In between are several steps: recover the things in 3D from the pixels, keep track of them, predict what they will do next, and choose an action. **This block follows that chain in three short series: perception and geometry, autonomous driving, and robot learning.**
 
@@ -10,11 +10,13 @@ A camera captures a frame; a car has to decide where to drive, a robot arm where
 
 ## Three series
 
-| Series | What it answers | Where to start |
-| --- | --- | --- |
-| [Perception & geometry](perception/README.en.md) | How a 3D point becomes a pixel, how to track objects, detection, segmentation and geometry foundation models in 2026, 3D reconstruction and neural rendering | [How a 3D point becomes a pixel](perception/camera-geometry.en.md) |
-| [Autonomous driving](driving/README.en.md) | How surround cameras become a bird's-eye view, how to forecast others and plan for yourself, why end-to-end models need closed-loop evaluation | [From surround cameras to BEV and occupancy](driving/bev-occupancy.en.md) |
-| [Robot learning](robot-learning/README.en.md) | How to learn actions from demonstrations, how VLA models output actions, whether what is learned in simulation carries over to real robots | [Learning actions from demonstrations](robot-learning/imitation.en.md) |
+| Series | Notes | What it answers | Where to start |
+| --- | --- | --- | --- |
+| [Perception & geometry](perception/README.en.md) | 5 | How a 3D point becomes a pixel, how to track objects, detection, segmentation and geometry foundation models in 2026, 3D reconstruction and neural rendering | Note 1, [How a 3D point becomes a pixel](perception/camera-geometry.en.md) |
+| [Autonomous driving](driving/README.en.md) | 3 | How surround cameras become a bird's-eye view, how to forecast others and plan for yourself, why end-to-end models need closed-loop evaluation | Note 1, [From surround cameras to BEV and occupancy](driving/bev-occupancy.en.md) |
+| [Robot learning](robot-learning/README.en.md) | 2 | How to learn actions from demonstrations, how VLA models output actions, whether what is learned in simulation carries over to real robots | Note 1, [Learning actions from demonstrations](robot-learning/imitation.en.md) |
+
+Each series numbers its own notes from 1, matching the numbers in its guide: perception and geometry has notes 1–5, autonomous driving notes 1–3, robot learning notes 1–2. When a note says "note 2", it means note 2 of the same series; references across series always use the title. For driving, the suggested order is notes 1 and 2 of the perception series, then the driving series; see the [driving guide](driving/README.en.md).
 
 ## How this connects to the rest of the site
 

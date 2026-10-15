@@ -2,7 +2,7 @@
 
 **中文** · [English](chips-and-fabs.en.md)
 
-> 阅读时间：约 12 分钟 · 草稿，待审核
+> 阅读时间：约 10 分钟 · 草稿，待审核
 
 新闻里常说“AI 芯片缺货”。缺的到底是什么，是晶圆厂造不出 GPU 吗？不完全是。**die 越大，一片晶圆上切得越少，坏的比例也越高；单个 die 的面积又有曝光上限。所以 AI 芯片越来越多地把几块 die 和 HBM 封装在一起，而这一步要用先进封装和 HBM，它们本身的产能也有限。** 这一篇从生产链讲起，用一张晶圆算一遍良率，再看封装和 HBM。
 
@@ -93,10 +93,10 @@ TSMC 的 CoWoS 就是这一类。按 TSMC 的说明（[CoWoS 页面](https://3df
 | 类型 | interposer 是什么 | TSMC 给出的规格 |
 | --- | --- | --- |
 | CoWoS-S | 硅 interposer | 最大约 3.3 倍曝光面积（约 2,700 mm²） |
-| CoWoS-R | 聚合物加铜线的 RDL interposer，较柔软 | 最小 4 µm 线距，2023 年起量产 |
-| CoWoS-L | RDL interposer 里嵌入局部硅互联（LSI）小芯片 | 首款 3.5 倍曝光面积，2024 年起量产；TSMC 建议超过 3.3 倍时用 L 或 R |
+| CoWoS-R | 聚合物加铜线的 RDL interposer，较柔软 | 布线最小间距（pitch）4 µm，即线宽、线距各 2 µm；2023 年起量产 |
+| CoWoS-L | RDL interposer 里嵌入局部硅互联（LSI）小芯片 | 3.5 倍曝光面积的版本 2024 年起量产；TSMC 建议超过 3.3 倍时用 L 或 R |
 
-CoWoS-L 的 LSI 小芯片专门承担 die 与 die、die 与 HBM 之间的高密度走线，其余部分用 RDL。至于 NVIDIA 用哪一种：据路透社 2025-01-16 报道（[Taipei Times 转载](https://www.taipeitimes.com/News/biz/archives/2025/01/17/2003830329)），黄仁勋说 Blackwell 将主要使用 CoWoS-L，仍在生产的 Hopper 使用 CoWoS-S。这是新闻报道里的 CEO 表态，不是产品规格表。
+CoWoS-L 的 LSI 小芯片专门承担 die 与 die、die 与 HBM 之间的高密度走线，其余部分用 RDL。至于 NVIDIA 哪款产品用哪一种，本文查过的 NVIDIA 白皮书、架构博客和产品页都没有写，只有新闻：据路透社 2025-01-16 报道（[Taipei Times 转载](https://www.taipeitimes.com/News/biz/archives/2025/01/17/2003830329)），黄仁勋说 Blackwell 将主要使用 CoWoS-L，仍在生产的 Hopper 使用 CoWoS-S。这是新闻报道转述的 CEO 表态，不是产品规格。
 
 ## HBM：把内存堆到 GPU 旁边
 
@@ -114,9 +114,9 @@ $$
 | HBM3E（Micron） | 1,024 位 | 超过 9.2 Gb/s | 超过 1.2 TB/s | 8 层 24 GB，12 层 36 GB | [Micron 产品页](https://www.micron.com/products/memory/hbm/hbm3e) |
 | HBM4 | 2,048 位 | 最高 8 Gb/s | 最高 2 TB/s | 16 层 × 32 Gb，最高 64 GB | [JEDEC，2025-04-16](https://www.jedec.org/news/pressreleases/jedec%C2%AE-and-industry-leaders-collaborate-release-jesd270-4-hbm4-standard-advancing) |
 
-验算一行：$1024\times6.4/8=819.2$ GB/s。HBM4 把位宽翻倍，所以线速率不比 HBM3E 高，带宽照样更大。Micron 写的是“每个 placement”超过 1.2 TB/s，$1024\times9.2/8\approx1{,}178$ GB/s，对得上。
+验算一行：$1024\times6.4/8=819.2$ GB/s。HBM4 把位宽翻倍，所以线速率不比 HBM3E 高，带宽照样更大。Micron 的两个“超过”要一起看：按 9.2 Gb/s 正好算是 $1024\times9.2/8\approx1{,}178$ GB/s，比 1.2 TB/s 还差一点；每根线要到约 9.4 Gb/s，单个 placement（堆栈）才超过 1.2 TB/s。
 
-再倒推一个产品：H100 SXM 有 5 个 HBM3 堆栈、5,120 位接口（Hopper 架构博客），产品页标 3.35 TB/s。那么每根线约 $3.35\times10^{12}\times8/5120\approx5.2$ Gb/s，低于标准允许的 6.4 Gb/s。这是本文的推算，NVIDIA 没有公布线速率。产品带宽不等于“堆栈数 × 标准上限”，要以产品页为准。
+再倒推一个产品：H100 SXM5 有 5 个 HBM3 堆栈、5,120 位接口，[白皮书 V1.04](https://dam-cdn.nvd.orangelogic.com/AssetLink/705n6ur546g0uk43w0117r17n8042d73.pdf)给出显存带宽 3,352 GB/s。每根线约 $3.352\times10^{12}\times8/5120\approx5.24$ Gb/s，和白皮书列的显存数据速率 2,619 MHz DDR（每个时钟传两次，约 5.24 Gb/s）一致，低于 HBM3 标准允许的 6.4 Gb/s。产品带宽不等于“堆栈数 × 标准上限”，要看具体 SKU 的规格。
 
 ## 为什么产能卡在封装和 HBM
 

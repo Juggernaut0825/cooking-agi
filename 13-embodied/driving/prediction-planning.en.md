@@ -2,7 +2,7 @@
 
 [中文](prediction-planning.md) · **English**
 
-> Reading time: ~12 min · Draft, pending review
+> Reading time: ~11 min · Draft, pending review
 
 The car in front of you at the intersection might go straight, turn left or turn right; it has not started turning yet, and you already have to commit to your own next 4 seconds. **Forecasts must give several possibilities with probabilities, not one averaged trajectory; the planner picks one trajectory from a set of candidates by cost, where the weights decide "what counts as good" and the hard constraints decide "what is never allowed".**
 
@@ -36,7 +36,7 @@ What if the model may hand over only one? Say it assigns probabilities $(0.5,0.3
 
 ### What this metric rewards, and what it misses
 
-- **Adding a forecast can only keep minADE the same or lower it.** Add a U-turn forecast $k_4$ and minADE and minFDE stay at 0.67 and 1. So compare only at the same $K$; NVIDIA reports Alpamayo's minADE at $K=6$ and a 6.4 s horizon (0.911 m, vendor-reported, see the [model page](https://www.nvidia.com/en-us/solutions/autonomous-vehicles/alpamayo/llm-info/)).
+- **Adding a forecast can only keep minADE the same or lower it.** Add a U-turn forecast $k_4$ and minADE and minFDE stay at 0.67 and 1. So compare only at the same $K$; NVIDIA reports Alpamayo 2 Super's minADE at $K=6$ and a 6.4 s horizon on its own selection of challenging samples (0.911 m, vendor-reported, see the [model page](https://www.nvidia.com/en-us/solutions/autonomous-vehicles/alpamayo/llm-info/)).
 - **It ignores probabilities.** Change $k_2$'s probability to 0.01 and minADE does not move. Planning uses the probabilities, so you also need confidence-aware metrics such as mAP or likelihood.
 - **How "the best one" is chosen varies by benchmark.** Some take the forecast with the lowest ADE; some first pick one by endpoint error and then compute its ADE. Check the protocol before comparing papers.
 - **Each road user is scored on its own.** Whether two cars' forecasts are consistent together is outside minADE.
@@ -117,7 +117,7 @@ The learned PDM-Open has the best open-loop score and the worst closed-loop scor
 - **Learning the cost.** Lift-Splat-Shoot learns a BEV cost map and scores 1,000 template trajectories on it, see [note 1](bev-occupancy.en.md).
 - **Learning the proposals, then searching.** At AI Day on 2021-08-19, Tesla said neural networks propose state and action distributions for Monte-Carlo tree search, scored by explicit costs such as collisions, comfort and time, and by intervention data; AI Day on 2022-09-30 presented a parallel tree search called "interaction search", with a decision every 50 ms (vendor-reported). Both are talks ([AI Day 2021](https://www.youtube.com/watch?v=j0z4FweCy4M), [AI Day 2022](https://www.youtube.com/watch?v=ODSJsviD_SU)), paraphrased from auto-captions, and describe Tesla's stack before its move to end-to-end; the 2021 version was presented as work in progress.
 - **Learning the scorer.** Per its abstract, [Hydra-MDP](https://arxiv.org/abs/2406.06978) distils a student network from human demonstrations and rule-based teachers, with one decoder head per evaluation metric, and ranked first in the NAVSIM end-to-end track of the CVPR 2024 challenge.
-- **Learning the whole planner with a large model.** Waymo's 2025-06-09 [blog post](https://waymo.com/blog/2025/06/scaling-laws-in-autonomous-driving/) reports that for autoregressive Transformers trained on about 500,000 hours of internal driving data, motion-forecasting and planning quality improve as a power law in compute, closed-loop metrics also improve with scale, and the compute-optimal model size grows about 1.5 times faster than the data (vendor-reported); the post also doubts open-loop metrics as a hill-climbing target.
+- **Learning the whole planner with a large model.** Waymo's 2025-06-13 [blog post](https://waymo.com/blog/2025/06/scaling-laws-in-autonomous-driving/) reports that for models trained on about 500,000 hours of internal driving data, motion-forecasting quality improves as a power law in training compute and closed-loop planning metrics also improve with scale (vendor-reported). The companion [technical report](https://arxiv.org/abs/2506.08228) (arXiv 2025-06-09, autoregressive encoder-decoder Transformers) adds that compute-optimal scaling grows model size about 1.5 times as fast as data, and notes that this bears on whether open-loop metrics are suitable for guiding model development.
 
 ## Handing the trajectory to control
 

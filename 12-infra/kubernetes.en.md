@@ -2,7 +2,7 @@
 
 [中文](kubernetes.md) · **English**
 
-> Reading time: ~15 min · Draft, pending review
+> Reading time: ~13 min · Draft, pending review
 
 The cluster has 24 GPUs and the dashboard shows 16 of them idle, yet a training job that needs 16 GPUs stays Pending; worse, half of its Pods start, the other half do not, and the half that started holds its GPUs while waiting. **By default Kubernetes finds a node for one Pod at a time, while distributed training needs "either the whole group of Pods is placed, or none of them holds anything"; and GPUs can only be handed out whole, ideally with topology in mind. The total number of idle GPUs tells you little about whether a large job can run.**
 
@@ -42,22 +42,11 @@ spec:
         nvidia.com/gpu: 8
 ```
 
-A plugin alone is not enough: the node also needs a driver, a way for containers to use the GPU, labels with the GPU model, and exported metrics. The [NVIDIA GPU Operator](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/overview.html) uses the operator pattern to manage these components together:
-
-| Component | What it does |
-| --- | --- |
-| NVIDIA GPU Driver | Installs the driver CUDA needs; runs as a container by default, or the node's preinstalled driver can be used instead |
-| NVIDIA Container Toolkit | Lets containers use the GPU |
-| NVIDIA Kubernetes Device Plugin | Advertises `nvidia.com/gpu` and related resources |
-| GPU Feature Discovery (GFD) | Labels nodes with GPU-related properties automatically |
-| MIG Manager | Configures MIG partitioning on the node |
-| DCGM and DCGM Exporter | Collect GPU metrics and expose them on an HTTP endpoint for Prometheus |
-
-As of 2026-10-15, the latest GPU Operator release on GitHub is v26.7.2 (released 2026-10-14).
+A plugin alone is not enough: the node also needs a driver, a way for containers to use the GPU, labels with the GPU model, and exported metrics. The [NVIDIA GPU Operator](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/overview.html) uses the operator pattern to manage these components together: the GPU driver (run as a container by default, or the node's preinstalled one), the Container Toolkit, the device plugin, GPU Feature Discovery to label nodes, the MIG Manager to configure MIG, and DCGM Exporter to collect metrics for Prometheus. As of 2026-10-15, its latest release on GitHub is v26.7.2 (released 2026-10-14).
 
 **Dynamic Resource Allocation (DRA)** is another route. It requests devices the way a PersistentVolumeClaim requests storage: drivers publish ResourceSlices describing the available devices, administrators define DeviceClasses, and workloads write ResourceClaims, which can filter devices by attributes with CEL expressions, let several Pods share a device by referencing the same claim, and carry per-claim device configuration. Compared with a device plugin, it is no longer just one integer of "how many GPUs".
 
-DRA's status needs its sources stated. The kubernetes.io [DRA concept page](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/) (checked 2026-10-15) is labelled "Stable since Kubernetes v1.35", says it first appeared in v1.30, and says its feature gate is now locked on; the [v1.34 release announcement](https://kubernetes.io/blog/2025/08/27/kubernetes-v1-34-release/) (2025-08-27), by contrast, says the core of DRA went GA in v1.34 with the `resource.k8s.io/v1` APIs available by default. The two official sources give different version numbers, but both mean it is a stable feature in the current 1.37. The concept page also lists a limitation: the scheduler does not support preemption for DRA resources, so a higher-priority Pod has to wait until the Pod holding the device finishes. On NVIDIA's side, the GPU Operator documentation describes installing the [DRA Driver for NVIDIA GPUs v0.5.1](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/dra-intro-install.html) as a newer alternative to the device plugin; features such as dynamic MIG, share-based sharing and MPS are still alpha there, and a cluster can have either the GPUCluster resource used for DRA or the ClusterPolicy resource used for the device plugin, not both.
+Official sources disagree on which version made DRA stable (checked 2026-10-15). The [v1.34 release announcement](https://kubernetes.io/blog/2025/08/27/kubernetes-v1-34-release/) (2025-08-27) says the core of DRA went GA in v1.34, with the `resource.k8s.io/v1` APIs graduating to stable and available by default; the [DRA concept page](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/) is labelled "Stable since Kubernetes v1.35", says it first appeared in v1.30, and says its feature gate is locked and can no longer be turned off. The [feature gate reference](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/) lists `DynamicResourceAllocation` as alpha in 1.30–1.31, beta in 1.32–1.33, and with one stable row from 1.34 and another from 1.35; the concept page's v1.35 may refer to the release that locked the gate, but the page does not say so. What is certain is that it is a stable feature in the current 1.37. The concept page also lists a limitation: the scheduler does not support preemption for DRA resources, so a higher-priority Pod has to wait until the Pod holding the device finishes. On NVIDIA's side, the GPU Operator documentation describes installing the [DRA Driver for NVIDIA GPUs v0.5.1](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/dra-intro-install.html) as a newer alternative to the device plugin; features such as dynamic MIG, share-based sharing and MPS are still alpha there, and a cluster can have either the GPUCluster resource used for DRA or the ClusterPolicy resource used for the device plugin, not both.
 
 ## Several jobs on one GPU: MIG, time-slicing, MPS
 
@@ -98,7 +87,7 @@ This is what topology-aware scheduling addresses: it asks not only "how many GPU
 | Option | Which layer | How the gang is enforced | Topology | Status (checked 2026-10-15) |
 | --- | --- | --- | --- | --- |
 | Core Kubernetes [gang scheduling](https://kubernetes.io/docs/concepts/scheduling-eviction/gang-scheduling/) | kube-scheduler with the PodGroup / Workload APIs | If `minCount` Pods cannot be placed, none is bound | [Topology-Aware Workload Scheduling](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-aware-scheduling/) places the whole group in one topology domain: alpha since v1.36, disabled by default | Beta since v1.37, disabled by default, requires the `GenericWorkload` feature gate |
-| [Kueue](https://kueue.sigs.k8s.io/docs/overview/) | Job-level queuing, quotas and admission on top of kube-scheduler, without replacing it | `waitForPodsReady`: if not all Pods are ready before a timeout, the workload is evicted and requeued (the docs call this a simple all-or-nothing implementation) | [TAS](https://kueue.sigs.k8s.io/docs/concepts/topology_aware_scheduling/): beta since v0.14, enabled by default, with required or preferred levels such as rack or block | Latest v0.20.2 (2026-10-15) |
+| [Kueue](https://kueue.sigs.k8s.io/docs/overview/) | Job-level queuing, quotas and admission on top of kube-scheduler, without replacing it | [`waitForPodsReady`](https://kueue.sigs.k8s.io/docs/tasks/manage/setup_wait_for_pods_ready/): if not all Pods are ready before a timeout, the workload is evicted and requeued (the docs call this a simple all-or-nothing implementation) | [TAS](https://kueue.sigs.k8s.io/docs/concepts/topology_aware_scheduling/): beta since v0.14, enabled by default, with required or preferred levels such as rack or block | Latest v0.20.2 (2026-10-15) |
 | [Volcano](https://volcano.sh/en/docs/podgroup/) | Its own batch scheduler, built from actions and plugins | PodGroup `minMember`: if resources cannot run that many Pods, none is scheduled | Not checked for this note | Latest v1.16.0 (2026-10-14) |
 | [JobSet](https://jobset.sigs.k8s.io/docs/overview/) | An API that manages a group of Jobs as one unit | The overview does not say it does gang scheduling itself; it can queue through Kueue | An annotation gives each child Job exclusive use of one topology domain, such as a rack | Latest v0.13.0 (2026-10-12) |
 

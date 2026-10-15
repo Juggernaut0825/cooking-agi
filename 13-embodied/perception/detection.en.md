@@ -2,7 +2,7 @@
 
 [中文](detection.md) · **English**
 
-> Reading time: ~13 min · Draft, pending review
+> Reading time: ~11 min · Draft, pending review
 
 You need a detector for a robot or a car. Papers show a row of COCO AP numbers, and the names run from YOLO26 and RF-DETR to SAM 3. How is that number computed? Which kind of model should you pick? Can you ship the weights commercially? **A detection score comes from matching predicted boxes one-to-one to ground truth and averaging precision over several IoU thresholds. The real choice in 2026 is between fast closed-set real-time models that you fine-tune on your own labels, and slower open-vocabulary or promptable models (such as SAM 3) that need no retraining; the licence often decides for you before the AP does.**
 
@@ -101,7 +101,7 @@ The YOLO line also dropped NMS in 2026. The [YOLO26 paper (2026-06-02)](https://
 
 Earlier open-vocabulary work includes [GLIP](https://arxiv.org/abs/2112.03857), [OWL-ViT](https://arxiv.org/abs/2205.06230) / [OWLv2](https://arxiv.org/abs/2306.09683), [YOLO-World](https://arxiv.org/abs/2401.17270) and [YOLOE](https://arxiv.org/abs/2503.07465). SAM 3 (2025-11-20) merges it with segmentation: given a short noun phrase (such as "yellow school bus") or an exemplar box, it returns masks and IDs for every matching instance in an image or video. It combines a DETR-style detector and a memory-based video tracker that share one backbone; a presence head separately decides "is this concept in the image at all", decoupling recognition from localisation (paper abstract).
 
-Read numbers together with their conditions. The same SAM 3 scores 56.4 box AP on COCO; on the 100 multi-domain datasets of [RF100-VL](https://arxiv.org/abs/2505.20612) its zero-shot average is only 15.2 AP, with 2.6 on the medical group; fine-tuning on 10 examples per class gives 36.5 on average, and full fine-tuning 61.6 (paper v2, Tables 36 and 37, author-reported). Appendix B of the paper says so itself: zero-shot, it struggles with fine-grained out-of-domain concepts (such as aircraft types and medical terms), especially in niche domains like thermal imagery; prompts must be simple noun phrases, and long referring expressions need a multimodal LLM alongside.
+Read numbers together with their conditions. The same SAM 3 scores 56.4 box AP on COCO (Table 1 of the paper lists it as a zero-shot result); on the 100 multi-domain datasets of [RF100-VL](https://arxiv.org/abs/2505.20612) its zero-shot average is only 15.2 AP, with 2.6 on the medical group; fine-tuning on about 10 labelled instances per class (10-shot) gives 36.5 on average, and full fine-tuning 61.6 (paper v2, Tables 36 and 37, author-reported). Appendix B of the paper says so itself: zero-shot, it struggles with fine-grained out-of-domain concepts (such as aircraft types and medical terms), especially in niche domains like thermal imagery; prompts must be simple noun phrases, and long referring expressions need a multimodal LLM alongside.
 
 How to choose. The following are design trade-offs, not the conclusion of any paper:
 

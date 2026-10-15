@@ -2,7 +2,7 @@
 
 **中文** · [English](cpu-architecture.en.md)
 
-> 阅读时间：约 12 分钟 · 草稿，待审核
+> 阅读时间：约 10 分钟 · 草稿，待审核
 
 一台 8 卡 GPU 服务器里也装着两颗 CPU。它们在干什么？GPU 利用率上不去时，为什么常常要回头查 CPU？**CPU 核心的设计目标，是让一条指令流尽快跑完：流水线、乱序执行、分支预测和多级缓存，都是为了掩盖“等”的时间。在 AI 服务器里，CPU 负责读数据、预处理、tokenize、向 GPU 发起工作和搬运数据；它慢一步，GPU 就只能空等。**
 
@@ -99,7 +99,7 @@ SIMD 让一条指令同时处理一个向量里的多个数。
 - **AMX（Intel）**：8 个二维 tile 寄存器，每个最多 16 行 × 64 字节，即 1 KB；由叫 TMUL 的矩阵乘单元在 tile 上做 INT8 和 BF16 矩阵乘；Intel 的示例在第 4 代至强可扩展处理器上运行（[Intel AMX 代码示例](https://www.intel.com/content/www/us/en/developer/articles/code-sample/advanced-matrix-extensions-intrinsics-functions.html)）。Intel 给出的每核每周期峰值：AMX 做 2,048 次 INT8 运算，AVX-512 VNNI 是 256 次；AMX 做 1,024 次 BF16 运算，AVX-512 做 FP32 是 64 次（[Intel AMX 简介](https://cdrdv2-public.intel.com/785250/Intel-AMXBrief-Final-3.17.pdf)，按架构峰值、CPU 满载计）。
 - **Neon 与 SVE（Arm）**：Neon 的向量固定 128 位。SVE 的向量长度由芯片实现决定，同一个二进制程序可以在不同长度的机器上运行（vector-length agnostic）。Arm 2025-02 修订的 [Introduction to SVE](https://documentation-service.arm.com/static/67ab35a4091bfc3e0a9478b5) 写明长度在 128 到 2048 位之间、必须是 2 的幂；同一文档的修订记录说明，这条限制是这一版新加的，旧材料里“128 位的任意整数倍”的说法已经过时。
 
-粗算一下 CPU 的矩阵乘上限：DGX H100 的两颗 Xeon 8480C 共 112 核，基础频率 2.0 GHz（[DGX H100 用户手册](https://docs.nvidia.com/dgx/dgxh100-user-guide/introduction-to-dgxh100.html)）。按 Intel 的 AMX 峰值，$112\times2.0\times10^9\times1024\approx229$ TFLOP/s BF16。这是纸面上限：AMX 满载时的实际频率、内存带宽都没算进去。同一台机器里 8 张 H100 SXM，BF16 合计约 7,900 TFLOP/s（产品页每卡 1,979 是 sparsity 数字，dense 按一半算）。CPU 能跑小模型推理，但大矩阵还是交给 GPU。
+粗算一下 CPU 的矩阵乘上限：DGX H100 的两颗 Xeon 8480C 共 112 核，基础频率 2.0 GHz（[DGX H100 用户手册](https://docs.nvidia.com/dgx/dgxh100-user-guide/introduction-to-dgxh100.html)）。按 Intel 的 AMX 峰值，$112\times2.0\times10^9\times1024\approx229$ TFLOP/s BF16。这是纸面上限：AMX 满载时的实际频率、内存带宽都没算进去。同一台机器里 8 张 H100 SXM5，dense BF16 合计 $8\times989.4\approx7{,}915$ TFLOP/s（[H100 架构白皮书 V1.04](https://dam-cdn.nvd.orangelogic.com/AssetLink/705n6ur546g0uk43w0117r17n8042d73.pdf)；产品页每卡写的 1,979 是 2:4 稀疏数字）。CPU 能跑小模型推理，但大矩阵还是交给 GPU。
 
 ## 多核与 NUMA：内存也分远近
 
@@ -134,10 +134,10 @@ $$
 
 112 核的机器够用。如果换成重的增强或视频解码，每个样本 20 ms，就要 160 核，超过整台机器，GPU 只能等。这时该做的是把解码挪到别处、预先处理好数据，或者把部分预处理放到 GPU 上，而不是继续加 `num_workers`。
 
-搬数据这一步，要记住带宽差多少。H100 SXM 的 HBM 是 3.35 TB/s；PCIe Gen5 x16 每个方向 64 GB/s（[Hopper 架构博客](https://developer.nvidia.com/blog/nvidia-hopper-architecture-in-depth/)），差了约 50 倍。CUDA 最佳实践指南举的老例子是 V100 的 898 GB/s 对 PCIe Gen3 的 16 GB/s，也差 50 多倍，所以它把“尽量少在主机和 GPU 之间搬数据”列为高优先级建议。它还说明：用锁页（pinned）内存传输带宽最高；异步拷贝要求主机内存是锁页的，这样拷贝才能和 kernel 重叠；但锁页内存是稀缺资源，不能滥用。PyTorch 的 DataLoader 设 `pin_memory=True`，就会把取到的 batch 放进锁页内存；`num_workers` 大于 0 时用多个进程加载（[PyTorch 2.14 DataLoader 文档](https://docs.pytorch.org/docs/2.14/data.html)）。
+搬数据这一步，要记住带宽差多少。H100 SXM5 的 HBM 是 3,352 GB/s（白皮书 V1.04）；PCIe Gen5 x16 每个方向 64 GB/s（[Hopper 架构博客](https://developer.nvidia.com/blog/nvidia-hopper-architecture-in-depth/)），差了约 50 倍。CUDA 最佳实践指南举的老例子是 V100 的 898 GB/s 对 PCIe Gen3 的 16 GB/s，也差 50 多倍，所以它把“尽量少在主机和 GPU 之间搬数据”列为高优先级建议。它还说明：用锁页（pinned）内存传输带宽最高；异步拷贝要求主机内存是锁页的，这样拷贝才能和 kernel 重叠；但锁页内存是稀缺资源，不能滥用。PyTorch 的 DataLoader 设 `pin_memory=True`，就会把取到的 batch 放进锁页内存；`num_workers` 大于 0 时用多个进程加载（[PyTorch 2.14 DataLoader 文档](https://docs.pytorch.org/docs/2.14/data.html)）。
 
 ## 为什么还要 GPU
 
-CPU 把大量晶体管花在“让一条线程少等”上：大缓存、乱序窗口、分支预测器。GPU 反过来。CUDA C++ 编程指南的说法是：CPU 擅长把一个线程尽快跑完，同时并行几十个线程；GPU 擅长同时跑几千个，把更多晶体管用在计算上，而不是缓存和控制流，用计算掩盖访存延迟，而不是靠大缓存和复杂的控制逻辑（[CUDA C++ 编程指南 12.8.1，§1.1](https://docs.nvidia.com/cuda/archive/12.8.1/cuda-c-programming-guide/index.html)）。再配上 HBM 这样的高带宽显存。数量级上：一颗 Grace 最多 512 GB/s，一张 H100 SXM 是 3.35 TB/s；上面那台机器两颗 CPU 的 AMX 纸面峰值，不到 8 张 GPU 的 3%。
+CPU 把大量晶体管花在“让一条线程少等”上：大缓存、乱序窗口、分支预测器。GPU 反过来。CUDA C++ 编程指南的说法是：CPU 擅长把一个线程尽快跑完，同时并行几十个线程；GPU 擅长同时跑几千个，把更多晶体管用在计算上，而不是缓存和控制流，用计算掩盖访存延迟，而不是靠大缓存和复杂的控制逻辑（[CUDA C++ 编程指南 12.8.1，§1.1](https://docs.nvidia.com/cuda/archive/12.8.1/cuda-c-programming-guide/index.html)）。再配上 HBM 这样的高带宽显存。数量级上：一颗 Grace 最多 512 GB/s，一张 H100 SXM5 是 3,352 GB/s；上面那台机器两颗 CPU 的 AMX 纸面峰值，不到 8 张 GPU 的 3%。
 
 所以分工是：CPU 管控制流、不规则的小任务和数据准备，GPU 管大块、规则、可以并行的矩阵运算。下一篇讲 GPU 怎样做到这一点：[GPU 架构](gpu-architecture.md)。这台机器的芯片是怎么造出来的，见[芯片怎么造出来](chips-and-fabs.md)；整条链路的地图在[导读](README.md)。

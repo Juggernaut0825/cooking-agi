@@ -2,7 +2,7 @@
 
 **中文** · [English](prediction-planning.en.md)
 
-> 阅读时间：约 12 分钟 · 草稿，待审核
+> 阅读时间：约 11 分钟 · 草稿，待审核
 
 路口前那辆车可能直行，也可能左转或右转；它还没打方向，你就得定下自己接下来 4 秒怎么走。**预测要给出几种可能并带概率，不能交一条平均轨迹；规划在一组候选轨迹里按代价挑一条，权重决定“怎样算好”，硬约束决定“什么绝对不行”。**
 
@@ -36,7 +36,7 @@ minFDE 同理取最小。这里 minADE$_3=0.67$ m、minFDE$_3=1$ m，都来自 $
 
 ### 这个指标奖励什么，漏掉什么
 
-- **再加一条预测，minADE 只会持平或变小。** 加一条掉头的预测 $k_4$，minADE 和 minFDE 仍是 0.67 和 1。所以只能在相同 $K$ 下比较；NVIDIA 给 Alpamayo 报的就是 $K=6$、6.4 s 时域的 minADE（0.911 m，公司自报，见[模型页](https://www.nvidia.com/en-us/solutions/autonomous-vehicles/alpamayo/llm-info/)）。
+- **再加一条预测，minADE 只会持平或变小。** 加一条掉头的预测 $k_4$，minADE 和 minFDE 仍是 0.67 和 1。所以只能在相同 $K$ 下比较；NVIDIA 给 Alpamayo 2 Super 报的就是 $K=6$、6.4 s 时域、在它自选的困难样本上的 minADE（0.911 m，公司自报，见[模型页](https://www.nvidia.com/en-us/solutions/autonomous-vehicles/alpamayo/llm-info/)）。
 - **它不看概率。** 把 $k_2$ 的概率改成 0.01，minADE 不变。规划要用概率，所以还要看考虑置信度的指标，比如 mAP 或似然。
 - **“最好的一条”怎么选，各 benchmark 不完全一样。** 有的直接取 ADE 最小的，有的先按终点误差选一条再算它的 ADE。比较论文数字前先看协议。
 - **每个参与者单独打分。** 两辆车的预测合在一起是否自洽，minADE 不管。
@@ -117,7 +117,7 @@ $$
 - **学代价。** Lift-Splat-Shoot 学一张 BEV 代价图，再给 1,000 条模板轨迹打分，见[第 1 篇](bev-occupancy.md)。
 - **学候选，再搜索。** Tesla 在 2021-08-19 的 AI Day 上说，神经网络给蒙特卡洛树搜索提出状态和动作的分布，再用碰撞、舒适、时间等显式代价和接管数据打分；2022-09-30 的 AI Day 讲了并行树搜索的“interaction search”，说每 50 ms 做一次决策（公司自报）。两者都是演讲（[AI Day 2021](https://www.youtube.com/watch?v=j0z4FweCy4M)、[AI Day 2022](https://www.youtube.com/watch?v=ODSJsviD_SU)），据自动字幕转述，描述的是 Tesla 转向端到端之前的栈；2021 年的版本当时被称为仍在开发中。
 - **学打分器。** [Hydra-MDP](https://arxiv.org/abs/2406.06978) 按摘要从人类示范和规则教师蒸馏出一个学生网络，每个评测指标配一个解码头，在 CVPR 2024 挑战赛的 NAVSIM 端到端赛道排第一。
-- **整个规划器用大模型学。** Waymo 2025-06-09 的[博客](https://waymo.com/blog/2025/06/scaling-laws-in-autonomous-driving/)报告，在约 50 万小时内部驾驶数据上训练的自回归 Transformer，运动预测和规划质量随算力呈幂律改善，闭环指标也随规模变好，计算最优的模型规模比数据量增长快约 1.5 倍（公司自报）；博客也对把开环指标当爬坡目标表示怀疑。
+- **整个规划器用大模型学。** Waymo 2025-06-13 的[博客](https://waymo.com/blog/2025/06/scaling-laws-in-autonomous-driving/)报告，在约 50 万小时内部驾驶数据上训练的模型，运动预测质量随训练算力呈幂律改善，闭环规划指标也随规模变好（公司自报）。同期的[技术报告](https://arxiv.org/abs/2506.08228)（arXiv 2025-06-09，自回归 encoder-decoder Transformer）还报告，计算最优时模型规模要比数据量增长快约 1.5 倍，并指出这关系到开环指标是否适合用来指导模型开发。
 
 ## 轨迹交给控制
 

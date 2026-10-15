@@ -735,6 +735,27 @@ en    = "Recursive self-improvement"
 order = ["README.md", "generate-verify-train.md", "code-not-weights.md", "measuring.md", "review.md"]
 
 [[section]]
+dir   = "11-frontier/test-time-compute"
+group = "frontier"
+zh    = "测试时计算（待审核）"
+en    = "Test-time compute (draft)"
+order = ["README.md", "parallel-and-verify.md", "long-chains.md", "measuring.md", "review.md"]
+
+[[section]]
+dir   = "11-frontier/agentic-rl"
+group = "frontier"
+zh    = "用 RL 训练 agent（待审核）"
+en    = "Agent RL (draft)"
+order = ["README.md", "environments-and-rewards.md", "credit-and-training.md", "review.md"]
+
+[[section]]
+dir   = "11-frontier/interpretability"
+group = "frontier"
+zh    = "机制可解释性（待审核）"
+en    = "Interpretability (draft)"
+order = ["README.md", "features-and-superposition.md", "sparse-autoencoders.md", "circuits.md", "review.md"]
+
+[[section]]
 dir   = "practice"
 group = "practice"
 zh    = "工程实践"
@@ -1112,6 +1133,20 @@ en  = "Templates"
 "11-frontier/self-improvement/code-not-weights.md" = ["改代码不改权重", "Code, not weights"]
 "11-frontier/self-improvement/measuring.md" = ["怎么量 AI 加速 AI", "Measuring AI speeding AI"]
 "11-frontier/self-improvement/review.md" = ["复习题", "Review"]
+"11-frontier/test-time-compute/README.md" = ["总览", "Overview"]
+"11-frontier/test-time-compute/parallel-and-verify.md" = ["多采样、投票与验证器", "Sampling, voting & verifiers"]
+"11-frontier/test-time-compute/long-chains.md" = ["长思维链怎样训练", "Training long chains"]
+"11-frontier/test-time-compute/measuring.md" = ["怎么比较、怎么读数字", "Comparing & reading numbers"]
+"11-frontier/test-time-compute/review.md" = ["复习题", "Review"]
+"11-frontier/agentic-rl/README.md" = ["总览", "Overview"]
+"11-frontier/agentic-rl/environments-and-rewards.md" = ["环境与奖励", "Environments & rewards"]
+"11-frontier/agentic-rl/credit-and-training.md" = ["信用分配与训练系统", "Credit & training systems"]
+"11-frontier/agentic-rl/review.md" = ["复习题", "Review"]
+"11-frontier/interpretability/README.md" = ["总览", "Overview"]
+"11-frontier/interpretability/features-and-superposition.md" = ["特征、叠加与探针", "Features & superposition"]
+"11-frontier/interpretability/sparse-autoencoders.md" = ["稀疏自编码器", "Sparse autoencoders"]
+"11-frontier/interpretability/circuits.md" = ["电路、归因与干预", "Circuits & interventions"]
+"11-frontier/interpretability/review.md" = ["复习题", "Review"]
 "learn/README.md" = ["基础目录与导读", "Foundations catalog & guide"]
 "learn/choose-your-path.md" = ["按目标找路线", "Find your route"]
 "learn/ml-exercises/README.md" = ["从代码开始", "Start with code"]
