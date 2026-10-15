@@ -33,6 +33,8 @@ $$\frac{\partial L_{MSE}}{\partial z}=(p-y)p(1-p),$$
 
 才会多一个很小的因子。训练中通常直接使用稳定的 logits loss，不先算概率再取 log，避免舍入到 0 或 1。[BCEWithLogitsLoss](https://docs.pytorch.org/docs/main/generated/torch.nn.BCEWithLogitsLoss.html)将这两步合在一起。
 
+<!-- widget:step-bce-vs-mse -->
+
 多分类也一样，softmax + cross-entropy 对 logits 的梯度是 $p-\operatorname{onehot}(y)$。`[1000, 10, 5]` 若标签是第 2 类，近似梯度是 `[1, -1, 0]`；不能说“softmax 很尖，所以模型完全更新不了”。作为 attention 内部模块时，后接的计算与梯度又不同，不能直接套输出层结论。
 
 ```python

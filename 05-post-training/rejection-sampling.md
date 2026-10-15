@@ -86,6 +86,8 @@ $$
 
 假如 C 恰好是评分器看不出的错误答案，增加采样量反而会更容易选中它。这里是手造反例，不是模型测量；它说明评分器准确性和采样预算必须一起看。
 
+<!-- widget:step-best-of-n -->
+
 [Reward Model Overoptimization（2022，ICML 2023）](https://proceedings.mlr.press/v202/gao23h.html)在用较大“gold”奖励模型代替真实偏好的合成设置中，也研究了 RL 和 best-of-N 的过度优化。它支持检查代理分数与独立质量是否背离，不意味着任何 N 增加都必然有害。
 
 ## 筛答案时，连题目比例也会改变 {#prompt-selection}

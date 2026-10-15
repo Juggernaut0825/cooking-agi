@@ -65,6 +65,8 @@ Suppose A and B are the only complete answers. The Reference assigns each 0.5; t
 
 B receives a small bonus because its probability is lower than under the reference. After weighting by Actor probabilities, KL is approximately 0.1927 and the objective is 0.9615, still below the unpenalized value of 1.
 
+<!-- widget:step-kl-penalty -->
+
 ```python
 import math
 

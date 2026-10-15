@@ -77,6 +77,8 @@ $$
 
 Since $\operatorname{SiLU}'(0)=1/2$, setting $u=3,\delta=1$ gives gate gradient 1.5. The content gradient is zero at this point, but the gate can still learn. A permanent on/off-switch metaphor misses that behavior.
 
+<!-- widget:step-swiglu -->
+
 ## Compare three matrices at a matched budget
 
 Ignoring biases, an ordinary FFN has $2dh$ parameters; SwiGLU has $3dh_g$. Matching an ordinary width of $4d$ gives

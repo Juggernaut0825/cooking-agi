@@ -517,6 +517,409 @@
     ]);
   };
 
+  /* 05-post-training/rejection-sampling#best-of-n: best-of-2 with p = (0.5, 0.3, 0.2) and a scorer that ranks C > B > A. */
+  F.bestOfN = function () {
+    const names = ['A', 'B', 'C'], p = [0.5, 0.3, 0.2], rank = {A: 0, B: 1, C: 2};
+    const r = x => Math.round(x * 1e6) / 1e6;
+    const cells = names.flatMap((second, row) => names.map((first, col) => ({row, col, first, second, area: r(p[col] * p[row]),
+      winner: rank[first] >= rank[second] ? first : second})));
+    const win = name => r(cells.filter(c => c.winner === name).reduce((a, c) => a + c.area, 0));
+    const base = {names, p, cells, picked: {A: win('A'), B: win('B'), C: win('C')}};
+    return frames([
+      {...base, stage: 0, zh: '只生成 1 份时，A、B、C 出现的概率是 0.5、0.3、0.2；评分器的排序是 C > B > A。',
+        en: 'With one draw, A, B and C come up with probability 0.5, 0.3 and 0.2; the scorer ranks C > B > A.'},
+      {...base, stage: 1, zh: '独立抽两份：第一份定列，第二份定行。每格面积是两次概率之积，9 格合计 1。',
+        en: 'Two independent draws: the first picks the column, the second the row. Each cell’s area is the product of the two probabilities, and the nine cells add up to 1.'},
+      {...base, stage: 2, focus: 'A', zh: '只有两份都是 A，A 才会被选中：0.5 × 0.5 = 0.25。',
+        en: 'A is picked only when both draws are A: 0.5 × 0.5 = 0.25.'},
+      {...base, stage: 3, focus: 'C', zh: '只要出现 C 就选 C。不含 C 的是左上 0.8 × 0.8 的方块，所以 C 胜出的概率是 1 − 0.64 = 0.36，不是 0.2 + 0.2 = 0.4：CC 那一格不能算两次。',
+        en: 'Whenever C appears, C is picked. The no-C region is the 0.8 × 0.8 block at the top left, so C wins with 1 − 0.64 = 0.36, not 0.2 + 0.2 = 0.4: the CC cell must not be counted twice.'},
+      {...base, stage: 4, focus: 'B', zh: '剩下的 AB、BA、BB 三格归 B：0.15 + 0.15 + 0.09 = 0.39。',
+        en: 'The remaining cells, AB, BA and BB, go to B: 0.15 + 0.15 + 0.09 = 0.39.'},
+      {...base, stage: 5, done: true, zh: '若 C 恰好是评分器看不出的错误答案，从生成 1 份变成 2 份，选中它的概率就从 0.2 升到 0.36。评分器准不准和采样预算要一起看。',
+        en: 'If C is a wrong answer that fools the scorer, going from one draw to two raises its chance of being picked from 0.2 to 0.36. Scorer quality and the sampling budget have to be checked together.'}
+    ]);
+  };
+
+  /* 05-post-training/where-preferences-come-from §4: Bradley–Terry sees only the gap, so a shift is free and a scale is not. */
+  F.btScale = function () {
+    const sigma = x => 1 / (1 + Math.exp(-x));
+    const state = (a, b, stage, extra = {}) => ({stage, a, b, gap: a - b, prob: Math.round(sigma(a - b) * 1000) / 1000, ...extra});
+    return frames([
+      {...state(2, 1, 0), zh: '奖励模型给 A 打 2 分、B 打 1 分。Bradley–Terry 只把分差 1 送进 sigmoid：A 胜出的概率是 σ(1) ≈ 0.731。',
+        en: 'The reward model gives A 2 and B 1. Bradley–Terry feeds only the gap of 1 into the sigmoid: A is preferred with probability σ(1) ≈ 0.731.'},
+      {...state(12, 11, 1), zh: '两者都加 10，变成 12 和 11：分差仍是 1，曲线上的点不动，概率还是 0.731。',
+        en: 'Add 10 to both, giving 12 and 11. The gap is still 1, the point on the curve stays put, and the probability is still 0.731.'},
+      {...state(4, 2, 2), zh: '改成把 2 和 1 都乘 2，变成 4 和 2：分差变成 2，概率升到 σ(2) ≈ 0.881。',
+        en: 'Instead, multiply 2 and 1 by 2, giving 4 and 2. The gap becomes 2 and the probability rises to σ(2) ≈ 0.881.'},
+      {...state(4, 2, 3, {ghost: 1, done: true}), zh: '平移不影响这个模型，缩放会影响。“只有分差进入公式”不等于分数的尺度可以随便定。',
+        en: 'A shared shift changes nothing; scaling does. “Only the gap enters the formula” does not make the scale arbitrary.'}
+    ]);
+  };
+
+  /* 05-post-training/dapo: response mean vs token mean, then the same gap across two ranks and the W/N fix. */
+  F.tokenMean = function () {
+    const rows = [{values: [1, 1, 999], valid: [true, true, false]}, {values: [3, 3, 3, 3, 3, 3], valid: Array(6).fill(true)}];
+    const valid = rows.map(row => row.values.filter((_, i) => row.valid[i]));
+    const sums = valid.map(v => v.reduce((a, b) => a + b, 0)), counts = valid.map(v => v.length);
+    const N = counts[0] + counts[1], W = rows.length;
+    const means = sums.map((s, i) => s / counts[i]);
+    const responseMean = (means[0] + means[1]) / 2, tokenMean = (sums[0] + sums[1]) / N;
+    const scaled = sums.map(s => s * W / N), ddp = (scaled[0] + scaled[1]) / 2;
+    const base = {rows, sums, counts, means, N, W, responseMean, tokenMean, scaled, ddp};
+    return frames([
+      {...base, stage: 0, zh: '短回答有 2 个有效 token，每个的值是 1；第三格 999 是 padding，要 mask 掉。长回答有 6 个有效 token，每个是 3。',
+        en: 'The short response has 2 valid tokens worth 1 each; the third cell, 999, is padding and is masked out. The long response has 6 valid tokens worth 3 each.'},
+      {...base, stage: 1, zh: `先在每条回答里平均（${means[0]} 和 ${means[1]}），再对回答平均：(1 + 3)/2 = ${responseMean}。两条回答各占一半，短回答的每个 token 权重 1/4，长回答的只有 1/12。`,
+        en: `Average within each response (${means[0]} and ${means[1]}), then across responses: (1 + 3)/2 = ${responseMean}. Each response gets half the weight, so a short-response token weighs 1/4 and a long-response token only 1/12.`},
+      {...base, stage: 2, zh: `把 8 个有效 token 放在一起平均：(2×1 + 6×3)/8 = ${tokenMean}。每个 token 权重 1/8，长回答一共占 6/8。这是换了权重，不是修正了除法。`,
+        en: `Pool all 8 valid tokens: (2×1 + 6×3)/8 = ${tokenMean}. Each token weighs 1/8, so the long response carries 6/8 in total. This changes the weighting; it does not fix a division.`},
+      {...base, stage: 3, zh: `放到两张卡上：rank 0 的局部均值是 ${means[0]}，rank 1 是 ${means[1]}。直接平均两个局部均值，又回到 ${responseMean}，不是全局 token 均值 ${tokenMean}。`,
+        en: `Split across two devices: rank 0’s local mean is ${means[0]} and rank 1’s is ${means[1]}. Averaging the two local means gives ${responseMean} again, not the global token mean ${tokenMean}.`},
+      {...base, stage: 4, done: true, zh: `每个 rank 把局部和乘 W/N = ${W}/${N}：${sums[0]} → ${scaled[0]}，${sums[1]} → ${scaled[1]}。DDP 再平均：(${scaled[0]} + ${scaled[1]})/2 = ${ddp}，和单卡的 token 均值一样。`,
+        en: `Each rank multiplies its local sum by W/N = ${W}/${N}: ${sums[0]} → ${scaled[0]} and ${sums[1]} → ${scaled[1]}. DDP then averages: (${scaled[0]} + ${scaled[1]})/2 = ${ddp}, the same as the single-device token mean.`}
+    ]);
+  };
+
+  /* 05-post-training/rlhf/reference-and-critic §3: per-answer KL terms can be negative; their weighted mean cannot. */
+  F.klPenalty = function () {
+    const ref = [0.5, 0.5], actor = [0.8, 0.2], reward = 1, beta = 0.2;
+    const r4 = x => Math.round(x * 1e4) / 1e4;
+    const logRatio = actor.map((q, i) => Math.log(q / ref[i]));
+    const shaped = logRatio.map(l => reward - beta * l);
+    const kl = actor.reduce((a, q, i) => a + q * logRatio[i], 0);
+    const objective = actor.reduce((a, q, i) => a + q * shaped[i], 0);
+    const base = {ref, actor, reward, beta, logRatio: logRatio.map(r4), shaped: shaped.map(r4), kl: r4(kl), objective: r4(objective),
+      weighted: actor.map((q, i) => r4(q * logRatio[i]))};
+    return frames([
+      {...base, stage: 0, zh: '只有 A、B 两个回答。Reference 各给 0.5，Actor 给 0.8 和 0.2；两条的奖励都是 1，β = 0.2。',
+        en: 'Only two answers, A and B. The reference gives each 0.5, the Actor 0.8 and 0.2; both rewards are 1, and β = 0.2.'},
+      {...base, stage: 1, zh: `逐条算 log(π_θ/π_ref)：A 是 +${fixed(base.logRatio[0], 4)}，B 是 ${fixed(base.logRatio[1], 4).replace('-', '−')}。单条的 log-ratio 可以是负数。`,
+        en: `Per answer, log(π_θ/π_ref) is +${fixed(base.logRatio[0], 4)} for A and ${fixed(base.logRatio[1], 4).replace('-', '−')} for B. A single log-ratio can be negative.`},
+      {...base, stage: 2, zh: `惩罚后回报 = 1 − β × log-ratio：A 降到 ${fixed(base.shaped[0], 4)}，B 反而升到 ${fixed(base.shaped[1], 4)}，因为 Actor 给 B 的概率比参照低。`,
+        en: `Shaped return = 1 − β × log-ratio: A drops to ${fixed(base.shaped[0], 4)}, while B rises to ${fixed(base.shaped[1], 4)}, because the Actor gives B less probability than the reference does.`},
+      {...base, stage: 3, zh: `按 Actor 的概率加权：0.8 × ${fixed(base.logRatio[0], 4)} + 0.2 × (${fixed(base.logRatio[1], 4).replace('-', '−')}) ≈ ${fixed(base.kl, 4)}。加权后的期望才是 KL，它不会是负数。`,
+        en: `Weight by the Actor’s probabilities: 0.8 × ${fixed(base.logRatio[0], 4)} + 0.2 × (${fixed(base.logRatio[1], 4).replace('-', '−')}) ≈ ${fixed(base.kl, 4)}. The weighted expectation is the KL, and it is never negative.`},
+      {...base, stage: 4, done: true, zh: `总目标 0.8 × ${fixed(base.shaped[0], 4)} + 0.2 × ${fixed(base.shaped[1], 4)} ≈ ${fixed(base.objective, 4)}，等于 1 − 0.2 × ${fixed(base.kl, 4)}，仍低于不加惩罚时的 1。`,
+        en: `The objective is 0.8 × ${fixed(base.shaped[0], 4)} + 0.2 × ${fixed(base.shaped[1], 4)} ≈ ${fixed(base.objective, 4)}, which equals 1 − 0.2 × ${fixed(base.kl, 4)} and stays below the unpenalized 1.`}
+    ]);
+  };
+
+  /* 05-post-training/post-training-infrastructure: the ratio's denominator is the distribution that actually sampled. */
+  F.behaviorRatio = function () {
+    const raw = [0.8, 0.2], temperature = 2, fresh = 0.25;
+    const powered = raw.map(p => Math.pow(p, 1 / temperature)), total = powered.reduce((a, b) => a + b, 0);
+    const behavior = powered.map(p => p / total);
+    const r = (x, d = 3) => Math.round(x * 10 ** d) / 10 ** d;
+    const base = {raw, temperature, fresh, powered: powered.map(x => r(x)), total: r(total), behavior: behavior.map(x => r(x, 4)),
+      right: r(fresh / behavior[1], 4), wrong: r(fresh / raw[1], 4)};
+    return frames([
+      {...base, stage: 0, zh: '模型原始的分布是 [0.8, 0.2]。',
+        en: 'The model’s raw distribution is [0.8, 0.2].'},
+      {...base, stage: 1, zh: `温度 2 等于把 logit 除以 2，也就是每一项取 p^(1/2)：${fixed(base.powered[0], 3)} 和 ${fixed(base.powered[1], 3)}，合计 ${fixed(base.total, 3)}。`,
+        en: `Temperature 2 halves the logits, which raises each probability to the power 1/2: ${fixed(base.powered[0], 3)} and ${fixed(base.powered[1], 3)}, totalling ${fixed(base.total, 3)}.`},
+      {...base, stage: 2, zh: '归一化后，实际的采样分布是 b = [2/3, 1/3]。这批数据是按它采出来的。',
+        en: 'Normalized, the actual sampling distribution is b = [2/3, 1/3]. That is what generated this batch.'},
+      {...base, stage: 3, zh: `新模型给第二个动作 0.25。相对实际的行为分布，比率是 0.25 / (1/3) = ${base.right}，小于 1：这个动作变得更不容易被选。`,
+        en: `The new model gives the second action 0.25. Against the actual behavior, the ratio is 0.25 / (1/3) = ${base.right}, below 1: the action has become less likely.`},
+      {...base, stage: 4, done: true, zh: `若错用原始的 0.2 作分母，就得到 0.25 / 0.2 = ${base.wrong}，大于 1，连增减方向都反了。先确认引擎返回的 logprob 是哪一种分布。`,
+        en: `Using the raw 0.2 as the denominator gives 0.25 / 0.2 = ${base.wrong}, above 1: the direction flips. Check which distribution an engine’s logprob refers to.`}
+    ]);
+  };
+
+  /* 06-systems/llm-serving: chunked prefill, decode first, a fixed number of positions per round. */
+  F.chunkedPrefill = function (budget = 6, prompt = 10, decoding = 2) {
+    const chunks = [];
+    for (let left = prompt; left > 0;) { const take = Math.min(left, budget - decoding); chunks.push(take); left -= take; }
+    const rounds = chunks.map((take, i) => ({decode: decoding, take, left: prompt - chunks.slice(0, i + 1).reduce((a, b) => a + b, 0)}));
+    const base = {budget, prompt, decoding, chunks, rounds};
+    const list = [{...base, shown: 0, zh: `${decoding} 个老请求正在 decode，每轮各要 1 个位置；新来一个 ${prompt}-token 的 prompt。每轮最多 ${budget} 个位置，先排 decode。`,
+      en: `${decoding} requests are decoding and need one position each per round; a ${prompt}-token prompt arrives. Each round allows ${budget} positions, decode first.`}];
+    rounds.forEach((round, i) => {
+      const last = i === rounds.length - 1;
+      list.push({...base, shown: i + 1, done: last,
+        zh: last ? (rounds.length === 1
+          ? `预算改成 ${budget}：一轮就处理完 ${decoding} + ${round.take}。新请求更早开始，但这一轮更重，正在等下一个 token 的用户可能会感到停顿。这是轮数算例，不是毫秒数。`
+          : `第 ${i + 1} 轮：${decoding} + ${round.take}，prefill 完成，新请求这时才有机会给出首 token。老请求每一轮都在前进。`)
+          : `第 ${i + 1} 轮：decode 占 ${decoding} 个，剩下 ${round.take} 个给新 prompt，还剩 ${round.left}。`,
+        en: last ? (rounds.length === 1
+          ? `Budget ${budget}: one round handles ${decoding} + ${round.take}. The new request starts sooner, but this round is heavier, and users waiting for their next token may notice a pause. This counts rounds, not milliseconds.`
+          : `Round ${i + 1}: ${decoding} + ${round.take}. Prefill is done, and only now can the new request produce its first token. The existing requests advanced every round.`)
+          : `Round ${i + 1}: decode takes ${decoding} and the remaining ${round.take} go to the prompt; ${round.left} left.`});
+    });
+    return frames(list);
+  };
+
+  /* 06-systems/inference-frameworks: static batching vs refilling a slot as soon as a request finishes. */
+  F.continuousBatching = function (refill) {
+    const need = {A: 2, B: 5, C: 3}, slots = 2, schedule = [];
+    const left = {...need}, waiting = ['C'];
+    let running = ['A', 'B'];
+    while (running.length) {
+      schedule.push([...running]);
+      running.forEach(k => { left[k] -= 1; });
+      running = running.filter(k => left[k] > 0);
+      if (refill || !running.length) while (running.length < slots && waiting.length) running.push(waiting.shift());
+    }
+    const empty = schedule.reduce((a, round) => a + slots - round.length, 0);
+    const start = schedule.findIndex(round => round.includes('C')) + 1;
+    const base = {need, slots, schedule, total: schedule.length, empty, start, refill};
+    return frames([
+      {...base, shown: 0, zh: 'A、B 已完成 prefill，还要生成 2 个和 5 个 token；C 在排队，需要 3 个。每轮最多 2 条请求，各出 1 个 token。',
+        en: 'A and B have finished prefill and need 2 and 5 more tokens; C waits and needs 3. Each round fits two requests, one token each.'},
+      {...base, shown: 2, zh: '第 1–2 轮：A、B 一起生成，A 在第 2 轮结束。',
+        en: 'Rounds 1–2: A and B run together; A finishes in round 2.'},
+      {...base, shown: 5, zh: refill ? '每轮补位：A 一结束，C 第 3 轮就补进来，第 3–5 轮跑 B 和 C。' : '等整批结束才补位：第 3–5 轮只有 B，另一个位置空着，C 还在等。',
+        en: refill ? 'Refilling: as soon as A finishes, C takes its slot in round 3; rounds 3–5 run B and C.' : 'Waiting for the whole batch: in rounds 3–5 only B runs, one slot sits empty, and C keeps waiting.'},
+      ...(refill ? [] : [{...base, shown: 8, zh: 'B 结束后 C 才进来，第 6–8 轮只有 C。', en: 'C enters only after B finishes; rounds 6–8 run C alone.'}]),
+      {...base, shown: schedule.length, done: true,
+        zh: refill ? `B 和 C 都在第 5 轮结束，一共 ${schedule.length} 轮。8 轮对 5 轮是这个假设下的排程差别，不是实测的加速比。` : `一共 ${schedule.length} 轮，其中 ${empty} 个“轮 × 位置”空着。`,
+        en: refill ? `B and C both finish in round 5: ${schedule.length} rounds in total. Eight versus five is a scheduling result under these assumptions, not a measured speedup.` : `${schedule.length} rounds in total, with ${empty} slot-rounds left empty.`}
+    ]);
+  };
+
+  /* 00-foundations/deep-dives/generalization: ½(w − a)² with a = 0.4, plus squared L2 or L1 with λ = 0.5. */
+  F.l1L2 = function (a = 0.4, lambda = 0.5) {
+    const r = x => Math.round(x * 1000) / 1000;
+    const l2 = a / (1 + lambda), l1 = Math.sign(a) * Math.max(Math.abs(a) - lambda, 0);
+    const right = r(-a + lambda), left = r(-a - lambda);
+    const base = {a, lambda, l2: r(l2), l1: r(l1), right, left,
+      curves: {data: w => (w - a) ** 2 / 2, l2: w => (w - a) ** 2 / 2 + lambda / 2 * w * w, l1: w => (w - a) ** 2 / 2 + lambda * Math.abs(w)}};
+    return frames([
+      {...base, stage: 0, curve: 'data', zh: `把数据损失简化成 ½(w − ${a})²，最低点在 a = ${a}。`,
+        en: `Reduce the data loss to ½(w − ${a})², which is lowest at a = ${a}.`},
+      {...base, stage: 1, curve: 'l2', zh: `加平方 L2 惩罚 (${lambda}/2)w²：还是一条光滑的抛物线，最低点移到 ${a}/(1 + ${lambda}) ≈ ${base.l2}。L2 的拉力 λw 越靠近 0 越小，拉不到 0。`,
+        en: `Add squared L2, (${lambda}/2)w²: still a smooth parabola, now lowest at ${a}/(1 + ${lambda}) ≈ ${base.l2}. Its pull λw fades near 0, so it never gets there.`},
+      {...base, stage: 2, curve: 'l1', zh: `换成 L1 惩罚 ${lambda}|w|：0 处出现一个尖角。0 右边的斜率是 −${a} + ${lambda} = +${right}，左边是 −${a} − ${lambda} = −${Math.abs(left)}。`,
+        en: `Switch to L1, ${lambda}|w|: a kink appears at 0. The slope just right of 0 is −${a} + ${lambda} = +${right}; just left, −${a} − ${lambda} = −${Math.abs(left)}.`},
+      {...base, stage: 3, curve: 'l1', zh: `两边都往上走，最低点就停在尖角上：软阈值 max(${a} − ${lambda}, 0) = 0。`,
+        en: `Both sides rise away from 0, so the minimum sits on the kink: the soft threshold max(${a} − ${lambda}, 0) = 0.`},
+      {...base, stage: 4, curve: 'both', done: true, zh: `L1 得到 0，平方 L2 约 ${base.l2}。精确的零只说明 |a| ≤ λ，不说明这个特征在业务上没用。`,
+        en: `L1 gives 0, squared L2 about ${base.l2}. An exact zero only says |a| ≤ λ, not that the feature is useless.`}
+    ]);
+  };
+
+  /* 00-foundations/deep-dives/activation-and-initialization: z = 10, y = 0 under BCE and under MSE on the probability. */
+  F.bceVsMse = function (z = 10) {
+    const p = 1 / (1 + Math.exp(-z)), slope = p * (1 - p);
+    const sci = x => { const e = Math.floor(Math.log10(x)); return `${(x / 10 ** e).toFixed(2)} × 10${String(e).replace('-', '⁻').replace(/\d/g, d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d])}`; };
+    const base = {z, p, slope, mseOuter: p, bceOuter: 1 / (1 - p), mse: p * slope, bce: p,
+      text: {p: p.toFixed(5), slope: sci(slope), mse: sci(p * slope), bceOuter: Math.round(1 / (1 - p)).toLocaleString('en-US'), bce: p.toFixed(5),
+        ratio: Math.round(1 / slope).toLocaleString('en-US')}};
+    const T = base.text;
+    return frames([
+      {...base, stage: 0, zh: `z = ${z}，y = 0：p = σ(${z}) ≈ ${T.p}。模型很自信，却错了。`,
+        en: `z = ${z}, y = 0: p = σ(${z}) ≈ ${T.p}. Confident, and wrong.`},
+      {...base, stage: 1, zh: `sigmoid 在这里的局部斜率 p(1 − p) ≈ ${T.slope}，这就是“饱和”。两种 loss 往回传时都要乘它。`,
+        en: `The sigmoid’s local slope here is p(1 − p) ≈ ${T.slope}; that is the saturation. Both losses pass back through it.`},
+      {...base, stage: 2, zh: `对概率用 MSE ½(p − y)²：dL/dp ≈ ${T.p}，再乘斜率，≈ ${T.mse}，梯度几乎没了。`,
+        en: `MSE on the probability, ½(p − y)²: dL/dp ≈ ${T.p}; times the slope gives ≈ ${T.mse}, almost nothing.`},
+      {...base, stage: 3, zh: `BCE −log(1 − p)：dL/dp = 1/(1 − p) ≈ ${T.bceOuter}，正好抵掉那个很小的斜率，乘积就是 p − y ≈ ${T.bce}。`,
+        en: `BCE, −log(1 − p): dL/dp = 1/(1 − p) ≈ ${T.bceOuter}, which cancels the tiny slope; the product is p − y ≈ ${T.bce}.`},
+      {...base, stage: 4, done: true, zh: `同一个饱和的 sigmoid：BCE 对 logit 的梯度接近 1，MSE 只有约 ${T.mse}，相差约 2.2 万倍。实际训练直接从 logits 算（BCEWithLogitsLoss）。`,
+        en: `The same saturated sigmoid: the BCE gradient on the logit is close to 1, the MSE one only about ${T.mse}, roughly 22,000 times smaller. In practice compute from logits (BCEWithLogitsLoss).`}
+    ]);
+  };
+
+  /* 00-foundations/deep-dives/optimizers: fresh state, θ = 2, zero data gradient, η = 0.1, λ = 0.2. */
+  F.adamwL2 = function () {
+    const theta = 2, eta = 0.1, lambda = 0.2, b1 = 0.9, b2 = 0.999, eps = 1e-8;
+    const r = x => Math.round(x * 1e6) / 1e6;
+    const adamw = r(theta * (1 - eta * lambda));
+    const g = lambda * theta, m = (1 - b1) * g, v = (1 - b2) * g * g, mHat = m / (1 - b1), vHat = v / (1 - b2);
+    const step = eta * mHat / (Math.sqrt(vHat) + eps), adamL2 = theta - step;
+    const base = {theta, eta, lambda, adamw, g: r(g), m: r(m), v: r(v), mHat: r(mHat), vHat: r(vHat), root: r(Math.sqrt(vHat)), step: r(step), adamL2: r(adamL2)};
+    return frames([
+      {...base, stage: 0, zh: '全新状态 m = v = 0，θ = 2，数据梯度为 0，η = 0.1，λ = 0.2，β₁ = 0.9，β₂ = 0.999。',
+        en: 'Fresh state m = v = 0, θ = 2, data gradient 0, η = 0.1, λ = 0.2, β₁ = 0.9, β₂ = 0.999.'},
+      {...base, stage: 1, zh: `AdamW：Adam 那部分只看数据梯度 0，两个矩都是 0，不动；衰减单独做：2 × (1 − 0.1 × 0.2) = ${adamw}。`,
+        en: `AdamW: the Adam part sees only the zero data gradient, so both moments stay 0 and nothing moves; decay happens separately: 2 × (1 − 0.1 × 0.2) = ${adamw}.`},
+      {...base, stage: 2, zh: `Adam + L2：把 λθ = ${base.g} 当成梯度送进去。m₁ = 0.1 × ${base.g} = ${base.m}，v₁ = 0.001 × ${base.g}² = ${base.v}。`,
+        en: `Adam + L2: feed λθ = ${base.g} in as the gradient. m₁ = 0.1 × ${base.g} = ${base.m}, v₁ = 0.001 × ${base.g}² = ${base.v}.`},
+      {...base, stage: 3, zh: `偏差修正：m̂ = ${base.m}/(1 − 0.9) = ${base.mHat}，v̂ = ${base.v}/(1 − 0.999) = ${base.vHat}，√v̂ = ${base.root}。`,
+        en: `Bias correction: m̂ = ${base.m}/(1 − 0.9) = ${base.mHat}, v̂ = ${base.v}/(1 − 0.999) = ${base.vHat}, √v̂ = ${base.root}.`},
+      {...base, stage: 4, zh: `更新量 0.1 × ${base.mHat}/${base.root} = ${base.step}，θ 走到约 ${base.adamL2}。`,
+        en: `The step is 0.1 × ${base.mHat}/${base.root} = ${base.step}, so θ reaches about ${base.adamL2}.`},
+      {...base, stage: 5, done: true, zh: `${adamw} 对约 ${base.adamL2}：同一个 λ，不是同一个更新。L2 那一项被它自己的尺度除掉了，所以第一步的步长约等于 η。`,
+        en: `${adamw} versus about ${base.adamL2}: the same λ, a different update. The L2 term is divided by its own scale, so the first step has size about η.`}
+    ]);
+  };
+
+  /* 00-foundations/deep-dives/pretraining-pipeline: two documents packed into one row; attention masks vs loss masks. */
+  F.packingMasks = function () {
+    const tokens = ['A', 'B', 'EOS', 'C', 'D', 'EOS'], doc = [1, 1, 1, 2, 2, 2];
+    const targets = tokens.slice(0, -1).map((tok, i) => ({from: tok, to: tokens[i + 1], cross: doc[i] !== doc[i + 1]}));
+    const causal = tokens.map((_, q) => tokens.map((_, k) => k <= q));
+    const block = tokens.map((_, q) => tokens.map((_, k) => k <= q && doc[k] === doc[q]));
+    const base = {tokens, doc, targets, causal, block};
+    const scored = mask => targets.filter((t, i) => mask[i]).length;
+    const all = targets.map(() => 1), loss = targets.map(t => (t.cross ? 0 : 1));
+    return frames([
+      {...base, stage: 0, mask: null, loss: all, zh: '两篇文档拼成一行。每个位置预测下一个 token：A→B、B→EOS、EOS→C、C→D、D→EOS，共 5 项。',
+        en: 'Two documents packed into one row. Each position predicts the next token: A→B, B→EOS, EOS→C, C→D, D→EOS, five in all.'},
+      {...base, stage: 1, mask: 'causal', loss: all, scored: scored(all), zh: '连续 token 流：普通 causal mask，C 那一行能看到 A、B、EOS 和它自己。EOS 只是提示边界，不会切断 attention。5 项都计分。',
+        en: 'Continuous stream: an ordinary causal mask lets row C see A, B, EOS and itself. EOS marks the boundary but does not cut attention. All five are scored.'},
+      {...base, stage: 2, mask: 'block', loss: all, zh: '独立文档 packing：块对角 causal mask，C 只看得到 C，D 只看 C 和 D。',
+        en: 'Independent-document packing: a block-diagonal causal mask, so C sees only C and D sees C and D.'},
+      {...base, stage: 3, mask: 'block', loss: all, focus: 2, zh: '但 attention mask 管不到 EOS→C：EOS 那一行只看得到文档 1，却被要求预测文档 2 的 C。',
+        en: 'The attention mask does not touch EOS→C: the EOS row sees only document 1, yet must predict document 2’s C.'},
+      {...base, stage: 4, mask: 'block', loss, focus: 2, scored: scored(loss), done: true, zh: '用 loss mask 把这一项置 0：本例独立文档、不设 BOS 时计分 4 项，连续流是 5 项。attention mask 管“能看谁”，loss mask 管“哪项算分”。',
+        en: 'Zero that term with the loss mask: four scored targets here, against five for the continuous stream. The attention mask decides what can be seen; the loss mask decides what is scored.'}
+    ]);
+  };
+
+  /* 06-systems/tensor-parallel: backward through the two-rank FFN with loss = output.sum(). */
+  F.tpBackward = function () {
+    const X = [2, -1];
+    const A = [[[1, 0], [1, 1]], [[-1, 2], [0, 0]]], B = [[[1, 2], [0, 1]], [[1, 0], [2, 1]]];
+    const vecMat = (v, M) => M[0].map((_, j) => v.reduce((a, x, i) => a + x * M[i][j], 0));
+    const T = M => M[0].map((_, j) => M.map(row => row[j]));
+    const pre = A.map(Ai => vecMat(X, Ai)), act = pre.map(h => h.map(x => Math.max(0, x)));
+    const Z = act.map((h, i) => vecMat(h, B[i])), Y = Z[0].map((z, j) => z + Z[1][j]);
+    const G = Y.map(() => 1);
+    const back = B.map(Bi => vecMat(G, T(Bi)));
+    const relu = pre.map(h => h.map(x => (x > 0 ? 1 : 0)));
+    const D = back.map((b, i) => b.map((x, j) => x * relu[i][j]));
+    const parts = D.map((d, i) => vecMat(d, T(A[i])));
+    const dX = parts[0].map((p, j) => p + parts[1][j]);
+    const base = {X, pre, relu, Y, G, back, D, parts, dX, mean: dX.map(x => x / 2)};
+    const v = a => `[${a.join(', ').replace(/-/g, '−')}]`;
+    return frames([
+      {...base, stage: 0, zh: `前向回顾：两卡的 pre-activation 是 ${v(pre[0])} 和 ${v(pre[1])}，ReLU 只放行 rank 0 的第 1 个通道、rank 1 的第 2 个通道；AllReduce 后输出 ${v(Y)}。`,
+        en: `Forward recap: the pre-activations are ${v(pre[0])} and ${v(pre[1])}; ReLU passes channel 1 on rank 0 and channel 2 on rank 1; after the AllReduce the output is ${v(Y)}.`},
+      {...base, stage: 1, zh: `取 loss = output.sum()，G = ${v(G)}。因为 Y = Z₀ + Z₁，两卡收到的是同一个 G，不是各拿一半。`,
+        en: `With loss = output.sum(), G = ${v(G)}. Since Y = Z₀ + Z₁, both ranks receive the same G, not half each.`},
+      {...base, stage: 2, zh: `穿过第二层：G B₀ᵀ = ${v(back[0])}，G B₁ᵀ = ${v(back[1])}。`,
+        en: `Through the second layer: G B₀ᵀ = ${v(back[0])} and G B₁ᵀ = ${v(back[1])}.`},
+      {...base, stage: 3, zh: `乘 ReLU 的导数：D₀ = ${v(D[0])}，D₁ = ${v(D[1])}。权重梯度 ∇Bᵢ、∇Aᵢ 到这里都能在本卡算完。`,
+        en: `Times the ReLU derivative: D₀ = ${v(D[0])} and D₁ = ${v(D[1])}. The weight gradients ∇Bᵢ and ∇Aᵢ can now finish on each rank.`},
+      {...base, stage: 4, zh: `回到输入：D₀A₀ᵀ = ${v(parts[0])}，D₁A₁ᵀ = ${v(parts[1])}，各是一条路径的贡献。`,
+        en: `Back to the input: D₀A₀ᵀ = ${v(parts[0])} and D₁A₁ᵀ = ${v(parts[1])}, one path’s contribution each.`},
+      {...base, stage: 5, done: true, zh: `AllReduce 求和：${v(parts[0])} + ${v(parts[1])} = ${v(dX)}，和单卡一样。这是同一次计算的两条路径相加，不能像数据并行那样取平均（那会得到 ${v(base.mean)}）。`,
+        en: `Sum with an AllReduce: ${v(parts[0])} + ${v(parts[1])} = ${v(dX)}, matching a single device. These are two paths of one computation, so do not average as in data parallelism (that would give ${v(base.mean)}).`}
+    ]);
+  };
+
+  /* 00-foundations/deep-dives/tokenizer-algorithms: two BPE merges on rain ×3 and rail ×2, then encode rair. */
+  F.bpeMerges = function () {
+    const corpus = [['rain', 3], ['rail', 2]];
+    const count = words => {
+      const pairs = new Map();
+      words.forEach(([symbols, n]) => symbols.slice(0, -1).forEach((sym, i) => { const k = sym + ' ' + symbols[i + 1]; pairs.set(k, (pairs.get(k) || 0) + n); }));
+      return pairs;
+    };
+    const merge = (symbols, [a, b]) => { const out = []; for (let i = 0; i < symbols.length; i++) { if (symbols[i] === a && symbols[i + 1] === b) { out.push(a + b); i++; } else out.push(symbols[i]); } return out; };
+    const symbolsOf = words => words.reduce((acc, [symbols, n]) => acc + symbols.length * n, 0);
+    let words = corpus.map(([w, n]) => [w.split(''), n]);
+    const vocab = [...new Set(words.flatMap(([s]) => s))];
+    const snap = () => words.map(([s, n]) => [[...s], n]);
+    const states = [{words: snap(), pairs: count(words), symbols: symbolsOf(words), vocab: [...vocab]}];
+    const rules = [];
+    for (let round = 0; round < 2; round++) {
+      const pairs = count(words);
+      const best = [...pairs.entries()].sort((x, y) => y[1] - x[1])[0][0].split(' ');
+      rules.push(best);
+      words = words.map(([s, n]) => [merge(s, best), n]);
+      vocab.push(best.join(''));
+      states.push({words: snap(), pairs: count(words), symbols: symbolsOf(words), vocab: [...vocab], rule: best});
+    }
+    let encoded = 'rair'.split('');
+    const encoding = [[...encoded]];
+    rules.forEach(rule => { encoded = merge(encoded, rule); encoding.push([...encoded]); });
+    const pairList = map => [...map.entries()].map(([k, n]) => [k, n]);
+    const base = {rules, encoding};
+    return frames([
+      {...base, ...states[0], table: pairList(states[0].pairs), stage: 0, zh: '按出现次数计：rain 3 次、rail 2 次，先切成单个字母，一共 20 个符号。不跨字符串合并。',
+        en: 'Count by occurrences: rain 3 times and rail twice, each split into letters, 20 symbols in all. No merges across strings.'},
+      {...base, ...states[0], table: pairList(states[0].pairs), stage: 1, pick: 'r a', zh: '数相邻对，要乘上出现次数：(r, a) 5、(a, i) 5、(i, n) 3、(i, l) 2。并列时按约定先选 (r, a)。',
+        en: 'Count adjacent pairs, weighted by occurrences: (r, a) 5, (a, i) 5, (i, n) 3, (i, l) 2. On a tie, the stated rule picks (r, a).'},
+      {...base, ...states[1], table: pairList(states[0].pairs), stage: 2, zh: '第 1 轮：r + a → ra。语料剩 15 个符号；词表加入 ra，r 和 a 仍保留。',
+        en: 'Round 1: r + a → ra. The corpus drops to 15 symbols; ra joins the vocabulary, and r and a stay.'},
+      {...base, ...states[1], table: [['a i', 0], ...pairList(states[1].pairs)], stage: 3, gone: 'a i', pick: 'ra i', zh: '重新统计：(a, i) 从 5 变成 0，因为 a 已经并进 ra 里；新的对 (ra, i) 有 5 次。沿用旧表，就会去合并一个已经不存在的对。',
+        en: 'Recount: (a, i) falls from 5 to 0, because a now sits inside ra; the new pair (ra, i) has 5. Reusing the old table would merge a pair that no longer exists.'},
+      {...base, ...states[2], table: [['a i', 0], ...pairList(states[1].pairs)], stage: 4, pick: 'ra i', zh: '第 2 轮：ra + i → rai。rain 变成 rai n，rail 变成 rai l，语料剩 10 个符号。',
+        en: 'Round 2: ra + i → rai. rain becomes rai n and rail becomes rai l; 10 symbols remain.'},
+      {...base, ...states[2], table: [['a i', 0], ...pairList(states[1].pairs)], stage: 5, done: true, zh: '编码新字符串 rair：按学到的顺序先 r + a，再 ra + i，得到 rai r。词表里不需要有完整的 rair。',
+        en: 'Encode the new string rair: apply r + a, then ra + i, in the learned order, giving rai r. The vocabulary never needs all of rair.'}
+    ]);
+  };
+
+  /* 00-foundations/core/ffn-and-gates: SwiGLU with g = [0, 1], u = [3, 2], W_d = [1, −1]. */
+  F.swiglu = function () {
+    const g = [0, 1], u = [3, 2], Wd = [1, -1];
+    const silu = z => z / (1 + Math.exp(-z));
+    const sig = z => 1 / (1 + Math.exp(-z));
+    const dsilu = z => sig(z) * (1 + z * (1 - sig(z)));
+    const r = x => Math.round(x * 1e4) / 1e4;
+    const act = g.map(silu), h = act.map((a, i) => a * u[i]), y = h.reduce((a, x, i) => a + x * Wd[i], 0);
+    const delta = Wd[0];
+    const base = {g, u, Wd, act: act.map(r), h: h.map(r), y: r(y), delta, gradU: r(delta * act[0]), gradG: r(delta * u[0] * dsilu(g[0]))};
+    return frames([
+      {...base, stage: 0, zh: '只看两个中间维度。投影之后，gate 分支 g = [0, 1]，内容分支 u = [3, 2]。',
+        en: 'Two hidden dimensions only. After projection, the gate branch is g = [0, 1] and the content branch is u = [3, 2].'},
+      {...base, stage: 1, zh: `gate 分支过 SiLU(z) = z·σ(z)：SiLU(0) = 0，SiLU(1) ≈ ${fixed(base.act[1], 4)}。`,
+        en: `The gate branch goes through SiLU(z) = z·σ(z): SiLU(0) = 0 and SiLU(1) ≈ ${fixed(base.act[1], 4)}.`},
+      {...base, stage: 2, zh: `逐元素相乘：h = [0 × 3, ${fixed(base.act[1], 4)} × 2] = [0, ${fixed(base.h[1], 4)}]。第一维被乘成了 0。`,
+        en: `Multiply elementwise: h = [0 × 3, ${fixed(base.act[1], 4)} × 2] = [0, ${fixed(base.h[1], 4)}]. The first dimension becomes 0.`},
+      {...base, stage: 3, zh: `W_d = [1, −1] 把两维压回一个数：y = 0 − ${fixed(base.h[1], 4)} ≈ −${fixed(base.h[1], 4)}。`,
+        en: `W_d = [1, −1] maps both back to one number: y = 0 − ${fixed(base.h[1], 4)} ≈ −${fixed(base.h[1], 4)}.`},
+      {...base, stage: 4, zh: '反向传到第一维。若损失就是 y，传到 h 的梯度 δ = W_d，第一维的 δ = 1。内容分支的梯度 = δ × SiLU(0) = 0。',
+        en: 'Backpropagate into dimension 1. If the loss is y itself, the gradient reaching h is δ = W_d, so δ = 1 in dimension 1. The content gradient is δ × SiLU(0) = 0.'},
+      {...base, stage: 5, done: true, zh: `gate 的梯度 = δ × u × SiLU′(0) = 1 × 3 × 0.5 = ${base.gradG}。前向输出是 0，gate 仍在学，下一步就可能打开。门不是永久的开关。`,
+        en: `The gate gradient is δ × u × SiLU′(0) = 1 × 3 × 0.5 = ${base.gradG}. The forward output was 0, yet the gate still learns and may open on the next step. It is not a permanent switch.`}
+    ]);
+  };
+
+  /* 00-foundations/deep-dives/attention-residuals: a depth softmax split into two batches, merged with the stored sums. */
+  F.depthMerge = function () {
+    const batches = [[0], [4, 4, 4]], scores = [[0], [0, 0, 0]];
+    const local = batches.map((values, b) => {
+      const m = Math.max(...scores[b]), w = scores[b].map(s => Math.exp(s - m)), l = w.reduce((a, x) => a + x, 0);
+      return {m, l, out: values.reduce((a, v, i) => a + w[i] * v, 0) / l};
+    });
+    const naive = (local[0].out + local[1].out) / 2;
+    const merged = (local[0].l * local[0].out + local[1].l * local[1].out) / (local[0].l + local[1].l);
+    const all = batches.flat(), full = all.reduce((a, v) => a + v, 0) / all.length;
+    const base = {batches, local, naive, merged, full};
+    return frames([
+      {...base, stage: 0, zh: '同一个 token 有 4 个深度来源，score 全是 0，value 是 0、4、4、4。为了省中间存储，分两批算：第一批 {0}，第二批 {4, 4, 4}。',
+        en: 'One token has four depth sources, all with score 0 and values 0, 4, 4, 4. To save intermediate storage, split them into two batches: {0} and {4, 4, 4}.'},
+      {...base, stage: 1, zh: '第一批单独做 softmax：只有一个来源，权重 1，输出 0。记下最大值 0、指数和 1。',
+        en: 'Softmax over batch 1 alone: one source with weight 1, output 0. Record the max 0 and the exponential sum 1.'},
+      {...base, stage: 2, zh: '第二批：三个来源各占 1/3，输出 4。记下最大值 0、指数和 3。',
+        en: 'Batch 2: three sources at 1/3 each, output 4. Record the max 0 and the exponential sum 3.'},
+      {...base, stage: 3, zh: `直接平均两批的输出：(0 + 4)/2 = ${naive}。两批的分母不同，这样算把只有 1 份权重的第一批，当成和第二批一样重。`,
+        en: `Averaging the two outputs gives (0 + 4)/2 = ${naive}. The batches had different denominators, so this treats batch 1, with one unit of weight, as heavy as batch 2.`},
+      {...base, stage: 4, zh: `按保存的指数和加权：(1 × 0 + 3 × 4)/(1 + 3) = ${merged}。`,
+        en: `Weight by the stored exponential sums: (1 × 0 + 3 × 4)/(1 + 3) = ${merged}.`},
+      {...base, stage: 5, done: true, zh: `核对：4 个来源一起做 softmax，每个权重 1/4，(0 + 4 + 4 + 4)/4 = ${full}。分批时带上最大值和指数和，结果就和全量一致。`,
+        en: `Check: one softmax over all four sources gives each weight 1/4, and (0 + 4 + 4 + 4)/4 = ${full}. Carry the max and the exponential sum, and batching matches the full result.`}
+    ]);
+  };
+
+  /* 00-foundations/moe/fine-grained-and-shared: one parameter budget, cut finer, then with a shared expert. */
+  F.expertBudget = function () {
+    const d = 128, budget = (f, routed, active, shared = 0) => {
+      const per = 3 * d * f;
+      return {f, per, routed, active, shared, total: per * (routed + shared), lit: per * (active + shared)};
+    };
+    const coarse = budget(256, 8, 2), fine = budget(64, 32, 8), sharedSwap = budget(64, 31, 7, 1), extra = budget(64, 32, 8, 1);
+    const n = x => x.toLocaleString('en-US');
+    const base = {d, coarse, fine, sharedSwap, extra, increase: extra.lit / fine.lit - 1};
+    return frames([
+      {...base, cfg: coarse, stage: 0, zh: `d = 128、f = 256 的 SwiGLU expert，每个有 3 × 128 × 256 = ${n(coarse.per)} 个权重。8 个一共 ${n(coarse.total)}；每个 token 激活 2 个，${n(coarse.lit)}。`,
+        en: `A SwiGLU expert with d = 128 and f = 256 holds 3 × 128 × 256 = ${n(coarse.per)} weights. Eight make ${n(coarse.total)}; each token activates two, or ${n(coarse.lit)}.`},
+      {...base, cfg: {...fine, active: 0, lit: 0}, stage: 1, zh: `把每个 expert 的 f 缩到 64：每个 ${n(fine.per)} 个权重，一共 32 个。总参数仍是 ${n(fine.total)}。`,
+        en: `Shrink each expert’s f to 64: ${n(fine.per)} weights apiece, 32 experts. The total stays ${n(fine.total)}.`},
+      {...base, cfg: fine, stage: 2, zh: `每个 token 改为激活 8 个小 expert：8 × ${n(fine.per)} = ${n(fine.lit)}，和 2 个大 expert 一样。`,
+        en: `Each token now activates eight small experts: 8 × ${n(fine.per)} = ${n(fine.lit)}, the same as two large ones.`},
+      {...base, cfg: sharedSwap, stage: 3, zh: `把其中 1 个改成 shared，所有 token 都经过它；routed 只再选 7 个。总数 31 + 1、激活 7 + 1，账不变。`,
+        en: 'Make one of them shared, so every token passes through it, and route only seven more. 31 + 1 in total, 7 + 1 active: the budget is unchanged.'},
+      {...base, cfg: extra, stage: 4, done: true, zh: `如果保留 8 个 routed、再额外加 1 个 shared：激活 9 × ${n(fine.per)} = ${n(extra.lit)}，多了 ${Math.round(base.increase * 1000) / 10}%。共享专家也要算钱；这样比，收益里混进了多出来的计算。`,
+        en: `Keep eight routed and add a shared one on top: 9 × ${n(fine.per)} = ${n(extra.lit)} active, ${Math.round(base.increase * 1000) / 10}% more. Shared experts cost compute too, and the comparison now mixes design with extra compute.`}
+    ]);
+  };
+
   if (typeof module !== 'undefined' && module.exports) module.exports = {F, frames};
   if (typeof document === 'undefined' || !scope.AlgoLab) return;
 
@@ -1234,6 +1637,402 @@
         line.setAttribute('x2', hit.p[0]); line.setAttribute('y2', hit.p[1]);
         line.setAttribute('class', 'algo-edge ' + (line === found[1] ? 'is-keep' : 'is-change') + (on ? '' : ' is-hidden') + (faded ? ' is-out' : ''));
       });
+    };
+  }});
+
+  FIGURES['step-best-of-n'] = name => stepper(name, F.bestOfN(), {height: 250, readouts: f => [['P(A)', f.stage >= 2 ? '0.5² = 0.25' : '—'], ['P(C)', f.stage >= 3 ? '1 − 0.8² = 0.36' : '—', f.stage >= 3 ? 'key' : ''], ['P(B)', f.stage >= 4 ? '0.15 + 0.15 + 0.09 = 0.39' : '—'], [t('C 被选中', 'C picked'), f.done ? '0.2 → 0.36' : '—', f.done ? 'bad' : '']], setup(svg) {
+    const base = F.bestOfN()[0], size = 230, x0 = 54, y0 = 40;
+    const tone = {A: 'is-look', B: 'is-keep', C: 'is-bad'};
+    const offsets = base.p.reduce((acc, p) => [...acc, acc[acc.length - 1] + p], [0]);
+    const grid = s('g');
+    svg.append(grid);
+    V.text(grid, x0 + size / 2, y0 - 22, t('第一份', 'first draw'), 'algo-head', 'middle');
+    V.text(grid, x0 - 30, y0 + size / 2, t('第二份', 'second'), 'algo-head', 'middle');
+    base.names.forEach((n, i) => {
+      V.text(grid, x0 + (offsets[i] + base.p[i] / 2) * size, y0 - 6, n, 'algo-idx', 'middle');
+      V.text(grid, x0 - 10, y0 + (offsets[i] + base.p[i] / 2) * size + 4, n, 'algo-idx', 'end');
+    });
+    const cells = base.cells.map(c => ({...c, ...cell(grid, x0 + offsets[c.col] * size + 1, y0 + offsets[c.row] * size + 1, base.p[c.col] * size - 2, base.p[c.row] * size - 2, '', 'algo-small')}));
+    const noC = s('rect', {x: x0, y: y0, width: 0.8 * size, height: 0.8 * size, rx: 4, class: 'algo-edge algo-dash', fill: 'none'});
+    svg.append(noC);
+    const bx = 330, bw = 290;
+    const bars = [[t('只生成 1 份', 'one draw'), 70], ['best-of-2', 160]].map(([label, y]) => {
+      const head = V.text(svg, bx, y - 10, label, 'algo-head');
+      const segs = base.names.map(() => cell(svg, 0, y, 10, 34, '', 'algo-note'));
+      return {head, segs, y};
+    });
+    const place = (bar, values, on) => {
+      let x = bx;
+      bar.segs.forEach((seg, i) => {
+        const w = values[i] * bw;
+        seg.rect.setAttribute('x', x); seg.rect.setAttribute('width', Math.max(0, w - 3));
+        seg.label.setAttribute('x', x + w / 2);
+        seg.set(on ? `${base.names[i]} ${values[i]}` : '', on ? tone[base.names[i]] : 'is-hidden');
+        x += w;
+      });
+      bar.head.classList.toggle('is-hidden', !on);
+    };
+    return frame => {
+      show(grid, frame.stage >= 1);
+      const colored = {A: frame.stage >= 2, C: frame.stage >= 3, B: frame.stage >= 4};
+      cells.forEach(c => c.set(frame.stage >= 1 ? String(c.area) : '', frame.stage < 1 ? 'is-hidden' : colored[c.winner] ? tone[c.winner] + (frame.focus === c.winner ? ' is-now' : '') : ''));
+      show(noC, frame.stage === 3);
+      place(bars[0], base.p, true);
+      place(bars[1], base.names.map(n => frame.picked[n]), Boolean(frame.done));
+    };
+  }});
+
+  FIGURES['step-bt-scale'] = name => stepper(name, F.btScale(), {height: 236, readouts: f => [['r_A / r_B', `${f.a} / ${f.b}`], [t('分差', 'gap'), String(f.gap), f.stage === 2 ? 'key' : ''], ['P(A ≻ B)', String(f.prob), f.done ? 'key' : '']], setup(svg) {
+    const lx = 30, lw = 270, ly = 120, at = v => lx + v / 13 * lw;
+    svg.append(s('line', {x1: lx, y1: ly, x2: lx + lw, y2: ly, class: 'algo-edge'}));
+    [0, 5, 10].forEach(v => V.text(svg, at(v), ly + 20, String(v), 'algo-idx', 'middle'));
+    V.text(svg, lx, 40, t('奖励分数', 'reward scores'), 'algo-head');
+    const dot = label => { const c = s('circle', {r: 9, cy: ly, class: 'algo-cell is-look'}); const tx = V.text(svg, 0, ly - 16, label, 'algo-strong', 'middle'); svg.append(c); return {c, tx}; };
+    const A = dot('A'), B = dot('B');
+    const bracket = s('line', {y1: ly + 34, y2: ly + 34, class: 'algo-edge is-keep'});
+    svg.append(bracket);
+    const gapText = V.text(svg, 0, ly + 52, '', 'algo-note', 'middle');
+    const cx = 350, cw = 260, cy = 40, ch = 150, gx = g => cx + (g + 3) / 6 * cw, py = p => cy + ch - p * ch;
+    V.text(svg, cx, 30, t('σ(分差) = A 胜出的概率', 'σ(gap) = P(A preferred)'), 'algo-head');
+    svg.append(s('line', {x1: cx, y1: cy + ch, x2: cx + cw, y2: cy + ch, class: 'algo-edge'}));
+    [-2, 0, 1, 2].forEach(g => V.text(svg, gx(g), cy + ch + 18, String(g), 'algo-idx', 'middle'));
+    const pts = Array.from({length: 61}, (_, i) => -3 + i * 0.1).map(g => `${gx(g).toFixed(1)},${py(1 / (1 + Math.exp(-g))).toFixed(1)}`);
+    svg.append(s('polyline', {points: pts.join(' '), class: 'algo-edge', fill: 'none'}));
+    const ghost = s('circle', {r: 6, class: 'algo-ghost'});
+    const point = s('circle', {r: 7, class: 'algo-cell is-bad'});
+    svg.append(ghost, point);
+    const pText = V.text(svg, 0, 0, '', 'algo-strong');
+    return frame => {
+      [[A, frame.a], [B, frame.b]].forEach(([d, v]) => { d.c.setAttribute('cx', at(v)); d.tx.setAttribute('x', at(v)); });
+      bracket.setAttribute('x1', at(frame.b)); bracket.setAttribute('x2', at(frame.a));
+      gapText.setAttribute('x', (at(frame.a) + at(frame.b)) / 2); gapText.textContent = t(`分差 ${frame.gap}`, `gap ${frame.gap}`);
+      point.setAttribute('cx', gx(frame.gap)); point.setAttribute('cy', py(frame.prob));
+      pText.setAttribute('x', gx(frame.gap) - 70); pText.setAttribute('y', py(frame.prob) - 10); pText.textContent = `σ(${frame.gap}) ≈ ${frame.prob}`;
+      ghost.setAttribute('cx', gx(1)); ghost.setAttribute('cy', py(0.731)); show(ghost, Boolean(frame.ghost));
+    };
+  }});
+
+  FIGURES['step-token-mean'] = name => stepper(name, F.tokenMean(), {height: 236, readouts: f => [[t('按回答平均', 'response mean'), f.stage >= 1 ? `(1 + 3)/2 = ${f.responseMean}` : '—'], [t('按 token 平均', 'token mean'), f.stage >= 2 ? `20/8 = ${f.tokenMean}` : '—', f.stage >= 2 ? 'key' : ''], [t('两卡均值再平均', 'mean of rank means'), f.stage >= 3 ? `(1 + 3)/2 = ${f.responseMean}` : '—', f.stage >= 3 ? 'bad' : ''], [t('局部和 × W/N', 'local sum × W/N'), f.done ? `(${f.scaled[0]} + ${f.scaled[1]})/2 = ${f.ddp}` : '—', f.done ? 'good' : '']], setup(svg) {
+    const base = F.tokenMean()[0], size = 44, gap = 6, x0 = 110, ys = [40, 130];
+    const labels = [t('短回答', 'short'), t('长回答', 'long')];
+    const rows = base.rows.map((row, r) => {
+      const name = V.text(svg, 20, ys[r] + 28, labels[r], 'algo-head');
+      const cells = row.values.map((v, i) => cell(svg, x0 + i * (size + gap), ys[r], size, size, String(v), 'algo-val'));
+      const weights = row.values.map((_, i) => V.text(svg, x0 + i * (size + gap) + size / 2, ys[r] + size + 16, '', 'algo-idx', 'middle'));
+      const box = s('rect', {x: x0 - 8, y: ys[r] - 8, width: row.values.length * (size + gap) + 10, height: size + 30, rx: 8, class: 'algo-edge algo-dash', fill: 'none'});
+      svg.append(box);
+      const rank = V.text(svg, x0 - 8, ys[r] - 14, `rank ${r}`, 'algo-idx');
+      const side = V.text(svg, x0 + 6 * (size + gap) + 12, ys[r] + 28, '', 'algo-strong');
+      return {name, cells, weights, box, rank, side, row};
+    });
+    return frame => {
+      rows.forEach((r, ri) => {
+        r.cells.forEach((c, i) => c.set(String(r.row.values[i]), r.row.valid[i] ? (frame.stage >= 1 ? 'is-look' : '') : 'is-cross is-out'));
+        r.weights.forEach((w, i) => { w.textContent = !r.row.valid[i] ? '' : frame.stage === 1 ? (ri === 0 ? '1/4' : '1/12') : frame.stage === 2 ? '1/8' : ''; });
+        show(r.box, frame.stage >= 3); show(r.rank, frame.stage >= 3);
+        r.side.textContent = frame.stage === 1 || frame.stage === 3 ? t(`均值 ${frame.means[ri]}`, `mean ${frame.means[ri]}`)
+          : frame.stage >= 4 ? `${frame.sums[ri]} × ${frame.W}/${frame.N} = ${frame.scaled[ri]}` : '';
+      });
+    };
+  }});
+
+  FIGURES['step-kl-penalty'] = name => stepper(name, F.klPenalty(), {height: 250, readouts: f => [[t('B 的 log-ratio', 'B’s log-ratio'), f.stage >= 1 ? '−0.9163' : '—', f.stage >= 1 ? 'bad' : ''], [t('B 惩罚后回报', 'B’s shaped return'), f.stage >= 2 ? '1.1833' : '—'], ['KL', f.stage >= 3 ? '≈ 0.1927' : '—', f.stage >= 3 ? 'key' : ''], [t('总目标', 'objective'), f.done ? '≈ 0.9615 < 1' : '—', f.done ? 'good' : '']], setup(svg) {
+    const base = F.klPenalty()[0], x0 = 230, w = 120, h = 32, gap = 10;
+    const rowNames = ['π_ref', 'π_θ', 'log(π_θ/π_ref)', t('惩罚后回报', 'shaped return'), t('× π_θ（求 KL）', '× π_θ (for KL)')];
+    ['A', 'B'].forEach((n, j) => V.text(svg, x0 + j * (w + gap) + w / 2, 26, n, 'algo-head', 'middle'));
+    const rows = rowNames.map((label, i) => {
+      const y = 38 + i * (h + 8);
+      const head = V.text(svg, x0 - 12, y + 21, label, 'algo-head', 'end');
+      return {head, cells: [0, 1].map(j => cell(svg, x0 + j * (w + gap), y, w, h, '', 'algo-note'))};
+    });
+    const sum = V.text(svg, x0 + 2 * (w + gap) + 8, 38 + 4 * (h + 8) + 21, '', 'algo-strong');
+    const sign = x => (x < 0 ? '−' : '') + Math.abs(x).toFixed(4);
+    return frame => {
+      const values = [base.ref.map(String), base.actor.map(String), base.logRatio.map(x => (x > 0 ? '+' : '') + sign(x)), base.shaped.map(x => x.toFixed(4)), base.weighted.map(sign)];
+      const visible = [true, true, frame.stage >= 1, frame.stage >= 2, frame.stage >= 3];
+      rows.forEach((row, i) => {
+        row.head.classList.toggle('is-dim', !visible[i]);
+        row.cells.forEach((c, j) => {
+          const state = !visible[i] ? 'is-hidden' : i === 2 && j === 1 ? 'is-bad' : i === 3 ? (j === 0 ? 'is-change' : 'is-keep') : i === 4 ? 'is-look' : '';
+          c.set(visible[i] ? values[i][j] : '', state);
+        });
+      });
+      sum.textContent = frame.stage >= 3 ? `= ${base.kl.toFixed(4)}` : '';
+    };
+  }});
+
+  FIGURES['step-behavior-ratio'] = name => stepper(name, F.behaviorRatio(), {height: 250, readouts: f => [[t('实际采样分布 b', 'behavior b'), f.stage >= 2 ? '[2/3, 1/3]' : '—'], [t('对的比率', 'right ratio'), f.stage >= 3 ? `0.25 / (1/3) = ${f.right}` : '—', f.stage >= 3 ? 'good' : ''], [t('错用原始概率', 'raw denominator'), f.done ? `0.25 / 0.2 = ${f.wrong}` : '—', f.done ? 'bad' : '']], setup(svg) {
+    const base = F.behaviorRatio()[0], floor = 210, unit = 170, bw = 80, groups = [70, 310];
+    svg.append(s('line', {x1: 40, y1: floor, x2: 600, y2: floor, class: 'algo-edge'}));
+    const bars = groups.map((gx, i) => {
+      V.text(svg, gx + bw, floor + 20, t(`动作 ${i + 1}`, `action ${i + 1}`), 'algo-head', 'middle');
+      const raw = s('rect', {x: gx, width: bw, rx: 3, class: 'algo-cell is-look'});
+      const beh = s('rect', {x: gx + bw + 8, width: bw, rx: 3, class: 'algo-cell is-keep'});
+      svg.append(raw, beh);
+      const rawText = V.text(svg, gx + bw / 2, 0, '', 'algo-note', 'middle');
+      const behText = V.text(svg, gx + bw * 1.5 + 8, 0, '', 'algo-note', 'middle');
+      const tag1 = V.text(svg, gx + bw / 2, floor - 6, 'p', 'algo-idx', 'middle');
+      const tag2 = V.text(svg, gx + bw * 1.5 + 8, floor - 6, 'b', 'algo-idx', 'middle');
+      return {raw, beh, rawText, behText, tag2};
+    });
+    const marker = s('line', {x1: groups[1] - 14, x2: groups[1] + 2 * bw + 22, class: 'algo-edge is-bad'});
+    svg.append(marker);
+    const markerText = V.text(svg, groups[1] + 2 * bw + 28, 0, t('新模型 0.25', 'new model 0.25'), 'algo-strong');
+    const note = V.text(svg, 40, 30, '', 'algo-note');
+    return frame => {
+      bars.forEach((b, i) => {
+        const p = base.raw[i], q = base.behavior[i];
+        b.raw.setAttribute('y', floor - p * unit); b.raw.setAttribute('height', p * unit);
+        b.rawText.setAttribute('y', floor - p * unit + 18); b.rawText.textContent = frame.stage === 1 ? `√${p}≈${base.powered[i]}` : String(p);
+        b.beh.setAttribute('y', floor - q * unit); b.beh.setAttribute('height', frame.stage >= 2 ? q * unit : 0);
+        b.behText.setAttribute('y', floor - q * unit + 18); b.behText.textContent = frame.stage >= 2 ? (i ? '1/3' : '2/3') : '';
+        show(b.tag2, frame.stage >= 2);
+      });
+      const y = floor - base.fresh * unit;
+      marker.setAttribute('y1', y); marker.setAttribute('y2', y); show(marker, frame.stage >= 3);
+      markerText.setAttribute('y', y + 4); show(markerText, frame.stage >= 3);
+      note.textContent = frame.stage === 1 ? t(`合计 ${base.total}，各项再除以它`, `total ${base.total}; divide each by it`) : '';
+    };
+  }});
+
+  FIGURES['step-chunked-prefill'] = name => stepper(name, {modes: [6, 12].map(budget => ({id: 'b' + budget, zh: `预算 ${budget}`, en: `budget ${budget}`, frames: F.chunkedPrefill(budget)}))},
+    {height: 236, readouts: f => { const r = f.rounds[f.shown - 1]; return [[t('本轮 decode', 'decode this round'), r ? String(r.decode) : '—'], [t('本轮 prefill', 'prefill this round'), r ? String(r.take) : '—'], [t('prompt 还剩', 'prompt left'), r ? String(r.left) : String(f.prompt)], [t('几轮后能出首 token', 'rounds to first token'), f.done ? String(f.rounds.length) : '—', f.done ? 'key' : '']]; }, setup(svg) {
+    const size = 34, gap = 4, x0 = 110;
+    V.text(svg, 20, 34, 'prompt', 'algo-head');
+    const strip = Array.from({length: 10}, (_, i) => cell(svg, x0 + i * (size + gap), 14, size, size, String(i + 1), 'algo-small'));
+    const layer = s('g');
+    svg.append(layer);
+    let drawn = null, rows = [];
+    return frame => {
+      if (drawn !== frame.budget) {
+        layer.textContent = '';
+        rows = frame.rounds.map((_, r) => ({
+          head: V.text(layer, 20, 92 + r * (size + 14) + 22, t(`第 ${r + 1} 轮`, `round ${r + 1}`), 'algo-head'),
+          cells: Array.from({length: frame.budget}, (_, i) => cell(layer, x0 + i * (size + gap), 92 + r * (size + 14), size, size, '', 'algo-small'))}));
+        drawn = frame.budget;
+      }
+      let done = 0;
+      rows.forEach((row, r) => {
+        const on = r < frame.shown, round = frame.rounds[r];
+        row.head.classList.toggle('is-dim', !on);
+        row.cells.forEach((c, i) => {
+          if (!on) return c.set('', 'algo-ghost');
+          if (i < round.decode) return c.set('D' + (i + 1), 'is-look');
+          if (i < round.decode + round.take) return c.set(String(done + i - round.decode + 1), 'is-keep');
+          c.set('', 'is-out');
+        });
+        if (on) done += round.take;
+      });
+      strip.forEach((c, i) => c.set(String(i + 1), i < done ? 'is-keep' : ''));
+    };
+  }});
+
+  FIGURES['step-continuous-batching'] = name => stepper(name, {modes: [false, true].map(refill => ({id: refill ? 'refill' : 'static', zh: refill ? '每轮补位' : '等整批结束', en: refill ? 'refill each round' : 'wait for the batch', frames: F.continuousBatching(refill)}))},
+    {height: 200, readouts: f => [[t('总轮数', 'rounds'), f.done ? String(f.total) : '—', f.done ? 'key' : ''], [t('空着的位置', 'empty slot-rounds'), f.done ? String(f.empty) : '—', f.done && f.empty ? 'bad' : ''], [t('C 从第几轮开始', 'C starts in round'), f.shown >= f.start ? String(f.start) : '—']], setup(svg) {
+    const size = 50, gap = 6, x0 = 110, tone = {A: 'is-look', B: 'is-keep', C: 'is-change'};
+    Array.from({length: 8}, (_, r) => V.text(svg, x0 + r * (size + gap) + size / 2, 26, String(r + 1), 'algo-idx', 'middle'));
+    V.text(svg, 20, 26, t('轮次', 'round'), 'algo-head');
+    const slots = [0, 1].map(k => {
+      V.text(svg, 20, 40 + k * (size + gap) + 31, t(`位置 ${k + 1}`, `slot ${k + 1}`), 'algo-head');
+      return Array.from({length: 8}, (_, r) => cell(svg, x0 + r * (size + gap), 40 + k * (size + gap), size, size, '', 'algo-val'));
+    });
+    return frame => {
+      slots.forEach((row, k) => row.forEach((c, r) => {
+        const round = frame.schedule[r];
+        if (!round) return c.set('', 'is-hidden');
+        if (r >= frame.shown) return c.set('', 'algo-ghost');
+        const who = round[k];
+        c.set(who || '', who ? tone[who] : 'is-cross is-out');
+      }));
+    };
+  }});
+
+  FIGURES['step-l1-l2'] = name => stepper(name, F.l1L2(), {height: 250, readouts: f => [[t('不加惩罚', 'no penalty'), 'w* = 0.4'], [t('平方 L2', 'squared L2'), f.stage >= 1 ? `w ≈ ${f.l2}` : '—'], [t('0 右侧斜率', 'slope right of 0'), f.stage >= 2 ? '+0.1' : '—'], ['L1', f.stage >= 3 ? 'w = 0' : '—', f.stage >= 3 ? 'key' : '']], setup(svg) {
+    const base = F.l1L2()[0], x0 = 70, w = 500, y0 = 30, h = 170;
+    const X = v => x0 + (v + 0.2) / 0.8 * w, Y = v => y0 + h - v / 0.3 * h;
+    svg.append(s('line', {x1: x0, y1: y0 + h, x2: x0 + w, y2: y0 + h, class: 'algo-edge'}));
+    svg.append(s('line', {x1: X(0), y1: y0, x2: X(0), y2: y0 + h, class: 'algo-edge algo-dash'}));
+    [-0.2, 0, 0.2, 0.4, 0.6].forEach(v => V.text(svg, X(v), y0 + h + 18, String(v), 'algo-idx', 'middle'));
+    V.text(svg, x0 + w, y0 + h + 34, 'w', 'algo-head', 'end');
+    const path = fn => s('polyline', {points: Array.from({length: 81}, (_, i) => -0.2 + i * 0.01).map(v => `${X(v).toFixed(1)},${Y(fn(v)).toFixed(1)}`).join(' '), fill: 'none'});
+    const curves = {data: path(base.curves.data), l2: path(base.curves.l2), l1: path(base.curves.l1)};
+    Object.values(curves).forEach(c => svg.append(c));
+    const mins = {data: [base.a, base.curves.data(base.a)], l2: [base.l2, base.curves.l2(base.l2)], l1: [0, base.curves.l1(0)]};
+    const dots = Object.fromEntries(Object.entries(mins).map(([k, [mx, my]]) => { const c = s('circle', {r: 6, cx: X(mx), cy: Y(my), class: 'algo-cell ' + (k === 'l1' ? 'is-bad' : k === 'l2' ? 'is-keep' : 'is-look')}); svg.append(c); return [k, c]; }));
+    const labels = {data: V.text(svg, X(0.45), Y(0.05), t('数据损失', 'data loss'), 'algo-note'), l2: V.text(svg, X(0.45), Y(0.115), '+ L2', 'algo-strong'), l1: V.text(svg, X(0.45), Y(0.27), '+ L1', 'algo-strong')};
+    const slopes = [[0.06, base.right, '+0.1'], [-0.06, base.left, '−0.9']].map(([dx, k, label]) => {
+      const y = base.curves.l1(0), line = s('line', {x1: X(0), y1: Y(y), x2: X(dx * 2), y2: Y(y + k * dx * 2), class: 'algo-edge is-keep'});
+      svg.append(line);
+      return {line, text: V.text(svg, X(dx * 2.6), Y(y + k * dx * 2.4) + 4, label, 'algo-strong', 'middle')};
+    });
+    return frame => {
+      const on = {data: true, l2: frame.stage === 1 || frame.curve === 'both', l1: frame.stage >= 2};
+      Object.entries(curves).forEach(([k, c]) => c.setAttribute('class', 'algo-edge' + (on[k] ? (k === 'data' && frame.stage >= 1 ? ' algo-dash' : '') : ' is-hidden')));
+      Object.entries(dots).forEach(([k, d]) => show(d, on[k] && (k !== 'l1' || frame.stage >= 3)));
+      Object.entries(labels).forEach(([k, l]) => show(l, on[k]));
+      slopes.forEach(sl => { show(sl.line, frame.stage === 2 || frame.stage === 3); show(sl.text, frame.stage === 2 || frame.stage === 3); });
+    };
+  }});
+
+  FIGURES['step-bce-vs-mse'] = name => stepper(name, F.bceVsMse(), {height: 236, readouts: f => [['p', f.text.p], ['dp/dz', f.stage >= 1 ? f.text.slope : '—'], [t('MSE 对 z 的梯度', 'MSE ∂L/∂z'), f.stage >= 2 ? f.text.mse : '—', f.stage >= 2 ? 'bad' : ''], [t('BCE 对 z 的梯度', 'BCE ∂L/∂z'), f.stage >= 3 ? f.text.bce : '—', f.stage >= 3 ? 'good' : '']], setup(svg) {
+    const T = F.bceVsMse()[0].text, xs = [130, 300, 450], widths = [160, 140, 170], h = 34;
+    const row = (y, name, values) => ({name: V.text(svg, 20, y + 22, name, 'algo-head'), values, cells: values.map((v, i) => cell(svg, xs[i], y, widths[i], h, v, 'algo-note'))});
+    const fwd = row(20, t('前向', 'forward'), ['z = 10, y = 0', `p ≈ ${T.p}`, `dp/dz ≈ ${T.slope}`]);
+    ['dL/dp', '× dp/dz', '= dL/dz'].forEach((label, i) => V.text(svg, xs[i] + widths[i] / 2, 96, label, 'algo-idx', 'middle'));
+    const mse = row(108, 'MSE', [`p ≈ ${T.p}`, T.slope, T.mse]);
+    const bce = row(160, 'BCE', [`1/(1 − p) ≈ ${T.bceOuter}`, T.slope, `p − y ≈ ${T.bce}`]);
+    return frame => {
+      fwd.cells.forEach((c, i) => { const on = i < 2 || frame.stage >= 1; c.set(on ? fwd.values[i] : '', !on ? 'is-hidden' : i === 2 ? 'is-look' : ''); });
+      [[mse, 2, 'is-bad'], [bce, 3, 'is-keep']].forEach(([r, stage, last]) => {
+        const on = frame.stage >= stage;
+        r.name.classList.toggle('is-dim', !on);
+        r.cells.forEach((c, i) => c.set(on ? r.values[i] : '', !on ? 'is-hidden' : i === 2 ? last : i === 1 ? 'is-look' : ''));
+      });
+    };
+  }});
+
+  FIGURES['step-adamw-l2'] = name => stepper(name, F.adamwL2(), {height: 200, readouts: f => [['AdamW θ₁', f.stage >= 1 ? String(f.adamw) : '—', f.stage >= 1 ? 'good' : ''], ['m̂ / √v̂', f.stage >= 3 ? `${f.mHat} / ${f.root}` : '—'], ['Adam + L2 θ₁', f.stage >= 4 ? `≈ ${f.adamL2}` : '—', f.stage >= 4 ? 'key' : '']], setup(svg) {
+    const base = F.adamwL2()[0], w = 82, gap = 6, x0 = 112;
+    const heads = ['g', 'm₁', 'v₁', 'm̂', '√v̂', t('更新', 'update'), 'θ₁'];
+    heads.forEach((hd, i) => V.text(svg, x0 + i * (w + gap) + w / 2, 26, hd, 'algo-idx', 'middle'));
+    const lane = (y, name, values, stageOf) => ({name: V.text(svg, 20, y + 22, name, 'algo-head'), values, stageOf, cells: values.map((_, i) => cell(svg, x0 + i * (w + gap), y, w, 34, '', 'algo-small'))});
+    const adamw = lane(36, 'AdamW', ['0', '0', '0', '0', '0', '× 0.98', String(base.adamw)], [1, 1, 1, 1, 1, 1, 1]);
+    const l2 = lane(90, 'Adam + L2', [String(base.g), String(base.m), String(base.v), String(base.mHat), String(base.root), `−${base.step}`, `≈ ${base.adamL2}`], [2, 2, 2, 3, 3, 4, 4]);
+    return frame => {
+      [adamw, l2].forEach(ln => {
+        ln.name.classList.toggle('is-dim', frame.stage < ln.stageOf[0]);
+        ln.cells.forEach((c, i) => { const on = frame.stage >= ln.stageOf[i]; c.set(on ? ln.values[i] : '', !on ? 'algo-ghost' : i === 6 ? (ln === adamw ? 'is-keep' : 'is-change') : ''); });
+      });
+    };
+  }});
+
+  FIGURES['step-packing-masks'] = name => stepper(name, F.packingMasks(), {height: 300, readouts: f => [[t('C 那一行能看到', 'row C can see'), f.mask === 'causal' ? 'A B EOS C' : f.mask === 'block' ? 'C' : '—'], ['EOS → C', f.stage >= 4 ? t('不计分', 'masked') : t('计分', 'scored'), f.stage >= 3 ? (f.stage >= 4 ? 'good' : 'bad') : ''], [t('计分的目标', 'scored targets'), f.scored ? String(f.scored) : '—', f.done ? 'key' : '']], setup(svg) {
+    const base = F.packingMasks()[0], size = 30, gap = 3, x0 = 120, y0 = 40;
+    base.tokens.forEach((tok, i) => {
+      V.text(svg, x0 + i * (size + gap) + size / 2, y0 - 8, tok, 'algo-idx', 'middle');
+      V.text(svg, x0 - 8, y0 + i * (size + gap) + 20, tok, 'algo-idx', 'end');
+    });
+    V.text(svg, x0 - 50, y0 - 24, t('query ↓  key →', 'query ↓  key →'), 'algo-head');
+    const grid = base.tokens.map((_, q) => base.tokens.map((_, k) => cell(svg, x0 + k * (size + gap), y0 + q * (size + gap), size, size, '', 'algo-small')));
+    const ty = y0 + 6 * (size + gap) + 26;
+    V.text(svg, 20, ty + 22, t('预测目标', 'targets'), 'algo-head');
+    const tw = 70;
+    const targets = base.targets.map((tg, i) => cell(svg, x0 + i * (tw + 6), ty, tw, 34, `${tg.from}→${tg.to}`, 'algo-small'));
+    return frame => {
+      const mask = frame.mask ? frame[frame.mask] : null;
+      grid.forEach((row, q) => row.forEach((c, k) => c.set('', !mask ? 'algo-ghost' : mask[q][k] ? (frame.focus === q ? 'is-now is-look' : 'is-look') : '')));
+      targets.forEach((c, i) => {
+        const tg = base.targets[i], scored = frame.loss[i];
+        c.set(`${tg.from}→${tg.to}${frame.stage >= 4 && !scored ? ' · 0' : ''}`, !scored ? 'is-cross is-out' : frame.focus === i ? 'is-bad' : frame.stage >= 1 ? 'is-keep' : '');
+      });
+    };
+  }});
+
+  FIGURES['step-tp-backward'] = name => stepper(name, F.tpBackward(), {height: 300, readouts: f => [['G', '[1, 1]'], ['D₀ / D₁', f.stage >= 3 ? '[3, 0] / [0, 3]' : '—'], [t('两条路径', 'two paths'), f.stage >= 4 ? '[3, 3] / [6, 0]' : '—'], ['∇X', f.done ? '[9, 3]' : '—', f.done ? 'good' : '']], setup(svg) {
+    const base = F.tpBackward()[0], w = 150, h = 32, xs = [200, 380];
+    const v = a => `[${a.join(', ').replace(/-/g, '−')}]`;
+    xs.forEach((x, r) => V.text(svg, x + w / 2, 24, `rank ${r}`, 'algo-head', 'middle'));
+    const rows = [['pre-activation', base.pre, 0], ['G', [base.G, base.G], 1], ['G Bᵢᵀ', base.back, 2], [t('ReLU 导数', 'ReLU mask'), base.relu, 3], ['Dᵢ', base.D, 3], ['Dᵢ Aᵢᵀ', base.parts, 4]]
+      .map(([label, values, stage], i) => {
+        const y = 34 + i * (h + 8);
+        return {stage, values, head: V.text(svg, xs[0] - 14, y + 21, label, 'algo-head', 'end'), cells: xs.map(x => cell(svg, x, y, w, h, '', 'algo-note'))};
+      });
+    const sy = 34 + 6 * (h + 8) + 6;
+    const sum = cell(svg, xs[0], sy, xs[1] + w - xs[0], h + 4, '', 'algo-strong');
+    const sumHead = V.text(svg, xs[0] - 14, sy + 23, 'AllReduce', 'algo-head', 'end');
+    return frame => {
+      rows.forEach(row => {
+        const on = frame.stage >= row.stage;
+        row.head.classList.toggle('is-dim', !on);
+        row.cells.forEach((c, r) => c.set(on ? v(row.values[r]) : '', !on ? 'algo-ghost' : row.stage === frame.stage ? 'is-look' : ''));
+      });
+      sumHead.classList.toggle('is-dim', !frame.done);
+      sum.set(frame.done ? `${v(base.parts[0])} + ${v(base.parts[1])} = ${v(base.dX)}` : '', frame.done ? 'is-keep' : 'algo-ghost');
+    };
+  }});
+
+  FIGURES['step-bpe-merges'] = name => stepper(name, F.bpeMerges(), {height: 250, readouts: f => [[t('本轮合并', 'merge'), f.stage === 2 ? 'r + a → ra' : f.stage === 4 ? 'ra + i → rai' : '—'], [t('语料符号', 'symbols'), String(f.symbols)], [t('词表', 'vocabulary'), String(f.vocab.length)], ['rair', f.done ? 'rai r' : '—', f.done ? 'key' : '']], setup(svg) {
+    const layer = s('g'), table = s('g');
+    svg.append(layer, table);
+    const chip = (g, x, y, text, cls) => { const w = text.length * 12 + 22; const c = cell(g, x, y, w, 32, text, 'algo-val'); c.set(text, cls); return w; };
+    return frame => {
+      layer.textContent = ''; table.textContent = '';
+      const rows = frame.done ? [...frame.words.map(([sy, n]) => [sy, `×${n}`]), [frame.encoding[2], 'rair']] : frame.words.map(([sy, n]) => [sy, `×${n}`]);
+      rows.forEach(([symbols, tag], r) => {
+        const y = 24 + r * 46;
+        V.text(layer, 20, y + 21, tag, 'algo-head');
+        let x = 70;
+        symbols.forEach(sym => { x += chip(layer, x, y, sym, sym.length > 1 ? 'is-keep' : '') + 6; });
+      });
+      V.text(table, 400, 22, t('相邻对 · 次数', 'pair · count'), 'algo-head');
+      if (frame.stage >= 1) frame.table.forEach(([pair, n], i) => {
+        const y = 32 + i * 38, key = pair.replace(' ', ', ');
+        const c = cell(table, 400, y, 190, 30, `(${key})  ${n}`, 'algo-note');
+        c.set(`(${key})  ${n}`, pair === frame.gone ? 'is-cross is-out' : pair === frame.pick ? 'is-now is-look' : '');
+      });
+    };
+  }});
+
+  FIGURES['step-swiglu'] = name => stepper(name, F.swiglu(), {height: 280, readouts: f => [['h', f.stage >= 2 ? `[0, ${f.h[1]}]` : '—'], ['y', f.stage >= 3 ? `≈ ${f.y}` : '—'], ['∂L/∂u₁', f.stage >= 4 ? '0' : '—', f.stage >= 4 ? 'bad' : ''], ['∂L/∂g₁', f.done ? String(f.gradG) : '—', f.done ? 'key' : '']], setup(svg) {
+    const base = F.swiglu()[0], w = 120, h = 32, xs = [170, 300];
+    xs.forEach((x, i) => V.text(svg, x + w / 2, 24, t(`第 ${i + 1} 维`, `dim ${i + 1}`), 'algo-head', 'middle'));
+    const rows = [['g', base.g.map(String), 0], ['SiLU(g)', base.act.map(x => (x ? fixed(x, 4) : '0')), 1], ['u', base.u.map(String), 0], ['h = SiLU(g) ⊙ u', base.h.map(x => (x ? fixed(x, 4) : '0')), 2]]
+      .map(([label, values, stage], i) => {
+        const y = 34 + i * (h + 8);
+        return {stage, values, head: V.text(svg, xs[0] - 14, y + 21, label, 'algo-head', 'end'), cells: xs.map(x => cell(svg, x, y, w, h, '', 'algo-note'))};
+      });
+    const yy = 34 + 4 * (h + 8) + 6;
+    const out = cell(svg, xs[1] + w + 30, 34 + 3 * (h + 8), 130, h, '', 'algo-note');
+    const outHead = V.text(svg, xs[1] + w + 95, 34 + 3 * (h + 8) - 8, 'y = W_d h', 'algo-idx', 'middle');
+    const gu = cell(svg, xs[0], yy, 200, h, '', 'algo-note'), gg = cell(svg, xs[0], yy + h + 8, 200, h, '', 'algo-note');
+    const guHead = V.text(svg, xs[0] - 14, yy + 21, '∂L/∂u₁', 'algo-head', 'end'), ggHead = V.text(svg, xs[0] - 14, yy + h + 29, '∂L/∂g₁', 'algo-head', 'end');
+    return frame => {
+      rows.forEach(row => { const on = frame.stage >= row.stage; row.head.classList.toggle('is-dim', !on); row.cells.forEach((c, i) => c.set(on ? row.values[i] : '', !on ? 'algo-ghost' : row.stage === 2 && i === 0 ? 'is-out' : row.stage === frame.stage ? 'is-look' : '')); });
+      out.set(frame.stage >= 3 ? `≈ ${fixed(base.y, 4).replace('-', '−')}` : '', frame.stage >= 3 ? 'is-look' : 'algo-ghost'); show(outHead, frame.stage >= 3);
+      gu.set(frame.stage >= 4 ? '1 × SiLU(0) = 0' : '', frame.stage >= 4 ? 'is-bad' : 'is-hidden'); guHead.classList.toggle('is-hidden', frame.stage < 4);
+      gg.set(frame.done ? '1 × 3 × 0.5 = 1.5' : '', frame.done ? 'is-keep' : 'is-hidden'); ggHead.classList.toggle('is-hidden', !frame.done);
+    };
+  }});
+
+  FIGURES['step-depth-merge'] = name => stepper(name, F.depthMerge(), {height: 230, readouts: f => [[t('第一批', 'batch 1'), f.stage >= 1 ? 'out 0 · ℓ 1' : '—'], [t('第二批', 'batch 2'), f.stage >= 2 ? 'out 4 · ℓ 3' : '—'], [t('合并', 'merged'), f.stage >= 4 ? '3 ✓' : f.stage === 3 ? '2 ✗' : '—', f.stage >= 4 ? 'good' : f.stage === 3 ? 'bad' : '']], setup(svg) {
+    const size = 48, gap = 8, xs = [60, 190];
+    const boxes = [[xs[0], 1], [xs[1], 3]].map(([x, n], b) => {
+      svg.append(s('rect', {x: x - 10, y: 24, width: n * (size + gap) + 12, height: size + 44, rx: 10, class: 'algo-edge algo-dash', fill: 'none'}));
+      V.text(svg, x - 6, 16, t(`第 ${b + 1} 批`, `batch ${b + 1}`), 'algo-head');
+      return F.depthMerge()[0].batches[b].map((value, i) => ({chip: cell(svg, x + i * (size + gap), 34, size, size, String(value), 'algo-val'), weight: V.text(svg, x + i * (size + gap) + size / 2, 34 + size + 22, '', 'algo-idx', 'middle')}));
+    });
+    const stats = [xs[0], xs[1]].map(x => V.text(svg, x - 6, 150, '', 'algo-note'));
+    const merged = cell(svg, 430, 70, 150, 40, '', 'algo-strong');
+    V.text(svg, 505, 60, t('合并后的输出', 'merged output'), 'algo-head', 'middle');
+    return frame => {
+      boxes.forEach((chips, b) => chips.forEach(({chip, weight}) => {
+        chip.set(chip.label.textContent, frame.stage >= b + 1 ? 'is-look' : '');
+        weight.textContent = frame.done ? '1/4' : frame.stage >= b + 1 ? (b === 0 ? '1' : '1/3') : '';
+      }));
+      stats.forEach((c, b) => { c.textContent = frame.stage >= b + 1 ? `m 0 · ℓ ${b ? 3 : 1} · out ${b ? 4 : 0}` : ''; });
+      merged.set(frame.stage === 3 ? '(0 + 4)/2 = 2' : frame.stage >= 4 ? '(1·0 + 3·4)/4 = 3' : '', frame.stage === 3 ? 'is-bad' : frame.stage >= 4 ? 'is-keep' : 'algo-ghost');
+    };
+  }});
+
+  FIGURES['step-expert-budget'] = name => stepper(name, F.expertBudget(), {height: 210, readouts: f => [[t('每个 expert', 'per expert'), f.cfg.per.toLocaleString('en-US')], [t('expert 总参数', 'expert params'), f.stage === 4 ? '—' : f.cfg.total.toLocaleString('en-US')], [t('每个 token 激活', 'active per token'), f.cfg.lit ? f.cfg.lit.toLocaleString('en-US') : '—', f.done ? 'bad' : f.stage >= 2 ? 'good' : ''], [t('相对第一行', 'vs. first row'), f.done ? '+12.5%' : f.cfg.lit ? '+0%' : '—', f.done ? 'bad' : '']], setup(svg) {
+    const x0 = 40, total = 512, y = 50, h = 80, layer = s('g');
+    svg.append(layer);
+    V.text(svg, x0, 36, t('面积 = 参数量', 'area = parameters'), 'algo-head');
+    return frame => {
+      layer.textContent = '';
+      const cfg = frame.cfg, n = cfg.routed + (frame.stage === 4 ? 0 : cfg.shared), w = total / (cfg.f === 256 ? 8 : 32);
+      for (let i = 0; i < n; i++) {
+        const isShared = frame.stage === 3 && i === 0;
+        const lit = isShared || (cfg.active && (frame.stage === 3 ? i >= 1 && i <= cfg.active : i < cfg.active));
+        const r = s('rect', {x: x0 + i * w + 1, y, width: w - 2, height: h, rx: 3, class: 'algo-cell' + (isShared ? ' is-change' : lit ? ' is-keep' : '')});
+        layer.append(r);
+      }
+      if (frame.stage === 4) {
+        layer.append(s('rect', {x: x0 + total + 12, y, width: w - 2, height: h, rx: 3, class: 'algo-cell is-bad'}));
+        V.text(layer, x0 + total + 12 + w / 2, y + h + 18, 'shared', 'algo-idx', 'middle');
+      }
+      if (frame.stage === 3) V.text(layer, x0 + w / 2, y + h + 18, 'shared', 'algo-idx', 'middle');
+      V.text(layer, x0, y + h + 40, cfg.f === 256 ? t('8 个 expert，f = 256', '8 experts, f = 256') : t(`${cfg.routed} 个 routed${cfg.shared ? ` + ${cfg.shared} 个 shared` : ''}，f = 64`, `${cfg.routed} routed${cfg.shared ? ` + ${cfg.shared} shared` : ''}, f = 64`), 'algo-note');
     };
   }});
 

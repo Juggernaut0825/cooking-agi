@@ -60,6 +60,8 @@ $$w_{L1}=\operatorname{sign}(a)\max(|a|-\lambda,0).$$
 
 With $a=0.4,\lambda=0.5$, L1 gives 0 while squared L2 gives about 0.267. This explains exact zeros; it does not prove a discarded feature is irrelevant. Correlated features may substitute for one another.
 
+<!-- widget:step-l1-l2 -->
+
 ```python
 import math
 

@@ -71,6 +71,8 @@ assert math.isclose(depth_mix([1000, 1000 + math.log(3)], [2, 10]), 8)
 
 合并时需要保留每批的 log-sum-exp 或等价的最大值与指数和。这与 [FlashAttention 的在线 softmax](attention-kernels.md) 是同一种归一化问题，只是这里沿深度组合来源。
 
+<!-- widget:step-depth-merge -->
+
 ## 应该怎样评估？
 
 先做数值检查：全量混合与分批混合一致；改变未来 token 不影响前缀；block 边界前后没有漏加、重加当前部分和。关闭随机性后再比较，别把 dropout 当成实现误差。

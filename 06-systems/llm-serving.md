@@ -52,6 +52,8 @@ vLLM V1 将 API、engine core 和 GPU worker 的职责分开；engine 管调度�
 
 这是**轮数与预算的算例，不是延迟预测**。Prefill 的一个位置和 decode 的一个位置，计算成本并不相同；实际还受 KV 容量、batch 形状、优先级和 kernel 影响。即使按表安排，6 个位置也不代表固定多少毫秒。
 
+<!-- widget:step-chunked-prefill -->
+
 <details markdown="1">
 <summary>用一个小函数核对分块数</summary>
 

@@ -146,3 +146,91 @@ test('every frame has both captions and the English ones carry no Chinese', () =
     assert.doesNotMatch(frame.en, /[　-〿一-鿿＀-￯]/, frame.en);
   }
 });
+
+test('best-of-2: A 0.25, B 0.39, C 0.36', () => {
+  assert.deepEqual(last(F.bestOfN()).picked, {A: 0.25, B: 0.39, C: 0.36});
+});
+
+test('Bradley–Terry: a shift keeps 0.731, a scale gives 0.881', () => {
+  assert.deepEqual(F.btScale().map(f => [f.gap, f.prob]), [[1, 0.731], [1, 0.731], [2, 0.881], [2, 0.881]]);
+});
+
+test('DAPO: response mean 2, token mean 2.5, rank means 2, W/N scaling 2.5', () => {
+  const end = last(F.tokenMean());
+  assert.deepEqual([end.responseMean, end.tokenMean, end.ddp], [2, 2.5, 2.5]);
+  assert.deepEqual(end.scaled, [0.5, 4.5]);
+});
+
+test('KL penalty: log-ratios 0.47 / -0.9163, shaped 0.906 / 1.1833, KL 0.1927, objective 0.9615', () => {
+  const end = last(F.klPenalty());
+  assert.deepEqual([end.logRatio, end.shaped, end.kl, end.objective], [[0.47, -0.9163], [0.906, 1.1833], 0.1927, 0.9615]);
+});
+
+test('behavior ratio: b = [2/3, 1/3], 0.75 against b, 1.25 against the raw 0.2', () => {
+  const end = last(F.behaviorRatio());
+  assert.deepEqual([end.behavior, end.right, end.wrong], [[0.6667, 0.3333], 0.75, 1.25]);
+});
+
+test('chunked prefill: budget 6 gives 4, 4, 2; budget 12 gives 10', () => {
+  assert.deepEqual(F.chunkedPrefill(6)[0].chunks, [4, 4, 2]);
+  assert.deepEqual(F.chunkedPrefill(12)[0].chunks, [10]);
+  assert.ok(last(F.chunkedPrefill(6)).done);
+});
+
+test('continuous batching: 8 rounds with 6 empty slots, or 5 rounds with none', () => {
+  const fixed = last(F.continuousBatching(false)), refill = last(F.continuousBatching(true));
+  assert.deepEqual(fixed.schedule.map(r => r.join('')), ['AB', 'AB', 'B', 'B', 'B', 'C', 'C', 'C']);
+  assert.deepEqual([fixed.total, fixed.empty, refill.total, refill.empty, refill.start], [8, 6, 5, 0, 3]);
+});
+
+test('L1 vs L2 with a = 0.4, λ = 0.5: L2 ≈ 0.267, L1 = 0, slopes +0.1 / -0.9', () => {
+  const end = last(F.l1L2());
+  assert.deepEqual([end.l2, end.l1, end.right, end.left], [0.267, 0, 0.1, -0.9]);
+});
+
+test('BCE vs MSE at z = 10: BCE gradient ≈ 0.99995, MSE ≈ 4.54e-5', () => {
+  const end = last(F.bceVsMse());
+  assert.equal(Number(end.bce.toFixed(5)), 0.99995);
+  assert.equal(Number(end.mse.toExponential(2)), 4.54e-5);
+});
+
+test('AdamW 1.96 vs Adam + L2 ≈ 1.9', () => {
+  const end = last(F.adamwL2());
+  assert.deepEqual([end.adamw, end.m, end.v, end.mHat, end.vHat, end.adamL2], [1.96, 0.04, 0.00016, 0.4, 0.16, 1.9]);
+});
+
+test('packing: 5 targets in a stream, 4 once EOS → C is masked', () => {
+  const frames = F.packingMasks();
+  assert.equal(frames[1].scored, 5);
+  assert.deepEqual(last(frames).loss, [1, 1, 0, 1, 1]);
+  assert.equal(last(frames).scored, 4);
+  assert.deepEqual(last(frames).block[3], [false, false, false, true, false, false]);
+});
+
+test('tensor-parallel backward: [3, 3] + [6, 0] = [9, 3]', () => {
+  const end = last(F.tpBackward());
+  assert.deepEqual([end.Y, end.parts, end.dX], [[9, 6], [[3, 3], [6, 0]], [9, 3]]);
+});
+
+test('BPE: 20 → 15 → 10 symbols, rair encodes as rai r', () => {
+  const frames = F.bpeMerges();
+  assert.deepEqual(frames.map(f => f.symbols), [20, 20, 15, 15, 10, 10]);
+  assert.deepEqual(last(frames).encoding.map(e => e.join(' ')), ['r a i r', 'ra i r', 'rai r']);
+});
+
+test('SwiGLU: h = [0, 1.4621], y ≈ -1.4621, gate gradient 1.5', () => {
+  const end = last(F.swiglu());
+  assert.deepEqual([end.h, end.y, end.gradU, end.gradG], [[0, 1.4621], -1.4621, 0, 1.5]);
+});
+
+test('depth merge: averaging gives 2, the stored sums give 3', () => {
+  const end = last(F.depthMerge());
+  assert.deepEqual([end.naive, end.merged, end.full], [2, 3, 3]);
+});
+
+test('expert budget: 196,608 active three ways, 221,184 with an extra shared expert', () => {
+  const end = last(F.expertBudget());
+  assert.deepEqual([end.coarse.lit, end.fine.lit, end.sharedSwap.lit, end.extra.lit], [196608, 196608, 196608, 221184]);
+  assert.equal(end.coarse.total, 786432);
+  assert.equal(end.increase, 0.125);
+});

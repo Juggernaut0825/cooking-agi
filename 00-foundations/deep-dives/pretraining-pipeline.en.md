@@ -66,6 +66,8 @@ To avoid training the cross-document prediction of C after EOS, also mask that *
 | C | D | Yes | Yes |
 | D | EOS | Yes | Yes |
 
+<!-- widget:step-packing-masks -->
+
 Padding must not become an ordinary target. Printing tokens, labels, document IDs, and masks for one example is more informative than observing a decreasing loss.
 
 ## What is averaged in one update?

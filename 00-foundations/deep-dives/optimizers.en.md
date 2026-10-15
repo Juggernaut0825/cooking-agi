@@ -81,6 +81,8 @@ $$\theta_t=(1-\eta\lambda)\theta_{t-1}
 
 With fresh state, $\theta=2$, zero data gradient, $\eta=0.1$, and $\lambda=0.2$, AdamW shrinks to 1.96. Feeding an L2 gradient of 0.4 into Adam gives approximately 1.9 on the first step. These are different updates. See [Decoupled Weight Decay](https://arxiv.org/abs/1711.05101).
 
+<!-- widget:step-adamw-l2 -->
+
 ```python
 import math
 

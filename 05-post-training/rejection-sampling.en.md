@@ -86,6 +86,8 @@ Return to the original probabilities $(0.5,0.3,0.2)$, but let a scorer rank C > 
 
 If C is an incorrect answer that fools the scorer, more candidates make it easier to select that error. This is a constructed counterexample, not a model measurement. It shows why selection budgets and scorer quality need to be evaluated together.
 
+<!-- widget:step-best-of-n -->
+
 [Reward Model Overoptimization (2022; ICML 2023)](https://proceedings.mlr.press/v202/gao23h.html) also studies RL and best-of-N using a synthetic setup with a larger “gold” reward model standing in for true preferences. It motivates checking whether proxy scores separate from independently measured quality, not claiming that every increase in N is harmful.
 
 ## The prompt mix changes too {#prompt-selection}
