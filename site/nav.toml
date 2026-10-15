@@ -229,6 +229,26 @@ summary_zh = "把一次请求放回完整产品：看可观测性、人工参与
 summary_en = "Put a request back in its product context: observability, human oversight, and long-term use."
 
 [[group]]
+id = "infra"
+category = "learn"
+zone = "design"
+zh = "AI 基础设施（待审核）"
+en = "AI infrastructure (draft)"
+home = "12-infra/README.md"
+summary_zh = "一次请求背后的整条链路：从晶圆、芯片、GPU 和 CUDA，到框架、集群和产品。草稿，待审核。"
+summary_en = "The whole chain behind one request: wafers, chips, GPUs and CUDA, up to frameworks, clusters and products. Draft, pending review."
+
+[[group]]
+id = "embodied"
+category = "learn"
+zone = "design"
+zh = "感知、机器人与自动驾驶（待审核）"
+en = "Perception, robots & driving (draft)"
+home = "13-embodied/README.md"
+summary_zh = "从像素到动作：相机几何与跟踪、鸟瞰图与规划、模仿学习与 VLA。草稿，待审核。"
+summary_en = "From pixels to actions: camera geometry and tracking, bird's-eye view and planning, imitation learning and VLAs. Draft, pending review."
+
+[[group]]
 id = "frontier"
 category = "learn"
 zone = "frontier"
@@ -622,14 +642,14 @@ dir   = "06-systems"
 group = "systems"
 zh    = "系统"
 en    = "Systems"
-order = ["README.md", "distributed-training.md", "agent-observability.md", "human-in-the-loop.md"]
+order = ["README.md", "distributed-training.md", "agent-observability.md", "human-in-the-loop.md", "decision-support.md"]
 
 [[section]]
 dir   = "07-evaluation"
 group = "eval"
 zh    = "评估基础"
 en    = "Evaluation basics"
-order = ["README.md", "evaluation-stack.md", "text-metrics.md", "benchmark-protocols.md", "ablation-and-slices.md", "metric-robustness.md"]
+order = ["README.md", "evaluation-stack.md", "text-metrics.md", "benchmark-protocols.md", "ablation-and-slices.md", "metric-robustness.md", "eval-observability.md"]
 
 [[section]]
 dir   = "07-evaluation/llm-as-a-judge"
@@ -656,7 +676,42 @@ dir   = "10-agents"
 group = "agents"
 zh    = "Agents"
 en    = "Agents"
-order = ["README.md", "prompting.md", "patterns.md", "tools-and-skills.md", "deep-research.md", "scenarios.md", "model-choice.md", "review.md"]
+order = ["README.md", "prompting.md", "patterns.md", "single-vs-multi-agent.md", "tools-and-skills.md", "deep-research.md", "scenarios.md", "model-choice.md", "review.md"]
+
+[[section]]
+dir   = "12-infra"
+group = "infra"
+zh    = "从芯片到产品"
+en    = "From silicon to product"
+order = ["README.md", "chips-and-fabs.md", "cpu-architecture.md", "gpu-architecture.md", "nvidia-generations.md", "cuda.md", "performance.md", "frameworks.md", "kubernetes.md", "review.md"]
+
+[[section]]
+dir   = "13-embodied"
+group = "embodied"
+zh    = "从这里开始"
+en    = "Start here"
+order = ["README.md"]
+
+[[section]]
+dir   = "13-embodied/perception"
+group = "embodied"
+zh    = "感知与几何"
+en    = "Perception & geometry"
+order = ["README.md", "camera-geometry.md", "tracking.md", "detection.md", "foundation-models.md", "reconstruction.md"]
+
+[[section]]
+dir   = "13-embodied/driving"
+group = "embodied"
+zh    = "自动驾驶"
+en    = "Autonomous driving"
+order = ["README.md", "bev-occupancy.md", "prediction-planning.md", "end-to-end.md"]
+
+[[section]]
+dir   = "13-embodied/robot-learning"
+group = "embodied"
+zh    = "机器人学习"
+en    = "Robot learning"
+order = ["README.md", "imitation.md", "vla.md"]
 
 [[section]]
 dir   = "11-frontier"
@@ -943,7 +998,9 @@ en  = "Templates"
 "06-systems/README.md"                                  = ["总览", "Overview"]
 "06-systems/agent-observability.md"                     = ["Agent 可观测性", "Agent observability"]
 "06-systems/human-in-the-loop.md"                       = ["人工参与", "Human in the loop"]
+"06-systems/decision-support.md" = ["LLM 辅助决策（待审核）", "Decision support (draft)"]
 "07-evaluation/README.md"                               = ["总览", "Overview"]
+"07-evaluation/eval-observability.md" = ["评估接到线上（待审核）", "Evaluation online (draft)"]
 "07-evaluation/evaluation-stack.md" = ["分层评估", "Evaluation stack"]
 "07-evaluation/text-metrics.md" = ["BLEU、ROUGE 与编辑距离", "BLEU, ROUGE & edit distance"]
 "07-evaluation/benchmark-protocols.md" = ["Benchmark 与长上下文测试", "Benchmarks & long-context tests"]
@@ -1017,7 +1074,32 @@ en  = "Templates"
 "10-agents/model-choice.md"                                      = ["模型选择与路由", "Model selection & routing"]
 "10-agents/tools-and-skills.md" = ["工具、MCP 与 Skills", "Tools, MCP & skills"]
 "10-agents/review.md"                                            = ["复习题", "Review"]
+"10-agents/single-vs-multi-agent.md" = ["一个还是多个 agent（待审核）", "One agent or several (draft)"]
 "11-frontier/README.md" = ["从这里开始", "Start here"]
+"13-embodied/README.md" = ["从这里开始", "Start here"]
+"13-embodied/perception/README.md" = ["总览", "Overview"]
+"13-embodied/perception/camera-geometry.md" = ["三维点怎样变成像素", "From 3D point to pixel"]
+"13-embodied/perception/tracking.md" = ["状态估计与跟踪", "Estimation & tracking"]
+"13-embodied/perception/detection.md" = ["检测与分割", "Detection & segmentation"]
+"13-embodied/perception/foundation-models.md" = ["几何基础模型", "Geometry foundation models"]
+"13-embodied/perception/reconstruction.md" = ["三维重建与神经渲染", "Reconstruction & rendering"]
+"13-embodied/driving/README.md" = ["总览", "Overview"]
+"13-embodied/driving/bev-occupancy.md" = ["鸟瞰图与占用", "BEV & occupancy"]
+"13-embodied/driving/prediction-planning.md" = ["预测与规划", "Forecasting & planning"]
+"13-embodied/driving/end-to-end.md" = ["端到端与闭环评测", "End-to-end & closed loop"]
+"13-embodied/robot-learning/README.md" = ["总览", "Overview"]
+"13-embodied/robot-learning/imitation.md" = ["从示范中学动作", "Learning from demonstrations"]
+"13-embodied/robot-learning/vla.md" = ["VLA 与仿真到现实", "VLAs & sim-to-real"]
+"12-infra/README.md" = ["总览：一次请求的链路", "Overview: one request"]
+"12-infra/chips-and-fabs.md" = ["芯片怎么造出来", "How chips are made"]
+"12-infra/cpu-architecture.md" = ["CPU 架构", "CPU architecture"]
+"12-infra/gpu-architecture.md" = ["GPU 架构", "GPU architecture"]
+"12-infra/nvidia-generations.md" = ["英伟达各代 GPU", "NVIDIA generations"]
+"12-infra/cuda.md" = ["CUDA", "CUDA"]
+"12-infra/performance.md" = ["性能：roofline 与 MFU", "Performance: roofline & MFU"]
+"12-infra/frameworks.md" = ["框架这一层", "The framework layer"]
+"12-infra/kubernetes.md" = ["Kubernetes 与 GPU 集群", "Kubernetes & GPU clusters"]
+"12-infra/review.md" = ["复习题", "Review"]
 "11-frontier/world-models/README.md" = ["总览", "Overview"]
 "11-frontier/world-models/dreamer.md" = ["在想象里学", "Learning in imagination"]
 "11-frontier/world-models/jepa.md" = ["预测表示：JEPA", "Predicting representations"]

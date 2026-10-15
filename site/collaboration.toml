@@ -33,7 +33,14 @@ reviewers = ["tianyi-zhang-02", "2pir2"]
 id = "systems-agents"
 zh = "系统、多模态与 Agents"
 en = "Systems, multimodal & agents"
-groups = ["systems", "agents", "multimodal"]
+groups = ["systems", "agents", "multimodal", "infra"]
+reviewers = ["tianyi-zhang-02", "2pir2"]
+
+[[area]]
+id = "embodied"
+zh = "感知、机器人与自动驾驶"
+en = "Perception, robots & driving"
+groups = ["embodied"]
 reviewers = ["tianyi-zhang-02", "2pir2"]
 
 [[area]]

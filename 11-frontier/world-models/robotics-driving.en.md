@@ -135,7 +135,7 @@ In driving, first separate open loop from closed loop. Open loop replays recorde
 | 2026-06-10 | [Oasis 3](https://decart.ai/publications/introducing-oasis-3-first-interactive-world-model-for-physical-ai) (Decart) | Driving and robot world model with three synchronised cameras, 512×768 at 22 FPS, latency under 200 ms (vendor-reported) |
 | 2026-08-03 | [GAIA-4](https://wayve.ai/thinking/gaia-4/) (Wayve) | Closed loop: the AI Driver's actions drive the next sensor frames; adds radar output (Wayve calls it an industry first); the only number is "2.5× better reconstruction faithfulness" (vendor-reported); no paper or parameter count |
 
-As of 2026-10-15, we found no published correlation with real outcomes for GAIA-3/4, the Waymo World Model or the 1X evaluator. Tesla is reported to use a neural world simulator for closed-loop evaluation, but only by a [secondary source](https://www.humanoidsdaily.com/feed/tesla-ai-chief-details-unified-world-simulator-for-fsd-and-optimus).
+As of 2026-10-15, we found no published correlation with real outcomes for GAIA-3/4, the Waymo World Model or the 1X evaluator. Tesla described its own "neural world simulator" for closed-loop evaluation in talks at ICCV 2025 and CVPR 2026 ([talk video](https://www.youtube.com/watch?v=2V0ddkF1Svo); content taken from the video's auto-generated captions), but has published no paper and no comparison with real outcomes; see the [end-to-end note in the driving series](../../13-embodied/driving/end-to-end.en.md).
 
 ## Risk checklist
 

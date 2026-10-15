@@ -135,7 +135,7 @@ $R_i$ 是策略 $i$ 的真机成功率，$\hat R_i$ 是世界模型预测的成�
 | 2026-06-10 | [Oasis 3](https://decart.ai/publications/introducing-oasis-3-first-interactive-world-model-for-physical-ai)（Decart） | 三路同步相机的驾驶与机器人世界模型，512×768、22 FPS、延迟低于 200 ms（公司自报） |
 | 2026-08-03 | [GAIA-4](https://wayve.ai/thinking/gaia-4/)（Wayve） | 闭环：AI Driver 的动作驱动下一帧传感器数据；新增雷达输出（Wayve 称业内首个）；唯一的数字是“重建忠实度好 2.5 倍”（公司自报）；没有论文和参数量 |
 
-截至 2026-10-15，我们在公开资料里没有找到 GAIA-3/4、Waymo World Model 或 1X 评测器与真实结果的相关系数。Tesla 被报道用神经世界模拟器做闭环评测，目前只有[二手来源](https://www.humanoidsdaily.com/feed/tesla-ai-chief-details-unified-world-simulator-for-fsd-and-optimus)。
+截至 2026-10-15，我们在公开资料里没有找到 GAIA-3/4、Waymo World Model 或 1X 评测器与真实结果的相关系数。Tesla 在 ICCV 2025 和 CVPR 2026 的演讲里介绍过自家用来做闭环评测的“神经世界模拟器”（[演讲视频](https://www.youtube.com/watch?v=2V0ddkF1Svo)，内容据视频自动字幕整理），但没有发表论文，也没有公布和真实结果的对照；详见[驾驶系列的端到端一篇](../../13-embodied/driving/end-to-end.md)。
 
 ## 风险清单
 

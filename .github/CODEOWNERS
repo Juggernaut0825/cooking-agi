@@ -12,6 +12,8 @@
 /08-model-experience/ @tianyi-zhang-02 @2pir2
 /09-personal-agi/ @tianyi-zhang-02 @2pir2
 /10-agents/ @tianyi-zhang-02 @2pir2
+/12-infra/ @tianyi-zhang-02 @2pir2
+/13-embodied/ @tianyi-zhang-02 @2pir2
 /11-frontier/ @tianyi-zhang-02 @2pir2
 /practice/ @tianyi-zhang-02 @2pir2
 /rl/ @tianyi-zhang-02 @2pir2
@@ -38,6 +40,9 @@
 /05-post-training/deep-rl/ @tianyi-zhang-02 @2pir2
 /05-post-training/rlhf/ @tianyi-zhang-02 @2pir2
 /07-evaluation/llm-as-a-judge/ @tianyi-zhang-02 @2pir2
+/13-embodied/perception/ @tianyi-zhang-02 @2pir2
+/13-embodied/driving/ @tianyi-zhang-02 @2pir2
+/13-embodied/robot-learning/ @tianyi-zhang-02 @2pir2
 /11-frontier/world-models/ @tianyi-zhang-02 @2pir2
 /11-frontier/self-improvement/ @tianyi-zhang-02 @2pir2
 /interview/basics/ @tianyi-zhang-02 @2pir2
