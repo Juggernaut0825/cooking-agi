@@ -30,14 +30,14 @@ headwise gate 给每个 token、每个 head 一个数；elementwise gate 则给 
 
 ## 两个 head，手算一次
 
-假设两个 head 已经读出了 `[4, -2]` 和 `[1, 3]`，当前 token 对应的门是 0.1 和 0.9。
+假设两个 head 已经读出了 `[4, -2]` 和 `[1, 3]`，当前 token 对应的门是 0.1 和 0.5。
 
 | 阶段 | Head 1 | Head 2 |
 | --- | --- | --- |
 | SDPA 输出 | `[4, -2]` | `[1, 3]` |
-| 乘门以后 | `[0.4, -0.2]` | `[0.9, 2.7]` |
+| 乘门以后 | `[0.4, -0.2]` | `[0.5, 1.5]` |
 
-第一路没有消失，只是影响变小。接下来的 $W_O$ 仍会混合各个 head，所以不能把某个 head 的门值直接解释成最终答案的置信度。
+两个门加起来是 0.6，不是 1：每个 head 的门单独决定，一路调小，不会让另一路自动变大。第一路也没有消失，只是影响变小。接下来的 $W_O$ 仍会混合各个 head，所以不能把某个 head 的门值直接解释成最终答案的置信度。
 
 ```python
 import math
@@ -58,9 +58,9 @@ def gated_heads(head_outputs, gate_logits):
     return [[sigmoid(logit) * value for value in head]
             for head, logit in zip(head_outputs, gate_logits)]
 
-result = gated_heads([[4, -2], [1, 3]], [math.log(1 / 9), math.log(9)])
+result = gated_heads([[4, -2], [1, 3]], [math.log(1 / 9), 0])
 assert math.isclose(result[0][0], 0.4)
-assert math.isclose(result[1][1], 2.7)
+assert math.isclose(result[1][1], 1.5)
 assert gated_heads([[4, -2]], [0]) == [[2.0, -1.0]]
 ```
 

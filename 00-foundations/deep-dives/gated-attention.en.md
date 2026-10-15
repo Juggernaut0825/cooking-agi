@@ -30,14 +30,14 @@ The sigmoid gates are independent and need not sum to one. Unlike softmax compet
 
 ## Work through two heads
 
-Suppose SDPA outputs are `[4, -2]` and `[1, 3]`, with gate values 0.1 and 0.9.
+Suppose SDPA outputs are `[4, -2]` and `[1, 3]`, with gate values 0.1 and 0.5.
 
 | Stage | Head 1 | Head 2 |
 | --- | --- | --- |
 | SDPA output | `[4, -2]` | `[1, 3]` |
-| After gating | `[0.4, -0.2]` | `[0.9, 2.7]` |
+| After gating | `[0.4, -0.2]` | `[0.5, 1.5]` |
 
-The first path is attenuated, not removed. The following $W_O$ still mixes heads, so a head's gate value is not a calibrated confidence score for the final answer.
+The two gates add up to 0.6, not 1: each head's gate is set on its own, so turning one down does not turn another up. The first path is also attenuated, not removed. The following $W_O$ still mixes heads, so a head's gate value is not a calibrated confidence score for the final answer.
 
 ```python
 import math
@@ -58,9 +58,9 @@ def gated_heads(head_outputs, gate_logits):
     return [[sigmoid(logit) * value for value in head]
             for head, logit in zip(head_outputs, gate_logits)]
 
-result = gated_heads([[4, -2], [1, 3]], [math.log(1 / 9), math.log(9)])
+result = gated_heads([[4, -2], [1, 3]], [math.log(1 / 9), 0])
 assert math.isclose(result[0][0], 0.4)
-assert math.isclose(result[1][1], 2.7)
+assert math.isclose(result[1][1], 1.5)
 assert gated_heads([[4, -2]], [0]) == [[2.0, -1.0]]
 ```
 
