@@ -4,7 +4,7 @@
 
 Start somewhere you can follow, and pair reading with practice. This is a suggested learning sequence, not a promise that a certain number of days will get you an offer.
 
-[Back to interview preparation](README.en.md#plan) · [Looking for a focused review? Try Speedrun](speedrun.en.md)
+[Back to interview preparation](README.en.md) · [Looking for a focused review? Try Speedrun](speedrun.en.md)
 
 ## Find a starting point {#build}
 
@@ -173,4 +173,4 @@ Saved notes, reading history, and reading positions live in this browser. Before
 - **Older backups still import.** Files exported from the old study dashboard and older saved-notes files both work. Plans and memos in an old file are kept in your backup, though the site no longer shows them.
 - **Renamed chapters keep their records.** Records match on a fixed ID, not the title, order, or language. Records without a matching page are kept, not deleted.
 
-[Back to preparation](README.en.md#plan) · [Practice one skill](README.en.md#prep-routes) · [Full library](../learn/README.en.md)
+[Back to interview preparation](README.en.md) · [Practice one skill](README.en.md#prep-routes) · [Full library](../learn/README.en.md)

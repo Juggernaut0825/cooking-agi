@@ -2130,7 +2130,7 @@ def assemble(page, sections, people, nav, built, template):
     if 'class="topic-coverage"' in page.body:
         template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/topic-coverage.css?v={built}">\n</head>')
     if is_prep_hub:
-        template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/prep-hub.css?v={built}">\n<script defer src="{prefix}static/prep-hub.js?v={built}"></script>\n</head>')
+        template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/prep-hub.css?v={built}">\n</head>')
     if 'class="tech-timeline"' in page.body:
         template = template.replace('</head>', f'<link rel="stylesheet" href="{prefix}static/technology-tree.css?v={built}">\n</head>')
     if 'data-technology-tree' in page.body:

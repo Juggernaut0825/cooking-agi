@@ -6,7 +6,7 @@
 
 Not sure where to begin? [Choose a route for your goal](choose-your-path.en.md).
 
-For interviews, go straight to [Interview prep](../interview/README.en.md): choose “Quick review” or “Study at your pace”. The full explanations stay here in Foundations whenever you want to go deeper.
+For interviews, go straight to [Interview prep](../interview/README.en.md) and pick the area you need. The full explanations stay here in Foundations whenever you want to go deeper.
 
 This section explains how models work, why training methods take the forms they do, and how to judge their results. Start with examples, then explore derivations and implementations as needed. You do not need every prerequisite or every new model; go straight to the subject you care about.
 
