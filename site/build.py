@@ -605,6 +605,10 @@ FIGURE_LAB = [
     ("step-swiglu", "跟着两个中间维度算一次 SwiGLU", "SwiGLU through two hidden dimensions", "step"),
     ("step-depth-merge", "分批做深度 softmax，怎样合并", "Merging a depth softmax computed in batches", "step"),
     ("step-expert-budget", "切细与共享，预算怎么算", "Finer and shared experts on one budget", "step"),
+    ("step-verifier-ceiling", "测试放过错解：一轮就到顶", "Tests that let wrong answers through: the ceiling in one round", "step"),
+    ("step-time-horizon", "拟合 50% 时间跨度，以及超出范围的读数", "Fitting a 50% time horizon, and readings past the task range", "step"),
+    ("step-evaluator-rank", "相关系数 0.98，第一名还是选错了", "A correlation of 0.98, and still the wrong winner", "step"),
+    ("step-mcts-visits", "六次模拟：访问次数变成策略标签", "Six simulations: visit counts become a policy target", "step"),
 ]
 for _name, _zh, _en, _kind in [(name, zh, en, "step") for name, zh, en in ALGO_LAB] + FIGURE_LAB:
     _kicker = 'data-zh="动画" data-en="Step by step"' if _kind == "step" else 'data-zh="图解" data-en="Diagram"'

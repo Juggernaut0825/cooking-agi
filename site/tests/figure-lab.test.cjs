@@ -234,3 +234,40 @@ test('expert budget: 196,608 active three ways, 221,184 with an extra shared exp
   assert.equal(end.coarse.total, 786432);
   assert.equal(end.increase, 0.125);
 });
+
+test('verifier ceiling: 46 pass, 87.0% right, ceilings 100 / 97.1 / 87.0 / 69.0', () => {
+  const frames = F.verifierCeiling(0.10), end = last(frames);
+  assert.equal(frames[1].kept, 46);
+  assert.equal(Number((end.precision * 100).toFixed(1)), 87);
+  assert.equal(end.right, 87);
+  assert.deepEqual(end.ceilings.map(c => Number((c.value * 100).toFixed(1))), [100, 97.1, 87, 69]);
+});
+
+test('time horizon: slope -0.74, 2 h at 50%, 33 min at 80%, then 34 h and 108 h beyond the task range', () => {
+  const frames = F.timeHorizon();
+  assert.equal(Number(frames[1].run.slope.toFixed(2)), -0.74);
+  assert.equal(Number(frames[2].run.h50.toFixed(2)), 2);
+  assert.equal(Math.round(frames[3].run.h80 * 60), 33);
+  assert.equal(Math.round(frames[4].run.h50), 34);
+  assert.equal(Math.round(last(frames).run.h50), 108);
+});
+
+test('evaluator rank: Pearson 0.98, Spearman 0.9, MMRV 0.04, picks D over E, top-3 Spearman 0.5', () => {
+  const end = last(F.evaluatorRank());
+  assert.equal(Number(end.pearson.toFixed(2)), 0.98);
+  assert.equal(Number(end.spearman.toFixed(2)), 0.9);
+  assert.equal(Number(end.mmrv.toFixed(2)), 0.04);
+  assert.equal(end.picked, 'D');
+  assert.equal(end.best, 'E');
+  assert.equal(Number(end.top3.toFixed(2)), 0.5);
+});
+
+test('MCTS visits: L, L, R, R, R, R gives N = (2, 4) and pi = (0.33, 0.67), (0.2, 0.8) at tau 0.5', () => {
+  const frames = F.mctsVisits();
+  assert.deepEqual(frames.slice(1, 7).map(f => f.pick), [0, 0, 1, 1, 1, 1]);
+  assert.deepEqual(round(frames[3].score, 2), [0.48, 0.57]);
+  const end = last(frames);
+  assert.deepEqual(end.N, [2, 4]);
+  assert.deepEqual(round(end.pi1, 2), [0.33, 0.67]);
+  assert.deepEqual(round(end.pi05, 2), [0.2, 0.8]);
+});

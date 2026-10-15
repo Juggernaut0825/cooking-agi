@@ -12,6 +12,7 @@
 /08-model-experience/ @tianyi-zhang-02 @2pir2
 /09-personal-agi/ @tianyi-zhang-02 @2pir2
 /10-agents/ @tianyi-zhang-02 @2pir2
+/11-frontier/ @tianyi-zhang-02 @2pir2
 /practice/ @tianyi-zhang-02 @2pir2
 /rl/ @tianyi-zhang-02 @2pir2
 /interview/ @tianyi-zhang-02 @2pir2
@@ -37,6 +38,8 @@
 /05-post-training/deep-rl/ @tianyi-zhang-02 @2pir2
 /05-post-training/rlhf/ @tianyi-zhang-02 @2pir2
 /07-evaluation/llm-as-a-judge/ @tianyi-zhang-02 @2pir2
+/11-frontier/world-models/ @tianyi-zhang-02 @2pir2
+/11-frontier/self-improvement/ @tianyi-zhang-02 @2pir2
 /interview/basics/ @tianyi-zhang-02 @2pir2
 /00-foundations/pytorch/ @tianyi-zhang-02 @2pir2
 /learn/ml-exercises/ @tianyi-zhang-02 @2pir2
@@ -174,12 +177,18 @@
 /05-post-training/deep-rl/soft-actor-critic.en.md @tianyi-zhang-02 @2pir2
 /05-post-training/deep-rl/model-based.md @tianyi-zhang-02 @2pir2
 /05-post-training/deep-rl/model-based.en.md @tianyi-zhang-02 @2pir2
+/05-post-training/deep-rl/model-types.md @tianyi-zhang-02 @2pir2
+/05-post-training/deep-rl/model-types.en.md @tianyi-zhang-02 @2pir2
 /05-post-training/deep-rl/planning-and-control.md @tianyi-zhang-02 @2pir2
 /05-post-training/deep-rl/planning-and-control.en.md @tianyi-zhang-02 @2pir2
+/05-post-training/deep-rl/planning-and-learning.md @tianyi-zhang-02 @2pir2
+/05-post-training/deep-rl/planning-and-learning.en.md @tianyi-zhang-02 @2pir2
 /05-post-training/deep-rl/imitation-and-rewards.md @tianyi-zhang-02 @2pir2
 /05-post-training/deep-rl/imitation-and-rewards.en.md @tianyi-zhang-02 @2pir2
 /05-post-training/deep-rl/offline-and-ope.md @tianyi-zhang-02 @2pir2
 /05-post-training/deep-rl/offline-and-ope.en.md @tianyi-zhang-02 @2pir2
+/05-post-training/deep-rl/ope-estimators.md @tianyi-zhang-02 @2pir2
+/05-post-training/deep-rl/ope-estimators.en.md @tianyi-zhang-02 @2pir2
 /05-post-training/deep-rl/exploration-and-hierarchy.md @tianyi-zhang-02 @2pir2
 /05-post-training/deep-rl/exploration-and-hierarchy.en.md @tianyi-zhang-02 @2pir2
 /05-post-training/deep-rl/experiments.md @tianyi-zhang-02 @2pir2

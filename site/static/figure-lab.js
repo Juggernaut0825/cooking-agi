@@ -920,6 +920,114 @@
     ]);
   };
 
+
+  /* 11-frontier/self-improvement/generate-verify-train §5: 40 of 100 solutions are right; the tests
+     accept every right one and a share f of the wrong ones; fine-tuning copies what passes. */
+  F.verifierCeiling = function (f = 0.10) {
+    const ceiling = x => 40 / (40 + 60 * x);
+    const leaked = Math.round(60 * f), kept = 40 + leaked, precision = ceiling(f);
+    const right = Math.round(precision * 100);
+    const ceilings = [0, 0.02, 0.10, 0.30].map(x => ({f: x, value: ceiling(x)}));
+    const pct = x => (x * 100).toFixed(1) + '%';
+    const base = {f, leaked, kept, precision, right, ceilings};
+    return frames([
+      {...base, stage: 0, zh: '教学例子：一批题上，模型写出的 100 份解答里有 40 份真正正确，60 份是错的。',
+        en: 'A teaching example: of 100 solutions the model writes for a batch of problems, 40 are actually right and 60 are wrong.'},
+      {...base, stage: 1, zh: `测试接受全部 40 份正确解，也放过了 ${Math.round(f * 100)}% 的错解：60 × ${f} = ${leaked} 份。通过测试的一共 ${kept} 份。`,
+        en: `The tests accept all 40 right solutions and also let ${Math.round(f * 100)}% of the wrong ones through: 60 × ${f} = ${leaked}. In all, ${kept} pass.`},
+      {...base, stage: 2, zh: `通过的 ${kept} 份里真正正确的是 40 / ${kept} ≈ ${pct(precision)}。按这套测试筛一轮，真实正确率最多从 40% 涨到这里，gap 约 ${Math.round(precision * 100 - 40)} 个百分点。`,
+        en: `Of the ${kept} that pass, 40 / ${kept} ≈ ${pct(precision)} are right. One round of filtering with these tests can lift true accuracy from 40% to at most this, a gap of about ${Math.round(precision * 100 - 40)} points.`},
+      {...base, stage: 3, zh: `在这 ${kept} 份上微调，并假设新模型原样学下它们的分布：100 份新解里 ${right} 份正确，${100 - right} 份错但能过测试。测试显示的通过率是 100%。`,
+        en: `Fine-tune on these ${kept} and assume the new model copies their distribution exactly: of 100 new solutions, ${right} are right and ${100 - right} are wrong but pass. The tests report 100%.`},
+      {...base, stage: 4, zh: `再转一轮：测试对两类一视同仁，全部接受，分布不变，gap = 0。真实正确率停在 ${right}%，测试一直显示 100%。`,
+        en: `Go round again: the tests treat both kinds alike and accept everything, so the distribution does not move and the gap is 0. True accuracy stays at ${right}% while the tests keep showing 100%.`},
+      {...base, stage: 5, done: true, zh: `能抬高上限的是验证器：错解放过率 0、2%、10%、30% 时，上限分别是 ${ceilings.map(c => pct(c.value)).join('、')}。`,
+        en: `What raises the ceiling is the verifier: with 0, 2%, 10% and 30% of wrong solutions let through, the ceiling is ${ceilings.map(c => pct(c.value)).join(', ')}.`}
+    ]);
+  };
+
+  /* 11-frontier/self-improvement/measuring §2: four task groups, 10 runs each; fit logit(p) as a line
+     in log2(time); the 50% horizon is where it crosses zero. */
+  F.timeHorizon = function () {
+    const xs = [-2, 0, 2, 4];
+    const fit = counts => {
+      const ps = counts.map(c => c / 10), ys = ps.map(p => Math.log(p / (1 - p)));
+      const mx = xs.reduce((a, b) => a + b, 0) / 4, my = ys.reduce((a, b) => a + b, 0) / 4;
+      const slope = xs.reduce((s, x, i) => s + (x - mx) * (ys[i] - my), 0) / xs.reduce((s, x) => s + (x - mx) ** 2, 0);
+      const icpt = my - slope * mx, at = q => (Math.log(q / (1 - q)) - icpt) / slope;
+      return {counts, ps, ys, slope, icpt, x50: at(0.5), x80: at(0.8), h50: 2 ** at(0.5), h80: 2 ** at(0.8)};
+    };
+    const first = fit([9, 7, 3, 1]), strong = fit([9, 8, 7, 6]), plus = fit([9, 8, 7, 7]);
+    const base = {xs, longest: 4};
+    return frames([
+      {...base, run: first, stage: 0, zh: '教学例子：一个模型在人类用时 15 分钟、1 小时、4 小时、16 小时的四组任务上各跑 10 次，成功 9、7、3、1 次。横轴是对数时间。',
+        en: 'A teaching example: a model runs 10 times on each of four task groups that take humans 15 minutes, 1 hour, 4 hours and 16 hours, succeeding 9, 7, 3 and 1 times. The x-axis is log time.'},
+      {...base, run: first, stage: 1, zh: `把成功率换成 logit，四个点几乎落在一条直线上。最小二乘斜率约 ${first.slope.toFixed(2)}（用时每翻一倍）。`,
+        en: `Turn the success rates into logits and the four points fall almost on a line. The least-squares slope is about ${first.slope.toFixed(2)} per doubling of task time.`},
+      {...base, run: first, stage: 2, zh: `曲线在 1 小时和 4 小时之间穿过 50%，交点是 ${first.h50.toFixed(0)} 小时：两者的几何中点，不是算术中点 2.5 小时。`,
+        en: `The curve crosses 50% between 1 hour and 4 hours, at ${first.h50.toFixed(0)} hours: their geometric midpoint, not the arithmetic 2.5 hours.`},
+      {...base, run: first, stage: 3, zh: `同一条曲线上找 80%：约 ${(first.h80 * 60).toFixed(0)} 分钟。要求更高的成功率，能承担的任务就短得多。`,
+        en: `On the same curve, 80% falls at about ${(first.h80 * 60).toFixed(0)} minutes. Ask for a higher success rate and the tasks it can take on get much shorter.`},
+      {...base, run: strong, stage: 4, zh: `换一个更强的模型：成功 9、8、7、6 次，四组都过半。50% 的点只能沿直线外推，落在约 ${strong.h50.toFixed(0)} 小时，已经在最长的 16 小时任务之外。`,
+        en: `Now a stronger model: 9, 8, 7 and 6 successes, every group above half. The 50% point can only be extrapolated along the line and lands at about ${strong.h50.toFixed(0)} hours, beyond the longest 16-hour tasks.`},
+      {...base, run: plus, stage: 5, done: true, zh: `16 小时组只多成功 1 次，读数就从约 ${strong.h50.toFixed(0)} 小时跳到约 ${plus.h50.toFixed(0)} 小时。超出任务范围的读数很不稳，METR 也提醒 16 小时以上不可靠。`,
+        en: `One more success in the 16-hour group moves the reading from about ${strong.h50.toFixed(0)} hours to about ${plus.h50.toFixed(0)}. Readings past the task range are unstable; METR likewise warns that results above 16 hours are unreliable.`}
+    ]);
+  };
+
+  /* 11-frontier/world-models/robotics-driving §3: five made-up policies, real success R vs the world model's R̂. */
+  F.evaluatorRank = function () {
+    const names = ['A', 'B', 'C', 'D', 'E'], R = [0.10, 0.25, 0.45, 0.70, 0.80], P = [0.05, 0.20, 0.30, 0.55, 0.50];
+    const mean = v => v.reduce((a, b) => a + b, 0) / v.length;
+    const pearson = (a, b) => { const ma = mean(a), mb = mean(b); let sab = 0, saa = 0, sbb = 0;
+      a.forEach((x, i) => { sab += (x - ma) * (b[i] - mb); saa += (x - ma) ** 2; sbb += (b[i] - mb) ** 2; });
+      return sab / Math.sqrt(saa * sbb); };
+    const ranks = v => v.map(x => 1 + v.filter(y => y > x).length);
+    const spearman = (a, b) => { const ra = ranks(a), rb = ranks(b), n = a.length;
+      return 1 - 6 * ra.reduce((s, r, i) => s + (r - rb[i]) ** 2, 0) / (n * (n * n - 1)); };
+    const mmrv = names.reduce((s, _, i) => s + Math.max(0, ...names.map((__, j) => ((P[i] < P[j]) !== (R[i] < R[j]) ? Math.abs(R[i] - R[j]) : 0))), 0) / names.length;
+    const top = ix => ix.reduce((b, i) => (P[i] > P[b] ? i : b), ix[0]);
+    const best = R.indexOf(Math.max(...R)), picked = top([0, 1, 2, 3, 4]);
+    const base = {names, R, P, rReal: ranks(R), rModel: ranks(P), pearson: pearson(R, P), spearman: spearman(R, P), mmrv,
+      picked: names[picked], best: names[best], top3: spearman(R.slice(2), P.slice(2))};
+    return frames([
+      {...base, stage: 0, zh: '五个推杯子策略的真机成功率（编的）：A 0.10、B 0.25、C 0.45、D 0.70、E 0.80。最好的是 E。',
+        en: 'Real-robot success rates for five cup-pushing policies (made up): A 0.10, B 0.25, C 0.45, D 0.70, E 0.80. E is the best.'},
+      {...base, stage: 1, zh: '世界模型给出的预测：0.05、0.20、0.30、0.55、0.50。整体偏低，而且 D 和 E 的顺序反了。',
+        en: 'The world model predicts 0.05, 0.20, 0.30, 0.55 and 0.50. It runs low overall, and D and E come out in the wrong order.'},
+      {...base, stage: 2, zh: `Pearson 相关约 ${base.pearson.toFixed(2)}，Spearman ${base.spearman.toFixed(1)}，MMRV ${base.mmrv.toFixed(2)}：三个指标都很好看。`,
+        en: `Pearson is about ${base.pearson.toFixed(2)}, Spearman ${base.spearman.toFixed(1)} and MMRV ${base.mmrv.toFixed(2)}: all three look good.`},
+      {...base, stage: 3, zh: `按模型分数挑最好的，挑中的是 ${base.picked}；真机上 ${base.best} 比它高 10 个百分点。`,
+        en: `Pick the best by the model's score and you get ${base.picked}; on the real robot, ${base.best} is 10 points better.`},
+      {...base, stage: 4, done: true, zh: `相关性主要来自 A、B 这些差策略和好策略的大差距。只看真正要选的 C、D、E，Spearman 降到 ${base.top3.toFixed(1)}。`,
+        en: `Most of the correlation comes from the wide gap between weak policies like A and B and the strong ones. Among C, D and E, the ones you actually choose between, Spearman drops to ${base.top3.toFixed(1)}.`}
+    ]);
+  };
+
+  /* 05-post-training/deep-rl/planning-and-learning §2: a one-level tree, priors (0.6, 0.4), values (0.2, 0.6), c = 1. */
+  F.mctsVisits = function () {
+    const P = [0.6, 0.4], v = [0.2, 0.6], c = 1, N = [0, 0], W = [0, 0], list = [];
+    const snap = extra => ({P, v, N: N.slice(), Q: N.map((n, i) => (n ? W[i] / n : 0)), ...extra});
+    list.push(snap({sim: 0, zh: '根节点有 L、R 两个动作。网络先验 P = (0.6, 0.4)，对两个子节点的估值 v = (0.2, 0.6)；取 c = 1，没访问过的边 Q = 0。',
+      en: 'The root has two actions, L and R. The network prior is P = (0.6, 0.4) and its values for the two children are v = (0.2, 0.6); take c = 1 and Q = 0 for an unvisited edge.'}));
+    for (let sim = 1; sim <= 6; sim++) {
+      const total = N[0] + N[1];
+      const score = [0, 1].map(i => (N[i] ? W[i] / N[i] : 0) + c * P[i] * Math.sqrt(total) / (1 + N[i]));
+      const pick = score[1] > score[0] ? 1 : 0;
+      N[pick] += 1; W[pick] += v[pick];
+      const name = pick ? 'R' : 'L', f2 = x => x.toFixed(2);
+      const why = total === 0 ? t2('两边加分都是 0，平局时选先验大的 L。', 'Both bonuses are 0; on a tie, take L, which has the larger prior.')
+        : t2(`L 的分数 ${f2(score[0])}，R 的分数 ${f2(score[1])}，选 ${name}。`, `L scores ${f2(score[0])} and R scores ${f2(score[1])}, so ${name} is chosen.`);
+      list.push(snap({sim, score, pick, zh: `第 ${sim} 次模拟：${why.zh}`, en: `Simulation ${sim}: ${why.en}`}));
+    }
+    const pi = tau => { const w = N.map(n => n ** (1 / tau)), s = w[0] + w[1]; return w.map(x => x / s); };
+    list.push(snap({sim: 6, done: true, pi1: pi(1), pi05: pi(0.5),
+      zh: `6 次模拟后访问次数是 (${N.join(', ')})。按 π ∝ N 得到 (${pi(1).map(x => x.toFixed(2)).join(', ')})，τ = 0.5 时是 (${pi(0.5).map(x => x.toFixed(1)).join(', ')})。先验 (0.6, 0.4) 被搜索改成了更偏向 R 的标签。`,
+      en: `After six simulations the visit counts are (${N.join(', ')}). π ∝ N gives (${pi(1).map(x => x.toFixed(2)).join(', ')}), and τ = 0.5 gives (${pi(0.5).map(x => x.toFixed(1)).join(', ')}). Search has turned the prior (0.6, 0.4) into a label that favours R.`}));
+    return frames(list);
+  };
+  function t2(zh, en) { return {zh, en}; }
+
   if (typeof module !== 'undefined' && module.exports) module.exports = {F, frames};
   if (typeof document === 'undefined' || !scope.AlgoLab) return;
 
@@ -2033,6 +2141,159 @@
       }
       if (frame.stage === 3) V.text(layer, x0 + w / 2, y + h + 18, 'shared', 'algo-idx', 'middle');
       V.text(layer, x0, y + h + 40, cfg.f === 256 ? t('8 个 expert，f = 256', '8 experts, f = 256') : t(`${cfg.routed} 个 routed${cfg.shared ? ` + ${cfg.shared} 个 shared` : ''}，f = 64`, `${cfg.routed} routed${cfg.shared ? ` + ${cfg.shared} shared` : ''}, f = 64`), 'algo-note');
+    };
+  }});
+
+  FIGURES['step-verifier-ceiling'] = name => stepper(name, F.verifierCeiling(), {height: 250, readouts: f => [
+    [t('通过测试', 'pass the tests'), f.stage >= 1 ? `${f.kept} / 100` : '—'],
+    [t('其中真正正确', 'actually right'), f.stage >= 2 ? (f.precision * 100).toFixed(1) + '%' : '—', f.stage >= 2 ? 'key' : ''],
+    [t('测试显示', 'tests report'), f.stage >= 3 ? '100%' : '—', f.stage >= 3 ? 'bad' : ''],
+    [t('真实正确率', 'true accuracy'), f.stage >= 3 ? `${f.right}%` : '40%', f.stage >= 4 ? 'key' : '']], setup(svg) {
+    const size = 17, gap = 3, x0 = 34, y0 = 34;
+    const grid = s('g');
+    svg.append(grid);
+    const head = V.text(svg, x0, 22, '', 'algo-head');
+    const cells = Array.from({length: 100}, (_, i) => {
+      const r = s('rect', {x: x0 + (i % 10) * (size + gap), y: y0 + Math.floor(i / 10) * (size + gap), width: size, height: size, rx: 3, class: 'algo-cell'});
+      grid.append(r);
+      return r;
+    });
+    const legend = [['is-keep', t('正确', 'right')], ['is-change', t('错，但过了测试', 'wrong, passes')], ['is-bad', t('错，被拦下', 'wrong, rejected')]].map(([cls, label], i) => {
+      const g = s('g');
+      g.append(s('rect', {x: 270, y: 44 + i * 26, width: 14, height: 14, rx: 3, class: 'algo-cell ' + cls}));
+      V.text(g, 292, 56 + i * 26, label, 'algo-note');
+      svg.append(g);
+      return g;
+    });
+    const bx = 270, bw = 300, bars = [0, 1, 2, 3].map(i => {
+      const y = 70 + i * 36;
+      return {label: V.text(svg, bx, y - 6, '', 'algo-note'), back: (() => { const r = s('rect', {x: bx, y, width: bw, height: 12, rx: 3, class: 'algo-ghost'}); svg.append(r); return r; })(),
+        bar: (() => { const r = s('rect', {x: bx, y, width: 0, height: 12, rx: 3, class: 'algo-bar'}); svg.append(r); return r; })()};
+    });
+    return frame => {
+      const {stage} = frame;
+      cells.forEach((rect, i) => {
+        let cls;
+        if (stage <= 2) cls = i < 40 ? 'is-keep' : (stage >= 1 && i < 40 + frame.leaked) ? 'is-change' : stage >= 1 ? 'is-bad is-out' : 'is-bad';
+        else cls = i < frame.right ? 'is-keep' : 'is-change';
+        rect.setAttribute('class', 'algo-cell ' + cls);
+      });
+      head.textContent = stage <= 2 ? t('第一轮：模型写出的 100 份解', 'round 1: the model’s 100 solutions') : t('微调后：新模型的 100 份解', 'after fine-tuning: 100 new solutions');
+      show(grid, true);
+      legend.forEach((g, i) => show(g, stage < 5 && (i < 2 || stage <= 2)));
+      bars.forEach((b, i) => {
+        const c = frame.ceilings[i], on = stage >= 5;
+        b.label.textContent = on ? `${t('放过错解', 'wrong let through')} ${Math.round(c.f * 100)}% → ${t('上限', 'ceiling')} ${(c.value * 100).toFixed(1)}%` : '';
+        b.bar.setAttribute('width', on ? c.value * bw : 0);
+        b.bar.setAttribute('class', 'algo-bar' + (on && c.f === frame.f ? ' is-now' : ''));
+        show(b.back, on);
+      });
+    };
+  }});
+
+  FIGURES['step-time-horizon'] = name => stepper(name, F.timeHorizon(), {height: 262, readouts: f => [
+    [t('成功次数', 'successes'), f.run.counts.join(' · ')],
+    [t('斜率', 'slope'), f.stage >= 1 ? f.run.slope.toFixed(2) : '—'],
+    [t('50% 时间跨度', '50% horizon'), f.stage >= 2 ? `${f.run.h50.toFixed(0)} ${t('小时', 'h')}` : '—', f.stage >= 4 ? 'bad' : f.stage >= 2 ? 'key' : ''],
+    [t('80% 时间跨度', '80% horizon'), f.stage === 3 ? `${(f.run.h80 * 60).toFixed(0)} ${t('分钟', 'min')}` : '—']], setup(svg) {
+    const px0 = 60, pw = 540, py0 = 30, ph = 170, xmin = -3, xmax = 8;
+    const X = x => px0 + (x - xmin) / (xmax - xmin) * pw, Y = p => py0 + (1 - p) * ph;
+    const beyond = s('rect', {x: X(4), y: py0, width: X(xmax) - X(4), height: ph, class: 'algo-reach is-bad-band'});
+    svg.append(beyond);
+    const beyondLabel = V.text(svg, X(6), py0 + 16, t('超出最长任务', 'beyond the longest tasks'), 'algo-warn', 'middle');
+    svg.append(s('line', {x1: px0, y1: Y(0), x2: px0 + pw, y2: Y(0), class: 'algo-edge'}), s('line', {x1: px0, y1: Y(0), x2: px0, y2: Y(1), class: 'algo-edge'}));
+    [[-2, t('15 分钟', '15 min')], [0, t('1 小时', '1 h')], [2, t('4 小时', '4 h')], [4, t('16 小时', '16 h')], [6, t('64 小时', '64 h')], [8, t('256 小时', '256 h')]].forEach(([x, label]) => V.text(svg, X(x), Y(0) + 18, label, 'algo-idx', 'middle'));
+    [0, 0.5, 0.8, 1].forEach(p => V.text(svg, px0 - 8, Y(p) + 4, String(p), 'algo-idx', 'end'));
+    const half = s('line', {x1: px0, x2: px0 + pw, y1: Y(0.5), y2: Y(0.5), class: 'algo-edge algo-dash'}), eighty = s('line', {x1: px0, x2: px0 + pw, y1: Y(0.8), y2: Y(0.8), class: 'algo-edge algo-dash'});
+    const curve = s('polyline', {class: 'algo-edge is-look-line', fill: 'none'}), drop = s('line', {class: 'algo-edge is-change'}), drop80 = s('line', {class: 'algo-edge is-keep'});
+    svg.append(half, eighty, curve, drop, drop80);
+    const dots = [0, 1, 2, 3].map(() => { const c = s('circle', {r: 6, class: 'algo-cell is-look'}); svg.append(c); return c; });
+    const mark = V.text(svg, 0, 0, '', 'algo-strong', 'middle');
+    return frame => {
+      const run = frame.run, sig = x => 1 / (1 + Math.exp(-(run.icpt + run.slope * x)));
+      dots.forEach((c, i) => { c.setAttribute('cx', X(frame.xs[i])); c.setAttribute('cy', Y(run.ps[i])); });
+      curve.setAttribute('points', Array.from({length: 111}, (_, k) => xmin + k / 10).map(x => `${X(x).toFixed(1)},${Y(sig(x)).toFixed(1)}`).join(' '));
+      show(curve, frame.stage >= 1);
+      show(half, frame.stage >= 2); show(eighty, frame.stage === 3);
+      const x50 = Math.min(xmax, run.x50);
+      drop.setAttribute('x1', X(x50)); drop.setAttribute('x2', X(x50)); drop.setAttribute('y1', Y(0.5)); drop.setAttribute('y2', Y(0));
+      show(drop, frame.stage >= 2);
+      drop80.setAttribute('x1', X(run.x80)); drop80.setAttribute('x2', X(run.x80)); drop80.setAttribute('y1', Y(0.8)); drop80.setAttribute('y2', Y(0));
+      show(drop80, frame.stage === 3);
+      mark.setAttribute('x', X(x50)); mark.setAttribute('y', Y(0.5) - 10);
+      mark.textContent = frame.stage >= 2 ? `≈ ${run.h50.toFixed(0)} ${t('小时', 'h')}` : '';
+      show(beyond, frame.stage >= 4); show(beyondLabel, frame.stage >= 4);
+    };
+  }});
+
+  FIGURES['step-evaluator-rank'] = name => stepper(name, F.evaluatorRank(), {height: 250, readouts: f => [
+    ['Pearson', f.stage >= 2 ? f.pearson.toFixed(2) : '—', f.stage >= 2 ? 'good' : ''],
+    ['Spearman', f.stage >= 2 ? (f.done ? `${f.spearman.toFixed(1)} → ${t('前三', 'top 3')} ${f.top3.toFixed(1)}` : f.spearman.toFixed(1)) : '—', f.done ? 'bad' : f.stage >= 2 ? 'good' : ''],
+    ['MMRV', f.stage >= 2 ? f.mmrv.toFixed(2) : '—'],
+    [t('按模型挑中', 'model picks'), f.stage >= 3 ? `${f.picked} ✗（${t('真机最好', 'best on robot')} ${f.best}）` : '—', f.stage >= 3 ? 'bad' : '']], setup(svg) {
+    const lx = 150, rx = 470, y0 = 48, gap = 36;
+    V.text(svg, lx, 26, t('真机成功率', 'real success rate'), 'algo-head', 'middle');
+    const rightHead = V.text(svg, rx, 26, t('世界模型预测', 'world-model prediction'), 'algo-head', 'middle');
+    const base = F.evaluatorRank()[0];
+    const left = base.names.map(() => cell(svg, lx - 60, 0, 120, 26, '', 'algo-small'));
+    const right = base.names.map(() => cell(svg, rx - 60, 0, 120, 26, '', 'algo-small'));
+    const links = base.names.map(() => { const l = s('line', {class: 'algo-edge'}); svg.append(l); return l; });
+    return frame => {
+      base.names.forEach((n, i) => {
+        const yl = y0 + (frame.rReal[i] - 1) * gap, yr = y0 + (frame.rModel[i] - 1) * gap;
+        const swapped = (n === 'D' || n === 'E');
+        left[i].rect.setAttribute('y', yl); left[i].label.setAttribute('y', yl + 18);
+        left[i].set(`${n}  ${frame.R[i].toFixed(2)}`, frame.stage >= 3 && n === frame.best ? 'is-keep' : '');
+        right[i].rect.setAttribute('y', yr); right[i].label.setAttribute('y', yr + 18);
+        right[i].set(frame.stage >= 1 ? `${n}  ${frame.P[i].toFixed(2)}` : '', frame.stage < 1 ? 'is-hidden' : frame.stage >= 3 && n === frame.picked ? 'is-bad' : '');
+        links[i].setAttribute('x1', lx + 60); links[i].setAttribute('y1', yl + 13); links[i].setAttribute('x2', rx - 60); links[i].setAttribute('y2', yr + 13);
+        links[i].setAttribute('class', 'algo-edge' + (frame.stage < 1 ? ' is-hidden' : swapped ? ' is-bad' : frame.done && i < 2 ? ' is-out' : ''));
+      });
+      show(rightHead, frame.stage >= 1);
+    };
+  }});
+
+  FIGURES['step-mcts-visits'] = name => stepper(name, F.mctsVisits(), {height: 250, readouts: f => [
+    ['N(L), N(R)', `${f.N[0]}, ${f.N[1]}`],
+    [t('这次选中', 'chosen'), f.pick == null ? '—' : (f.pick ? 'R' : 'L')],
+    [t('先验 P', 'prior P'), '0.6, 0.4'],
+    [t('搜索标签 π', 'search target π'), f.done ? `${f.pi1.map(x => x.toFixed(2)).join(', ')}` : '—', f.done ? 'key' : '']], setup(svg) {
+    const root = [200, 40], kids = [[110, 150], [290, 150]], w = 120, h = 54;
+    const edges = kids.map(([x, y]) => { const l = s('line', {x1: root[0], y1: root[1] + 14, x2: x, y2: y - h / 2, class: 'algo-edge'}); svg.append(l); return l; });
+    svg.append(s('circle', {cx: root[0], cy: root[1], r: 14, class: 'algo-cell is-look'}));
+    V.text(svg, root[0], root[1] + 4, 's', 'algo-strong', 'middle');
+    const boxes = kids.map(([x, y], i) => {
+      const rect = s('rect', {x: x - w / 2, y: y - h / 2, width: w, height: h, rx: 8, class: 'algo-cell'});
+      svg.append(rect);
+      const l1 = V.text(svg, x, y - 6, `${i ? 'R' : 'L'} · P ${i ? 0.4 : 0.6} · v ${i ? 0.6 : 0.2}`, 'algo-note', 'middle');
+      const l2 = V.text(svg, x, y + 14, '', 'algo-strong', 'middle');
+      const score = V.text(svg, x, y + h / 2 + 18, '', 'algo-idx', 'middle');
+      return {rect, l1, l2, score};
+    });
+    const bx = 420, bw = 170;
+    V.text(svg, bx, 40, t('先验 P 与搜索标签 π', 'prior P vs search target π'), 'algo-head');
+    const rows = [['L', 0], ['R', 1]].map(([n, i]) => {
+      const y = 62 + i * 70;
+      V.text(svg, bx, y + 10, n, 'algo-strong');
+      const pr = s('rect', {x: bx + 18, y, width: 0.6 * bw, height: 12, rx: 3, class: 'algo-ghost'});
+      const pi = s('rect', {x: bx + 18, y: y + 18, width: 0, height: 12, rx: 3, class: 'algo-bar'});
+      svg.append(pr, pi);
+      const lp = V.text(svg, bx + 18 + bw + 6, y + 10, '', 'algo-idx'), lq = V.text(svg, bx + 18 + bw + 6, y + 28, '', 'algo-idx');
+      return {pr, pi, lp, lq};
+    });
+    return frame => {
+      boxes.forEach((b, i) => {
+        b.l2.textContent = `N ${frame.N[i]} · Q ${frame.N[i] ? frame.Q[i].toFixed(1) : '0'}`;
+        b.rect.setAttribute('class', 'algo-cell' + (frame.pick === i ? ' is-change' : frame.done && i === 1 ? ' is-keep' : ''));
+        b.score.textContent = frame.score ? `${t('分数', 'score')} ${frame.score[i].toFixed(2)}` : '';
+        edges[i].setAttribute('class', 'algo-edge' + (frame.pick === i ? ' is-change' : ''));
+      });
+      rows.forEach((r, i) => {
+        r.pr.setAttribute('width', [0.6, 0.4][i] * bw);
+        r.lp.textContent = `P ${[0.6, 0.4][i]}`;
+        r.pi.setAttribute('width', frame.done ? frame.pi1[i] * bw : 0);
+        r.lq.textContent = frame.done ? `π ${frame.pi1[i].toFixed(2)}` : '';
+      });
     };
   }});
 

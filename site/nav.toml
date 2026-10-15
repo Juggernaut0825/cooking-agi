@@ -99,6 +99,13 @@ en = "03 · Inference & applications"
 summary_zh = "从生成一个回答，到检索资料、使用工具和维持长期状态。"
 summary_en = "Move from generating an answer to retrieving evidence, using tools, and maintaining state."
 
+[[zone]]
+id = "frontier"
+zh = "04 · 前沿观察"
+en = "04 · Frontier watch"
+summary_zh = "变化快、还没定型的方向：先分清说的是哪件事，再看证据走到了哪一步。"
+summary_en = "Fast-moving directions that have not settled: pin down what is meant, then see how far the evidence goes."
+
 [[group]]
 id = "start"
 zh = "开始"
@@ -220,6 +227,16 @@ en = "AI systems & experience"
 home = "06-systems/README.md"
 summary_zh = "把一次请求放回完整产品：看可观测性、人工参与和长期使用体验。"
 summary_en = "Put a request back in its product context: observability, human oversight, and long-term use."
+
+[[group]]
+id = "frontier"
+category = "learn"
+zone = "frontier"
+zh = "前沿"
+en = "Frontier"
+home = "11-frontier/README.md"
+summary_zh = "世界模型、递归自我改进这类正在变化的方向：先问清楚指的是什么，再看有哪些可核对的证据。"
+summary_en = "Moving targets such as world models and recursive self-improvement: ask what is meant, then check the evidence."
 
 [[group]]
 id = "coding"
@@ -579,16 +596,16 @@ dir = "05-post-training/deep-rl/algorithms"
 group = "deep-rl"
 zh = "02 · 核心算法"
 en = "02 · Core algorithms"
-include = ["05-post-training/deep-rl/dqn.md", "05-post-training/deep-rl/continuous-control.md", "05-post-training/deep-rl/soft-actor-critic.md", "05-post-training/deep-rl/model-based.md", "05-post-training/deep-rl/planning-and-control.md"]
-order = ["dqn.md", "continuous-control.md", "soft-actor-critic.md", "model-based.md", "planning-and-control.md"]
+include = ["05-post-training/deep-rl/dqn.md", "05-post-training/deep-rl/continuous-control.md", "05-post-training/deep-rl/soft-actor-critic.md", "05-post-training/deep-rl/model-based.md", "05-post-training/deep-rl/model-types.md", "05-post-training/deep-rl/planning-and-control.md", "05-post-training/deep-rl/planning-and-learning.md"]
+order = ["dqn.md", "continuous-control.md", "soft-actor-critic.md", "model-based.md", "model-types.md", "planning-and-control.md", "planning-and-learning.md"]
 
 [[section]]
 dir = "05-post-training/deep-rl/extensions"
 group = "deep-rl"
 zh = "03 · 数据与实验"
 en = "03 · Data & experiments"
-include = ["05-post-training/deep-rl/imitation-and-rewards.md", "05-post-training/deep-rl/offline-and-ope.md", "05-post-training/deep-rl/exploration-and-hierarchy.md", "05-post-training/deep-rl/experiments.md", "05-post-training/deep-rl/llm-bridge.md", "05-post-training/deep-rl/why-rl-is-hard.md"]
-order = ["imitation-and-rewards.md", "offline-and-ope.md", "exploration-and-hierarchy.md", "experiments.md", "llm-bridge.md", "why-rl-is-hard.md"]
+include = ["05-post-training/deep-rl/imitation-and-rewards.md", "05-post-training/deep-rl/offline-and-ope.md", "05-post-training/deep-rl/ope-estimators.md", "05-post-training/deep-rl/exploration-and-hierarchy.md", "05-post-training/deep-rl/experiments.md", "05-post-training/deep-rl/llm-bridge.md", "05-post-training/deep-rl/why-rl-is-hard.md"]
+order = ["imitation-and-rewards.md", "offline-and-ope.md", "ope-estimators.md", "exploration-and-hierarchy.md", "experiments.md", "llm-bridge.md", "why-rl-is-hard.md"]
 
 [[section]]
 dir   = "05-post-training/rlhf"
@@ -640,6 +657,27 @@ group = "agents"
 zh    = "Agents"
 en    = "Agents"
 order = ["README.md", "prompting.md", "patterns.md", "tools-and-skills.md", "deep-research.md", "scenarios.md", "model-choice.md", "review.md"]
+
+[[section]]
+dir   = "11-frontier"
+group = "frontier"
+zh    = "从这里开始"
+en    = "Start here"
+order = ["README.md"]
+
+[[section]]
+dir   = "11-frontier/world-models"
+group = "frontier"
+zh    = "世界模型"
+en    = "World models"
+order = ["README.md", "dreamer.md", "jepa.md", "interactive-video.md", "robotics-driving.md", "do-they-understand.md", "review.md"]
+
+[[section]]
+dir   = "11-frontier/self-improvement"
+group = "frontier"
+zh    = "递归自我改进"
+en    = "Recursive self-improvement"
+order = ["README.md", "generate-verify-train.md", "code-not-weights.md", "measuring.md", "review.md"]
 
 [[section]]
 dir   = "practice"
@@ -872,8 +910,11 @@ en  = "Templates"
 "05-post-training/deep-rl/soft-actor-critic.md" = ["SAC 与最大熵", "SAC & maximum entropy"]
 "05-post-training/deep-rl/model-based.md" = ["Model-based RL", "Model-based RL"]
 "05-post-training/deep-rl/planning-and-control.md" = ["规划与 LQR", "Planning & LQR"]
+"05-post-training/deep-rl/model-types.md" = ["学什么样的模型", "Which model to learn"]
+"05-post-training/deep-rl/planning-and-learning.md" = ["规划与学习互相喂", "Planning meets learning"]
 "05-post-training/deep-rl/imitation-and-rewards.md" = ["模仿与奖励", "Imitation & rewards"]
 "05-post-training/deep-rl/offline-and-ope.md" = ["Offline RL 与 OPE", "Offline RL & OPE"]
+"05-post-training/deep-rl/ope-estimators.md" = ["OPE 估计器", "OPE estimators"]
 "05-post-training/deep-rl/exploration-and-hierarchy.md" = ["探索与层级", "Exploration & hierarchy"]
 "05-post-training/deep-rl/experiments.md" = ["实验与排错", "Experiments & debugging"]
 "05-post-training/deep-rl/llm-bridge.md" = ["接到 LLM 与 Agents", "LLMs & agents"]
@@ -976,6 +1017,19 @@ en  = "Templates"
 "10-agents/model-choice.md"                                      = ["模型选择与路由", "Model selection & routing"]
 "10-agents/tools-and-skills.md" = ["工具、MCP 与 Skills", "Tools, MCP & skills"]
 "10-agents/review.md"                                            = ["复习题", "Review"]
+"11-frontier/README.md" = ["从这里开始", "Start here"]
+"11-frontier/world-models/README.md" = ["总览", "Overview"]
+"11-frontier/world-models/dreamer.md" = ["在想象里学", "Learning in imagination"]
+"11-frontier/world-models/jepa.md" = ["预测表示：JEPA", "Predicting representations"]
+"11-frontier/world-models/interactive-video.md" = ["能交互的视频", "Video you can act in"]
+"11-frontier/world-models/robotics-driving.md" = ["机器人与自动驾驶", "Robots & driving"]
+"11-frontier/world-models/do-they-understand.md" = ["它真的懂世界吗", "Do they understand?"]
+"11-frontier/world-models/review.md" = ["复习题", "Review"]
+"11-frontier/self-improvement/README.md" = ["总览", "Overview"]
+"11-frontier/self-improvement/generate-verify-train.md" = ["生成、验证、再训练", "Generate, verify, retrain"]
+"11-frontier/self-improvement/code-not-weights.md" = ["改代码不改权重", "Code, not weights"]
+"11-frontier/self-improvement/measuring.md" = ["怎么量 AI 加速 AI", "Measuring AI speeding AI"]
+"11-frontier/self-improvement/review.md" = ["复习题", "Review"]
 "learn/README.md" = ["基础目录与导读", "Foundations catalog & guide"]
 "learn/choose-your-path.md" = ["按目标找路线", "Find your route"]
 "learn/ml-exercises/README.md" = ["从代码开始", "Start with code"]

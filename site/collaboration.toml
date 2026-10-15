@@ -37,6 +37,13 @@ groups = ["systems", "agents", "multimodal"]
 reviewers = ["tianyi-zhang-02", "2pir2"]
 
 [[area]]
+id = "frontier"
+zh = "前沿观察"
+en = "Frontier watch"
+groups = ["frontier"]
+reviewers = ["tianyi-zhang-02", "2pir2"]
+
+[[area]]
 id = "practice"
 zh = "工程实践与开源"
 en = "Practice & open source"

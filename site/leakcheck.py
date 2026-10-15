@@ -52,7 +52,7 @@ def redact_public_career_role(line, source):
 SCAN = ["00-foundations", "quant", "01-data-and-feedback", "02-memory",
         "03-multimodal-learning", "04-search", "05-post-training", "06-systems",
         "07-evaluation", "08-model-experience", "09-personal-agi",
-        "10-agents", "papers", "career", "interview", "practice", "learn", "community", "discussions"]
+        "10-agents", "11-frontier", "papers", "career", "interview", "practice", "learn", "community", "discussions"]
 
 
 def main():
