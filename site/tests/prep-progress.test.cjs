@@ -1,5 +1,5 @@
 // window.PreparationProgress: the small API the save button, the reading drawer,
-// note positions and the interview-prep tabs share, plus the whole-envelope backup.
+// and note positions share, plus the whole-envelope backup.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -37,10 +37,10 @@ function withBookmarks(records) {
   return state;
 }
 
-test('the API is small: library, backup, mode and health only', () => {
+test('the API is small: library, backup and health only', () => {
   const {progress} = environment();
-  assert.deepEqual(Object.keys(progress).sort(), ['exportBackup', 'getCatalog', 'getHealth', 'getMode', 'getState',
-    'importBackup', 'library', 'setMode', 'storageKey', 'updateWorkspace']);
+  assert.deepEqual(Object.keys(progress).sort(), ['exportBackup', 'getCatalog', 'getHealth', 'getState',
+    'importBackup', 'library', 'storageKey', 'updateWorkspace']);
   assert.equal(progress.storageKey, api.KEY);
   assert.equal(typeof progress.library.read, 'function');
 });
@@ -79,16 +79,6 @@ test('an unreadable or future backup throws and leaves local records untouched',
   assert.throws(() => context.progress.importBackup(JSON.stringify({...api.empty(), version: 99})));
   assert.equal(context.data.get(api.KEY), local);
   assert.ok(!context.fired.includes('notes:prep-restored'));
-});
-
-test('the interview-prep tab choice is remembered, and blocked storage does not throw', () => {
-  const context = environment();
-  assert.equal(context.progress.getMode(), 'review');
-  context.progress.setMode('plan');
-  assert.equal(context.progress.getMode(), 'plan');
-  assert.equal(context.state().mode.value, 'plan');
-  const blocked = environment({denied: true});
-  assert.doesNotThrow(() => blocked.progress.setMode('plan'));
 });
 
 test('a change from another tab re-reads storage and tells the page', () => {

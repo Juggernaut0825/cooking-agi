@@ -1,7 +1,6 @@
 from html.parser import HTMLParser
 from pathlib import Path
 import re
-import subprocess
 import sys
 import unittest
 from unittest.mock import patch
@@ -34,30 +33,25 @@ class PrepHubTests(unittest.TestCase):
             for source in sources:
                 self.assertFalse(paritycheck.source_issues(source))
 
-    def test_modes_and_destinations_work_without_javascript(self):
+    def test_landing_is_a_plain_directory(self):
+        # The quick-review / study-plan tabs and the familiarity picker were removed on
+        # 2026-10-14: readers pick the part they need themselves.
         for suffix in ("", ".en"):
             source = (ROOT / f"interview/README{suffix}.md").read_text()
             body, _ = build.render_markdown(source)
             markup = HubMarkup(body)
-            panels = [attrs for _, attrs in markup.elements if "data-prep-panel" in attrs]
-            tabs = [attrs for _, attrs in markup.elements if "data-prep-tab" in attrs]
-            self.assertEqual([panel['id'] for panel in panels], ['review', 'plan'])
-            self.assertEqual([tab['href'] for tab in tabs], ['#review', '#plan'])
-            self.assertTrue(all('hidden' not in panel for panel in panels))
-            self.assertTrue(all('role' not in tab for tab in tabs))
+            self.assertFalse([attrs for _, attrs in markup.elements if "data-prep-tab" in attrs or "data-prep-panel" in attrs])
             identifiers = [attrs['id'] for _, attrs in markup.elements if 'id' in attrs]
             self.assertEqual(len(identifiers), len(set(identifiers)))
             links = [attrs['href'] for tag, attrs in markup.elements if tag == 'a']
-            for target in (f'speedrun{suffix}.md#two-hours',
-                           f'speedrun-start{suffix}.md#first-two',
-                           f'study-plan{suffix}.md#build',
-                           f'study-plan{suffix}.md#refresh',
-                           f'code-comprehension{suffix}.md'):
+            for target in (f'basics/README{suffix}.md', f'../learn/ml-exercises/README{suffix}.md', f'leetcode{suffix}.md',
+                           f'code-comprehension{suffix}.md', f'../learn/system-design/README{suffix}.md',
+                           f'../career/prepare{suffix}.md', f'ai-roles-prep{suffix}.md'):
                 self.assertIn(target, links)
 
     def test_legacy_landing_anchors_survive(self):
-        for suffix, anchors in [('', ['prep-routes', 'ml', 'python', '_1', '_2']),
-                                ('.en', ['prep-routes', 'ml-questions-implementations',
+        for suffix, anchors in [('', ['prep-routes', 'review', 'plan', 'ml', 'python', '_1', '_2']),
+                                ('.en', ['prep-routes', 'review', 'plan', 'ml-questions-implementations',
                                          'python-algorithms', 'system-design', 'how-to-review',
                                          'code-exercises-turn-understanding-into-practice'])]:
             body, _ = build.render_markdown((ROOT / f'interview/README{suffix}.md').read_text())
@@ -84,15 +78,11 @@ class PrepHubTests(unittest.TestCase):
                     build.build_page(page, [], navigation['site']['repo'], urls)
                     result = build.assemble(page, sections, [], navigation, 'test', template)
                     self.assertEqual('page-prep-hub' in result, chapter == 'README')
-                    self.assertEqual('static/prep-hub.js' in result, chapter == 'README')
+                    self.assertNotIn('static/prep-hub.js', result)
                     self.assertEqual('static/prep-hub.css' in result, chapter == 'README')
                     if chapter == 'README':
                         self.assertNotIn('class="page-turn"', result)
                     self.assertNotIn('.md"', page.body)
-
-    def test_tabs_keyboard_history_and_language_behavior(self):
-        subprocess.run(['node', str(ROOT / 'site/tests/prep-hub-behavior.cjs')], check=True)
-
 
 if __name__ == '__main__':
     unittest.main()

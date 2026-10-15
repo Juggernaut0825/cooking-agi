@@ -27,7 +27,7 @@ A little Python is enough to begin. If vectors and gradients are unfamiliar, sta
 
 ## Interviews: find the part that needs practice {#interviews}
 
-In [Interview prep](../interview/README.en.md), choose “Quick review” or “Study at your pace”. The first narrows the scope; the second follows the prerequisites. Both let you start with what you know. Suggested hour budgets are not deadlines.
+In [Interview prep](../interview/README.en.md), pick the area you need. With a background, go straight to the [quick review](../interview/speedrun.en.md); to build up step by step, use the [study plan](../interview/study-plan.en.md). The first narrows the scope; the second follows the prerequisites. Both let you start with what you know. Suggested hour budgets are not deadlines.
 
 Start with the job description and any interview information you've received. Two MLE roles may emphasize quite different things. Without a particular interview coming up, try one concept question and one small implementation to see where you get stuck.
 

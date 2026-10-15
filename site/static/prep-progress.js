@@ -3,7 +3,8 @@
    this file opens it and gives the sidebar, the reading drawer, note positions
    and the study buddy one small API, plus a whole-envelope backup.
 
-   Earlier versions also kept study plans, per-note status and memos. Their data
+   Earlier versions also kept study plans, per-note status, memos and the
+   interview page's last-opened tab. Their data
    stays inside existing envelopes and backups, untouched and still exported, but
    nothing on the site shows or edits it any more. */
 (() => {
@@ -25,11 +26,6 @@
     getCatalog() { return null; },
     getHealth() { return store.health(); },
     updateWorkspace(records, action) { return store.updateWorkspace(records, action); },
-    // which tab the interview-prep page opened on last (quick review or study plan)
-    getMode() { return store.read().mode.value; },
-    setMode(value) {
-      try { store.setMode(value, new Date().toISOString()); } catch {}
-    },
     // the whole envelope, so a backup carries saved notes, reading history and positions
     exportBackup() { return store.serialize(); },
     // merge a backup in; for each record the newer copy wins, nothing local is dropped
