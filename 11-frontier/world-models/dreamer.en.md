@@ -104,6 +104,8 @@ Work backwards:
 
 The advantage at the start is $0.695-0.6=0.095$, which is positive, so the actor slightly raises the probability of "push 1 cm". Here $S<1$, so the denominator is 1.
 
+<!-- widget:step-lambda-return -->
+
 Change one condition to see $\lambda$: with $\lambda=0$, $R^\lambda_0=r_1+\gamma v_1=0.45$, trusting the critic entirely; with $\lambda=1$ it becomes $0.9^2\times1+0.9^3\times0.8\approx1.393$, trusting the imagined rewards entirely and using $v_3$ only once at the end. $\lambda=0.5$ lies in between.
 
 Change another to see a model error. Suppose the model wrongly predicts that the cup falls at step 2, giving $r_2=-1$ and $c_2=0$. Then $R^\lambda_1=-1$ and $R^\lambda_0=0.9\times(0.5\times0.5+0.5\times(-1))=-0.225$, so the advantage becomes $-0.825$: the actor learns to avoid an action that is actually safe. Conversely, if the model misses a real fall, the actor learns to push. **The actor sees only the numbers the model gives it, never the real world.**

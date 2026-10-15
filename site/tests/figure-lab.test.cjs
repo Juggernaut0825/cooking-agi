@@ -271,3 +271,13 @@ test('MCTS visits: L, L, R, R, R, R gives N = (2, 4) and pi = (0.33, 0.67), (0.2
   assert.deepEqual(round(end.pi1, 2), [0.33, 0.67]);
   assert.deepEqual(round(end.pi05, 2), [0.2, 0.8]);
 });
+
+test('lambda return: 0.8, 1.72, 1.044, 0.695; lambda 0 gives 0.45, lambda 1 gives 1.393; a wrong fall gives -0.225', () => {
+  const frames = F.lambdaReturn();
+  assert.deepEqual(frames[4].R.map(x => Number(x.toFixed(3))), [0.695, 1.044, 1.72, 0.8]);
+  assert.equal(Number(frames[5].lam0.toFixed(3)), 0.45);
+  assert.equal(Number(frames[5].lam1.toFixed(3)), 1.393);
+  const end = frames[frames.length - 1];
+  assert.equal(Number(end.R[0].toFixed(3)), -0.225);
+  assert.equal(end.R[1], -1);
+});

@@ -609,6 +609,7 @@ FIGURE_LAB = [
     ("step-time-horizon", "拟合 50% 时间跨度，以及超出范围的读数", "Fitting a 50% time horizon, and readings past the task range", "step"),
     ("step-evaluator-rank", "相关系数 0.98，第一名还是选错了", "A correlation of 0.98, and still the wrong winner", "step"),
     ("step-mcts-visits", "六次模拟：访问次数变成策略标签", "Six simulations: visit counts become a policy target", "step"),
+    ("step-lambda-return", "从后往前算 λ-return", "Computing a λ-return backwards", "step"),
 ]
 for _name, _zh, _en, _kind in [(name, zh, en, "step") for name, zh, en in ALGO_LAB] + FIGURE_LAB:
     _kicker = 'data-zh="动画" data-en="Step by step"' if _kind == "step" else 'data-zh="图解" data-en="Diagram"'

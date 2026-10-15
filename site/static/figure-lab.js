@@ -1028,6 +1028,38 @@
   };
   function t2(zh, en) { return {zh, en}; }
 
+
+  /* 11-frontier/world-models/dreamer §4: three imagined steps, γ = 0.9, λ = 0.5 (teaching values). */
+  F.lambdaReturn = function (gamma = 0.9, lambda = 0.5) {
+    const r = [null, 0, 0, 1], c = [null, 1, 1, 1], v = [0.6, 0.5, 0.6, 0.8];
+    const run = (rr, cc, lam) => {
+      const R = [null, null, null, v[3]];
+      for (let t = 2; t >= 0; t--) R[t] = rr[t + 1] + gamma * cc[t + 1] * ((1 - lam) * v[t + 1] + lam * R[t + 1]);
+      return R;
+    };
+    const R = run(r, c, lambda), f3 = x => (Math.round(x * 1000) / 1000).toString();
+    const lam0 = run(r, c, 0)[0], lam1 = run(r, c, 1)[0];
+    const wrong = run([null, 0, -1, 1], [null, 1, 0, 1], lambda);
+    const base = {r, c, v, gamma, lambda, lam0, lam1};
+    const upTo = k => R.map((x, t) => (t >= k ? x : null));
+    return frames([
+      {...base, R: upTo(4), stage: 0, zh: '从回放里的真实状态 s0 出发，模型想象出 3 步。每一步有预测奖励 r、继续标志 c，critic 给出价值 v。只有到达目标区的 s3 拿到奖励 1。',
+        en: 'Start from a real replayed state s0; the model imagines three steps. Each step has a predicted reward r and continue flag c, and the critic gives a value v. Only s3, in the goal zone, earns a reward of 1.'},
+      {...base, R: upTo(3), stage: 1, zh: '从最后一步往回算。末端没有更多想象，直接用 critic：R3 = v3 = 0.8。',
+        en: 'Work backwards from the last step. With no more imagination, use the critic directly: R3 = v3 = 0.8.'},
+      {...base, R: upTo(2), stage: 2, zh: `R2 = r3 + γ·c3·[(1−λ)·v3 + λ·R3] = 1 + 0.9 × 0.8 = ${f3(R[2])}。`,
+        en: `R2 = r3 + γ·c3·[(1−λ)·v3 + λ·R3] = 1 + 0.9 × 0.8 = ${f3(R[2])}.`},
+      {...base, R: upTo(1), stage: 3, zh: `R1 = 0 + 0.9 × (0.5 × 0.6 + 0.5 × 1.72) = ${f3(R[1])}：一半信 critic 的 v2，一半信后面想象出来的回报。`,
+        en: `R1 = 0 + 0.9 × (0.5 × 0.6 + 0.5 × 1.72) = ${f3(R[1])}: half trusts the critic's v2, half the imagined return behind it.`},
+      {...base, R: upTo(0), stage: 4, zh: `R0 = 0.9 × (0.5 × 0.5 + 0.5 × 1.044) ≈ ${f3(R[0])}。优势 = R0 − v0 ≈ +${f3(R[0] - v[0])}，actor 会稍微提高“推 1 cm”的概率。`,
+        en: `R0 = 0.9 × (0.5 × 0.5 + 0.5 × 1.044) ≈ ${f3(R[0])}. The advantage R0 − v0 ≈ +${f3(R[0] - v[0])}, so the actor nudges up the probability of "push 1 cm".`},
+      {...base, R: upTo(0), stage: 5, zh: `换 λ：λ = 0 时只信 critic，R0 = ${f3(lam0)}；λ = 1 时只信想象出的奖励，R0 ≈ ${f3(lam1)}。λ = 0.5 落在两者之间。`,
+        en: `Change λ: at λ = 0 it trusts only the critic, R0 = ${f3(lam0)}; at λ = 1 it trusts only the imagined rewards, R0 ≈ ${f3(lam1)}. λ = 0.5 sits in between.`},
+      {...base, R: wrong.map(x => x), wrong: true, stage: 6, done: true, zh: `如果模型在第 2 步误报“杯子掉了”（r2 = −1，c2 = 0）：R1 = −1，R0 = ${f3(wrong[0])}，优势变成 ${f3(wrong[0] - v[0])}。actor 学会躲开一个其实安全的动作：它只看得到模型给的数字。`,
+        en: `If the model wrongly predicts at step 2 that the cup fell (r2 = −1, c2 = 0): R1 = −1, R0 = ${f3(wrong[0])}, and the advantage becomes ${f3(wrong[0] - v[0])}. The actor learns to avoid a move that is actually safe: it sees only the model's numbers.`}
+    ]);
+  };
+
   if (typeof module !== 'undefined' && module.exports) module.exports = {F, frames};
   if (typeof document === 'undefined' || !scope.AlgoLab) return;
 
@@ -2258,7 +2290,7 @@
     [t('这次选中', 'chosen'), f.pick == null ? '—' : (f.pick ? 'R' : 'L')],
     [t('先验 P', 'prior P'), '0.6, 0.4'],
     [t('搜索标签 π', 'search target π'), f.done ? `${f.pi1.map(x => x.toFixed(2)).join(', ')}` : '—', f.done ? 'key' : '']], setup(svg) {
-    const root = [200, 40], kids = [[110, 150], [290, 150]], w = 120, h = 54;
+    const root = [200, 40], kids = [[105, 150], [295, 150]], w = 170, h = 54;
     const edges = kids.map(([x, y]) => { const l = s('line', {x1: root[0], y1: root[1] + 14, x2: x, y2: y - h / 2, class: 'algo-edge'}); svg.append(l); return l; });
     svg.append(s('circle', {cx: root[0], cy: root[1], r: 14, class: 'algo-cell is-look'}));
     V.text(svg, root[0], root[1] + 4, 's', 'algo-strong', 'middle');
@@ -2294,6 +2326,37 @@
         r.pi.setAttribute('width', frame.done ? frame.pi1[i] * bw : 0);
         r.lq.textContent = frame.done ? `π ${frame.pi1[i].toFixed(2)}` : '';
       });
+    };
+  }});
+
+  FIGURES['step-lambda-return'] = name => stepper(name, F.lambdaReturn(), {height: 236, readouts: f => [
+    ['γ, λ', '0.9, 0.5'],
+    ['R0', f.R[0] == null ? '—' : String(Math.round(f.R[0] * 1000) / 1000), f.wrong ? 'bad' : f.stage >= 4 ? 'key' : ''],
+    [t('优势 R0 − v0', 'advantage R0 − v0'), f.R[0] == null ? '—' : (f.R[0] - 0.6 >= 0 ? '+' : '') + String(Math.round((f.R[0] - 0.6) * 1000) / 1000), f.wrong ? 'bad' : f.stage >= 4 ? 'good' : ''],
+    [t('λ = 0 / λ = 1', 'λ = 0 / λ = 1'), f.stage >= 5 ? `${Math.round(f.lam0 * 1000) / 1000} / ${Math.round(f.lam1 * 1000) / 1000}` : '—']], setup(svg) {
+    const xs = [90, 230, 370, 510], y = 96;
+    V.text(svg, 20, 30, 'R^λ', 'algo-head');
+    const nodes = xs.map((x, i) => {
+      const circle = s('circle', {cx: x, cy: y, r: 24, class: 'algo-cell'});
+      svg.append(circle);
+      V.text(svg, x, y + 5, 's' + i, 'algo-strong', 'middle');
+      const R = V.text(svg, x, 40, '', 'algo-strong', 'middle');
+      const facts = V.text(svg, x, y + 46, '', 'algo-note', 'middle');
+      const val = V.text(svg, x, y + 66, '', 'algo-idx', 'middle');
+      return {circle, R, facts, val};
+    });
+    xs.slice(0, 3).forEach((x, i) => svg.append(s('line', {x1: x + 26, y1: y, x2: xs[i + 1] - 26, y2: y, class: 'algo-edge'})));
+    const back = xs.slice(0, 3).map((x, i) => { const p = s('path', {d: `M${xs[i + 1] - 10} 52 Q${(x + xs[i + 1]) / 2} 66 ${x + 10} 52`, class: 'algo-edge is-change'}); svg.append(p); return p; });
+    return frame => {
+      nodes.forEach((n, i) => {
+        const rr = i === 2 && frame.wrong ? -1 : frame.r[i], cc = i === 2 && frame.wrong ? 0 : frame.c[i];
+        n.facts.textContent = i === 0 ? t('起点（真实）', 'start (real)') : `r ${rr} · c ${cc}`;
+        n.val.textContent = `v ${frame.v[i]}`;
+        n.R.textContent = frame.R[i] == null ? '' : String(Math.round(frame.R[i] * 1000) / 1000);
+        const now = frame.stage >= 1 && frame.stage <= 4 && i === 4 - frame.stage;
+        n.circle.setAttribute('class', 'algo-cell' + (frame.wrong && i === 2 ? ' is-bad' : now ? ' is-change' : frame.R[i] != null && frame.stage >= 1 ? ' is-keep' : ''));
+      });
+      back.forEach((p, i) => p.classList.toggle('is-hidden', !(frame.R[i] != null && frame.stage >= 2)));
     };
   }});
 
