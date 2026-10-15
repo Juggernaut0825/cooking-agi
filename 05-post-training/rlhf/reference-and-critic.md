@@ -65,6 +65,8 @@ $$
 
 B 的单条回报反而被加了一点，因为 Actor 给它的概率比参照更低。按 Actor 概率加权后，KL 约为 0.1927，总目标约为 0.9615，仍低于未惩罚的 1。
 
+<!-- widget:step-kl-penalty -->
+
 ```python
 import math
 

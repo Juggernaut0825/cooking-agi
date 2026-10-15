@@ -89,6 +89,8 @@ If DDP averages rank gradients, world size is $W$, and the global valid-token co
 
 This is a general distributed-averaging issue, not unique to DAPO. A numerical unit test can catch it before a multi-GPU run.
 
+<!-- widget:step-token-mean -->
+
 ## A truncated response is not necessarily incorrect reasoning
 
 A length cap makes training manageable, but an unfinished correct approach differs from a completed wrong answer. DAPO discusses both filtering overlong samples and soft overlong punishment. The latter gradually adds a penalty near the cap instead of treating every boundary case as one abrupt failure.

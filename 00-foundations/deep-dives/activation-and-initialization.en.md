@@ -33,6 +33,8 @@ $$\frac{\partial L_{MSE}}{\partial z}=(p-y)p(1-p).$$
 
 That extra factor is small in saturation. Use a stable logits loss rather than materializing probabilities and then taking logs. [BCEWithLogitsLoss](https://docs.pytorch.org/docs/main/generated/torch.nn.BCEWithLogitsLoss.html) combines the operations.
 
+<!-- widget:step-bce-vs-mse -->
+
 Similarly, softmax cross-entropy has logit gradient $p-\operatorname{onehot}(y)$. With logits `[1000, 10, 5]` and the second class correct, it is approximately `[1, -1, 0]`. A sharp softmax does not imply that the model cannot update. Attention uses softmax inside a different computation, so the output-loss conclusion cannot simply be transferred there.
 
 ```python

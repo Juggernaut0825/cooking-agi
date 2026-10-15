@@ -37,6 +37,8 @@ Count **occurrences**, not distinct strings. Both `(r, a)` and `(a, i)` occur 5 
 
 Recount adjacent symbols after each merge; the original character-pair counts are no longer enough. Applying the learned rules to the new string `rair` gives `rai r`. We do not need a vocabulary entry for the entire new word.
 
+<!-- widget:step-bpe-merges -->
+
 One implementation detail matters: **merging does not delete the base alphabet.** Keep `r`, `a`, and intermediate pieces such as `ra` in the vocabulary. Otherwise a new combination may tokenize successfully but have no matching IDs. Try the site's [TinyBPE](../code/tokenizer_from_scratch.py):
 
 ```python

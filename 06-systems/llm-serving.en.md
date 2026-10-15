@@ -52,6 +52,8 @@ The new request can produce its first token after completing prefill in iteratio
 
 This is **budget arithmetic, not a latency prediction**. One prefill position and one decode position need not cost the same. KV capacity, batch shapes, priorities, and kernels also matter. Six scheduled positions do not imply a fixed number of milliseconds.
 
+<!-- widget:step-chunked-prefill -->
+
 <details markdown="1">
 <summary>Check the chunk sizes with a small function</summary>
 

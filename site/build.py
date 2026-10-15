@@ -589,6 +589,22 @@ FIGURE_LAB = [
     ("step-mrope", "M-RoPE：时间、高度、宽度三个序号", "M-RoPE: time, height and width positions", "step"),
     ("step-ppl-windows", "滑动窗口：前文可以重读，目标只计一次", "Sliding windows: reread the context, score each target once", "step"),
     ("step-ivf", "IVF：最近的簇里不一定有最近的点", "IVF: the nearest cluster may not hold the nearest point", "step"),
+    ("step-best-of-n", "Best-of-2：谁会被选中", "Best-of-2: who gets picked", "step"),
+    ("step-bt-scale", "平移不变，缩放会变", "A shift changes nothing; a scale does", "step"),
+    ("step-token-mean", "按回答平均，还是按 token 平均", "Average by response or by token", "step"),
+    ("step-kl-penalty", "两种回答的 KL 惩罚", "The KL penalty on two answers", "step"),
+    ("step-behavior-ratio", "比率的分母用哪个分布", "Which distribution goes in the denominator", "step"),
+    ("step-chunked-prefill", "分块 prefill：每轮的位置怎么分", "Chunked prefill: sharing each round’s positions", "step"),
+    ("step-continuous-batching", "等整批结束，还是每轮补位", "Wait for the batch, or refill each round", "step"),
+    ("step-l1-l2", "L1 为什么能停在 0", "Why L1 can stop at exactly zero", "step"),
+    ("step-bce-vs-mse", "饱和的 sigmoid，梯度消失了吗", "A saturated sigmoid: does the gradient vanish?", "step"),
+    ("step-adamw-l2", "AdamW 与 Adam + L2 的第一步", "AdamW vs Adam + L2: the first step", "step"),
+    ("step-packing-masks", "Packing：能看谁，哪项算分", "Packing: what can be seen, what is scored", "step"),
+    ("step-tp-backward", "反向传播：输入梯度也要相加", "Backward: the input gradient needs a sum too", "step"),
+    ("step-bpe-merges", "手算两轮 BPE", "Two rounds of BPE by hand", "step"),
+    ("step-swiglu", "跟着两个中间维度算一次 SwiGLU", "SwiGLU through two hidden dimensions", "step"),
+    ("step-depth-merge", "分批做深度 softmax，怎样合并", "Merging a depth softmax computed in batches", "step"),
+    ("step-expert-budget", "切细与共享，预算怎么算", "Finer and shared experts on one budget", "step"),
 ]
 for _name, _zh, _en, _kind in [(name, zh, en, "step") for name, zh, en in ALGO_LAB] + FIGURE_LAB:
     _kicker = 'data-zh="动画" data-en="Step by step"' if _kind == "step" else 'data-zh="图解" data-en="Diagram"'

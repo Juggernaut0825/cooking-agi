@@ -77,6 +77,8 @@ $$
 
 因为 $\operatorname{SiLU}'(0)=1/2$，当 $u=3,\delta=1$ 时，gate 梯度为 1.5。内容分支这一刻的梯度为 0，gate 仍能学习。这比把门想象成永久开关更准确。
 
+<!-- widget:step-swiglu -->
+
 ## 三个矩阵，参数预算怎么比？
 
 忽略 bias，普通 FFN 有 $2dh$ 个参数，SwiGLU 有 $3dh_g$。如果普通 FFN 的宽度是 $4d$，相同矩阵参数预算下：

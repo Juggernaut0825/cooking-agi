@@ -66,6 +66,8 @@
 | C | D | 是 | 是 |
 | D | EOS | 是 | 是 |
 
+<!-- widget:step-packing-masks -->
+
 padding 位置也不能当成普通 target。检查时打印一条完整的 tokens、labels、document IDs 和 masks，比看一条下降的 loss 更有用。
 
 ## 一次更新，到底平均了什么？

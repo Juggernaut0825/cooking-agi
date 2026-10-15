@@ -71,6 +71,8 @@ Suppose the first batch contains value 0 and the second contains three values of
 
 Merging requires each batch's log-sum-exp, or equivalent maximum and exponential sum. This is the same normalization issue as [FlashAttention's online softmax](attention-kernels.en.md), now across depth sources.
 
+<!-- widget:step-depth-merge -->
+
 ## What should an evaluation check?
 
 Start with numerical agreement between full and batched mixing, prefix invariance under future-token changes, and no missing or double-counted partial sums at block boundaries. Disable randomness before comparing; dropout differences are not implementation errors.

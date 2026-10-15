@@ -39,6 +39,8 @@ assert coarse == fine == with_shared == (786432, 196608)
 
 The last row matters: **shared computation is not free**. Keeping eight routed experts active and adding one shared raises the active count to 221,184, an increase of 12.5%. Any improvement then mixes a design change with extra compute.
 
+<!-- widget:step-expert-budget -->
+
 This table excludes routing, activations, attention, and communication. Smaller matrix operations and more dispatches can run slower at equal MACs. Equal total parameters also do not imply equal per-device peak memory.
 
 ## Shared experts

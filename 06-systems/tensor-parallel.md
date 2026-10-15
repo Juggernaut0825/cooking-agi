@@ -99,6 +99,8 @@ $$\nabla X=D_0A_0^\top+D_1A_1^\top.$$
 
 这就是 FFN 反向里的那次 AllReduce。上面算例若取 `loss = output.sum()`，两卡的输入梯度贡献分别为 `[3, 3]` 和 `[6, 0]`，相加才得到 `[9, 3]`。
 
+<!-- widget:step-tp-backward -->
+
 注意这里是在把**同一次计算的不同路径相加**，不是把两批不同样本的梯度取平均。不要直接套用数据并行的平均系数。
 
 <details markdown="1">

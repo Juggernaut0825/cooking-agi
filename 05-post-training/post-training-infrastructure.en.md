@@ -110,6 +110,8 @@ Separate the raw model distribution, the sampling distribution after temperature
 
 For example, raw probabilities `[0.8, 0.2]` become `[2/3, 1/3]` under temperature 2. If the new model gives the second action probability 0.25, its ratio to actual behavior is `0.25 / (1/3) = 0.75`. Using the raw 0.2 denominator instead gives 1.25—even reversing whether that action has become more likely. Top-p truncation also changes support; ordinary importance sampling cannot recover actions that collection never sampled.
 
+<!-- widget:step-behavior-ratio -->
+
 When actual behavior policy $b$ is the chosen anchor, the action ratio is:
 
 $$

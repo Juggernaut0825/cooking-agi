@@ -99,6 +99,8 @@ $$\nabla X=D_0A_0^\top+D_1A_1^\top.$$
 
 That is the FFN's backward AllReduce. With `loss = output.sum()` in our example, the two input-gradient contributions are `[3, 3]` and `[6, 0]`. Their sum is `[9, 3]`.
 
+<!-- widget:step-tp-backward -->
+
 These are **different paths through the same computation**, not gradients from two different data batches. Applying a data-parallel averaging factor would change the result.
 
 <details markdown="1">

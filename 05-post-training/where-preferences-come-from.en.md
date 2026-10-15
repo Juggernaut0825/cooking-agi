@@ -40,6 +40,8 @@ Suppose rewards for A and B are 2 and 1. Bradley–Terry gives A a preference pr
 
 Multiplying both by 2 is different: the gap becomes 2 and the probability becomes $\sigma(2)\approx0.881$. **A shared offset is invariant; scaling is not.** Depending only on differences does not make the scale arbitrary.
 
+<!-- widget:step-bt-scale -->
+
 Scores still are not universal utility units shared across reward models. In RL, their scale affects advantages, gradients, and the relative weight of a KL penalty. Normalization is a design choice to examine with the objective and implementation, not an unconditional repair.
 
 ## Four traps in preference data {#four-traps-in-preference-data}

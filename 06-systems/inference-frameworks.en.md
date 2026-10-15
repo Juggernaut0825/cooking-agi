@@ -100,6 +100,8 @@ Take an idealized decode schedule. A and B have completed prefill and need two a
 
 Eight rounds versus five is a scheduling result under these assumptions, not a measured speedup. Real prefill, KV capacity, and history reads matter. Continuous batching does not admit unlimited work: requests still need queues, limits, or rejection when budgets are exhausted.
 
+<!-- widget:step-continuous-batching -->
+
 ## Two ways to organize prefix reuse {#prefix}
 
 Both engines support prefix reuse, and both turn it on by default (vLLM's `--enable-prefix-caching`, SGLang's radix cache). “vLLM manages memory; SGLang does caching” is not a useful distinction. What still differs is the index structure, the default granularity, and the eviction policy.

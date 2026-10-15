@@ -60,6 +60,8 @@ $$w_{L1}=\operatorname{sign}(a)\max(|a|-\lambda,0).$$
 
 例如 $a=0.4,\lambda=0.5$：L1 得到 0，平方 L2 得到约 0.267。这解释了 L1 为什么可能产生精确的零；它不代表被删掉的特征在业务上一定没用，相关特征之间也可能互相替代。
 
+<!-- widget:step-l1-l2 -->
+
 ```python
 import math
 

@@ -100,6 +100,8 @@ SGLang 的上述执行选择可以在固定版本的 [ModelRunner](https://githu
 
 从 8 轮到 5 轮，是这个假设下的排程差别，不是实测加速比。真实 prefill、KV 容量和长上下文读写都要计入。Continuous batching 也不是让所有请求同时进来：超出预算时仍要排队、限流或拒绝。
 
+<!-- widget:step-continuous-batching -->
+
 ## vLLM 和 SGLang 的缓存怎么理解 {#prefix}
 
 两者都能做前缀复用，而且默认都开着（vLLM 的 `--enable-prefix-caching`，SGLang 的 radix cache），不能简单说“vLLM 管显存，SGLang 才管 cache”。今天还能比较的是索引结构、默认粒度和回收策略：

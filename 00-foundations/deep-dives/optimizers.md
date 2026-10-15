@@ -81,6 +81,8 @@ $$\theta_t=(1-\eta\lambda)\theta_{t-1}
 
 用全新状态、$\theta=2$、数据梯度为 0、$\eta=0.1,\lambda=0.2$ 举例：AdamW 只衰减到 1.96。把 L2 梯度 0.4 送进 Adam，则首步约到 1.9。不是同一个更新。[Decoupled Weight Decay](https://arxiv.org/abs/1711.05101)专门区分了这两件事。
 
+<!-- widget:step-adamw-l2 -->
+
 ```python
 import math
 
