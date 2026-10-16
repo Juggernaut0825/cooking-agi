@@ -23,14 +23,14 @@ A model (decides the next step), tools (act on the world), a loop (results go ba
 <details class="interview" markdown="1">
 <summary>Why is coding one of the most mature settings for agents?</summary>
 
-Because its verification signal is the strongest: code runs, tests pass, every step gets objective feedback, and the agent can safely try again. Settings such as customer support or personal assistants are much harder to judge automatically and lean more on rules, permissions, and people. Even in coding, passing tests does not mean the change is right.
+Because its verification signal is the strongest: code runs, tests pass, every step gets objective feedback, and the agent can try again in a sandbox, with a person still reviewing the diff once tests pass. Settings such as customer support or personal assistants are much harder to judge automatically and lean more on rules, permissions, and people. Even in coding, passing tests does not mean the change is right.
 
 </details>
 
 <details class="interview" markdown="1">
 <summary>How do you evaluate the reliability of a customer-support agent?</summary>
 
-Not by single-run success alone: check whether the same task is done right every time it is repeated, as with τ-bench's pass^k. Also check policy compliance, whether tool calls are correct, whether hard cases are handed to a person, and read complete run traces rather than only the final answer.
+Not by single-run success alone: check whether the same task succeeds in every one of several independent repeats, as with τ-bench's pass^k (the probability that all k runs succeed). Also check policy compliance, whether tool calls are correct, whether hard cases are handed to a person, and read complete run traces rather than only the final answer.
 
 </details>
 
@@ -79,8 +79,8 @@ A cascade lets the small model answer first and decides whether to escalate afte
 
 - [Building effective agents](https://www.anthropic.com/engineering/building-effective-agents): the workflow and agent distinction, and common structures
 - [ReAct](https://arxiv.org/abs/2210.03629): interleaving reasoning and acting
-- [SWE-bench](https://arxiv.org/abs/2310.06770): evaluating coding agents on real issues
-- [τ-bench](https://arxiv.org/abs/2406.12045): tools and dialogue under policy constraints, and pass^k
+- [SWE-bench](https://arxiv.org/abs/2310.06770): evaluating coding agents on real issues; the Verified subset is close to saturated, and since February 2026 OpenAI recommends [SWE-bench Pro](https://arxiv.org/abs/2509.16941) instead
+- [τ-bench](https://arxiv.org/abs/2406.12045): tools and dialogue under policy constraints, and pass^k; its successor [τ²-bench](https://arxiv.org/abs/2506.07982) adds dual control, where the user also acts, and as of October 2026 the repository has released τ³-bench
 - [WebArena](https://arxiv.org/abs/2307.13854)
 - [OSWorld](https://arxiv.org/abs/2404.07972)
 - [Not what you've signed up for](https://arxiv.org/abs/2302.12173): indirect prompt injection

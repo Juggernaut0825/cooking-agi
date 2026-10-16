@@ -4,15 +4,16 @@
 
 A knowledge-question score may be a poor way to choose an assistant for long reports. Knowledge, evidence retrieval, reasoning across sections, citation, and abstention are different capabilities. One attractive average cannot establish them all.
 
-This page is not a latest-model leaderboard. It gives a reusable process: choose the question, fix the protocol, then interpret scores. Checked 2026-10-08. Historical benchmarks remain useful for comparison, but age and familiarity do not establish present-day discriminative power.
+This page is not a latest-model leaderboard. It gives a reusable process: choose the question, fix the protocol, then interpret scores. Checked 2026-10-16. Historical benchmarks remain useful for comparison, but age and familiarity do not establish present-day discriminative power.
 
 ## 1. What question does each test answer?
 
 | Question | Example reference | What remains to test |
 | --- | --- | --- |
-| Subject knowledge and multiple-choice reasoning | [MMLU](https://github.com/hendrycks/test) | Open responses, citations, real tasks, contamination |
+| Subject knowledge and multiple-choice reasoning | [MMLU](https://github.com/hendrycks/test); frontier models now exceed 90%, so when it no longer separates models use [MMLU-Pro](https://arxiv.org/abs/2406.01574), [GPQA](https://arxiv.org/abs/2311.12022) or [HLE](https://arxiv.org/abs/2501.14249) | Open responses, citations, real tasks, contamination |
 | Chinese subject knowledge | [C-Eval](https://github.com/hkust-nlp/ceval) | Conversation, domain language, mixed-language work |
-| Code passing tests | [LiveCodeBench](https://livecodebench.github.io/) | Dependencies, repository edits, security, maintainability |
+| Code passing tests | [LiveCodeBench](https://livecodebench.github.io/); problems come in release versions, and as of October 2026 [the latest, `release_v6`](https://github.com/LiveCodeBench/LiveCodeBench), holds 1,055 problems from May 2023 to April 2025, so for any model whose training cutoff is later than those problems, they no longer count as unseen | Dependencies, security, maintainability |
+| Repository-level code changes | [SWE-bench Pro](https://arxiv.org/abs/2509.16941); since February 2026 OpenAI [no longer reports SWE-bench Verified](https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/), citing saturation, flawed tests and leaked problems | Whether the grading tests are reliable, the run environment, code review |
 | Long-context lookup, tracing, aggregation | [RULER](https://arxiv.org/abs/2404.06654) | Ambiguous natural documents and actual workflows |
 | More complex realistic long-input tasks | [LongBench v2](https://arxiv.org/abs/2412.15204) | Your files, costs, and user requirements |
 | Helpful conversation | Human review or a calibrated judge | Separate stylistic preference, facts, and execution |
@@ -94,11 +95,13 @@ On 200 items, 160 versus 164 correct answers establishes a sample improvement of
 
 Retain paired per-item results and use [paired comparisons](metric-robustness.en.md#paired-comparison) to estimate uncertainty. Questions derived from the same document should be grouped at a sensible unit rather than treated as independent. Repeated generation measures sampling variation; independent training runs measure training variation.
 
+One calculation shows how little four items say. Treating the two result sets as unrelated samples, the 95% interval for a two-point difference has a half-width of about $1.96\sqrt{0.8\times0.2/200+0.82\times0.18/200}\approx7.7$ points, much larger than the difference itself. Paired, look only at the items that disagree: suppose the new model fixes 10 and breaks 6, a net gain of exactly 4; the exact McNemar test gives p ≈ 0.45, so these items do not show that the two accuracies differ.
+
 Predefine the main metric, protected slices, and acceptable costs. Selecting the largest post-hoc improvement can create an unstable story. An interval containing zero does not prove equivalence, and statistical significance does not automatically justify deployment.
 
 ## 6. Contamination and evaluation updates
 
-Old items can enter pretraining, SFT, synthetic data, or prompt demonstrations. Exact and near-duplicate checks help, but failing to find overlap does not prove cleanliness. Temporal splits require actual training and data-update dates; changing a date label does not remove leaked answers.
+Old items can enter pretraining, SFT, synthetic data, or prompt demonstrations. Exact and near-duplicate checks help, but failing to find overlap does not prove cleanliness. Temporal splits require actual training and data-update dates; changing a date label does not remove leaked answers. How mainstream benchmarks get contaminated and saturated is covered in [Test-time compute: reading the numbers](../11-frontier/test-time-compute/measuring.en.md).
 
 For a continually updated test, fix a release snapshot and date window rather than combine different periods into one supposedly comparable score. Treat a claimed model cutoff cautiously; it is not an auditable inventory of every training source.
 

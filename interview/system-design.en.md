@@ -34,7 +34,7 @@ General system design:
 
 - [System Design Primer](https://github.com/donnemartin/system-design-primer): free, broad, good for building the skeleton
 - [ByteByteGo](https://bytebytego.com): Alex Xu's *System Design Interview* series, heavily illustrated and easy to read
-- [Designing Data-Intensive Applications](https://www.dataintensive.net): the one worth real time if you want to understand the underlying trade-offs
+- [Designing Data-Intensive Applications](https://www.dataintensive.net): the one worth real time if you want to understand the underlying trade-offs. As of October 2026 the latest is the [second edition, published in March 2026](https://martin.kleppmann.com/2026/03/24/designing-data-intensive-applications-2e.html) (Martin Kleppmann and Chris Riccomini, O'Reilly); the book's website still describes the first edition
 
 ML and recommendation:
 
@@ -49,3 +49,4 @@ ML and recommendation:
 - [Modern AI systems: the model is only one part](../06-systems/README.en.md)
 - [Agents: how they are used in different settings](../10-agents/scenarios.en.md)
 - [Evaluation: why should we believe the system improved](../07-evaluation/README.en.md)
+- [Kubernetes and GPU clusters](../12-infra/kubernetes.en.md): why distributed training needs gang scheduling, and why scaling inference is more than adding replicas (draft, pending review)

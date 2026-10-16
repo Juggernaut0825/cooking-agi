@@ -24,7 +24,9 @@ $$
 
 低概率 token 的绝对变化可以很小。例如从 0.01 到 0.012，已是 1.2 倍；从 0.5 到 0.6 也是 1.2 倍。Clip-Higher 放宽的是乘法幅度，不是给所有 token 加同一个概率，也不是保证熵不会下降。
 
-## 动态采样：保留的是组，不是只留正确答案
+<span id="_1"></span>
+
+## 动态采样：保留的是组，不是只留正确答案 {#dynamic-sampling}
 
 同一 prompt 采 4 次，二元奖励可能是：
 
@@ -47,7 +49,7 @@ $p=0.5,G=4$ 时是 0.875；$p=0.99$ 时只有约 0.0394。现实采样未必独�
 
 过滤后的 prompt 分布也变了。它偏向当前模型还会时对时错的问题，不能再把保留组上的正确率当成整个任务分布上的正确率。评估应保留固定题集。
 
-## 两种平均方式，可以直接算出不同结果
+## 两种平均方式，可以直接算出不同结果 {#_2}
 
 设短回答 2 个有效 token，每个 token 的 surrogate 都是 1；长回答 6 个，每个都是 3。
 
@@ -81,7 +83,7 @@ assert aggregate_tokens(values, masks) == (2.0, 2.5)
 
 999 代表 padding 或非动作位置的垃圾值，它不该影响结果。全 mask 的样本如何处理，也应明确：这里选择报错；生产代码可以跳过，但不能悄悄把它算作零分样本。
 
-### 多卡上还有一次容易漏掉的加权
+### 多卡上还有一次容易漏掉的加权 {#_3}
 
 rank 0 有 2 个 token，局部均值 1；rank 1 有 6 个 token，局部均值 3。直接平均两个 rank 的局部均值仍是 2，不是全局 token 均值 2.5。
 
@@ -91,7 +93,7 @@ rank 0 有 2 个 token，局部均值 1；rank 1 有 6 个 token，局部均值 
 
 <!-- widget:step-token-mean -->
 
-## 生成被截断，不等于推理一定错了
+## 生成被截断，不等于推理一定错了 {#_4}
 
 长度上限让训练可控，但一个没写完的正确解法与已经完成的错误答案不同。DAPO 讨论了超长样本过滤与 soft overlong punishment。后者在接近上限的一个区间里逐步扣分，而不是在某个位置突然把所有情况打成同一种错误。
 
@@ -121,4 +123,4 @@ assert [length_penalty(value, 100, 20) for value in (70, 80, 90, 100, 110)] == [
 
 先把这些局部检查做对，再运行训练对比。本文的小算例只检验目标和数据处理，没有复现论文的模型训练。2026 年继续读 [GSPO / ASPO](policy-ratios.md)与 [SAO](async-policy-learning.md)时，也可以沿用这套问题：到底改了采样、权重，还是数据到达训练器的时间？
 
-实现入口：[DAPO 项目页](https://dapo-sia.github.io/) · [verl DAPO recipe](https://github.com/volcengine/verl/tree/main/recipe/dapo)。实际复现要记录 commit，不把随时变化的 main 当作固定版本。
+实现入口：[DAPO 项目页](https://dapo-sia.github.io/) · [verl DAPO recipe](https://github.com/verl-project/verl-recipe/tree/main/dapo)（2026-10 核对：verl 的 recipe 已移到单独的 `verl-project/verl-recipe` 仓库）。实际复现要记录 commit，不把随时变化的 main 当作固定版本。

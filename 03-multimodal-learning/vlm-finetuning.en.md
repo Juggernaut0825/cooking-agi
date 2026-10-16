@@ -6,7 +6,7 @@
 
 You show a timetable and ask when the last bus leaves. The answer is “22:40.” Training loss falls, but the model still answers 22:40 when the image is hidden. It may have learned the dataset's most common answer rather than how to read a timetable.
 
-Fine-tuning first needs evidence that the data teaches the intended skill. Starting a training process is only one step.
+**Fine-tuning first needs evidence that the data teaches the intended skill.** Starting a training process is only one step.
 
 ## Check whether fine-tuning addresses the failure
 
@@ -106,9 +106,11 @@ Long answers contribute more tokens. Mixing long OCR transcriptions with short a
 
 ## Length, freezing, and memory
 
-TRL v0.29.0 warns against unchecked VLM sequence truncation because it can remove image tokens. Its `max_length=None` recommendation disables that truncation; it does not provide unlimited memory. Still constrain image dimensions, image count, and text length, and inspect length tails. [Versioned TRL documentation](https://huggingface.co/docs/trl/v0.29.0/en/sft_trainer)
+TRL warns against unchecked VLM sequence truncation because it can remove image tokens. Its `max_length=None` recommendation disables that truncation; it does not provide unlimited memory. Still constrain image dimensions, image count, and text length, and inspect length tails. The advice is unchanged from v0.29.0 to v1.16.0 (released 2026-10-15). [TRL v1.16.0 documentation](https://huggingface.co/docs/trl/v1.16.0/en/sft_trainer)
 
-**This version rejects `assistant_only_loss=True` for VLMs, even if the template supplies an assistant mask.** For single-turn QA, use `prompt` / `completion` data with the answer in completion and `completion_only_loss=True`. That is not automatic assistant-turn selection in an arbitrary multi-turn conversation. For the latter, use validated custom labels / a collator while leaving the unsupported flag off. Setting it to `False` merely to get training running does not establish answer-only supervision. [v0.29.0 guard and collator implementation](https://github.com/huggingface/trl/blob/v0.29.0/trl/trainer/sft_trainer.py)
+**As of October 2026, `assistant_only_loss=True` works for VLMs: TRL v1.15.0 added vision-dataset support, provided you have `transformers>=5.18.0` and a conversational language-modeling dataset; older transformers versions still raise** ([v1.15.0 release notes](https://github.com/huggingface/trl/releases/tag/v1.15.0)). Before turning it on, still decode one batch and confirm that the active labels fall only on assistant turns.
+
+This page was first written against TRL v0.29.0. That version rejects `assistant_only_loss=True` for VLMs, even if the template supplies an assistant mask. If your environment is pinned to the old version, for single-turn QA use `prompt` / `completion` data with the answer in completion and `completion_only_loss=True`. That is not automatic assistant-turn selection in an arbitrary multi-turn conversation. For the latter, use validated custom labels / a collator while leaving the unsupported flag off. Setting it to `False` merely to get training running does not establish answer-only supervision. [v0.29.0 guard and collator implementation](https://github.com/huggingface/trl/blob/v0.29.0/trl/trainer/sft_trainer.py)
 
 | Trainable scope | What to test first | Cost or limitation |
 | --- | --- | --- |
@@ -150,13 +152,6 @@ This page supplies a checked mask example and an experiment protocol, **not a re
 
 ## Counterfactual images reveal more than one overall score
 
-Keep the original timetable, then make three versions: change only the last departure time, hide that field, and use a matching layout with different numbers. Expected behavior is to follow the new time, acknowledge missing evidence, and read the new values.
-
-| Check | What it can reveal | What it cannot establish alone |
-| --- | --- | --- |
-| Remove the image | Whether text priors suffice | A score drop does not prove correct visual reasoning |
-| Change one field | Whether answers follow visual facts | Does not cover every layout or semantic skill |
-| Conflict between image and text | Whether inconsistencies are noticed | Neither modality is always authoritative |
-| Unseen templates | Reliance on layout memorization | Domain and temporal transfer still need testing |
+Keep the original timetable, then make three versions: change only the last departure time, hide that field, and use a matching layout with different numbers. Expected behavior is to follow the new time, acknowledge missing evidence, and read the new values. What removing the image, an image–text conflict, or an unseen template can and cannot show is listed once in [the multimodal overview's comparison table](README.en.md#modality-checks); with new templates, also test transfer across domains and time.
 
 Track field accuracy, unanswerable detection, output format, latency, and memory. Report which settings help which slices. Without measurements, retain the experiment plan rather than claiming significant gains. This page validates teaching mask code, not end-to-end GPU fine-tuning; use the [official Qwen3-VL fine-tuning project](https://github.com/QwenLM/Qwen3-VL/tree/main/qwen-vl-finetune) for a real run and pin its commit.

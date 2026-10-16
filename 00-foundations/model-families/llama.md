@@ -8,6 +8,8 @@
 
 本篇以 **Llama 1–3.1 的文本模型**为范围，重点拆 dense decoder。先拿它做清楚的基线，再去看 MoE、MLA 和多模态结构，会更容易判断每个改动解决了什么。这里不把某一代的配置套到整个 Llama 家族。
 
+之后的变化不在本篇范围内。2025-04 的 [Llama 4](https://ai.meta.com/blog/llama-4-multimodal-intelligence/) 改成 MoE：Scout 每 token 激活 17B、共 16 个专家、总参数 109B，Maverick 激活 17B、128 个专家、总参数 400B，专家配置见 [MoE 的共享专家对照表](../moe/fine-grained-and-shared.md)。2026 年 Meta Superintelligence Labs 推出新的 Muse 系列：[Muse Spark](https://ai.meta.com/blog/introducing-muse-spark-msl/)（2026-04-08）和 [Muse Wonder](https://about.fb.com/news/2026/10/introducing-muse-wonder-models/)（2026-10-12）的发布说明只提供 Meta 自己的应用和 API，没有提到可下载的权重，也没有公开架构和参数量（截至 2026-10）。
+
 <span id="_7"></span>
 
 ## 先把版本对齐，不然参数表会越看越乱
@@ -52,7 +54,9 @@ Attention 这个缩写包含投影、Q/K 的 RoPE、mask、softmax 和输出投�
 
 [GPT-2 已经采用 pre-normalization](https://cdn.openai.com/better-language-models/language-models.pdf)，因此不能把 Llama 的变化一概说成“GPT 都是 Post-LN，Llama 才改成 Pre”。要比较具体版本和具体公式。
 
-## GQA 省了哪里？算一次缓存就明白了
+<span id="gqa"></span>
+
+## GQA 省了哪里？算一次缓存就明白了 {#gqa-cache}
 
 GQA 让多个 Query heads 共用一组 K/V。Query 没有因此少到一个；原始 KV cache 则不必为每个 Query head 各存一份。[GQA 论文](https://arxiv.org/abs/2305.13245)
 

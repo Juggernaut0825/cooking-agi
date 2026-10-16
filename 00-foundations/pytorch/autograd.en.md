@@ -167,7 +167,7 @@ assert first.item() == 12.0
 assert second.item() == 12.0
 ```
 
-`torch.compile` may capture and compile parts of execution. That does not replace eager-autograd reasoning with “the entire program always has one static graph.” Get gradient and state handling right first, then consider compilation boundaries.
+`torch.compile` may capture and compile parts of execution. That does not replace eager-autograd reasoning with “the entire program always has one static graph.” Get gradient and state handling right first, then consider compilation boundaries; for how `torch.compile` captures a graph and generates kernels, see [The framework layer](../../12-infra/frameworks.en.md).
 
 ## 6. Check a derivative instead of trusting its appearance
 
@@ -198,7 +198,7 @@ When training fails, check in order: whether the loss is still a tensor connecte
 
 These are teaching experiments, not a complete trainer. Continue to the [training loop](training-loop.en.md) to connect data, parameters, validation, and logging.
 
-- [Autograd mechanics](https://docs.pytorch.org/docs/2.8/notes/autograd.html): leaves, gradient modes, graph lifetime, and in-place changes.
-- [Tensor.backward](https://docs.pytorch.org/docs/2.8/generated/torch.Tensor.backward.html) and [autograd.grad](https://docs.pytorch.org/docs/2.8/generated/torch.autograd.grad.html): gradient seeds, accumulation, and returned derivatives.
-- [retain_grad](https://docs.pytorch.org/docs/2.8/generated/torch.Tensor.retain_grad.html) and [detach](https://docs.pytorch.org/docs/2.8/generated/torch.Tensor.detach.html): retaining an intermediate gradient is not copying data or keeping an entire graph.
-- [Gradcheck mechanics](https://docs.pytorch.org/docs/2.8/notes/gradcheck.html): numerical gradient checking and its limitations.
+- [Autograd mechanics](https://docs.pytorch.org/docs/2.14/notes/autograd.html): leaves, gradient modes, graph lifetime, and in-place changes.
+- [Tensor.backward](https://docs.pytorch.org/docs/2.14/generated/torch.Tensor.backward.html) and [autograd.grad](https://docs.pytorch.org/docs/2.14/generated/torch.autograd.grad.html): gradient seeds, accumulation, and returned derivatives.
+- [retain_grad](https://docs.pytorch.org/docs/2.14/generated/torch.Tensor.retain_grad.html) and [detach](https://docs.pytorch.org/docs/2.14/generated/torch.Tensor.detach.html): retaining an intermediate gradient is not copying data or keeping an entire graph.
+- [Gradcheck mechanics](https://docs.pytorch.org/docs/2.14/notes/gradcheck.html): numerical gradient checking and its limitations.

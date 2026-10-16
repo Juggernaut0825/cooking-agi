@@ -238,7 +238,7 @@ TensorBoard 画出的网络图依赖捕获方式和示例输入，不能当作�
 
 设备内部也不是所有数据都一直待在同一个地方：张量通常放在 GPU 的全局内存中，kernel 按需把一部分数据读到 cache、shared memory 或寄存器里运算。算完的结果再留给后续算子。具体经过哪层、是否融合，取决于 kernel；Python 里一个 `matmul` 不代表整块矩阵一次装进片上存储。想继续看这部分，可以接着读 [attention kernel](../deep-dives/attention-kernels.md)。
 
-这里的 kernel 是启动到 GPU 上执行的函数，不是一块存储器。计算由 SM（Streaming Multiprocessor）里的计算单元执行；shared memory、cache 和寄存器负责放数据，不能简单说“在 SRAM 里做计算”。它们的容量和配置随硬件变化，也不该把某张卡的数字背成通用规格。具体区分见 [CUDA 编程模型的硬件与内存说明](https://docs.nvidia.com/cuda/cuda-programming-guide/01-introduction/programming-model.html#gpu-hardware-model)（2026-10-10 核对）。
+这里的 kernel 是启动到 GPU 上执行的函数，不是一块存储器。计算由 SM（Streaming Multiprocessor）里的计算单元执行；shared memory、cache 和寄存器负责放数据，不能简单说“在 SRAM 里做计算”。它们的容量和配置随硬件变化，也不该把某张卡的数字背成通用规格。具体区分见 [CUDA 编程模型的硬件与内存说明](https://docs.nvidia.com/cuda/cuda-programming-guide/01-introduction/programming-model.html#gpu-hardware-model)（2026-10-10 核对）。SM、warp 和内存层级的讲解见 [GPU 架构](../../12-infra/gpu-architecture.md)；kernel 怎样用 shared memory 分块，见 [CUDA：shared memory tiling](../../12-infra/cuda.md#tiling)。
 
 ### 先把设备放对，再谈加速 {#device-placement}
 
@@ -259,13 +259,13 @@ def device_step(model, optimizer, features, labels):
 
 这个函数假设模型参数在同一设备上，输入是前面的两个 tensor，不是通用多设备 batch 搬运器。CPU 版本会做数值测试；**这篇没有运行 CUDA 吞吐测试**。返回的 loss 已脱离计算图，但仍在原设备上；如果把每一步的返回值一直存进列表，还是会积累张量。
 
-`non_blocking=True` 的意思是尽可能不让主机在复制调用处等待，不等于“下一批传输已经和当前计算重叠”。真要重叠，还要有合适的 pinned 源数据、不同 stream、可用复制引擎和正确依赖。先用普通循环跑通，再看 profiler，通常比一开始手写预取器好排查。[PyTorch 的传输教程](https://docs.pytorch.org/tutorials/intermediate/pinmem_nonblock.html)有对应的时间线对照。
+`non_blocking=True` 的意思是尽可能不让主机在复制调用处等待，不等于“下一批传输已经和当前计算重叠”。真要重叠，还要有合适的 pinned 源数据、不同 stream、可用复制引擎和正确依赖。先用普通循环跑通，再看 profiler，通常比一开始手写预取器好排查。[PyTorch 的传输教程](https://docs.pytorch.org/tutorials/intermediate/pinmem_nonblock.html)有对应的时间线对照；stream 怎样让拷贝和计算重叠，见 [CUDA：Streams](../../12-infra/cuda.md#streams)。
 
 ### 复制已经返回，数据就能改了吗？ {#async-copy-safety}
 
 不一定。比如把一个 pinned CPU batch 异步复制到 GPU，调用返回后马上对源张量做 `zero_()`。如果复制还没完成，GPU 收到的数据就可能被改掉。反过来，异步从 GPU 复制到 CPU 后，CPU 也不能立刻读取目标。要等相关复制完成，而不是只等 Python 函数返回。[官方教程的反例](https://docs.pytorch.org/tutorials/intermediate/pinmem_nonblock.html#other-copy-directions-gpu-cpu-cpu-mps)说明了这两种情况。
 
-`DataLoader(pin_memory=True)` 可以把取出的张量放进 pinned 主机内存，但**pinning 不是搬到 GPU**；后面仍要调用 `.to(device)`。自定义 batch 类型可能还需要自己的 `pin_memory()` 方法，见 [DataLoader 说明](https://docs.pytorch.org/docs/2.8/data.html#memory-pinning)。
+`DataLoader(pin_memory=True)` 可以把取出的张量放进 pinned 主机内存，但**pinning 不是搬到 GPU**；后面仍要调用 `.to(device)`。自定义 batch 类型可能还需要自己的 `pin_memory()` 方法，见 [DataLoader 说明](https://docs.pytorch.org/docs/2.14/data.html#memory-pinning)。
 
 如果进一步使用不同 CUDA streams，还要分清两件事：
 
@@ -274,7 +274,7 @@ def device_step(model, optimizer, features, labels):
 | 消费方能开始计算了吗？ | 等待生产方之前提交的复制或计算完成 | event / `wait_stream`，建立执行顺序 |
 | 这块显存能被别的张量复用了吗？ | 使用它的 stream 尚未结束时，不能提前回收 | `record_stream` 通知分配器，或自行完整管理生命周期 |
 
-`record_stream` 不会替消费方等待数据准备好；`wait_stream` 本身也不是完整的生命周期管理。不要把其中一个当成另一个的替代品。这里先记住区别，不急着写多 stream 预取器；[PyTorch 2.8 的生命周期示例](https://docs.pytorch.org/docs/2.8/generated/torch.Tensor.record_stream.html)给出了两种管理方式。本页没有用 CPU 测试验证这些 CUDA 竞态。
+`record_stream` 不会替消费方等待数据准备好；`wait_stream` 本身也不是完整的生命周期管理。不要把其中一个当成另一个的替代品。这里先记住区别，不急着写多 stream 预取器；[`record_stream` 文档里的生命周期示例](https://docs.pytorch.org/docs/2.14/generated/torch.Tensor.record_stream.html)给出了两种管理方式。本页没有用 CPU 测试验证这些 CUDA 竞态。
 
 ### 用 3 个 batch 看懂等待发生在哪儿 {#pipeline-example}
 
@@ -320,7 +320,7 @@ assert ideal_pipeline_ms(3, 12, 2, 8) == (66, 46)
 | CPU 内存随 worker 数增加 | 看预取队列、每批大小和进程内副本 | 认为 `num_workers` 越多越好 |
 | 计算很快，记日志却慢 | 降低同步取指标的频率，再比较时间线 | 直接关掉所有检查或保留所有输出 |
 
-复用 batch 只是定位数据开销，不能拿来报告真实训练吞吐。计时也要等所测 GPU 工作完成；只量 Python 调用返回，可能只量到了排队。多 stream 还需处理依赖与张量生命周期，不能靠随手插一个 `synchronize()` 证明写法高效。[CUDA semantics](https://docs.pytorch.org/docs/2.8/notes/cuda.html#asynchronous-execution)说明了这些边界。
+复用 batch 只是定位数据开销，不能拿来报告真实训练吞吐。计时也要等所测 GPU 工作完成；只量 Python 调用返回，可能只量到了排队。多 stream 还需处理依赖与张量生命周期，不能靠随手插一个 `synchronize()` 证明写法高效。[CUDA semantics](https://docs.pytorch.org/docs/2.14/notes/cuda.html#asynchronous-execution)说明了这些边界；怎样用 profiler 正确计时，见[性能：Profiling](../../12-infra/performance.md#profiling)。
 
 前面的保存例子只检查输出一致。接下来若要处理被打断的训练，去看 [checkpoint 与恢复](../../practice/post-training/checkpoint-and-resume.md)：那里会让“接着跑”与“从同一权重重新开始”真正分出差别。
 
@@ -328,10 +328,10 @@ assert ideal_pipeline_ms(3, 12, 2, 8) == (66, 46)
 
 这一章没有用旧版 torchtext 加载数据：torchtext 已停止开发，0.18 是最后一个稳定版本。学习 PyTorch 不需要先装齐它的所有领域库，也不要照着老截图盲目补依赖。
 
-- [Linear](https://docs.pytorch.org/docs/2.8/generated/torch.nn.Linear.html)、[Module](https://docs.pytorch.org/docs/2.8/generated/torch.nn.Module.html)：维度、注册、状态与调用接口。
-- [Data utilities](https://docs.pytorch.org/docs/2.8/data.html)：Dataset、DataLoader、collate 与多进程；iterable dataset 的分片和 `drop_last` 还需单独检查。
-- [CrossEntropyLoss](https://docs.pytorch.org/docs/2.8/generated/torch.nn.CrossEntropyLoss.html)：类别索引、概率目标、权重与归约。
-- [Saving and loading models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html)、[TensorBoard](https://docs.pytorch.org/docs/2.8/tensorboard.html)：状态保存与日志。
-- [Reproducibility](https://docs.pytorch.org/docs/2.8/notes/randomness.html)、[torchtext 状态](https://docs.pytorch.org/text/stable/index.html)：种子的保证范围和依赖维护情况。
+- [Linear](https://docs.pytorch.org/docs/2.14/generated/torch.nn.Linear.html)、[Module](https://docs.pytorch.org/docs/2.14/generated/torch.nn.Module.html)：维度、注册、状态与调用接口。
+- [Data utilities](https://docs.pytorch.org/docs/2.14/data.html)：Dataset、DataLoader、collate 与多进程；iterable dataset 的分片和 `drop_last` 还需单独检查。
+- [CrossEntropyLoss](https://docs.pytorch.org/docs/2.14/generated/torch.nn.CrossEntropyLoss.html)：类别索引、概率目标、权重与归约。
+- [Saving and loading models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html)、[TensorBoard](https://docs.pytorch.org/docs/2.14/tensorboard.html)：状态保存与日志。
+- [Reproducibility](https://docs.pytorch.org/docs/2.14/notes/randomness.html)、[torchtext 状态](https://docs.pytorch.org/text/stable/index.html)：种子的保证范围和依赖维护情况。
 
 接下来把小模型换成[从零实现的模块](../code/README.md)，或去看[语言模型的一次训练更新](../deep-dives/training-step.md)。如果你能说清每个 batch 的形状、loss 分母和参数更新时机，再扩大模型才不容易把小错误一起放大。

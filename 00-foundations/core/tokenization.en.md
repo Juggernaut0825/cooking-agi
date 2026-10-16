@@ -4,7 +4,7 @@
 
 > Reading time: ~12 min · Level: core · Last reviewed: 2026-10
 
-The same sentence can become different ID sequences under different tokenizers. If a toy tokenizer splits `playing` into `play` and `ing`, the model receives two IDs, not one English word. That choice affects sequence length, compute, and how unfamiliar words are represented. We will follow the text through tokenization and the embedding lookup.
+The same sentence can become different ID sequences under different tokenizers. If a toy tokenizer splits `playing` into `play` and `ing`, the model receives two IDs, not one English word. That choice affects sequence length, compute, and how unfamiliar words are represented. We will follow the text through tokenization and the embedding lookup. **The model only ever sees token IDs; change the split, and the sequence length, the compute, and the units the model sees all change with it.**
 
 ## The model receives token IDs {#the-model-receives-token-ids}
 
@@ -140,7 +140,7 @@ table turns integers into model-width vectors.
 A chat template does not alter the attention equation. It gives an ordinary token
 sequence a learnable grammatical structure.
 
-Avoid duplicating special tokens in actual code. In Transformers v4.57.1, if you render with `apply_chat_template(tokenize=False)` and tokenize separately, use `add_special_tokens=False`; `tokenize=True` combines the two steps. [Official guidance](https://huggingface.co/docs/transformers/v4.57.1/chat_templating)
+Avoid duplicating special tokens in actual code. In Transformers v5.20.0 (checked October 2026), if you render with `apply_chat_template(tokenize=False)` and tokenize separately, use `add_special_tokens=False`; `tokenize=True` combines the two steps and, because `return_dict` now defaults to `True` in v5, returns a dict with `input_ids` rather than a bare list of ids. [Official guidance](https://huggingface.co/docs/transformers/v5.20.0/chat_templating)
 
 ## Connecting the output shapes to the neural network {#connecting-the-output-shapes-to-the-neural-network}
 

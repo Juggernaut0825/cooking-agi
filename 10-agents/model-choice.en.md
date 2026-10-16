@@ -44,7 +44,7 @@ A small team might establish a baseline with an API that meets its data requirem
 
 ## 3. Who decides whether to reason longer? {#thinking-control}
 
-When a model offers a thinking mode, ask whether the caller selects it or the model chooses during generation. Both can be useful, but they are different capabilities.
+When a model offers a thinking mode, ask whether the caller selects it or the model chooses during generation. Both can be useful, but they are different capabilities. Why reasoning models get more answers right when they think longer, and when longer thinking stops helping, is covered in [Reasoning models and test-time compute](../11-frontier/test-time-compute/README.en.md).
 
 <figure class="worked-update" lang="en" id="reasoning-decisions">
 <figcaption>Date extraction and debugging can receive budgets at different points</figcaption>
@@ -60,6 +60,8 @@ When a model offers a thinking mode, ask whether the caller selects it or the mo
 **Learned selection.** AutoThink (2025) trains R1-style models to choose when to retain explicit reasoning. Its stages balance modes, improve performance, and introduce length-aware rewards. A prompt that produces both modes does not itself establish difficulty-aware allocation. [AutoThink §2–3](https://arxiv.org/html/2505.10832v2#S3)
 
 A detail worth checking: stage 2 removes batch balancing but retains the mode-and-correctness-dependent base reward, rather than switching to binary accuracy reward. The main experiments concern mathematics. We have not reproduced them or established benefits for arbitrary agents.
+
+**When the first two layers merge.** As of October 2026, some hosted APIs fold "the caller specifies" and "the model chooses" into one interface. In Anthropic's Claude API, for example, the caller sets an `effort` level (from `low` to `max`) and the model decides per request whether to think and how much. The documentation says the caller no longer sets a thinking token budget: `max_tokens` is the only hard cap, and `effort` is soft guidance that does not guarantee a token count. [Claude docs: Steering thinking](https://platform.claude.com/docs/en/build-with-claude/thinking-steering-and-cost) "Give date extraction a short budget" then becomes "give these requests a lower effort", and the model may still think longer on an occasional hard case. Check the thinking tokens actually reported per request type rather than trusting the configuration.
 
 **External routing.** The application estimates which model suits a request; neither candidate needs a thinking switch. [Adaptive depth](../00-foundations/looped/adaptive-depth.en.md) instead concerns internal layers or iterations. Hidden-state computation is not the same as generating more text.
 

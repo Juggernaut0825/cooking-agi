@@ -23,14 +23,14 @@ workflow 用事先写好的代码路径串起模型和工具；agent 让模型�
 <details class="interview" markdown="1">
 <summary>为什么写代码是 agent 最成熟的场景之一？</summary>
 
-因为验证信号最强：代码能跑，测试能过，每一步都有客观反馈，agent 可以放心多试。相比之下，客服、个人助理这类场景很难自动判断对错，更依赖规则、权限和人工。即使在写代码的场景，测试通过也不等于改对了。
+因为验证信号最强：代码能跑，测试能过，每一步都有客观反馈，agent 可以在沙箱里多试，通过后仍要人看 diff。相比之下，客服、个人助理这类场景很难自动判断对错，更依赖规则、权限和人工。即使在写代码的场景，测试通过也不等于改对了。
 
 </details>
 
 <details class="interview" markdown="1">
 <summary>怎么评估一个客服 agent 的可靠性？</summary>
 
-不能只看单次成功率，要看同一个任务重复多次是否都做对，比如 τ-bench 的 pass^k。还要检查是否遵守政策、工具调用是否正确、复杂情况有没有转人工，并看完整的运行轨迹而不只是最终回答。
+不能只看单次成功率，要看同一个任务独立重复多次是否全都做对，比如 τ-bench 的 pass^k（k 次全部成功的概率）。还要检查是否遵守政策、工具调用是否正确、复杂情况有没有转人工，并看完整的运行轨迹而不只是最终回答。
 
 </details>
 
@@ -79,8 +79,8 @@ workflow 用事先写好的代码路径串起模型和工具；agent 让模型�
 
 - [Building effective agents](https://www.anthropic.com/engineering/building-effective-agents)：workflow 与 agent 的区分和常见结构
 - [ReAct](https://arxiv.org/abs/2210.03629)：推理与行动交替
-- [SWE-bench](https://arxiv.org/abs/2310.06770)：用真实 issue 评估写代码的 agent
-- [τ-bench](https://arxiv.org/abs/2406.12045)：带政策约束的工具与对话，以及 pass^k
+- [SWE-bench](https://arxiv.org/abs/2310.06770)：用真实 issue 评估写代码的 agent；Verified 子集已接近做满，OpenAI 自 2026-02 起改为推荐 [SWE-bench Pro](https://arxiv.org/abs/2509.16941)
+- [τ-bench](https://arxiv.org/abs/2406.12045)：带政策约束的工具与对话，以及 pass^k；后续的 [τ²-bench](https://arxiv.org/abs/2506.07982) 加入用户也要动手的 dual control，仓库截至 2026-10 已发布 τ³-bench
 - [WebArena](https://arxiv.org/abs/2307.13854)
 - [OSWorld](https://arxiv.org/abs/2404.07972)
 - [Not what you've signed up for](https://arxiv.org/abs/2302.12173)：indirect prompt injection

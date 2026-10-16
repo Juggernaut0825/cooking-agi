@@ -30,7 +30,7 @@
 ## 站内前置和外部教材
 
 - [ViT](../../03-multimodal-learning/vit.md) 和 [CLIP](../../03-multimodal-learning/clip.md)：第 3、4 篇的骨干和图文对齐。
-- [概率](../../quant/probability/README.md)：第 2 篇用到条件概率和高斯分布。
+- 概率：第 2 篇用到条件概率和高斯分布。
 - [世界模型怎样给机器人和汽车当仿真器](../../11-frontier/world-models/robotics-driving.md)：第 5 篇讲重建式仿真时的对照。
 - 免费教材：[Szeliski《Computer Vision》第 2 版](https://szeliski.org/Book/)、[Barfoot《State Estimation for Robotics》第 2 版](https://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser24.pdf)；Hartley & Zisserman 只有[样章](https://www.robots.ox.ac.uk/~vgg/hzbook/)免费，其中包括对极几何一章。
 - 课程：CMU [16-385](http://16385.courses.cs.cmu.edu/)（相机模型、两视图几何、跟踪）和 [16-822](https://geometric3d.github.io/)（射影几何、基础矩阵、基于学习的 SfM/SLAM），两门都有 2026 年秋季版；[Stanford CS231n](https://cs231n.stanford.edu/) 2026 年春季版覆盖检测、分割和三维视觉。
@@ -61,4 +61,4 @@
 2. [状态估计与跟踪](tracking.md)：Kalman filter、Hungarian 配对、ByteTrack 的低分框，以及滤波和优化两种 SLAM
 3. [2026 年的检测与分割](detection.md)：手算 AP，NMS 和一对一匹配，闭集实时、开放词表和 SAM 3 怎么选，常见权重的许可证
 4. [冻结骨干与几何基础模型](foundation-models.md)：DINOv3、Depth Anything 3、VGGT，以及一次前向输出相机、深度和点图
-5. [三维重建与神经渲染](reconstruction.md)：从 SfM 到 Gaussian splatting 仿真器，以及重建在哪里不够用
+5. [三维重建与神经渲染（NeRF、3DGS）](reconstruction.md)：从 SfM 到 Gaussian splatting 仿真器，以及重建在哪里不够用

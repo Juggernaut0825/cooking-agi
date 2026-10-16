@@ -1,4 +1,4 @@
-# 自动求导：梯度算出来了，为什么没存下来？
+# 自动求导（autograd）：梯度算出来了，为什么没存下来？
 
 **中文** · [English](autograd.en.md)
 
@@ -6,7 +6,7 @@
 
 写完 `loss.backward()`，打印某个中间结果的 `.grad`，却看到 `None`。先别急着认定计算图断了：**算过这个梯度**，和**把它存在这个张量的 `.grad` 里**，是两回事。
 
-这一章用几个很小的计算把它们分开。代码只需要 CPU；数值检查环境为 PyTorch 2.8.0。这里讨论常见的实数自动求导，不涉及复数梯度约定。
+这一章用几个很小的计算把它们分开。代码只需要 CPU；数值检查环境为 PyTorch 2.8.0。这里讨论常见的实数自动求导（autograd），不涉及复数梯度约定。
 
 ## 1. 先跟着一条链算
 
@@ -167,7 +167,7 @@ assert first.item() == 12.0
 assert second.item() == 12.0
 ```
 
-`torch.compile` 可能捕获和编译部分执行过程，但这不意味着要把 eager autograd 的规则换成“整个程序永远只有一张静态图”。先把这里的梯度与状态弄对，再讨论编译边界。
+`torch.compile` 可能捕获和编译部分执行过程，但这不意味着要把 eager autograd 的规则换成“整个程序永远只有一张静态图”。先把这里的梯度与状态弄对，再讨论编译边界；`torch.compile` 怎样抓图、生成 kernel，见[框架这一层](../../12-infra/frameworks.md)。
 
 ## 6. 怎么知道导数不是“看起来对”？
 
@@ -198,7 +198,7 @@ assert torch.autograd.gradcheck(smooth_objective, (coordinate,))
 
 上面的代码是教学实验，不是完整训练器。接着看[训练循环](training-loop.md)，把数据、参数、验证和日志接起来。
 
-- [Autograd mechanics](https://docs.pytorch.org/docs/2.8/notes/autograd.html)：叶节点、梯度模式、计算图与原地修改。
-- [Tensor.backward](https://docs.pytorch.org/docs/2.8/generated/torch.Tensor.backward.html) 与 [autograd.grad](https://docs.pytorch.org/docs/2.8/generated/torch.autograd.grad.html)：梯度种子、累积和返回值。
-- [retain_grad](https://docs.pytorch.org/docs/2.8/generated/torch.Tensor.retain_grad.html) 与 [detach](https://docs.pytorch.org/docs/2.8/generated/torch.Tensor.detach.html)：保留中间梯度不等于复制或保留整张图。
-- [Gradcheck mechanics](https://docs.pytorch.org/docs/2.8/notes/gradcheck.html)：数值梯度检查的原理和限制。
+- [Autograd mechanics](https://docs.pytorch.org/docs/2.14/notes/autograd.html)：叶节点、梯度模式、计算图与原地修改。
+- [Tensor.backward](https://docs.pytorch.org/docs/2.14/generated/torch.Tensor.backward.html) 与 [autograd.grad](https://docs.pytorch.org/docs/2.14/generated/torch.autograd.grad.html)：梯度种子、累积和返回值。
+- [retain_grad](https://docs.pytorch.org/docs/2.14/generated/torch.Tensor.retain_grad.html) 与 [detach](https://docs.pytorch.org/docs/2.14/generated/torch.Tensor.detach.html)：保留中间梯度不等于复制或保留整张图。
+- [Gradcheck mechanics](https://docs.pytorch.org/docs/2.14/notes/gradcheck.html)：数值梯度检查的原理和限制。

@@ -2,6 +2,8 @@
 
 [中文](memory-lifecycle.md) · **English**
 
+> Reading time: ~8–10 min · Last reviewed: 2026-10
+
 Last month a user said, “Don't schedule evening meetings.” Today they say, “I'm in another time zone this week; evenings are fine.” If both statements simply enter a vector store and whichever is retrieved wins, memory becomes a liability.
 
 **The question isn't how much was stored, but which record applies and when it stops applying.** This note uses a fictional scheduling assistant.
@@ -61,7 +63,7 @@ This is a teaching example, not an industry standard. `supersedes_in_scope` mean
 
 On Monday a user says, “I'll be away Wednesday through Friday.” Monday is when the system learns the fact; Wednesday is when it starts applying. With only an `updated_at` field, the system might change Tuesday’s schedule too early.
 
-Records can include `observed_at`, `valid_from`, and `valid_until`. An exclusive end boundary, $[t_{\mathrm{start}},t_{\mathrm{end}})$, prevents adjacent intervals from both claiming the same boundary. Resolve time zones as well: “Friday evening” is not inherently UTC.
+Records can include `observed_at`, `valid_from`, and `valid_until`. Databases call data with these two time axes **bitemporal**: `valid_from` and `valid_until` give the valid time, when the fact holds in the world, and `observed_at` is close to the transaction time, when the system recorded it. SQL:2011 temporal tables model them as application-time periods and system-versioned tables; their query patterns are a useful reference when designing read rules. An exclusive end boundary, $[t_{\mathrm{start}},t_{\mathrm{end}})$, prevents adjacent intervals from both claiming the same boundary. Resolve time zones as well: “Friday evening” is not inherently UTC.
 
 Put that statement on a timeline. Let Monday be day 1; Wednesday through Friday is $[3,6)$:
 
@@ -133,7 +135,9 @@ A conservative starting rule: explicit new instructions take priority only withi
 
 Deletion must also account for derived summaries, caches, and index copies. If they reintroduce the same information, the system hasn't effectively forgotten it. Inventory storage locations and test deletion or invalidation propagation; logs follow their separately disclosed retention policy.
 
-## Why can a summary remember something that was deleted?
+<span id="why-can-a-summary-remember-something-that-was-deleted"></span>
+
+## Why can a summary remember something that was deleted? {#deletion-propagation}
 
 Suppose original statement M1 contributes to summary S1, which produces vector V1. Deleting only M1 leaves retrieval able to find V1 and supply S1. Track derived records through their source relationships:
 
@@ -147,7 +151,9 @@ During asynchronous cleanup, first make affected versions unavailable to readers
 
 This differs from unlearning training data from model parameters. We are discussing external memory storage and reads, not claiming that deleting a database record removes information from model weights.
 
-## Test a timeline, not a single question
+<span id="test-a-timeline-not-a-single-question"></span>
+
+## Test a timeline, not a single question {#timeline-test}
 
 | Step | Input or change | Expected behavior |
 | --- | --- | --- |
@@ -173,13 +179,14 @@ The same wrong answer can have three causes: the validity interval was lost duri
 
 For the trip example, check the stored statement and interval, then whether retrieval returns that evidence, then whether the answer applies the exception only from Wednesday through Friday. In a synthetic test, provide the correct evidence directly as a control. If the answer is still wrong, retrieving more records may not help. This is a diagnostic experiment, not the normal production input.
 
-Two public benchmarks offer useful starting points, with different scopes:
+Three public benchmarks offer useful starting points as of October 2026, with different scopes:
 
 | Resource | What it helps test | What you still need to add |
 | --- | --- | --- |
 | [LongMemEval, ICLR 2025, §3–4](https://arxiv.org/html/2410.10813v2#S3) | Extraction, multi-session reasoning, temporal reasoning, updates, and abstention; separates indexing, retrieval, and reading | Product-specific permissions, deletion propagation, latency, and target languages |
 | [LoCoMo, 2024, §4 and §8](https://arxiv.org/html/2402.17753v1#S4) | Long-dialogue QA, event summaries, and multimodal dialogue; mainly model-generated data checked by humans | Real users' wording and changes; the paper's English data does not establish Chinese-language quality |
+| [MemoryAgentBench, first posted 2025 / v4 June 2026, §3.1 and §4.2](https://arxiv.org/html/2507.05257v4#S3) | Tests accurate retrieval, test-time learning, long-range understanding, and selective forgetting separately; FactConsolidation gives a fact, then a rewritten version that contradicts it, and asks for the newer one. In Table 3's main comparison, all methods score at most 28% on multi-hop FactConsolidation. This is not a ceiling across settings: the shorter-context validation in [Table 5](https://arxiv.org/html/2507.05257v4#S4.SS3.SSS4) reports 80% for o4-mini at 6K and 14% at 32K | The prompt tells the model that larger serial numbers are newer, which real user corrections rarely make explicit; it tests overwriting facts in context, not deletion propagation or permissions |
 
-These are evaluation references, not a ranking of all memory systems in 2026. Fix the dataset version, available history, retrieval budget, and scoring script when reusing a benchmark. We have not run either full benchmark here. Strong QA results cannot replace checks that deleted information is no longer served.
+These are evaluation references, not a ranking of all memory systems in 2026. Fix the dataset version, available history, retrieval budget, and scoring script when reusing a benchmark. We have not run any of the three full benchmarks here. Strong QA results cannot replace checks that deleted information is no longer served.
 
 Continue: [Retrieving evidence](../04-search/README.en.md) · [When to ask a human](../06-systems/human-in-the-loop.en.md).

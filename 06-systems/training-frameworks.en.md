@@ -2,7 +2,7 @@
 
 [中文](training-frameworks.md) · **English**
 
-> Checked 2026-10-11. FSDP2 mechanics are anchored to PyTorch v2.8.0 source, not a claim that it is the latest release. No multi-GPU performance benchmark was run for this note.
+> Checked 2026-10-16. FSDP2 mechanics were first written against PyTorch v2.8.0 source; in October 2026 they were re-checked against v2.14.1 (released 2026-09-30), and the grouping, DTensor sharding and `reshard_after_forward` behaviour are unchanged. No multi-GPU performance benchmark was run for this note.
 
 A model that fits on one GPU but trains too slowly has a different problem from a model that does not fit at all. The first may benefit from processing more data in parallel. The second also needs a different way to store or partition state.
 
@@ -44,7 +44,7 @@ Imagine four GPUs each holding a parameter shard. Before a Transformer block run
 <figcaption>This path assumes reshard_after_forward=True. Retention, prefetching, and mixed precision change the memory and communication timeline.</figcaption>
 </figure>
 
-[PyTorch v2.8.0 fully_shard](https://github.com/pytorch/pytorch/blob/v2.8.0/torch/distributed/fsdp/_fully_shard/_fully_shard.py) creates communication groups and represents shards with DTensor. Apply it to blocks first, then to remaining root parameters. A root-only call puts many parameters in one group, limiting opportunities to reduce transient memory and overlap communication.
+[PyTorch v2.14.1 fully_shard](https://github.com/pytorch/pytorch/blob/v2.14.1/torch/distributed/fsdp/_fully_shard/_fully_shard.py) creates communication groups and represents shards with DTensor. Apply it to blocks first, then to remaining root parameters. A root-only call puts many parameters in one group, limiting opportunities to reduce transient memory and overlap communication.
 
 These are **FSDP parameter communication groups**, not attention head groups or optimizer hyperparameter groups.
 
@@ -55,6 +55,8 @@ Consider one billion parameters with FP32 persistent parameters and gradients, t
 Peak memory also includes activations, temporary full parameters, communication buffers, kernel workspace, and allocator overhead:
 
 $$M_{\text{peak}}=\max_t\left(M_{\text{persistent}}(t)+M_{\text{activation}}(t)+M_{\text{temporary}}(t)\right).$$
+
+Fill it in once for the billion-parameter example; every number below is an assumption. The model has 20 equal blocks of 50 million parameters each. When backward reaches one block, each rank holds its 4 GB of persistent shards; that block's full FP32 parameters have just been gathered, taking $5\times10^7\times4=0.2$ GB, and its full gradient takes another 0.2 GB before reduce-scatter; 3 GB of activations and 0.5 GB of workspace are still live. At that moment the total is $4+3+0.2+0.2+0.5=7.9$ GB. $M_{\text{peak}}$ is the largest such value over all moments, nearly twice the 4 GB counted from persistent shards alone.
 
 Independent component peaks may occur at different times; summing them is not an exact measurement. Counting only persistent shards is also insufficient. Inspect which allocations coexist. Mixed precision requires a fresh accounting of parameter, gradient, and communication dtypes.
 
@@ -91,7 +93,7 @@ Prefetching can fetch the next block while the current one computes. It also kee
 
 Compare one update on fixed small inputs. Align sample order, valid tokens, masks, gradient normalization, clipping, and optimizer settings. Reduction order can cause numerical differences; declare tolerances rather than promising bitwise equality.
 
-Then measure effective target tokens/s after warm-up, step-time distributions, peak memory, and communication waits. High GPU utilization can include recomputation, padding, and communication. Ask how long it takes to complete a reliable experiment at the required quality, not just how busy the devices look.
+Then measure effective target tokens/s after warm-up, step-time distributions, peak memory, and communication waits. High GPU utilization can include recomputation, padding, and communication; why MFU and HFU count different numerators is covered in [Performance: MFU and HFU](../12-infra/performance.en.md#mfu). Ask how long it takes to complete a reliable experiment at the required quality, not just how busy the devices look.
 
 Finally, interrupt a run deliberately. Loading weights is not full training recovery: inspect optimizer, scheduler, RNG, data cursor, and update count. Resharding a checkpoint to another world size depends on the format and loader and needs testing. Successful loading does not guarantee the same training trajectory. Continue with [saving and resuming](../practice/post-training/checkpoint-and-resume.en.md).
 

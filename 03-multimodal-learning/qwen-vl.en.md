@@ -4,7 +4,7 @@
 
 > Last reviewed: 2026-10 · Prerequisites: [ViT](vit.en.md), [RoPE](../00-foundations/deep-dives/position-and-context.en.md)
 
-An icon and a dense train timetable need different information budgets. Yet unrestricted growth in visual tokens lets a single tall image slow down the model. One useful thread through Qwen-VL is how it preserves detail while controlling these costs.
+An icon and a dense train timetable need different information budgets. Yet unrestricted growth in visual tokens lets a single tall image slow down the model. **One useful thread through Qwen-VL is how it preserves detail while controlling these costs.**
 
 This is an architecture walkthrough, not a leaderboard. Always record the model variant, processor, and inference budget together.
 
@@ -99,6 +99,8 @@ Only two injections are drawn to illustrate the route, not a layer configuration
 ## 2026: vision also enters the general-purpose model line
 
 Qwen3.5's public model card describes early vision–language fusion alongside a hybrid language backbone combining Gated DeltaNet and attention. Visual capability is no longer confined to separately named VL releases. The specific example here is the public 397B-A17B checkpoint, not a configuration for every size. [Official model card](https://huggingface.co/Qwen/Qwen3.5-397B-A17B)
+
+As of October 2026, the newer [Qwen3.8-27B](https://huggingface.co/Qwen/Qwen3.8-27B) (dated August 2026 on its model card) puts the same idea into a 27B dense model: it is a native vision-language model whose 64 layers repeat a pattern of three Gated DeltaNet layers and one Gated Attention layer, with a native context of 262,144 tokens. This too is one checkpoint's configuration; how the Qwen3.8 checkpoints differ is covered in [Qwen family](../00-foundations/model-families/qwen.en.md#2026-update-qwen38-is-not-one-uniform-architecture).
 
 Model selection therefore involves more than comparing vision encoders. Ask how long image–text sequences enter the backbone, which layers retain KV, and which summarize history in recurrent state. Fixed recurrent state does not make the entire hybrid model's cache independent of sequence length.
 

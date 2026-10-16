@@ -34,7 +34,7 @@
 
 - [System Design Primer](https://github.com/donnemartin/system-design-primer)：免费，覆盖面广，适合搭骨架
 - [ByteByteGo](https://bytebytego.com)：Alex Xu 的《System Design Interview》系列，图多、好读
-- [Designing Data-Intensive Applications](https://www.dataintensive.net)：想真正理解底层取舍，这本最值得花时间
+- [Designing Data-Intensive Applications](https://www.dataintensive.net)：想真正理解底层取舍，这本最值得花时间。截至 2026-10，最新的是 [2026 年 3 月出版的第 2 版](https://martin.kleppmann.com/2026/03/24/designing-data-intensive-applications-2e.html)（Martin Kleppmann、Chris Riccomini 合著，O'Reilly）；书的网站目前仍是第 1 版的介绍
 
 ML / 推荐方向：
 
@@ -49,3 +49,4 @@ ML / 推荐方向：
 - [现代 AI 系统：模型只是其中一部分](../06-systems/)
 - [Agents：不同场景怎么用](../10-agents/scenarios.md)
 - [Evaluation：我们凭什么说系统变好了](../07-evaluation/)
+- [Kubernetes 与 GPU 集群](../12-infra/kubernetes.md)：分布式训练为什么要成组调度（gang scheduling），推理服务扩容为什么不只是加副本（待审核草稿）

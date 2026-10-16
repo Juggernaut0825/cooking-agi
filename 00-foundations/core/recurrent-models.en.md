@@ -4,7 +4,7 @@
 
 > Reading time: ~10 min · Level: core · Last reviewed: 2026-10
 
-In “It is raining; remember your umbrella,” the final word depends on earlier information. An RNN updates a hidden state as it reads each position. An LSTM adds controls for keeping, writing, and reading its state. First we follow the information forward, then examine why learning long dependencies is difficult.
+In “It is raining; remember your umbrella,” the final word depends on earlier information. An RNN updates a hidden state as it reads each position. An LSTM adds controls for keeping, writing, and reading its state. First we follow the information forward, then examine why learning long dependencies is difficult. **An RNN squeezes all history into one fixed-size state and updates it step by step; LSTM gates make that state easier to keep, but the computation is still serial and the capacity still fixed.**
 
 ## How the hidden state carries information {#how-the-hidden-state-carries-information}
 
@@ -76,6 +76,8 @@ An LSTM mitigates forgetting, but it does not eliminate the sequential computati
 <summary><b>Deeper</b>: when an RNN / LSTM is still worth using</summary>
 
 For streaming sensors, very small edge models, and tasks whose state space is small and which must be updated online one step at a time, a recurrent state can still be cheaper than keeping the full context. The choice of architecture depends on the workload; it is not a simple ranking of new over old.
+
+Fixed-size recurrent state has also returned to large models: as of October 2026, 45 of the 60 layers in [Qwen3.5-397B-A17B](https://huggingface.co/Qwen/Qwen3.5-397B-A17B) are [Gated DeltaNet](../deep-dives/gated-deltanet.en.md) layers, which update a matrix state in a form that trains in parallel; the RSSM in the world model [Dreamer](../../11-frontier/world-models/dreamer.en.md) is a recurrent network as well. They change how the state is written and forgotten; they are not a return to LSTMs trained serially token by token.
 
 </details>
 

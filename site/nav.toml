@@ -255,7 +255,7 @@ zone = "frontier"
 zh = "前沿"
 en = "Frontier"
 home = "11-frontier/README.md"
-summary_zh = "世界模型、递归自我改进这类正在变化的方向：先问清楚指的是什么，再看有哪些可核对的证据。"
+summary_zh = "世界模型、递归自我改进（RSI）这类正在变化的方向：先问清楚指的是什么，再看有哪些可核对的证据。"
 summary_en = "Moving targets such as world models and recursive self-improvement: ask what is meant, then check the evidence."
 
 [[group]]
@@ -479,6 +479,14 @@ include = ["00-foundations/deep-dives/precision-and-memory.md", "06-systems/dist
 order = ["precision-and-memory.md", "distributed-training.md", "tensor-parallel.md", "training-frameworks.md"]
 
 [[section]]
+dir   = "00-foundations/scaling"
+group = "pretraining"
+sequence = 3
+zh    = "03 · Scaling law 与超参数（待审核）"
+en    = "03 · Scaling laws & hyperparameters (draft)"
+order = ["README.md", "compute-optimal.md", "beyond-chinchilla.md", "hyperparameters.md", "review.md"]
+
+[[section]]
 dir = "learn/inference"
 group = "inference"
 zh = "01 · 生成与缓存"
@@ -686,6 +694,13 @@ en    = "From silicon to product"
 order = ["README.md", "chips-and-fabs.md", "cpu-architecture.md", "gpu-architecture.md", "nvidia-generations.md", "cuda.md", "performance.md", "frameworks.md", "kubernetes.md", "review.md"]
 
 [[section]]
+dir   = "12-infra/quantization"
+group = "infra"
+zh    = "量化（待审核）"
+en    = "Quantization (draft)"
+order = ["README.md", "formats-and-error.md", "weight-only-and-ptq.md", "fp8-and-kv-cache.md", "checking-quality.md", "review.md"]
+
+[[section]]
 dir   = "13-embodied"
 group = "embodied"
 zh    = "从这里开始"
@@ -730,7 +745,7 @@ order = ["README.md", "dreamer.md", "jepa.md", "interactive-video.md", "robotics
 [[section]]
 dir   = "11-frontier/self-improvement"
 group = "frontier"
-zh    = "递归自我改进"
+zh    = "递归自我改进（RSI）"
 en    = "Recursive self-improvement"
 order = ["README.md", "generate-verify-train.md", "code-not-weights.md", "measuring.md", "review.md"]
 
@@ -744,7 +759,7 @@ order = ["README.md", "parallel-and-verify.md", "long-chains.md", "measuring.md"
 [[section]]
 dir   = "11-frontier/agentic-rl"
 group = "frontier"
-zh    = "用 RL 训练 agent（待审核）"
+zh    = "Agentic RL（待审核）"
 en    = "Agent RL (draft)"
 order = ["README.md", "environments-and-rewards.md", "credit-and-training.md", "review.md"]
 
@@ -754,6 +769,13 @@ group = "frontier"
 zh    = "机制可解释性（待审核）"
 en    = "Interpretability (draft)"
 order = ["README.md", "features-and-superposition.md", "sparse-autoencoders.md", "circuits.md", "review.md"]
+
+[[section]]
+dir   = "11-frontier/diffusion-lm"
+group = "frontier"
+zh    = "扩散语言模型（dLLM，待审核）"
+en    = "Diffusion LMs (draft)"
+order = ["README.md", "masked-diffusion.md", "decoding-and-speed.md", "review.md"]
 
 [[section]]
 dir   = "practice"
@@ -905,21 +927,21 @@ en  = "Templates"
 "00-foundations/deep-dives/precision-and-memory.md" = ["精度与训练显存", "Precision & memory"]
 "00-foundations/deep-dives/position-and-context.md" = ["RoPE 与长上下文", "RoPE & long context"]
 "00-foundations/deep-dives/nope-and-order.md" = ["NoPE 与顺序信息", "NoPE & sequence order"]
-"00-foundations/deep-dives/attention-kernels.md" = ["FlashAttention 与分页", "FlashAttention & paging"]
+"00-foundations/deep-dives/attention-kernels.md" = ["FlashAttention 与分页（PagedAttention）", "FlashAttention & paging"]
 "00-foundations/deep-dives/latent-and-sparse-attention.md" = ["MLA 与稀疏注意力", "MLA & sparse attention"]
-"00-foundations/deep-dives/multi-token-prediction.md" = ["多 token 预测", "Multi-token prediction"]
+"00-foundations/deep-dives/multi-token-prediction.md" = ["多 token 预测（MTP）", "Multi-token prediction"]
 "05-post-training/parameter-efficient-tuning.md" = ["Prompt / Prefix / Adapter", "Prompt / Prefix / Adapter"]
 "06-systems/distributed-training.md" = ["多卡训练怎么分", "Distributed training"]
-"06-systems/tensor-parallel.md" = ["张量并行：跟着算一层", "Tensor parallelism, worked through"]
+"06-systems/tensor-parallel.md" = ["张量并行（TP）：跟着算一层", "Tensor parallelism, worked through"]
 "06-systems/llm-serving.md" = ["一次请求怎样跑完", "A request through the service"]
 "06-systems/training-frameworks.md" = ["DDP、FSDP2 与训练框架", "DDP, FSDP2 & training stacks"]
 "06-systems/inference-frameworks.md" = ["vLLM 与 SGLang", "vLLM & SGLang"]
-"00-foundations/core/embeddings-and-similarity.md" = ["向量与相似度", "Embeddings & similarity"]
+"00-foundations/core/embeddings-and-similarity.md" = ["向量（embedding）与相似度", "Embeddings & similarity"]
 "00-foundations/deep-dives/training-step.md" = ["一次训练怎么走", "One training step"]
 "00-foundations/deep-dives/generalization.md" = ["泛化与训练诊断", "Generalization & diagnosis"]
 "00-foundations/deep-dives/activation-and-initialization.md" = ["激活与初始化", "Activations & initialization"]
 "00-foundations/deep-dives/optimizers.md" = ["SGD 到 AdamW", "SGD to AdamW"]
-"00-foundations/deep-dives/tokenizer-algorithms.md" = ["分词算法详解", "Tokenizer algorithms"]
+"00-foundations/deep-dives/tokenizer-algorithms.md" = ["分词（tokenization）算法详解", "Tokenizer algorithms"]
 "00-foundations/deep-dives/kv-cache-and-inference.md" = ["KV cache 与推理成本", "KV cache & inference"]
 "05-post-training/lora-and-qlora.md" = ["LoRA 与 QLoRA", "LoRA & QLoRA"]
 "05-post-training/distillation.md" = ["蒸馏：答案与分布", "Distillation: answers & distributions"]
@@ -951,7 +973,7 @@ en  = "Templates"
 "00-foundations/core/tokenization.md"                   = ["Tokenization", "Tokenization"]
 "00-foundations/core/recurrent-models.md"               = ["RNN 与 LSTM", "RNN & LSTM"]
 "00-foundations/core/seq2seq.md"                        = ["Seq2Seq", "Seq2Seq"]
-"00-foundations/core/multi-head-attention.md"           = ["多头注意力", "Multi-head attention"]
+"00-foundations/core/multi-head-attention.md"           = ["多头注意力（MHA）", "Multi-head attention"]
 "00-foundations/core/normalization.md"                  = ["归一化", "Normalization"]
 "00-foundations/core/residual-connections.md"           = ["残差连接", "Residual connections"]
 "00-foundations/core/vanilla-transformer.md"            = ["Vanilla Transformer", "Vanilla Transformer"]
@@ -965,11 +987,11 @@ en  = "Templates"
 "02-memory/README.md"                                   = ["表征与记忆", "Representation & memory"]
 "03-multimodal-learning/README.md"                      = ["多模态学习", "Multimodal learning"]
 "04-search/README.md"                                   = ["搜索与检索", "Search & retrieval"]
-"04-search/dual-encoder.md" = ["双塔：表示与目标", "Dual encoders & objectives"]
+"04-search/dual-encoder.md" = ["双塔（dual encoder）：表示与目标", "Dual encoders & objectives"]
 "04-search/tfidf-and-bm25.md" = ["TF-IDF 与 BM25", "TF-IDF & BM25"]
 "04-search/embedding-models.md" = ["Qwen Embedding 与 BGE-M3", "Qwen Embedding & BGE-M3"]
 "04-search/hybrid-and-reranking.md" = ["混合检索与重排", "Hybrid retrieval & reranking"]
-"04-search/vector-indexes.md" = ["向量索引：IVF 与 PQ", "Vector indexes: IVF & PQ"]
+"04-search/vector-indexes.md" = ["向量索引：IVF、PQ 与 HNSW", "Vector indexes: IVF, PQ & HNSW"]
 "04-search/rag-evidence.md" = ["RAG：证据与评估", "RAG: evidence & evaluation"]
 "05-post-training/README.md"                            = ["总览", "Overview"]
 "05-post-training/deep-rl/README.md" = ["从这里开始", "Start here"]
@@ -1023,7 +1045,7 @@ en  = "Templates"
 "07-evaluation/README.md"                               = ["总览", "Overview"]
 "07-evaluation/eval-observability.md" = ["评估接到线上（待审核）", "Evaluation online (draft)"]
 "07-evaluation/evaluation-stack.md" = ["分层评估", "Evaluation stack"]
-"07-evaluation/text-metrics.md" = ["BLEU、ROUGE 与编辑距离", "BLEU, ROUGE & edit distance"]
+"07-evaluation/text-metrics.md" = ["BLEU、ROUGE、编辑距离与困惑度", "BLEU, ROUGE, edit distance & perplexity"]
 "07-evaluation/benchmark-protocols.md" = ["Benchmark 与长上下文测试", "Benchmarks & long-context tests"]
 "07-evaluation/metric-robustness.md" = ["指标靠得住吗", "Is the metric robust?"]
 "07-evaluation/llm-as-a-judge/README.md" = ["总览", "Overview"]
@@ -1103,9 +1125,9 @@ en  = "Templates"
 "13-embodied/perception/tracking.md" = ["状态估计与跟踪", "Estimation & tracking"]
 "13-embodied/perception/detection.md" = ["检测与分割", "Detection & segmentation"]
 "13-embodied/perception/foundation-models.md" = ["几何基础模型", "Geometry foundation models"]
-"13-embodied/perception/reconstruction.md" = ["三维重建与神经渲染", "Reconstruction & rendering"]
+"13-embodied/perception/reconstruction.md" = ["三维重建（NeRF、3DGS）", "Reconstruction & rendering"]
 "13-embodied/driving/README.md" = ["总览", "Overview"]
-"13-embodied/driving/bev-occupancy.md" = ["鸟瞰图与占用", "BEV & occupancy"]
+"13-embodied/driving/bev-occupancy.md" = ["鸟瞰图（BEV）与占用", "BEV & occupancy"]
 "13-embodied/driving/prediction-planning.md" = ["预测与规划", "Forecasting & planning"]
 "13-embodied/driving/end-to-end.md" = ["端到端与闭环评测", "End-to-end & closed loop"]
 "13-embodied/robot-learning/README.md" = ["总览", "Overview"]
@@ -1121,6 +1143,12 @@ en  = "Templates"
 "12-infra/frameworks.md" = ["框架这一层", "The framework layer"]
 "12-infra/kubernetes.md" = ["Kubernetes 与 GPU 集群", "Kubernetes & GPU clusters"]
 "12-infra/review.md" = ["复习题", "Review"]
+"12-infra/quantization/README.md" = ["总览", "Overview"]
+"12-infra/quantization/formats-and-error.md" = ["格式与误差", "Formats & error"]
+"12-infra/quantization/weight-only-and-ptq.md" = ["只压权重与训练后量化（PTQ）", "Weight-only & PTQ"]
+"12-infra/quantization/fp8-and-kv-cache.md" = ["FP8 与 KV cache 量化", "FP8 & KV-cache quantization"]
+"12-infra/quantization/checking-quality.md" = ["怎样测出丢了多少", "Measuring the loss"]
+"12-infra/quantization/review.md" = ["复习题", "Review"]
 "11-frontier/world-models/README.md" = ["总览", "Overview"]
 "11-frontier/world-models/dreamer.md" = ["在想象里学", "Learning in imagination"]
 "11-frontier/world-models/jepa.md" = ["预测表示：JEPA", "Predicting representations"]
@@ -1144,17 +1172,26 @@ en  = "Templates"
 "11-frontier/agentic-rl/review.md" = ["复习题", "Review"]
 "11-frontier/interpretability/README.md" = ["总览", "Overview"]
 "11-frontier/interpretability/features-and-superposition.md" = ["特征、叠加与探针", "Features & superposition"]
-"11-frontier/interpretability/sparse-autoencoders.md" = ["稀疏自编码器", "Sparse autoencoders"]
+"11-frontier/interpretability/sparse-autoencoders.md" = ["稀疏自编码器（SAE）", "Sparse autoencoders"]
 "11-frontier/interpretability/circuits.md" = ["电路、归因与干预", "Circuits & interventions"]
 "11-frontier/interpretability/review.md" = ["复习题", "Review"]
+"11-frontier/diffusion-lm/README.md" = ["总览", "Overview"]
+"11-frontier/diffusion-lm/masked-diffusion.md" = ["掩码扩散在训练什么", "What masked diffusion trains"]
+"11-frontier/diffusion-lm/decoding-and-speed.md" = ["解码步数、缓存与速度", "Steps, caching & speed"]
+"11-frontier/diffusion-lm/review.md" = ["复习题", "Review"]
+"00-foundations/scaling/README.md" = ["总览", "Overview"]
+"00-foundations/scaling/compute-optimal.md" = ["给定算力：模型多大、数据多少", "Compute-optimal size and data"]
+"00-foundations/scaling/beyond-chinchilla.md" = ["为什么训练得比 Chinchilla 久", "Training past Chinchilla"]
+"00-foundations/scaling/hyperparameters.md" = ["学习率（LR）、batch size 与 schedule", "LR, batch size & schedule"]
+"00-foundations/scaling/review.md" = ["复习题", "Review"]
 "learn/README.md" = ["基础目录与导读", "Foundations catalog & guide"]
 "learn/choose-your-path.md" = ["按目标找路线", "Find your route"]
 "learn/ml-exercises/README.md" = ["从代码开始", "Start with code"]
 "00-foundations/pytorch/README.md" = ["PyTorch 阅读路线", "PyTorch reading path"]
-"00-foundations/pytorch/tensors-and-storage.md" = ["张量与存储", "Tensors & storage"]
+"00-foundations/pytorch/tensors-and-storage.md" = ["张量（tensor）与存储", "Tensors & storage"]
 "00-foundations/pytorch/operations-and-shapes.md" = ["运算与维度", "Operations & shapes"]
-"00-foundations/pytorch/cross-entropy.md" = ["交叉熵与 Loss", "Cross-entropy & loss"]
-"00-foundations/pytorch/autograd.md" = ["自动求导", "Autograd"]
+"00-foundations/pytorch/cross-entropy.md" = ["交叉熵（CE）与 Loss", "Cross-entropy & loss"]
+"00-foundations/pytorch/autograd.md" = ["自动求导（autograd）", "Autograd"]
 "00-foundations/pytorch/training-loop.md" = ["从 batch 到训练循环", "Batches to training loops"]
 "learn/system-design/README.md" = ["从需求到设计", "From needs to design"]
 "learn/system-design/feed.md" = ["信息流推荐", "A recommendation feed"]

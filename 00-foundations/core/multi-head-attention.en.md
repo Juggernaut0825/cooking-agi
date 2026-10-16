@@ -314,7 +314,7 @@ Therefore:
 “Different representation subspaces” should not be over-interpreted either. Each
 head does have independent parameters and can therefore learn a different matching
 function; but for an ambiguous word like “apple,” “one head must handle the company sense and another must handle the
-fruit sense” is neither designed in advance nor guaranteed to be interpretable.
+fruit sense” is neither designed in advance nor guaranteed to be interpretable. A claim that a head performs a function needs a causal test, such as patching specific heads on the IOI task; see [circuits](../../11-frontier/interpretability/circuits.en.md).
 
 ## The six places a from-scratch implementation goes wrong {#the-six-places-a-from-scratch-implementation-goes-wrong}
 
@@ -433,7 +433,7 @@ def causal_mask(t, device=None):
     return torch.triu(torch.ones(t, t, dtype=torch.bool, device=device), diagonal=1)
 ```
 
-When switching to SDPA, **carry the mask across too**. This example uses boolean `True` for blocked positions; PyTorch 2.8 SDPA uses `True` for allowed positions, the opposite convention. With a valid mask, and when only the output is needed, the core call is:
+When switching to SDPA, **carry the mask across too**. This example uses boolean `True` for blocked positions; PyTorch SDPA uses `True` for allowed positions (2.14 documentation, checked October 2026), the opposite convention. With a valid mask, and when only the output is needed, the core call is:
 
 ```python
 import torch.nn.functional as F
@@ -445,7 +445,7 @@ output = F.scaled_dot_product_attention(
 )
 ```
 
-It returns per-head outputs, not attention weights; head merging and output projection are still needed. Fused-kernel selection depends on device, dtype, and input support: calling SDPA does not guarantee FlashAttention. The teaching implementation's row checks aid debugging, not performance. See the [PyTorch 2.8 SDPA reference](https://docs.pytorch.org/docs/2.8/generated/torch.nn.functional.scaled_dot_product_attention.html).
+It returns per-head outputs, not attention weights; head merging and output projection are still needed. Fused-kernel selection depends on device, dtype, and input support: calling SDPA does not guarantee FlashAttention. The teaching implementation's row checks aid debugging, not performance. See the [PyTorch 2.14 SDPA reference](https://docs.pytorch.org/docs/2.14/generated/torch.nn.functional.scaled_dot_product_attention.html).
 
 </details>
 
@@ -470,7 +470,7 @@ One matching output is a useful start, not a complete migration test. Check thes
 | Allowed positions | This example and `nn.MultiheadAttention` use boolean `True` to block a key; SDPA uses the opposite meaning. |
 | Gradients | Compare input gradients under the same scalar loss. For the handwritten and SDPA paths, also compare gradients of their shared parameters. |
 
-The script's `library_version` creates a separate module and copies the parameters for comparison. Its parameter gradients do not flow back to the original `mha`. Tests cover bias, float32 / float64, per-head masks, and gradients across the three PyTorch paths; the NumPy comparison remains a small bias-free fixture. Dropout is off throughout. These are correctness checks, not speed or memory benchmarks. See the [PyTorch 2.8 MultiheadAttention API](https://docs.pytorch.org/docs/2.8/generated/torch.nn.MultiheadAttention.html) for its conventions.
+The script's `library_version` creates a separate module and copies the parameters for comparison. Its parameter gradients do not flow back to the original `mha`. Tests cover bias, float32 / float64, per-head masks, and gradients across the three PyTorch paths; the NumPy comparison remains a small bias-free fixture. Dropout is off throughout. These are correctness checks, not speed or memory benchmarks. See the [PyTorch 2.14 MultiheadAttention API](https://docs.pytorch.org/docs/2.14/generated/torch.nn.MultiheadAttention.html) for its conventions.
 
 ## Where does the causal mask start with a KV cache? {#cached-causal-mask}
 
@@ -493,7 +493,7 @@ To make the error visible, set all Q/K scores to zero and use values `[10, 20, 3
   </ol>
 </figure>
 
-In PyTorch 2.8, `F.scaled_dot_product_attention(..., is_causal=True)` uses **upper-left alignment** for a non-square mask. It does not infer that the queries belong at the end of the KV sequence. Here, construct `attn_mask` from actual positions and leave `is_causal` off. This is an API-specific convention, not a claim that every attention kernel uses the same alignment. [SDPA documentation](https://docs.pytorch.org/docs/2.8/generated/torch.nn.functional.scaled_dot_product_attention.html)
+As of PyTorch 2.14 (documentation checked October 2026), `F.scaled_dot_product_attention(..., is_causal=True)` uses **upper-left alignment** for a non-square mask. It does not infer that the queries belong at the end of the KV sequence. Here, construct `attn_mask` from actual positions and leave `is_causal` off. This is an API-specific convention, not a claim that every attention kernel uses the same alignment. [SDPA documentation](https://docs.pytorch.org/docs/2.14/generated/torch.nn.functional.scaled_dot_product_attention.html)
 
 <details class="code-drop" markdown="1">
 <summary>Check the four numbers in PyTorch</summary>
@@ -550,6 +550,10 @@ For batch size B and model width d, time including projections is $O(BTd^2+BT^2d
 <summary>Why do Q and K use two different matrices? Can they be shared?</summary>
 
 They can be shared, but that restricts the matching function. In this self-attention example without extra positional transformations, Q=K makes the raw scores $QQ^\top$ symmetric. Row-wise softmax uses different denominators, so the final weights need not be symmetric. Separate projections let even the raw scores differ by direction; symmetric scores do not imply symmetric attention weights.
+
+$Q=K$ does not make attention fail either. Three cases: if all queries are identical, every row is uniform; if queries are mutually orthogonal with equal norm, the diagonal score is largest, but attention approaches the identity only when the norm is large relative to the softmax temperature; in general, positions more similar to a position itself get more weight, with no guarantee that it attends only to itself.
+
+These internal coordinates are also not unique. For any invertible $R$, setting $Q'=QR$ and $K'=KR^{-\top}$ still gives $Q'K'^\top=QK^\top$: a different internal basis, the same function. Interpreting a single entry of $W_Q$ in isolation is therefore usually meaningless; what matters is the function the projection implements and its causal effect on the output.
 
 </details>
 

@@ -38,7 +38,9 @@ V3 的对话后训练与 R1 是从 V3-Base 出发的不同路线，不是“先�
 
 这张图区分的是权重起点，不代表两条路线没有数据联系：V3 报告明确说，部分推理 SFT 数据借助了内部 R1 模型。[V3 §5.1](https://arxiv.org/html/2412.19437v2#S5.SS1)
 
-**版本范围：**本文按 V2 报告 v5、V3 报告 v2 和原始 R1 报告 v1 核对；不把结论自动推广到 Lite、后续小版本或带日期的 checkpoint。以下官方 `config.json` 读取于 2026-10-10，`main` 不是不可变版本。
+V3 和 V4 之间还有两次更新，本文不展开。2025-08-21 的 [V3.1](https://api-docs.deepseek.com/news/news250821) 把 thinking 与 non-thinking 合进同一个模型，API 里 `deepseek-reasoner` 走 thinking、`deepseek-chat` 走 non-thinking。2025-12 的 [V3.2 报告](https://arxiv.org/abs/2512.02556)在 MLA 旁边加了 DeepSeek Sparse Attention（DSA）：先用便宜的 indexer 挑出 top-k 位置，主 attention 只读这些位置。DSA 的复杂度和错选代价，见 [MLA 与稀疏注意力](../deep-dives/latent-and-sparse-attention.md)的 DSA 一节。
+
+**版本范围：**本文按 V2 报告 v5、V3 报告 v2 和原始 R1 报告 v1 核对；不把结论自动推广到 Lite、后续小版本或带日期的 checkpoint。以下官方 `config.json` 读取于 2026-10-10，`main` 不是不可变版本。R1 报告后来发表于 [Nature 645, 633–638](https://doi.org/10.1038/s41586-025-09422-z)（2025），arXiv 也在 2026-01-04 更新到 [v2](https://arxiv.org/abs/2501.12948v2)：R1-Zero 在 §2，R1 的两轮 RL 在 §3，数据配方移到附录 B.3。下面的四阶段顺序在 v2 里不变；“第三步重新微调 V3-Base”出自 v1 §2.3.3，v2 的正文和附录 B.3 没有再写明这一步的起点。
 
 | 配置 | Attention | MoE 层中的 routed / 每 token 选中 / shared | 不能混用的细节 |
 | --- | --- | --- | --- |
@@ -52,7 +54,7 @@ V3 的对话后训练与 R1 是从 V3-Base 出发的不同路线，不是“先�
 2. **MoE 分开了总容量与每 token 的计算。** 多个 routed experts 提供容量，token 只调用少数；shared expert 的设计目的是承接可复用的模式，不保证自然学出清晰的领域分工。还要付路由、通信和存储成本。
 3. **R1 研究的是后训练能改变什么。** R1-Zero 从已经预训练的 V3-Base 开始做 RL，不是从随机权重出发。它不能证明预训练不重要，也不能把奖励之外的所有能力一并归功于 RL。
 
-“细粒度”可以用宽度预算理解：自拟 8 个中间宽度为 256 的 experts，每次选 2 个；改成 32 个宽度为 64 的 experts，每次选 8 个。对输入宽度相同的无 bias SwiGLU，参数量与矩阵乘加量都正比于 expert 数 × 中间宽度，因此两者的总 expert 参数和激活分支的乘加量相同；路由、通信开销并不相同。再额外加 shared expert 会增加预算，不能把它当免费分支。
+“细粒度”是把宽专家切成更多窄专家、每次多选几个：总 expert 参数和每 token 的主要乘加量不变，变的是可选组合，以及路由和通信开销。8 选 2 与 32 选 8 的对照算例，以及额外加 shared expert 为什么会增加预算，见[细粒度专家与共享专家](../moe/fine-grained-and-shared.md)。
 
 ### MLA 的缓存账：一份 latent，不是两份 {#mla-cache-ledger}
 
@@ -117,6 +119,8 @@ assert math.isclose(sum(weight * [2, 0, 10][index] for index, weight in routed),
 
 代码只演示 routed 分支，不含 shared expert、节点限制、完整缩放和通信。选择偏置在上一步负载统计之后调整，不是给当前 token 添加一个“更相关”的证据。看性能时还要检查每卡接收多少 token：平均 expert 负载接近，并不保证跨节点通信均匀。
 
+另一组数（加上 bias 后选中的专家换了人），以及专家均衡和卡间均衡为什么是两张表，见[负载均衡](../moe/load-balancing.md#bias-example)。
+
 ### MTP：多一个目标，不是跳过验证 {#mtp-causal-chain}
 
 V3 的 MTP 深度为 1：主干状态 $h_i$ 预测 $t_{i+1}$；额外模块把 $h_i$ 与真实的 $t_{i+1}$ 的 embedding 结合，再预测 $t_{i+2}$。模块按因果顺序连接，embedding 和输出 head 与主干共享，不是几个互不相干的预测头。[V3 §2.2、§4.2](https://arxiv.org/html/2412.19437v2#S2.SS2)
@@ -154,9 +158,9 @@ assert mtp_training_rows(["A", "B", "C", "D"]) == [
 
 ### 奖励能检查结果，不一定能检查理由
 
-R1-Zero 的规则奖励检查答案准确性和格式；R1 后续不同阶段还涉及语言一致性与通用偏好目标。不能把最初阶段的“规则奖励”概括为整个 R1 从头到尾只看数学答案。[R1 §2.2–2.3](https://arxiv.org/html/2501.12948v1#S2.SS2)
+R1-Zero 的规则奖励检查答案准确性和格式；R1 后续不同阶段还涉及语言一致性与通用偏好目标。不能把最初阶段的“规则奖励”概括为整个 R1 从头到尾只看数学答案。[R1 §2.2–2.3](https://arxiv.org/html/2501.12948v1#S2.SS2) 只奖励答案时，回答为什么会自己变长，见[长思维链是怎样训练出来的](../../11-frontier/test-time-compute/long-chains.md)的 R1-Zero 一节。
 
-自己造个更小的例子：题目问两个整数相加，输出恰好是正确的 12，但解释写成“5 + 8”。只核对最后数字的 checker 会给分，逐步检查却能发现错误。相反，一个正确算法如果输出了不合约定的单位，脆弱的 parser 也可能判错。于是要分别检查 **verifier 是否可靠、奖励是否覆盖需求、训练是否真的利用了这些信号**。
+自己造个更小的例子：题目问两个整数相加，输出恰好是正确的 12，但解释写成“5 + 8”。只核对最后数字的 checker 会给分，逐步检查却能发现错误。相反，一个正确算法如果输出了不合约定的单位，脆弱的 parser 也可能判错。于是要分别检查 **verifier 是否可靠、奖励是否覆盖需求、训练是否真的利用了这些信号**。verifier 的误判率怎样限制 best-of-N 的收益，见[多采样、投票与验证器](../../11-frontier/test-time-compute/parallel-and-verify.md)。
 
 做本地验证时，至少留四类夹具：正确答案、格式变化但语义正确、结果正确但理由错误、结果错误但语气流畅。不要把训练用的同一个 checker 当成唯一独立评估。
 
@@ -166,7 +170,7 @@ R1-Zero 的规则奖励检查答案准确性和格式；R1 后续不同阶段还
 
 [V4 专篇](deepseek-v4.md)继续拆 CSA / HCA 混合注意力、mHC 与后训练。几个词不能混用：序列压缩不同于 MLA 的通道压缩；mHC 的残差映射约束不同于 Muon 的更新矩阵正交化；局部窗口大小固定，也不代表整个模型的历史缓存恒定。
 
-报告中的实现与性能还需要分开看。压缩比不是无损保证，正交化不是收敛保证，某个长度下的 FLOPs 比例也不是所有请求的延迟比例。
+报告中的实现与性能还需要分开看。压缩比不是无损保证，正交化不是收敛保证，某个长度下的 FLOPs 比例也不是所有请求的延迟比例。V4 之后的 V4.1-Flash 换了结构，原来的 API 名称也已转到新权重，见 V4 专篇开头的说明。
 
 ## 取舍表
 

@@ -4,7 +4,7 @@
 
 > 阅读时间：约 12 分钟 · 难度：必修 · 最近审阅：2026-10
 
-同样一句话，换一个 tokenizer，可能就变成了不同长度的 ID 序列。比如把 `playing` 示意性地切成 `play` 和 `ing`，模型接收到的是两个编号，而不是一个英文单词。这种切法会影响序列长度、计算量，也会影响模型怎样处理没见过的词。下面从分词和查表开始，一步步走到模型的输入。
+同样一句话，换一个 tokenizer，可能就变成了不同长度的 ID 序列。比如把 `playing` 示意性地切成 `play` 和 `ing`，模型接收到的是两个编号，而不是一个英文单词。这种切法会影响序列长度、计算量，也会影响模型怎样处理没见过的词。下面从分词和查表开始，一步步走到模型的输入。**模型从头到尾只处理 token ID；切法一变，序列长度、计算量和模型看到的单位都会跟着变。**
 
 ## 模型接收的是 Token ID {#token-id}
 
@@ -201,7 +201,7 @@ table 才把整数变成模型维度里的向量。
 
 Chat template 没有改变 attention 公式，它只是给普通序列加了可学习的语法结构。
 
-实际调用时也要避免重复添加特殊 token：在 Transformers v4.57.1 中，若先用 `apply_chat_template(tokenize=False)` 得到文本，再单独 tokenize，应设置 `add_special_tokens=False`；直接用 `tokenize=True` 可以合并这两步。[官方说明](https://huggingface.co/docs/transformers/v4.57.1/chat_templating)
+实际调用时也要避免重复添加特殊 token：在 Transformers v5.20.0 中（2026-10 核对），若先用 `apply_chat_template(tokenize=False)` 得到文本，再单独 tokenize，应设置 `add_special_tokens=False`；直接用 `tokenize=True` 可以合并这两步，v5 的 `return_dict` 默认是 `True`，返回带 `input_ids` 的字典，不是一串 id。[官方说明](https://huggingface.co/docs/transformers/v5.20.0/chat_templating)
 
 </div>
 <div class="concept-face concept-en" data-concept-en markdown="1">
@@ -230,7 +230,7 @@ table turns integers into model-width vectors.
 A chat template does not alter the attention equation. It gives an ordinary token
 sequence a learnable grammatical structure.
 
-Avoid duplicating special tokens in actual code. In Transformers v4.57.1, if you render with `apply_chat_template(tokenize=False)` and tokenize separately, use `add_special_tokens=False`; `tokenize=True` combines the two steps. [Official guidance](https://huggingface.co/docs/transformers/v4.57.1/chat_templating)
+Avoid duplicating special tokens in actual code. In Transformers v5.20.0 (checked October 2026), if you render with `apply_chat_template(tokenize=False)` and tokenize separately, use `add_special_tokens=False`; `tokenize=True` combines the two steps and, because `return_dict` now defaults to `True` in v5, returns a dict with `input_ids` rather than a bare list of ids. [Official guidance](https://huggingface.co/docs/transformers/v5.20.0/chat_templating)
 
 </div>
 </section>

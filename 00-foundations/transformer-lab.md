@@ -41,7 +41,7 @@
 
 <!-- widget:tx-kv-cache -->
 
-切到“没有 cache”再看一遍，注意两条累计柱的差距。在层数和维度固定时，attention 的单步工作量从 $O(t^2)$ 降到 $O(t)$，代价是 cache 随长度增长。小 batch 解码常受读取权重和 KV 的带宽限制；大 batch、不同 kernel 或硬件下，瓶颈可能不同。下一节只比较 KV 存储，不据此保证吞吐量。
+切到“没有 cache”再看一遍，注意两条累计柱的差距。在层数和维度固定时，attention 的单步工作量从 $O(t^2)$ 降到 $O(t)$，代价是 cache 随长度增长。小 batch 解码常受读取权重和 KV 的带宽限制（batch 变大后怎样变化，见[推理性能](../12-infra/performance.md#decode-batching)）；大 batch、不同 kernel 或硬件下，瓶颈可能不同。下一节只比较 KV 存储，不据此保证吞吐量。
 
 ## 压缩 cache：MHA → GQA → MQA → MLA
 
@@ -109,7 +109,7 @@ MoE 把一个 FFN 换成多个 expert，再由 router 为每个 token 选其中 
 | 家族 | 整体结构 | Norm | 位置编码 | Attention | FFN | 上下文 | 规模 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Transformer（2017，base） | Encoder–decoder，6 + 6 层 | Post-LN · LayerNorm | 正弦，加在 embedding 上 | MHA · 8 head，另有 cross-attention | Dense · ReLU · $d_{ff}$ 2,048 | 句子对（机器翻译） | 65M · $d_{model}$ 512 |
-| GPT-2 / GPT-3（2019–20） | Decoder-only | Pre-LN · LayerNorm，末尾再加一层 | 可学习的绝对位置 | MHA · 25 head（GPT-2 XL）· 96 head（GPT-3） | Dense · GELU · 4× | 1,024 · 2,048 | 1.5B：48 层 · 175B：96 层 |
+| GPT-2 / GPT-3（2019–20） | Decoder-only | Pre-LN · LayerNorm，末尾再加一层 | 可学习的绝对位置 | MHA · 25 head（GPT-2 XL）· 96 head（GPT-3，稠密与局部带状稀疏注意力逐层交替） | Dense · GELU · 4× | 1,024 · 2,048 | 1.5B：48 层 · 175B：96 层 |
 | Llama 3（2024，8B） | Decoder-only | Pre-norm · RMSNorm | RoPE · $\theta$ = 500,000 | GQA · 32 query / 8 KV head | Dense · SwiGLU · $d_{ff}$ 14,336 | 8K → 128K（Llama 3.1） | 8B：32 层，$d$ 4,096 |
 | Mistral 7B（2023） | Decoder-only | Pre-norm · RMSNorm | RoPE | GQA · 32 / 8 · sliding window 4,096 | Dense · SwiGLU · $d_{ff}$ 14,336 | 8K，每层窗口 4,096 | 7B：32 层，$d$ 4,096 |
 | Mixtral 8x7B（2023） | Decoder-only | Pre-norm · RMSNorm | RoPE | GQA · 32 / 8 · 完整 32K attention | MoE · 8 个 SwiGLU expert，选 2 个 | 32K | 总参数约 47B · 激活约 13B |
@@ -134,7 +134,7 @@ MoE 把一个 FFN 换成多个 expert，再由 router 为每个 token 选其中 
 
 ## 继续阅读
 
-- [Transformer 架构](transformer.md) —— 这一页所有机制的公式、推导和从零实现
+- [Transformer 架构](transformer.md) —— 这一页所有机制的公式、从零实现，以及各个推导的入口
 - [Multi-head attention](core/multi-head-attention.md) 与 [Decoder-only](core/decoder-only.md) —— 必修章节里的逐步拆解
 
 ## 参考论文

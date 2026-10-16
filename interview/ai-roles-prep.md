@@ -10,11 +10,12 @@
 
 RE 是 Research Engineer，MLE 是 Machine Learning Engineer，RS 是 Research Scientist。同一个 title，在不同团队可能做很不一样的事。先看职位描述，再向 recruiter 确认轮次、编码环境、是否允许查文档和使用 AI。不要从“某人没被考过”推导出“这个不用准备”。
 
-| 目标工作 | 先准备的内容 | 再往下练 |
-| --- | --- | --- |
-| RE / MLE，偏模型和训练 | [ML 实现](#implement)、训练排错、项目选择 | 数据与目标、分布式训练、实验设计 |
-| RS，偏研究 | 上面需要的实现能力，加上研究问题、证据和后续实验 | 自己方向的论文、推导与失效条件，不必照搬 LLM 题单 |
-| Inference / serving / ML systems | 基础编码、生成循环、显存估算 | [请求链路与性能诊断](#inference)，再选一层深入 |
+| 目标工作 | 先准备的内容 | 再往下练 | 时间紧时先放一放 |
+| --- | --- | --- | --- |
+| RE / MLE，偏模型和训练 | 算法、[ML 实现](#implement)、训练排错、数据与评估、项目选择 | 数据与目标、分布式训练、实验设计 | 每个模型家族的细节 |
+| RS，偏研究 | 已要求的 coding 与实现能力，加上研究问题、证据、个人贡献和后续实验 | 自己方向的论文、推导与失效条件，不必照搬 LLM 题单 | 一口气实现所有热门结构 |
+| Inference / serving / ML systems | 算法、基础编码、生成循环与 cache、显存估算、调度 | [请求链路与性能诊断](#inference)，再选一层深入，拿出性能证据 | 背每个框架的全部类名 |
+| 通用 SWE | 算法、[读代码](code-comprehension.md)、测试、项目；按通知准备系统设计 | [Python 与 LeetCode](leetcode.md) | 与工作无关的模型推导 |
 
 刚准备实习或 new grad，可以先写 MLP、attention、一个训练循环，再讲清一个自己的项目。已有经验的读者，则可以多练性能取舍、故障恢复和跨团队接口。这个顺序是本站的练习建议，不是不同职级的录用门槛。
 
@@ -55,7 +56,7 @@ RE 是 Research Engineer，MLE 是 Machine Learning Engineer，RS 是 Research S
 | --- | --- | --- |
 | 初始化 | 输入宽度翻倍，为什么权重尺度通常要变？推导用了哪些独立性假设？ | [激活与初始化](../00-foundations/deep-dives/activation-and-initialization.md) |
 | 位置编码 | 绝对位置与 RoPE 分别怎样进入计算？长度变长，不只改一个 max length 吧？ | [位置与上下文](../00-foundations/deep-dives/position-and-context.md) |
-| PPO / GRPO | advantage 来自哪里？同组奖励全相等时还剩什么信号？ | [PPO 之后](../05-post-training/rlhf/after-rlhf.md)、[稀疏奖励组](../05-post-training/deep-rl/llm-bridge.md#sparse-groups) |
+| PPO / GRPO | advantage 来自哪里？同组奖励全相等时还剩什么信号？ | [PPO 之后](../05-post-training/rlhf/after-rlhf.md)、[稀疏奖励组](../05-post-training/deep-rl/llm-bridge.md#sparse-groups)、[多步 agent 的信用分配（credit assignment）](../11-frontier/agentic-rl/credit-and-training.md) |
 | DP / TP / PP | 拆的是样本、层内计算还是层？每种方案在哪儿通信？ | [分布式训练](../06-systems/distributed-training.md)、[框架与训练栈](../06-systems/training-frameworks.md) |
 | 对比学习 | 正负样本怎样构造？换 batch size 后 loss 的归一化有没有变？ | [CLIP](../03-multimodal-learning/clip.md)、[SigLIP](../03-multimodal-learning/siglip.md) |
 
@@ -72,10 +73,10 @@ RE 是 Research Engineer，MLE 是 Machine Learning Engineer，RS 是 Research S
 | 有多少东西放在 GPU 上？ | [权重、KV、workspace 分账](../00-foundations/deep-dives/kv-cache-and-inference.md#inference-budget)，不是只用参数量乘精度 |
 | 两个请求共享前缀，复用了什么？ | token 前缀与模型配置兼容、缓存归属、跨副本命中，以及租户隔离 |
 | 为什么吞吐高了，体验却差了？ | [长 prefill 与 decode 争抢](../06-systems/llm-serving.md#token-budget)；看尾延迟，不只看 tokens/s |
-| GPU 利用率低，先改什么？ | 分开检查 CPU 输入、队列、执行、HBM 带宽、通信和输出缓冲；先取 trace，再改一个变量 |
+| GPU 利用率低，先改什么？ | 分开检查 CPU 输入、队列、执行、HBM 带宽、通信和输出缓冲；先[取 trace](../12-infra/performance.md#profiling)，再改一个变量 |
 | 什么时候拆 prefill / decode？ | 在测出的干扰之外，算上 KV 传输、两端队列与失败恢复成本 |
 
-[一亩三分地上的 inference 面试复盘](https://www.1point3acres.com/home/thread/1188659)特别强调相关经验和技术深度，语境主要是有经验、尤其 senior 的求职者。可以借它决定要深挖哪一层，但不能推出“新人必须先内部转岗”或“传统系统设计不用准备”。轮次还是要问清楚。
+准备 inference 方向，至少挑一层准备到能讲细节：调度策略、KV cache 管理，或者你拿得出的性能证据。传统系统设计也别丢；轮次还是要问清楚。
 
 ## 项目、研究讨论和 BQ，别拖到最后 {#projects}
 
@@ -91,19 +92,17 @@ BQ 可以准备合作分歧、失败、模糊需求各一个真实故事：当�
 
 ## 免费资料怎么接着用 {#resources}
 
-不必把它们全部刷完。下面分别解决“需要练什么”“怎样动手”和“面试有什么规则”。
+不必把它们全部刷完。下面分别解决“需要练什么”和“怎样动手”。
 
 | 资料 | 适合拿来做什么 |
 | --- | --- |
 | [Alisa：Notes on the Industry Job Search](https://alisawuffles.github.io/blog/job-search/) · 2026-06 | PhD 求职视角；把 ML coding、技术讨论和研究讨论区分开，不只准备论文介绍 |
-| [Evan：从 astrophysics postdoc 到 Anthropic](https://evanhanders.blog/2026/04/02/my-path-from-astrophysics-postdoc-to-anthropic/) · 2026-04 | 转行视角；作者反思会多练工程编码、读别人的代码与 code review |
+| [Evan：从天体物理博士后转行做 ML](https://evanhanders.blog/2026/04/02/my-path-from-astrophysics-postdoc-to-anthropic/) · 2026-04 | 转行视角；作者反思会多练工程编码、读别人的代码与 code review |
 | [Silvia：ML Job Interviews](https://silviasapora.github.io/blog/ml-interviews.html) · 2026-06 | ML PhD 的 RS 求职经历；实现和 debugging 清单。她的题目范围不等于所有人的必修课 |
 | [Andrey：ML/Research Engineer interviews 2025](https://reyzharkov.com/blog/posts/interviews-2025-ml-research-engineer-uk) · 2026-03 发布 | 复盘的是 2025 年英国 / 远程求职，有经验工程师的视角；别把发布时间当面试发生年份 |
-| [LLM Inference Role 面试总结](https://www.1point3acres.com/home/thread/1188659) · 2026-09 | 了解 serving / systems 方向如何追问深度；个人样本，不是市场统计 |
 | [Stanford CS336 Assignment 1](https://github.com/stanford-cs336/assignment1-basics) | 从学生版接口写实现、接测试；是系统性作业，不是现成答案。正在修课时遵守课程协作规则 |
 | [Karpathy：Zero to Hero](https://karpathy.ai/zero-to-hero.html) → [Let's reproduce GPT-2 (124M)](https://www.youtube.com/watch?v=l8pRSuU81PU) | 先练从零实现，再练训练与效率；视频关掉后重新写，比只跟着敲更能发现缺口 |
 | [TinyZero](https://github.com/Jiayi-Pan/TinyZero) → [verl](https://github.com/volcengine/verl) | 有余力再做 RL 实验。TinyZero 已声明不再积极维护，建议新实验用 verl；其 0.5B 结果只描述该模型与设置，不是小模型能力上限 |
-| [OpenAI 官方面试指南](https://openai.com/interview-guide/) | AI 和其他工具是否允许，取决于具体轮次；以准备材料和 recruiter 确认为准 |
 
 这几篇作者的背景差别很大。我们借用它们发现遗漏，练习、例子和站内组织另写，不搬运公司题目、薪资推断或成功门槛。朋友的个人建议也只能作为补充，不写成某家公司的内部标准。
 

@@ -92,7 +92,7 @@ Bootstrap from the interrupted trajectory's final observation, not the first obs
 
 ## Find out where sampling time goes {#one-sampling-throughput-rls-real-cost-center}
 
-A batch can pass through generation, tool waits, scoring, training, and weight synchronization. GPU utilization alone can make “waiting for a tool” look like “the model is too small.”
+A batch can pass through generation, tool waits, scoring, training, and weight synchronization. GPU utilization alone can make “waiting for a tool” look like “the model is too small.” As NVML defines it, the utilization in `nvidia-smi` is only the fraction of the sample period during which some kernel was running; it says nothing about how much compute is used. See [Performance: the roofline, arithmetic intensity, and MFU](../12-infra/performance.en.md).
 
 Take hypothetical durations: 30 seconds sampling, 10 scoring, 20 training, and 5 synchronizing. Serial execution takes 65 seconds. If the first three stages have independent resources and overlap perfectly across batches, while the 5-second synchronization cannot overlap, the steady-state interval has a lower bound of `max(30, 10, 20) + 5 = 35` seconds: about 1.86× faster. This is not a general asynchronous speedup. The first batch still traverses all stages; contention, stragglers, and networking add time.
 
@@ -120,6 +120,8 @@ $$
 
 Other implementations use a trainer-recomputed old policy as the PPO anchor and separately correct the rollout-to-old mismatch. **The denominator neither always comes from the inference engine nor can always be replaced by a trainer score.** Check how distributions enter the objective. [verl's rollout-correction guide](https://verl.readthedocs.io/en/latest/algo/rollout_corr.html) distinguishes these designs; this discussion checks its 2026-09-23 revision, not a promise that configuration names will stay fixed.
 
+Several primary sources sit behind that guide and are worth reading directly. The blog post [“Your Efficient RL Framework Secretly Brings You Off-Policy RL Training”](https://fengyao.notion.site/off-policy-rl) points out that an inference engine (such as vLLM) and a training framework compute different probabilities for the same token, so “on-policy” training actually carries an off-policy bias. Its fix truncates the training-to-inference probability ratio to an interval and multiplies it into the gradient: truncated importance sampling (TIS). [“When Speed Kills Stability” (Liu et al., 2025)](https://richardli.xyz/rl-collapse) links this mismatch to RL training collapse and compares token-level with sequence-level corrections. IcePop, in the [Ring-1T report (Ling Team, 2025)](https://arxiv.org/abs/2510.18855), masks and clips tokens whose mismatch is too large. Frameworks are following: as of October 2026, [TRL v1.16.0](https://huggingface.co/docs/trl/v1.16.0/en/grpo_trainer) turns on this kind of correction by default when generating with vLLM (`vllm_importance_sampling_correction=True`; the default mode in the config signature is `sequence_mask`, which masks whole sequences, with `vllm_importance_sampling_clip_max=3.0`). A default being on does not mean the problem is solved: find where the mismatch comes from before choosing between truncating and discarding.
+
 After aligning sampling semantics, inspect kernels, precision, templates, positions, and masks. Score identical tokens and weights on both sides, examining valid-action differences by quantile, extremes, and length. Bitwise equality across hardware is not the requirement. Large ratios alone do not prove data staleness: alignment errors and numerical differences can also cause them.
 
 <details markdown="1">
@@ -133,7 +135,7 @@ Also distinguish what you monitor: a raw ratio outside the clipping interval doe
 
 ## Removed context is information the policy no longer has {#three-context-management-so-long-tasks-can-finish}
 
-Return to the tool task. The user initially says “do not modify the original file.” Several turns later, the system removes that sentence to fit the context window. If the model then changes the file, reward design is not the only issue: the constraint was missing when it made the decision.
+Return to the tool task. The user initially says “do not modify the original file.” Several turns later, the system removes that sentence to fit the context window. If the model then changes the file, reward design is not the only issue: the constraint was missing when it made the decision. For how truncation and compression affect scoring and the loss in multi-turn agent training, see the section “When episodes get long” in the frontier draft on [agent credit assignment and training](../11-frontier/agentic-rl/credit-and-training.en.md).
 
 | Approach | Benefit | What to validate |
 | --- | --- | --- |

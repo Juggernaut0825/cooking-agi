@@ -1,4 +1,4 @@
-# Agent 选模型：API、自部署与路由 {#agents-frontier-api-serve}
+# Agent 选模型：API、自部署与路由（routing） {#agents-frontier-api-serve}
 
 **中文** · [English](model-choice.en.md)
 
@@ -44,7 +44,7 @@ $$P_{\mathrm{success}}=0.95^{20}\approx0.358.$$
 
 ## 3. “自动决定要不要思考”，是谁在决定？ {#thinking-control}
 
-看到一个模型有 thinking 模式，不妨追问：这是调用方选的，还是模型生成过程中自己选的？两者都可以有用，但不是同一种能力。
+看到一个模型有 thinking 模式，不妨追问：这是调用方选的，还是模型生成过程中自己选的？两者都可以有用，但不是同一种能力。推理模型为什么想得越久越可能做对、什么时候多想也没用，见[推理模型与测试时计算](../11-frontier/test-time-compute/README.md)。
 
 <figure class="worked-update" lang="zh-CN" id="reasoning-decisions">
 <figcaption>提取日期和排查 bug，可以在不同位置分配预算</figcaption>
@@ -60,6 +60,8 @@ $$P_{\mathrm{success}}=0.95^{20}\approx0.358.$$
 **模型学出的选择。** AutoThink（2025）研究让 R1 风格模型学习何时保留显式思考。训练先平衡两种模式，再提高表现，最后引入长度相关奖励。只改 prompt 能产生模式变化，却不等于已经学会按难度分配计算。[AutoThink §2–3](https://arxiv.org/html/2505.10832v2#S3)
 
 一个容易读错的细节：该论文第 2 阶段去掉的是 batch-level 平衡，保留了按模式与正确性区分的基础奖励，不是简单的“答对 1 分、答错 0 分”。主要实验是数学题；我们没有复现它，也不能据此推断任意 agent 都会受益。
+
+**前两层合到一起。** 截至 2026-10，有的托管 API 已经把“调用前指定”和“生成中选择”合成一套接口。以 Anthropic 的 Claude API 为例：调用方用 `effort`（从 `low` 到 `max`）设一个倾向，模型对每个请求自己决定要不要想、想多少；文档明确说调用方不再设 thinking token 预算，硬上限只有 `max_tokens`，`effort` 是软引导，不保证 token 数。[Claude 文档：Steering thinking](https://platform.claude.com/docs/en/build-with-claude/thinking-steering-and-cost) 这样一来，“日期提取用较短预算”就变成“给这类请求设较低的 effort”，个别难题模型仍可能多想。要按请求类型核对响应里实际的 thinking token 数，不能只看配置。
 
 **外部路由。** 应用估计哪种模型更适合当前请求；即使候选模型没有 thinking 开关，也能做 routing。[自适应深度](../00-foundations/looped/adaptive-depth.md)则讨论网络内部多算几层或几轮，别把隐藏状态迭代和多生成一些文字混在一起。
 

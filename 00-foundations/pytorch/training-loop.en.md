@@ -238,7 +238,7 @@ So far, everything has run on the CPU. Moving to a GPU does not mean moving the 
 
 Inside the GPU, tensors usually reside in global memory. Kernels move working portions through caches, shared memory, or registers and leave outputs for later operations. The exact path depends on the kernel and fusion choices; a Python `matmul` does not mean the entire matrix fits into on-chip storage. The [attention-kernel chapter](../deep-dives/attention-kernels.en.md) follows that distinction further.
 
-A kernel is a function launched on the GPU, not a memory region. Functional units within an SM (Streaming Multiprocessor) perform the computation; shared memory, caches, and registers store data. “Computing in SRAM” blurs that distinction. Capacities and configurations vary by hardware, so one GPU's numbers are not universal specifications. See the [CUDA hardware and memory model](https://docs.nvidia.com/cuda/cuda-programming-guide/01-introduction/programming-model.html#gpu-hardware-model), checked on 2026-10-10.
+A kernel is a function launched on the GPU, not a memory region. Functional units within an SM (Streaming Multiprocessor) perform the computation; shared memory, caches, and registers store data. “Computing in SRAM” blurs that distinction. Capacities and configurations vary by hardware, so one GPU's numbers are not universal specifications. See the [CUDA hardware and memory model](https://docs.nvidia.com/cuda/cuda-programming-guide/01-introduction/programming-model.html#gpu-hardware-model), checked on 2026-10-10. SMs, warps and the memory hierarchy are explained in [GPU architecture](../../12-infra/gpu-architecture.en.md); how kernels tile data through shared memory is in [CUDA: shared-memory tiling](../../12-infra/cuda.en.md#tiling).
 
 ### Get placement right before tuning throughput {#device-placement}
 
@@ -259,13 +259,13 @@ def device_step(model, optimizer, features, labels):
 
 This assumes a single-device model and the two input tensors used earlier, not an arbitrary nested or multi-device batch. Numerical tests cover its CPU path; **no CUDA throughput experiment was run for this note**. The returned loss is detached but stays on its device. Keeping every return value in a list still accumulates tensors.
 
-`non_blocking=True` avoids waiting at the host copy call where possible. It does not establish overlap between the next transfer and current computation. That also needs suitable pinned input, separate streams, available copy hardware, and correct dependencies. Start with the ordinary loop and inspect a profiler trace before building a prefetcher. [PyTorch's transfer tutorial](https://docs.pytorch.org/tutorials/intermediate/pinmem_nonblock.html) compares the timelines.
+`non_blocking=True` avoids waiting at the host copy call where possible. It does not establish overlap between the next transfer and current computation. That also needs suitable pinned input, separate streams, available copy hardware, and correct dependencies. Start with the ordinary loop and inspect a profiler trace before building a prefetcher. [PyTorch's transfer tutorial](https://docs.pytorch.org/tutorials/intermediate/pinmem_nonblock.html) compares the timelines; for how streams overlap copies with computation, see [CUDA: streams](../../12-infra/cuda.en.md#streams).
 
 ### The copy call returned. Can I change the data? {#async-copy-safety}
 
 Not necessarily. Suppose you copy a pinned CPU batch to the GPU asynchronously, then immediately call `zero_()` on the source. If the transfer is unfinished, that mutation can corrupt what the GPU receives. Likewise, after an asynchronous GPU-to-CPU copy, the CPU must not immediately read the destination. Wait for the relevant transfer to finish, not merely for the Python call to return. The [official tutorial](https://docs.pytorch.org/tutorials/intermediate/pinmem_nonblock.html#other-copy-directions-gpu-cpu-cpu-mps) demonstrates both cases.
 
-`DataLoader(pin_memory=True)` can place fetched tensors in pinned host memory. **Pinning does not move them to the GPU**; `.to(device)` is still needed. Custom batch types may require their own `pin_memory()` method; see the [DataLoader documentation](https://docs.pytorch.org/docs/2.8/data.html#memory-pinning).
+`DataLoader(pin_memory=True)` can place fetched tensors in pinned host memory. **Pinning does not move them to the GPU**; `.to(device)` is still needed. Custom batch types may require their own `pin_memory()` method; see the [DataLoader documentation](https://docs.pytorch.org/docs/2.14/data.html#memory-pinning).
 
 If you introduce separate CUDA streams, distinguish these two responsibilities:
 
@@ -274,7 +274,7 @@ If you introduce separate CUDA streams, distinguish these two responsibilities:
 | Can the consumer start computing? | Previously submitted producer work must finish first | Events / `wait_stream` establish execution order |
 | Can another tensor reuse this GPU allocation? | The allocation must remain valid until the consuming stream finishes | `record_stream` informs the allocator, or manage the full lifetime explicitly |
 
-`record_stream` does not make the consumer wait for its input. Nor is `wait_stream` alone a complete lifetime-management scheme. Neither substitutes for the other. Understand the distinction before building a multistream prefetcher; the [PyTorch 2.8 lifetime example](https://docs.pytorch.org/docs/2.8/generated/torch.Tensor.record_stream.html) describes both management approaches. CPU tests in this note do not validate these CUDA races.
+`record_stream` does not make the consumer wait for its input. Nor is `wait_stream` alone a complete lifetime-management scheme. Neither substitutes for the other. Understand the distinction before building a multistream prefetcher; the [lifetime example in the `record_stream` docs](https://docs.pytorch.org/docs/2.14/generated/torch.Tensor.record_stream.html) describes both management approaches. CPU tests in this note do not validate these CUDA races.
 
 ### Where does the time go? Try three batches {#pipeline-example}
 
@@ -320,7 +320,7 @@ The second calculation raises preparation to 12 ms, making it the slowest stage.
 | Host memory grows with workers | Inspect prefetch queues, batch size, and per-process copies | More workers are always better |
 | Logging takes longer than computation | Retrieve synchronized metrics less often and compare traces | Remove all checks or retain all outputs |
 
-Reusing a batch diagnoses data overhead; it is not a realistic training-throughput benchmark. Timing must wait for the measured GPU work to finish, rather than just measuring Python enqueue time. Multiple streams also require dependency and lifetime handling; an extra `synchronize()` does not prove an efficient implementation. See [CUDA semantics](https://docs.pytorch.org/docs/2.8/notes/cuda.html#asynchronous-execution).
+Reusing a batch diagnoses data overhead; it is not a realistic training-throughput benchmark. Timing must wait for the measured GPU work to finish, rather than just measuring Python enqueue time. Multiple streams also require dependency and lifetime handling; an extra `synchronize()` does not prove an efficient implementation. See [CUDA semantics](https://docs.pytorch.org/docs/2.14/notes/cuda.html#asynchronous-execution); for timing correctly with a profiler, see [Performance: profiling](../../12-infra/performance.en.md#profiling).
 
 The earlier save example only checks matching outputs. For interrupted training, continue with [checkpoints and recovery](../../practice/post-training/checkpoint-and-resume.en.md): it tests the difference between continuing a run and starting over from the same weights.
 
@@ -328,10 +328,10 @@ The earlier save example only checks matching outputs. For interrupted training,
 
 We deliberately avoid old torchtext data-loading tutorials: torchtext development has stopped, with 0.18 its final stable release. Learning PyTorch does not require installing every domain library, and an old screenshot is not a dependency specification.
 
-- [Linear](https://docs.pytorch.org/docs/2.8/generated/torch.nn.Linear.html) and [Module](https://docs.pytorch.org/docs/2.8/generated/torch.nn.Module.html): dimensions, registration, state, and calling conventions.
-- [Data utilities](https://docs.pytorch.org/docs/2.8/data.html): Dataset, DataLoader, collation, and multiprocessing; iterable-dataset sharding and `drop_last` need additional care.
-- [CrossEntropyLoss](https://docs.pytorch.org/docs/2.8/generated/torch.nn.CrossEntropyLoss.html): class indices, probability targets, weights, and reduction.
-- [Saving and loading models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html) and [TensorBoard](https://docs.pytorch.org/docs/2.8/tensorboard.html): checkpoints and logging.
-- [Reproducibility](https://docs.pytorch.org/docs/2.8/notes/randomness.html) and [torchtext status](https://docs.pytorch.org/text/stable/index.html): seed guarantees and dependency maintenance.
+- [Linear](https://docs.pytorch.org/docs/2.14/generated/torch.nn.Linear.html) and [Module](https://docs.pytorch.org/docs/2.14/generated/torch.nn.Module.html): dimensions, registration, state, and calling conventions.
+- [Data utilities](https://docs.pytorch.org/docs/2.14/data.html): Dataset, DataLoader, collation, and multiprocessing; iterable-dataset sharding and `drop_last` need additional care.
+- [CrossEntropyLoss](https://docs.pytorch.org/docs/2.14/generated/torch.nn.CrossEntropyLoss.html): class indices, probability targets, weights, and reduction.
+- [Saving and loading models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html) and [TensorBoard](https://docs.pytorch.org/docs/2.14/tensorboard.html): checkpoints and logging.
+- [Reproducibility](https://docs.pytorch.org/docs/2.14/notes/randomness.html) and [torchtext status](https://docs.pytorch.org/text/stable/index.html): seed guarantees and dependency maintenance.
 
 Next, replace this tiny model with a [from-scratch module](../code/README.en.md), or follow [one language-model training update](../deep-dives/training-step.en.md). Being able to explain each batch shape, loss denominator, and parameter-update boundary makes scaling up much safer.

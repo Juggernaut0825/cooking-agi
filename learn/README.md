@@ -10,7 +10,14 @@
 
 不确定该选哪一部分，可以先看[阅读路线](choose-your-path.md)；主要为面试复习，直接去[面试准备](../interview/README.md)。
 
-近期补充：[Muon 与 AdamW 的区别](../00-foundations/deep-dives/muon.md)、[DFlash、MTP 与 DFlash 2](../00-foundations/deep-dives/dflash.md)。这两篇偏进阶，分别讨论参数更新与推理加速。
+近期补充（2026-10）：
+
+- [前沿观察](../11-frontier/README.md)：新增的第四部分。[世界模型](../11-frontier/world-models/README.md)和[递归自我改进（RSI）](../11-frontier/self-improvement/README.md)两组已审阅；[测试时计算（test-time compute）](../11-frontier/test-time-compute/README.md)、[用 RL 训练 agent](../11-frontier/agentic-rl/README.md)、[机制可解释性](../11-frontier/interpretability/README.md)三组是待审核草稿。
+- 两个新板块，都是待审核草稿：[AI 基础设施（AI infra）](../12-infra/README.md)，从芯片、GPU、CUDA 讲到框架和集群；[感知、机器人与自动驾驶](../13-embodied/README.md)。
+- 2026-10-16 又加了三组待审核草稿：[Scaling law 与超参数](../00-foundations/scaling/README.md)，开训前怎样定模型大小、数据量和学习率（LR）；[扩散语言模型（dLLM）](../11-frontier/diffusion-lm/README.md)，放在前沿观察里；[量化](../12-infra/quantization/README.md)，放在 AI 基础设施里。
+- 强化学习补了三篇：[学什么样的模型](../05-post-training/deep-rl/model-types.md)、[规划和学习怎样互相喂](../05-post-training/deep-rl/planning-and-learning.md)、[离线策略评估（OPE）的估计量](../05-post-training/deep-rl/ope-estimators.md)。
+
+待审核草稿的开头有提示框，侧栏标「（待审核）」；引用其中的事实前，请回到文中链接的一手资料核对。
 
 ## 从基础开始
 
@@ -40,6 +47,9 @@
 | RL 公式会推，实验却不稳定 | [价值估计与 GAE](../05-post-training/deep-rl/actor-critic-gae.md) → [PPO clipping](../05-post-training/rlhf/ppo-clipping.md) → [实验排错](../05-post-training/deep-rl/experiments.md) | reward、advantage、更新幅度各出了什么变化 |
 | 检索分数涨了，回答却没有更好 | [双塔检索](../04-search/dual-encoder.md) → [混合检索与重排](../04-search/hybrid-and-reranking.md) → [指标稳健性](../07-evaluation/metric-robustness.md) | 固定候选池后，哪些样本真的改善了 |
 | 换 embedding 模型，需要改哪些地方？ | [Qwen Embedding 与 BGE-M3](../04-search/embedding-models.md) → [向量索引](../04-search/vector-indexes.md) | 输入与 pooling 怎么对齐，什么时候要重建索引 |
+| `nvidia-smi` 显示 100%，生成还是很慢 | [AI 基础设施](../12-infra/README.md) → [GPU 架构](../12-infra/gpu-architecture.md) → [性能：roofline 与 MFU](../12-infra/performance.md) | 每从显存搬 1 字节做几次运算，瓶颈在带宽还是算力（待审核草稿） |
+| 车和机器人怎样从像素走到动作 | [感知与几何](../13-embodied/perception/README.md) → [自动驾驶](../13-embodied/driving/README.md) → [机器人学习](../13-embodied/robot-learning/README.md) | 每一步交给下一步的是什么（待审核草稿） |
+| “世界模型”“自我改进”到底指什么 | [前沿](../11-frontier/README.md) → [世界模型](../11-frontier/world-models/README.md) → [递归自我改进](../11-frontier/self-improvement/README.md) | 同一个词说的是哪件事，证据走到了哪一步 |
 
 <span id="area-coding"></span>
 <span id="subject-coding"></span>
@@ -72,7 +82,7 @@
 
 ## 全部章节
 
-分为**理解模型、训练与检验、推理与应用**三个部分，与左侧目录一致。点标题看导读，展开小节找文章。相关主题会在文中互相链接。
+分为**理解模型、训练与检验、推理与应用、前沿观察**四个部分，与左侧目录一致。点标题看导读，展开小节找文章。相关主题会在文中互相链接。
 
 <!-- widget:study-atlas -->
 

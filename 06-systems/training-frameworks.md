@@ -2,7 +2,7 @@
 
 **中文** · [English](training-frameworks.en.md)
 
-> 核对：2026-10-11 · FSDP2 机制对照 PyTorch v2.8.0 源码；不把它称为最新版本。本页没有运行多卡性能测试。
+> 核对：2026-10-16 · FSDP2 机制最初对照 PyTorch v2.8.0 源码写成；2026-10 对照 v2.14.1（2026-09-30 发布）源码，分组、DTensor 分片和 `reshard_after_forward` 的行为没有变。本页没有运行多卡性能测试。
 
 模型能在一张卡上训练，只是太慢；和模型连一张卡都放不下，是两个不同的问题。前者可以让更多卡同时处理不同数据，后者还要想办法减少每张卡保存的状态。选框架之前，先分清自己卡在哪里。
 
@@ -44,7 +44,7 @@ DDP 是 Distributed Data Parallel（分布式数据并行）；FSDP 是 Fully Sh
 <figcaption>示意采用 reshard_after_forward=True。保留参数、预取和混合精度会改变实际内存与通信时间线。</figcaption>
 </figure>
 
-[PyTorch v2.8.0 的 fully_shard](https://github.com/pytorch/pytorch/blob/v2.8.0/torch/distributed/fsdp/_fully_shard/_fully_shard.py)把每次调用覆盖的参数组织成通信组，并用 DTensor 表示分片。通常先对各个 block 调用，再处理根模块里剩余的参数。只对最外层调用，会把大量参数放进一个组，不利于降低临时峰值和重叠通信。
+[PyTorch v2.14.1 的 fully_shard](https://github.com/pytorch/pytorch/blob/v2.14.1/torch/distributed/fsdp/_fully_shard/_fully_shard.py)把每次调用覆盖的参数组织成通信组，并用 DTensor 表示分片。通常先对各个 block 调用，再处理根模块里剩余的参数。只对最外层调用，会把大量参数放进一个组，不利于降低临时峰值和重叠通信。
 
 这里的“组”是 **FSDP 的参数通信组**，不是多头注意力的 head group，也不是 optimizer 的超参数分组。
 
@@ -55,6 +55,8 @@ DDP 是 Distributed Data Parallel（分布式数据并行）；FSDP 是 Fully Sh
 训练峰值还要加上激活、临时完整参数、通信 buffer、算子 workspace 和分配器开销。更准确的理解是：
 
 $$M_{\text{peak}}=\max_t\left(M_{\text{persistent}}(t)+M_{\text{activation}}(t)+M_{\text{temporary}}(t)\right).$$
+
+接着上面的 10 亿参数例子填一次数，下面的数都是假设：模型有 20 个同样大的 block，每个 5,000 万参数。反向算到某个 block 时，每卡常驻 4 GB 分片；这个 block 的完整 FP32 参数刚聚合回来，占 $5\times10^7\times4=0.2$ GB，它的完整梯度在 reduce-scatter 之前又占 0.2 GB；这时还留着 3 GB 激活和 0.5 GB workspace。这一刻就是 $4+3+0.2+0.2+0.5=7.9$ GB。$M_{\text{peak}}$ 是所有时刻里最大的那个值，比只数常驻分片的 4 GB 高出将近一倍。
 
 不要把不同时间各自出现的最大值随便相加，当成精确峰值；也不要只数常驻分片，就认定能训练。先记录时间线，再看哪几项同时存在。混合精度下参数、梯度和通信可能是不同 dtype，需要重新列账。
 
@@ -91,7 +93,7 @@ Prefetch 可以在算当前块时取下一块，前提是还有通信和内存�
 
 先在固定小样本上比较一次更新，再谈吞吐：输入顺序、有效 token、mask、梯度归一化、clipping 和 optimizer 配置都要对齐。不同并行归约顺序可能有数值误差，用事先声明的容差比较，不承诺逐 bit 相同。
 
-然后测 warm-up 后的有效 target tokens/s、每步耗时分布、峰值显存和通信等待。GPU utilization 很高，也可能是在重算、padding 或通信上忙。更有用的问题是：**同样的质量目标，多久能完成一次可靠实验？**
+然后测 warm-up 后的有效 target tokens/s、每步耗时分布、峰值显存和通信等待。GPU utilization 很高，也可能是在重算、padding 或通信上忙；MFU 和 HFU 的分子为什么不同，见[性能：MFU 与 HFU](../12-infra/performance.md#mfu)。更有用的问题是：**同样的质量目标，多久能完成一次可靠实验？**
 
 最后故意中断一次。只恢复模型权重，不等于恢复训练；还要检查 optimizer、scheduler、RNG、数据游标和更新步。分片 checkpoint 能否换卡数加载，需要实际验证所用保存格式与 loader；能加载也不等于重放同一条训练轨迹。接着看[保存与恢复](../practice/post-training/checkpoint-and-resume.md)。
 

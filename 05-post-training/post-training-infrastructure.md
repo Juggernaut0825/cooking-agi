@@ -94,7 +94,7 @@ bootstrap 要使用被截断轨迹的最后状态，不能误用环境 reset 后
 
 ## 采样慢，先分清时间花在哪里 {#rl}
 
-一批数据可能依次经历生成、工具等待、评分、训练、权重同步。只盯 GPU utilization，很容易把“GPU 在等工具”误判成“模型太小”。
+一批数据可能依次经历生成、工具等待、评分、训练、权重同步。只盯 GPU utilization，很容易把“GPU 在等工具”误判成“模型太小”。按 NVML 的定义，`nvidia-smi` 里的利用率只是采样周期里有 kernel 在跑的时间比例，不说明算力用了多少，见[性能：roofline、算术强度与 MFU](../12-infra/performance.md)。
 
 用一组假设时间算账：采样 30 秒，评分 10 秒，训练 20 秒，同步 5 秒。完全串行需要 65 秒。如果前三段有独立资源、能在不同批次间理想重叠，而每批同步的 5 秒不能重叠，稳态间隔下界才是 `max(30, 10, 20) + 5 = 35` 秒，约 1.86×。这不是“异步必然快一倍”：首批仍要经过完整流程，资源争用、长尾任务和网络都会增加时间。
 
@@ -122,6 +122,8 @@ $$
 
 也有实现用训练端重算的 old policy 作为 PPO anchor，再另外校正 rollout 与 old 的差异。**分母不是永远来自推理引擎，也不是永远能由训练端替换。** 要按目标和实现看这几个分布怎样对应。[verl 的 rollout correction 文档](https://verl.readthedocs.io/en/latest/algo/rollout_corr.html)区分了这两类设计；此处核对的是 2026-09-23 更新的文档，不保证未来配置名称不变。
 
+这份文档背后有几篇一手资料，值得直接读。博客 [“Your Efficient RL Framework Secretly Brings You Off-Policy RL Training”](https://fengyao.notion.site/off-policy-rl) 指出，推理引擎（如 vLLM）和训练框架给同一个 token 算出的概率并不相同，因此，即使在线收集新样本，原本希望保持 on-policy 的训练也可能出现采样策略与训练策略不一致的偏差；它的修正是把训练端与推理端的概率比截断到一个区间内，再乘到梯度上，叫截断重要性采样（truncated importance sampling, TIS）。[“When Speed Kills Stability”（Liu 等，2025）](https://richardli.xyz/rl-collapse)把这种不一致和 RL 训练崩溃联系起来，并比较 token 级与序列级的修正。[Ring-1T 报告（Ling Team，2025）](https://arxiv.org/abs/2510.18855)里的 IcePop 则对差异过大的 token 做 mask 和裁剪。框架也在跟进：截至 2026-10，[TRL v1.16.0](https://huggingface.co/docs/trl/v1.16.0/en/grpo_trainer) 用 vLLM 生成时默认打开这类修正（`vllm_importance_sampling_correction=True`；配置签名里的默认模式是按整条序列 mask 的 `sequence_mask`，上限 `vllm_importance_sampling_clip_max=3.0`）。默认打开不等于问题已经解决：先查清差异从哪来，再决定截断还是丢弃。
+
 统一采样语义后，再查 kernel、精度、模板、位置、mask 等差异。同一批 token、同一权重在两侧评分，按有效动作统计差值的分位数、极端值和长度切片，不要求所有硬件都 bitwise 一致。比率偏离大也不一定全因数据旧了：对齐错误和数值差异同样可能造成。
 
 <details markdown="1">
@@ -135,7 +137,7 @@ $$
 
 ## 上下文删掉什么，训练就看不到什么 {#_5}
 
-继续用工具任务。用户最早说“不要改动原文件”，几轮之后，为了腾出窗口，系统把这句话删了。最终模型改动了文件，问题就不只是 reward 给得不好：它做决定时根本没看到约束。
+继续用工具任务。用户最早说“不要改动原文件”，几轮之后，为了腾出窗口，系统把这句话删了。最终模型改动了文件，问题就不只是 reward 给得不好：它做决定时根本没看到约束。多轮 agent 训练里，截断和压缩怎样影响记分与 loss，见前沿草稿里的[回合变长以后](../11-frontier/agentic-rl/credit-and-training.md)一节。
 
 | 处理方式 | 能省下什么 | 要验证什么 |
 | --- | --- | --- |

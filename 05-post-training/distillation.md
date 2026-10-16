@@ -229,7 +229,7 @@ assert aligned_spans([b"blue", b"bird", b"!"], [b"bluebird", b"!"]) == [
 
 ## R1 的数据蒸馏属于哪一种？
 
-[DeepSeek-R1 的公开说明](https://github.com/deepseek-ai/DeepSeek-R1)介绍了用 R1 整理的数据微调 Qwen / Llama 学生。这可以放在上面的“老师提供答案”一栏：学生用自己的 tokenizer 读文本，不要求逐 token 对齐老师的 logits。
+[DeepSeek-R1 的公开说明](https://github.com/deepseek-ai/DeepSeek-R1)介绍了用 R1 整理的数据微调 Qwen / Llama 学生。这可以放在上面的“老师提供答案”一栏：学生用自己的 tokenizer 读文本，不要求逐 token 对齐老师的 logits。长思维链蒸馏到小模型的效果和局限，见前沿草稿[长思维链是怎样训练出来的](../11-frontier/test-time-compute/long-chains.md)里“蒸馏：把长链教给小模型”一节。
 
 不能仅凭词表不同，就反推出一个项目完整的训练方法。也别把 SFT 等同于全参数更新：用什么监督，与更新全部权重还是 LoRA，是两件事。要确认一个具体模型，还是看它的训练报告。
 
@@ -328,6 +328,8 @@ assert abs(score_gradient[0] + math.log(2) / 2) < 1e-12
 - **固定采样前缀后做全词表 KL**：在每个已访问位置拟合分布，不对前缀采样求导。这是明确的训练约定，不是假装算了完整轨迹梯度。
 - **优化完整序列的 reverse KL**：在共同 token / 结束空间上，序列 log-ratio 是逐步 log-ratio 的和；精确的策略梯度还要考虑动作对未来的影响，可写成 return-to-go 的形式。
 - **把当前位置 log-prob 差直接当 advantage，再用 PPO clipping**：这是局部 surrogate。它可能实用，但不能只凭长得像第二行公式，就说与完整序列目标的梯度严格相同。
+
+第三种思路有一个公开实例，只是损失不同：[Thinking Machines 的 on-policy distillation（Lu 等，2025-10-27）](https://thinkingmachines.ai/blog/on-policy-distillation/)把每个采样 token 的 advantage 设为负的 reverse KL，也就是老师与学生在这个 token 上的 log-prob 之差；折扣设为 0，只管下一个 token；损失用 importance-sampling 策略梯度，不用 PPO clipping；老师只需返回采样 token 的 log-prob。作者说非零折扣在实践中没有更好，所以为了简单取 0。文中引用 Qwen3 技术报告的表 21：在 Qwen3-8B 上，on-policy distillation 用约 1/10 的 GPU-hours（1,800 对 17,920）拿到了比 RL 更高的 AIME'24 分数（74.4 对 67.6）；这是 Qwen 团队自报的结果。
 
 实际实现还要记录 behavior / current student 版本，确认 prompt、工具返回和 padding 不被误当成采样动作。只拿到 sampled-token log-prob 与拿到全词表 logits，也不是同一份信息。数据怎样进入训练，接着看 [rollout 与训练记录](post-training-infrastructure.md#rollout-record)。
 

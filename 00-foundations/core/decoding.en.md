@@ -4,7 +4,7 @@
 
 > Reading time: ~12 min · Level: core · Last reviewed: 2026-10
 
-Suppose the next-token probabilities are `0.6, 0.3, 0.1`. Greedy always chooses the first. Top-k with k=2 keeps the first two; top-p with p=0.8 also needs the first two to reach its probability-mass threshold. Sampling then uses the renormalized distribution. The model has not changed, but its selection rule has.
+Suppose the next-token probabilities are `0.6, 0.3, 0.1`. Greedy always chooses the first. Top-k with k=2 keeps the first two; top-p with p=0.8 also needs the first two to reach its probability-mass threshold. Sampling then uses the renormalized distribution. The model has not changed, but its selection rule has. **The model only supplies a distribution; truncate the same distribution differently and the candidate pool changes.**
 
 ## The model outputs a probability distribution; the decoding strategy does the choosing {#the-model-outputs-a-probability-distribution-the-decoding-strategy-does-the-choosing}
 
@@ -35,7 +35,7 @@ $$p_i = \frac{\exp(z_i / T)}{\sum_j \exp(z_j / T)}$$
 
 Positive temperature preserves the **ranking** but changes concentration. Lowering it does not add knowledge or guarantee a more correct answer.
 
-> The formula is undefined at $T=0$. Some interfaces use it as shorthand for greedy decoding; others have a separate switch. In [Transformers 4.57.1](https://huggingface.co/docs/transformers/v4.57.1/en/main_classes/text_generation), for example, `do_sample=False, num_beams=1` explicitly selects greedy decoding.
+> The formula is undefined at $T=0$. Some interfaces use it as shorthand for greedy decoding; others have a separate switch. In [Transformers 5.20.0](https://huggingface.co/docs/transformers/v5.20.0/en/main_classes/text_generation) (checked October 2026), for example, `do_sample=False, num_beams=1` explicitly selects greedy decoding.
 
 ## Top-k: keep only the k most probable {#top-k-keep-only-the-k-most-probable}
 
@@ -114,7 +114,7 @@ Consider two steps: A has probability 0.6 and B has 0.4. The best continuation a
 
 Translation and speech recognition often use beam search, not because answers are unique, but because searching by model score can be useful. Score, length handling, and task quality still need to agree. In open-ended generation, likelihood maximization can produce repetition; see [Neural Text Degeneration](https://arxiv.org/abs/1904.09751).
 
-Math does not require greedy decoding either. [Self-consistency](https://arxiv.org/abs/2203.11171) samples multiple reasoning paths and aggregates answers. Choose a strategy together with its candidate budget, verification method, and final metric.
+Math does not require greedy decoding either. [Self-consistency](https://arxiv.org/abs/2203.11171) samples multiple reasoning paths and aggregates answers; [parallel sampling and verification](../../11-frontier/test-time-compute/parallel-and-verify.en.md) covers how to split the budget and what to verify with. Choose a strategy together with its candidate budget, verification method, and final metric.
 
 ## How to set the parameters in practice {#how-to-set-the-parameters-in-practice}
 
@@ -139,7 +139,7 @@ A few easy traps:
 
 **min-p**: keep tokens whose probability is ≥ `min_p × highest probability`. This is a threshold relative to the peak, not cumulative mass. Whether it improves high-temperature outputs requires a task-level comparison.
 
-**Repetition penalty and no-repeat n-gram are different operations**. The former changes scores of previously used tokens; the latter bans a next token that would complete a repeated n-gram. After `A B A`, a bigram ban excludes `B`, not every previously seen token. See the [Transformers 4.57.1 generation processors](https://huggingface.co/docs/transformers/v4.57.1/en/internal/generation_utils#transformers.NoRepeatNGramLogitsProcessor).
+**Repetition penalty and no-repeat n-gram are different operations**. The former changes scores of previously used tokens; the latter bans a next token that would complete a repeated n-gram. After `A B A`, a bigram ban excludes `B`, not every previously seen token. See the [Transformers 5.20.0 generation processors](https://huggingface.co/docs/transformers/v5.20.0/en/internal/generation_utils#transformers.NoRepeatNGramLogitsProcessor).
 
 **Typical sampling**: compare token surprisal $-\log p_i$ with conditional entropy rather than ranking solely by probability. It favors information content near the current expectation; see the assumptions and experiments in [Locally Typical Sampling](https://arxiv.org/abs/2202.00666).
 
@@ -252,7 +252,7 @@ Both also hit tokens that are supposed to repeat — punctuation, pronouns, code
 
 First identify the actual rollout distribution $\mu$. An untransformed old policy is an easy baseline to audit. Other sampling settings can be deliberate, but the target policy, recorded probabilities, and correction method must be explicit.
 
-In ordinary PPO, the denominator is the old policy that collected the batch, not the current updating policy. Treating samples from $\mu$ as samples from an untransformed old policy changes the estimator. Also check support: actions with zero probability under $\mu$ cannot be recovered from this batch.
+In ordinary PPO, the denominator is the old policy that collected the batch, not the current updating policy. Treating samples from $\mu$ as samples from an untransformed old policy changes the estimator. Also check support: actions with zero probability under $\mu$ cannot be recovered from this batch (the same issue in offline estimation is covered in [OPE estimators](../../05-post-training/deep-rl/ope-estimators.en.md)).
 
 </details>
 

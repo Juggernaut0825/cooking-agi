@@ -229,7 +229,7 @@ The counterexample concerns **renormalizing both distributions after selecting t
 
 ## Where does R1 data distillation fit?
 
-[DeepSeek-R1's public description](https://github.com/deepseek-ai/DeepSeek-R1) describes fine-tuning Qwen / Llama students with R1-curated data. This fits the “teacher provides answers” row: the student tokenizes text itself, without requiring aligned teacher logits.
+[DeepSeek-R1's public description](https://github.com/deepseek-ai/DeepSeek-R1) describes fine-tuning Qwen / Llama students with R1-curated data. This fits the “teacher provides answers” row: the student tokenizes text itself, without requiring aligned teacher logits. For what distilling long chains of thought into small models achieves and where it stops, see the section “Distillation: teaching long chains to small models” in the frontier draft on [how long chains of thought are trained](../11-frontier/test-time-compute/long-chains.en.md).
 
 Different vocabularies alone do not establish an entire training recipe. Nor does SFT imply updating every parameter: supervision and the choice of full-parameter versus LoRA updates are separate decisions. Check the specific model's training report.
 
@@ -328,6 +328,8 @@ The derivation deliberately fixed the prefix. In a full generation, earlier acti
 - **Full-vocabulary KL at fixed sampled prefixes:** fit distributions at visited positions without differentiating through prefix sampling. This is a stated training convention, not an exact full-trajectory gradient.
 - **Full-sequence reverse KL:** on a common token and termination space, the sequence log-ratio sums per-step log-ratios. Its exact policy gradient also accounts for future effects of actions, expressible through return-to-go.
 - **Immediate log-prob differences as advantages with PPO clipping:** this is a local surrogate. It may be useful, but resemblance to the one-prefix equation does not make its gradient identical to the full-sequence objective.
+
+The third option has a public example, with a different loss. [Thinking Machines' on-policy distillation (Lu et al., 2025-10-27)](https://thinkingmachines.ai/blog/on-policy-distillation/) sets each sampled token's advantage to the negative reverse KL, that is, the teacher's log-prob minus the student's on that token. The discount is 0, so only the next token counts, and the loss is an importance-sampling policy gradient without PPO clipping; the teacher only has to return log-probs for the sampled tokens. The authors say a nonzero discount did not help in practice, so they chose 0 for simplicity. The post cites Table 21 of the Qwen3 technical report: on Qwen3-8B, on-policy distillation reached a higher AIME'24 score than RL (74.4 versus 67.6) with about one tenth of the GPU-hours (1,800 versus 17,920). These are the Qwen team's self-reported numbers.
 
 An implementation must also track behavior / current student versions and avoid treating prompt, tool-result, or padding tokens as sampled actions. Sampled-token log-probs and full-vocabulary logits are different information. Continue to [rollout records](post-training-infrastructure.en.md#rollout-record) for the data entering training.
 

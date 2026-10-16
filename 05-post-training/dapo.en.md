@@ -24,7 +24,9 @@ For $A=-1$, the same ratio gives -1.25, retaining a gradient to correct the bad 
 
 Absolute changes can be tiny for rare tokens. Moving from 0.01 to 0.012 is already a factor of 1.2, just like moving from 0.5 to 0.6. Clip-Higher relaxes a multiplicative margin, not an equal additive probability allowance or a guarantee against entropy decline.
 
-## Dynamic sampling retains groups, not only correct answers
+<span id="dynamic-sampling-retains-groups-not-only-correct-answers"></span>
+
+## Dynamic sampling retains groups, not only correct answers {#dynamic-sampling}
 
 With 4 samples per prompt, binary rewards might be:
 
@@ -121,4 +123,4 @@ Mean reward alone can improve when the model writes less and pays a smaller pena
 
 Check these local properties before training comparisons. The examples test objectives and data handling, not a reproduction of the paper's training run. When reading [GSPO / ASPO](policy-ratios.en.md) and [SAO](async-policy-learning.en.md) in 2026, ask the same question: did the method change sampling, weighting, or when data reaches the trainer?
 
-Implementation entry points: [DAPO project](https://dapo-sia.github.io/) and [verl DAPO recipe](https://github.com/volcengine/verl/tree/main/recipe/dapo). Record a commit when reproducing a result; a changing main branch is not a fixed version.
+Implementation entry points: [DAPO project](https://dapo-sia.github.io/) and [verl DAPO recipe](https://github.com/verl-project/verl-recipe/tree/main/dapo) (checked 2026-10: verl's recipes now live in the separate `verl-project/verl-recipe` repository). Record a commit when reproducing a result; a changing main branch is not a fixed version.

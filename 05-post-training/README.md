@@ -1,4 +1,4 @@
-# 后训练：模型预训练之后还要学什么？
+# 后训练（post-training）：模型预训练之后还要学什么？
 
 **中文** · [English](README.en.md)
 
@@ -6,11 +6,47 @@
 
 ## 会续写文本，还不等于会完成任务
 
-想先弄懂 RL 本身？从独立的[强化学习路线](deep-rl/README.md)开始：MDP、Bellman、Policy Gradient、DQN、SAC 与 Model-based RL，再回到这里看它们怎样用于语言模型。
-
 预训练让模型从大量数据里学习语言、知识和通用能力。后训练则进一步教它怎样完成任务：怎么遵循指令、什么回答更合适，以及怎样根据反馈调整行为。
 
-## 各阶段的直观分工
+想先弄懂 RL 本身？从独立的[强化学习路线](deep-rl/README.md)开始：MDP、Bellman、Policy Gradient、DQN、SAC 与 Model-based RL，再回到这里看它们怎样用于语言模型。
+
+## 这个系列怎么读 {#_7}
+
+先分清两件事：**用什么信号教**，以及**允许哪些参数改变**。如果已经了解 SFT，可以直接去看偏好学习；遇到不熟的概念再回来补，不必从第一页重新读。
+
+**一、打地基：为什么还需要教**
+
+1. 为什么预训练完还不够（本页）—— SFT、偏好学习、RL 各自解决什么学习问题
+2. [模型适配：Full Fine-Tuning、LoRA、Prompt Tuning 与蒸馏](model-adaptation.md) —— 区分 learning objective 与 parameterization，并解释分类输出怎样被系统约束
+3. [SFT](sft-and-its-ceiling.md) —— 为什么平均 token loss 不能代替任务成功率，以及示范怎样教会回答、澄清或拒答
+4. [偏好与奖励模型](where-preferences-come-from.md) —— Bradley–Terry 如何用分数差解释偏好，策略变化后奖励模型还是否可靠，以及 AI 反馈、生成式奖励模型和 rubric 奖励
+
+想把两种常用方法算清楚，可以接着读 [LoRA / QLoRA](lora-and-qlora.md)和[蒸馏](distillation.md)：前者算参数、梯度和显存，后者算软标签、KL 和 top-k 省略了什么。
+
+想知道 SFT 示范怎么从模型输出里筛出来，接着读[拒绝采样与数据筛选](rejection-sampling.md)：区分“挑一份交给用户”和“挑一批继续训练”，再检查筛选是否悄悄改变了题目比例。
+
+**二、用结果教：RL 那条线**
+
+5. [RLHF 的三个阶段，和后来发生了什么](rlhf/) —— 四个模型，谁在训谁被冻住
+6. [PPO、GRPO 与 DPO](after-ppo.md) —— 从 PPO 讲起，再看 GRPO / RLOO / REINFORCE++ / DAPO / DPO 怎样使用不同的信号和目标
+7. [可验证奖励](verifiable-rewards.md) —— 从排序测试看奖励漏洞，再看稀疏反馈与过程检查
+
+这条线往后延伸，可以看两篇前沿草稿：[用 RL 训练多步 agent](../11-frontier/agentic-rl/README.md)，以及[长思维链是怎样训练出来的](../11-frontier/test-time-compute/long-chains.md)。
+
+**三、怎么真的跑起来**
+
+8. [后训练的基础设施：采样、数值、上下文](post-training-infrastructure.md) —— 三样都不改目标函数，但决定你能对目标函数做什么。**这一层最少被讨论，而效果常常卡在这里**
+9. [同一个基座能走多远](same-base-different-posttraining.md) —— 一次难得的自然实验：基座锁死、只改后训练，看看第 8 篇那三件事值多少
+
+**四、代价**
+
+10. [对齐的取舍](alignment-tax.md) —— 检查具体任务的退化、多样性与分布变化；不能仅凭总体 pass@1 和 pass@k 判断模式坍缩
+
+这些文章可以连着读：先选监督信号和更新方式，再看如何训练、怎样验证，以及有什么代价。
+
+想解决具体问题，也可以从目录直接进入，不必一次读完。
+
+## 各阶段的直观分工 {#_2}
 
 - **预训练**：从大规模语料中学习语言、知识和通用能力。
 - **继续预训练**：进一步适应某个领域的数据和术语。
@@ -20,7 +56,7 @@
 
 这些方法各有用途，不能简单地互相替代。选哪一种，要看手上的数据和希望模型学会什么。
 
-## 从基础模型到对齐模型：先分清每一步在学什么
+## 从基础模型到对齐模型：先分清每一步在学什么 {#_3}
 
 <div class="bilingual-note bilingual-intro">
   <span>中英对照 · CONCEPT-BY-CONCEPT</span>
@@ -30,7 +66,7 @@
 <section class="concept-card" data-concept-card markdown="1">
 <div class="concept-face concept-zh" data-concept-zh markdown="1">
 
-### 1. 三个阶段，使用三种不同的监督
+### 1. 三个阶段，监督各不相同
 
 最常见的主线是：
 
@@ -40,7 +76,7 @@ $$
 \longrightarrow
 \text{SFT}
 \longrightarrow
-\text{Preference Alignment (RLHF / DPO / RLVR)}
+\text{Preference / RL (RLHF, DPO, RLVR)}
 }
 $$
 
@@ -48,11 +84,13 @@ $$
 | --- | --- | --- | --- |
 | 预训练 | 海量普通文本、代码等 | 根据上下文预测文本单元 | 基础模型（Base Model） |
 | 监督微调（SFT） | 指令与示范回答 | 指定的理想回答 | 指令模型（Instruction Model） |
-| 偏好对齐 | 被选中与被拒绝的回答、奖励或验证结果 | 哪种完整行为更好 | 对齐后的模型或策略 |
+| 偏好学习（RLHF / DPO） | 被选中与被拒绝的回答，或用它们训练的奖励模型 | 两个回答中哪个更受偏好 | 对齐后的模型或策略 |
+| 可验证奖励的 RL（RLVR） | 题目，加上能自动检查结果的程序，如答案匹配、单元测试 | 采样出的回答是否通过检查 | 经过 RL 的策略 |
 
 这是按训练目的划分的阶段，不代表实际训练一定会分别保存 3 份模型状态。主要区别在于：
-预训练学习数据分布中的语言、知识与基础能力；SFT 教模型按示范调用这些能力；偏好对齐
-再告诉它多个可行回答中哪种更符合目标。
+预训练学习数据分布中的语言、知识与基础能力；SFT 教模型按示范调用这些能力；偏好学习
+再告诉它多个可行回答中哪种更符合目标。RLVR 不需要偏好数据，奖励来自程序检查（见[可验证奖励](verifiable-rewards.md)）；
+它和偏好学习常放在 SFT 之后的同一阶段，用的却是不同的信号。
 
 **预训练在经典 RLHF 之前，不是 RLHF 的第一阶段。** RLHF 指利用人类反馈进行强化学习；
 讲它的训练流程时，通常从监督微调这一步开始，而不是从零预训练。
@@ -60,7 +98,7 @@ $$
 </div>
 <div class="concept-face concept-en" data-concept-en markdown="1">
 
-<div class="concept-title-en" role="heading" aria-level="3">1. Three stages use three different kinds of supervision</div>
+<div class="concept-title-en" role="heading" aria-level="3">1. Three stages, each with its own supervision</div>
 
 A common high-level path is
 
@@ -70,7 +108,7 @@ $$
 \longrightarrow
 \text{SFT}
 \longrightarrow
-\text{Preference Alignment (RLHF / DPO / RLVR)}
+\text{Preference / RL (RLHF, DPO, RLVR)}
 }
 $$
 
@@ -78,13 +116,16 @@ $$
 | --- | --- | --- | --- |
 | Pre-training | large-scale text, code, and related corpora | token targets constructed from the text itself | Base Model |
 | SFT | instruction–response demonstrations | selected ideal responses | Instruction Model |
-| Preference alignment | chosen/rejected pairs, rewards, or verifiers | which complete behavior is better | Aligned Model / Policy |
+| Preference learning (RLHF / DPO) | chosen/rejected pairs, or a reward model trained on them | which of two responses is preferred | Aligned Model / Policy |
+| RL with verifiable rewards (RLVR) | prompts plus a program that checks results, such as answer matching or unit tests | whether a sampled response passes the check | RL-trained policy |
 
 These labels describe functional stages; an organization need not save exactly three
 separate checkpoints. The useful distinction is that pre-training learns language,
 knowledge, and foundational capability from the data distribution; SFT teaches the
-model to invoke that capability through demonstrations; preference alignment selects
-which of several plausible behaviors better serves the objective.
+model to invoke that capability through demonstrations; preference learning selects
+which of several plausible behaviors better serves the objective. RLVR needs no preference
+data: its reward comes from a program check (see [verifiable rewards](verifiable-rewards.md)).
+It often sits in the same post-SFT stage as preference learning, but uses a different signal.
 
 **Pre-training precedes classic RLHF; it is not RLHF's first stage.** In the full model
 lifecycle it is upstream, while the classic RLHF pipeline usually begins from an SFT
@@ -285,7 +326,7 @@ RL 更适合需要多步行动、结果延迟，或者策略必须通过探索�
 
 例如在推荐场景里，用户点不点击，同时取决于内容排在哪个位置、标题怎么写，以及用户当时有没有空。直接把点击当 reward，模型可能学会怎样更吸引点击，而不是提供更有长期价值的内容。
 
-## 为什么数据经常比算法更先成为瓶颈
+## 为什么数据经常比算法更先成为瓶颈 {#_4}
 
 如果数据缺少纵向关系，同一个用户的行为被切成许多孤立样本，那么模型很难学习长期意图变化。
 
@@ -309,7 +350,7 @@ RL 更适合需要多步行动、结果延迟，或者策略必须通过探索�
 - 训练数据怎样保留同一用户随时间变化的关系和因果结构？
 - 哪些行为上的提升，在分布变化和反复交互之后还能留下来？
 
-## 怎样选择方法
+## 怎样选择方法 {#_5}
 
 可以先问：
 
@@ -321,7 +362,7 @@ RL 更适合需要多步行动、结果延迟，或者策略必须通过探索�
 | 模型缺少领域知识和分布覆盖吗？ | Continued pretraining |
 | 反馈本身稀疏、偏置、无法归因吗？ | 先修数据与评估，而不是先换算法 |
 
-## 怎样评估
+## 怎样评估 {#_6}
 
 不能只看训练损失或一个总奖励分。还要检查：
 
@@ -330,40 +371,6 @@ RL 更适合需要多步行动、结果延迟，或者策略必须通过探索�
 - 模型是否牺牲多样性、校准或安全性换取一个指标；
 - 离线偏好是否转化为真实任务结果；
 - 训练和推理时使用的策略、对数概率（log-probability）与数据含义是否一致。
-
-## 这个系列怎么读
-
-先分清两件事：**用什么信号教**，以及**允许哪些参数改变**。如果已经了解 SFT，可以直接去看偏好学习；遇到不熟的概念再回来补，不必从第一页重新读。
-
-**一、打地基：为什么还需要教**
-
-1. 为什么预训练完还不够（本页）—— SFT、偏好学习、RL 各自解决什么学习问题
-2. [模型适配：Full Fine-Tuning、LoRA、Prompt Tuning 与蒸馏](model-adaptation.md) —— 区分 learning objective 与 parameterization，并解释分类输出怎样被系统约束
-3. [SFT](sft-and-its-ceiling.md) —— 为什么平均 token loss 不能代替任务成功率，以及示范怎样教会回答、澄清或拒答
-4. [偏好与奖励模型](where-preferences-come-from.md) —— Bradley–Terry 如何用分数差解释偏好，以及策略变化后奖励模型还是否可靠
-
-想把两种常用方法算清楚，可以接着读 [LoRA / QLoRA](lora-and-qlora.md)和[蒸馏](distillation.md)：前者算参数、梯度和显存，后者算软标签、KL 和 top-k 省略了什么。
-
-想知道 SFT 示范怎么从模型输出里筛出来，接着读[拒绝采样与数据筛选](rejection-sampling.md)：区分“挑一份交给用户”和“挑一批继续训练”，再检查筛选是否悄悄改变了题目比例。
-
-**二、用结果教：RL 那条线**
-
-5. [RLHF 的三个阶段，和后来发生了什么](rlhf/) —— 四个模型，谁在训谁被冻住
-6. [PPO、GRPO 与 DPO](after-ppo.md) —— 从 PPO 讲起，再看 GRPO / RLOO / REINFORCE++ / DAPO / DPO 怎样使用不同的信号和目标
-7. [可验证奖励](verifiable-rewards.md) —— 从排序测试看奖励漏洞，再看稀疏反馈与过程检查
-
-**三、怎么真的跑起来**
-
-8. [后训练的基础设施：采样、数值、上下文](post-training-infrastructure.md) —— 三样都不改目标函数，但决定你能对目标函数做什么。**这一层最少被讨论，而效果常常卡在这里**
-9. [同一个基座能走多远](same-base-different-posttraining.md) —— 一次难得的自然实验：基座锁死、只改后训练，看看第 8 篇那三件事值多少
-
-**四、代价**
-
-10. [对齐的取舍](alignment-tax.md) —— 检查具体任务的退化、多样性与分布变化；不能仅凭总体 pass@1 和 pass@k 判断模式坍缩
-
-这些文章可以连着读：先选监督信号和更新方式，再看如何训练、怎样验证，以及有什么代价。
-
-想解决具体问题，也可以从目录直接进入，不必一次读完。
 
 ## 继续阅读
 

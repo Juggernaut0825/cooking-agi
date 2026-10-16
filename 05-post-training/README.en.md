@@ -6,9 +6,45 @@
 
 ## Post-training changes how the model behaves
 
+Pretraining teaches a model what the world usually contains. Post-training teaches it how to behave and act when it faces a particular kind of task.
+
 Want the RL foundations first? Start with the separate [Deep RL route](deep-rl/README.en.md): MDPs, Bellman, policy gradients, DQN, SAC, and model-based RL. Then return here for their language-model applications.
 
-Pretraining teaches a model what the world usually contains. Post-training teaches it how to behave and act when it faces a particular kind of task.
+## How to read this series
+
+First separate **what supplies supervision** from **which parameters may change**. If you already understand SFT, go straight to preference learning and return for unfamiliar concepts; there is no need to restart from page one.
+
+**I. Foundations: why more teaching is needed**
+
+1. Why pretraining isn't enough (this page) — what learning problem SFT, preference learning, and RL each solve
+2. [Model adaptation: Full Fine-Tuning, LoRA, Prompt Tuning, and Distillation](model-adaptation.en.md) — separate the learning objective from parameterization, and explain how the system constrains classification output
+3. [SFT](sft-and-its-ceiling.en.md) — why mean token loss does not replace task success, and how demonstrations teach answering, clarification, or abstention
+4. [Preferences and reward models](where-preferences-come-from.en.md) — how Bradley–Terry models preferences through score differences, whether the reward model remains reliable as the policy changes, and AI feedback, generative reward models, and rubric rewards
+
+For worked calculations, continue to [LoRA / QLoRA](lora-and-qlora.en.md) and [distillation](distillation.en.md): parameters, gradients, and memory in the former; soft targets, KL, and what top-k leaves out in the latter.
+
+For demonstrations built from model outputs, read [rejection sampling and filtering](rejection-sampling.en.md): distinguish selecting an answer for a user from selecting data for another training round, then check how filtering changes the prompt mix.
+
+**II. Teaching by outcome: the RL line**
+
+5. [The three stages of RLHF, and what happened next](rlhf/README.en.md) — four models, which train and which are frozen
+6. [PPO, GRPO, and DPO](after-ppo.en.md) — starting from PPO, how GRPO / RLOO / REINFORCE++ / DAPO / DPO use different signals and objectives
+7. [Verifiable rewards](verifiable-rewards.en.md) — sorting tests expose reward loopholes, followed by sparse feedback and process checks
+
+Two frontier drafts extend this line: [training multi-step agents with RL](../11-frontier/agentic-rl/README.en.md) and [how long chains of thought are trained](../11-frontier/test-time-compute/long-chains.en.md).
+
+**III. Actually running it**
+
+8. [Post-training infrastructure: sampling, numerics, context](post-training-infrastructure.en.md) — none of the three changes the objective; all of them decide what you can do to it. **The least discussed layer, and often where results actually stall**
+9. [How far one base model can go](same-base-different-posttraining.en.md) — a rare natural experiment: base pinned, only post-training changed, showing what the three things in note 8 are worth
+
+**IV. What it costs**
+
+10. [Alignment trade-offs](alignment-tax.en.md) — check task-level regressions, diversity, and distribution shift; aggregate pass@1 and pass@k alone cannot establish mode collapse
+
+Read these as a connected sequence: choose supervision and an update method, then examine training, validation, and costs.
+
+Use the contents to jump to a specific problem; there is no need to finish everything in one sitting.
 
 ## What each stage does, intuitively
 
@@ -22,7 +58,9 @@ They are not interchangeable buttons; they solve different learning problems.
 
 ## From Base Model to Aligned Model: get the map right first
 
-### 1. Three stages use three different kinds of supervision
+<span id="1-three-stages-use-three-different-kinds-of-supervision"></span>
+
+### 1. Three stages, each with its own supervision
 
 A common high-level path is
 
@@ -32,7 +70,7 @@ $$
 \longrightarrow
 \text{SFT}
 \longrightarrow
-\text{Preference Alignment (RLHF / DPO / RLVR)}
+\text{Preference / RL (RLHF, DPO, RLVR)}
 }
 $$
 
@@ -40,13 +78,16 @@ $$
 | --- | --- | --- | --- |
 | Pre-training | large-scale text, code, and related corpora | token targets constructed from the text itself | Base Model |
 | SFT | instruction–response demonstrations | selected ideal responses | Instruction Model |
-| Preference alignment | chosen/rejected pairs, rewards, or verifiers | which complete behavior is better | Aligned Model / Policy |
+| Preference learning (RLHF / DPO) | chosen/rejected pairs, or a reward model trained on them | which of two responses is preferred | Aligned Model / Policy |
+| RL with verifiable rewards (RLVR) | prompts plus a program that checks results, such as answer matching or unit tests | whether a sampled response passes the check | RL-trained policy |
 
 These labels describe functional stages; an organization need not save exactly three
 separate checkpoints. The useful distinction is that pre-training learns language,
 knowledge, and foundational capability from the data distribution; SFT teaches the
-model to invoke that capability through demonstrations; preference alignment selects
-which of several plausible behaviors better serves the objective.
+model to invoke that capability through demonstrations; preference learning selects
+which of several plausible behaviors better serves the objective. RLVR needs no preference
+data: its reward comes from a program check (see [verifiable rewards](verifiable-rewards.en.md)).
+It often sits in the same post-SFT stage as preference learning, but uses a different signal.
 
 **Pre-training precedes classic RLHF; it is not RLHF's first stage.** In the full model
 lifecycle it is upstream, while the classic RLHF pipeline usually begins from an SFT
@@ -199,40 +240,6 @@ Training loss or one aggregate reward is not enough. Also check:
 - whether the model gives up diversity, calibration, or safety in exchange for one metric;
 - whether offline preference translates into real task outcomes;
 - whether the policy, log-probabilities, and data semantics agree between training and inference.
-
-## How to read this series
-
-First separate **what supplies supervision** from **which parameters may change**. If you already understand SFT, go straight to preference learning and return for unfamiliar concepts; there is no need to restart from page one.
-
-**I. Foundations: why more teaching is needed**
-
-1. Why pretraining isn't enough (this page) — what learning problem SFT, preference learning, and RL each solve
-2. [Model adaptation: Full Fine-Tuning, LoRA, Prompt Tuning, and Distillation](model-adaptation.en.md) — separate the learning objective from parameterization, and explain how the system constrains classification output
-3. [SFT](sft-and-its-ceiling.en.md) — why mean token loss does not replace task success, and how demonstrations teach answering, clarification, or abstention
-4. [Preferences and reward models](where-preferences-come-from.en.md) — how Bradley–Terry models preferences through score differences, and whether the reward model remains reliable as the policy changes
-
-For worked calculations, continue to [LoRA / QLoRA](lora-and-qlora.en.md) and [distillation](distillation.en.md): parameters, gradients, and memory in the former; soft targets, KL, and what top-k leaves out in the latter.
-
-For demonstrations built from model outputs, read [rejection sampling and filtering](rejection-sampling.en.md): distinguish selecting an answer for a user from selecting data for another training round, then check how filtering changes the prompt mix.
-
-**II. Teaching by outcome: the RL line**
-
-5. [The three stages of RLHF, and what happened next](rlhf/README.en.md) — four models, which train and which are frozen
-6. [PPO, GRPO, and DPO](after-ppo.en.md) — starting from PPO, how GRPO / RLOO / REINFORCE++ / DAPO / DPO use different signals and objectives
-7. [Verifiable rewards](verifiable-rewards.en.md) — sorting tests expose reward loopholes, followed by sparse feedback and process checks
-
-**III. Actually running it**
-
-8. [Post-training infrastructure: sampling, numerics, context](post-training-infrastructure.en.md) — none of the three changes the objective; all of them decide what you can do to it. **The least discussed layer, and often where results actually stall**
-9. [How far one base model can go](same-base-different-posttraining.en.md) — a rare natural experiment: base pinned, only post-training changed, showing what the three things in note 8 are worth
-
-**IV. What it costs**
-
-10. [Alignment trade-offs](alignment-tax.en.md) — check task-level regressions, diversity, and distribution shift; aggregate pass@1 and pass@k alone cannot establish mode collapse
-
-Read these as a connected sequence: choose supervision and an update method, then examine training, validation, and costs.
-
-Use the contents to jump to a specific problem; there is no need to finish everything in one sitting.
 
 ## Continue reading
 

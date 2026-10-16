@@ -23,9 +23,11 @@ Choose by familiarity, not years of employment. If you know Python but not ML, u
 <a href="#twelve-hours"><small>12 HOURS</small><strong>Practice again under different conditions</strong><span>Add system tradeoffs, experiment checks, and another debugging pass</span></a>
 </nav>
 
+<span id="google"></span>
+
 ## Spend ten minutes choosing the round to prepare for {#start}
 
-Check the invitation and job description: algorithms, ML coding, code comprehension, system design, or a project discussion? Can you run code, read documentation, or use a specified AI tool? **Do not use AI during the interview without explicit permission.**
+Check the invitation and job description: algorithms, ML coding, code comprehension, system design, or a project discussion? Can you run code, read documentation, or use a specified AI tool? **Do not use AI during the interview without explicit permission.** If the round involves reading and debugging code, start with the [code-comprehension exercises](code-comprehension.en.md#read); they do not replace algorithm practice.
 
 Write down the next round, your weakest relevant skill, and what you will produce today. For example: “ML coding on Thursday; I reverse masks; today I will implement attention and test that changing a future token cannot change earlier outputs.” That gives you more to work with than “review Transformers.”
 
@@ -109,7 +111,7 @@ SFT learns from demonstrations; DPO commonly optimizes directly from preference 
 
 If four responses to a prompt all receive zero reward, group centering leaves no relative reward difference for GRPO to learn from in that group. Whether other terms such as KL still contribute depends on the objective. Changing the learning rate alone may miss the issue: inspect task difficulty, reachable rewards, and sampling budget.
 
-**Keep the roles separate:** the reference is a policy used to constrain drift, not a “correct answer.” The old policy generated the sampled trajectories. RLVR describes a source of feedback, not an alternative on the same axis as PPO versus GRPO.
+**Keep the roles separate:** the reference is a policy used to constrain drift, not a “correct answer.” The old policy generated the sampled trajectories. RLVR describes a source of feedback, not an alternative on the same axis as PPO versus GRPO; for how RLVR produces long chains of thought, see [test-time compute](../11-frontier/test-time-compute/long-chains.en.md).
 
 Continue: [Methods compared](../05-post-training/deep-rl/methods-map.en.md) · [Why RL is hard to train](../05-post-training/deep-rl/why-rl-is-hard.en.md). Skip this block if it is unrelated to the role.
 
@@ -123,7 +125,7 @@ Continue: [Evaluation](../07-evaluation/README.en.md) · [LLM-as-a-Judge](../07-
 
 ### Systems: follow a request instead of listing frameworks {#systems}
 
-A request typically passes through validation, queuing, scheduling, model execution, and output handling. Establish latency targets and concurrency before choosing a bottleneck: computation, memory bandwidth, memory capacity, or communication?
+A request typically passes through validation, queuing, scheduling, model execution, and output handling. Establish latency targets and concurrency before choosing a bottleneck: computation, memory bandwidth, memory capacity, or communication? A [roofline](../12-infra/performance.en.md#roofline) estimate tells you whether compute or bandwidth runs out first.
 
 At two bytes per parameter, 7B parameters need roughly **14 GB for weights alone**, in decimal units. That is not the whole service footprint: add KV cache, temporary tensors, and runtime overhead. Training also needs gradients and optimizer state. Quantization does not shrink every allocation by the same factor.
 
@@ -133,20 +135,7 @@ Continue: [A complete ML system](../practice/ml-system/README.en.md) · [vLLM / 
 
 ## Replace irrelevant work with role-specific practice {#roles}
 
-| Direction | Keep first | Leave for later when time is short |
-| --- | --- | --- |
-| General SWE | Algorithms, code reading, tests, projects; system design if requested | Unrelated model derivations |
-| Model-focused MLE / RE | Algorithms, ML coding, training bugs, data and evaluation, projects | Every model family's details |
-| RS / research discussion | Required coding, research assumptions, experiments, personal contributions, next questions | Implementing every popular architecture |
-| Inference / ML systems | Algorithms, generation and caches, memory estimates, scheduling, performance evidence | Memorizing every framework class |
-
-These are time-allocation suggestions, not a company's question bank. For vision, speech, robotics, or other domains, substitute their core problems for the LLM material. A few memorized terms do not replace domain knowledge.
-
-## Should you practice Google's code-comprehension format? {#google}
-
-Yes, but **do not drop algorithm practice**. Reporting from May 2026 described an AI-assisted code-comprehension pilot on selected US Google teams, involving reading, debugging, and optimization—not a confirmed worldwide process. See [code comprehension](code-comprehension.en.md#google) for sources and an original practice exercise.
-
-If your invitation includes that round, confirm the tools, test execution, and exact permission to use AI. Code comprehension does not automatically mean AI is allowed; Google's and Google DeepMind's processes are not interchangeable.
+What to keep first and what to leave for later when time is short, by role, is in one table in the [role-based guide](ai-roles-prep.en.md#routes): one row each for general SWE, model-focused MLE / RE, RS, and inference / ML systems. Those are time-allocation suggestions, not a company's question bank. For vision, speech, robotics, or other domains, substitute their core problems for the LLM material; a few memorized terms do not replace domain knowledge.
 
 ## Finish with a small note of your own {#finish}
 

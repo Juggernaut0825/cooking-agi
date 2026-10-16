@@ -6,7 +6,7 @@
 
 给模型一张时刻表，问“末班车几点？”，标准答案是“22:40”。训练 loss 在降，你却发现遮住图片后它还是回答 22:40。可能模型根本没学会看图，只记住了这个数据集里最常见的答案。
 
-微调首先要证明数据教的是你想要的能力。把训练命令跑起来只是其中一步。
+**微调首先要证明数据教的是你想要的能力。**把训练命令跑起来只是其中一步。
 
 ## 先判断问题能不能靠微调解决
 
@@ -106,9 +106,11 @@ $$
 
 ## 长度、冻结与显存
 
-TRL v0.29.0 的 VLM 指南建议避免未经检查的序列截断，因为可能切掉图像 token；其中 `max_length=None` 是关闭这种截断，不是无限显存。仍要在数据侧限制图片尺寸、张数、文本长度，并检查高分位长度。[固定版本的 TRL 文档](https://huggingface.co/docs/trl/v0.29.0/en/sft_trainer)
+TRL 的 VLM 指南建议避免未经检查的序列截断，因为可能切掉图像 token；其中 `max_length=None` 是关闭这种截断，不是无限显存。仍要在数据侧限制图片尺寸、张数、文本长度，并检查高分位长度。这条建议从 v0.29.0 到 v1.16.0（2026-10-15 发布）都没变。[v1.16.0 的 TRL 文档](https://huggingface.co/docs/trl/v1.16.0/en/sft_trainer)
 
-**这个版本的 VLM 不支持 `assistant_only_loss=True`，即使模板能返回 assistant mask，trainer 也会报错。**单轮问答可以使用 `prompt` / `completion` 数据格式和 `completion_only_loss=True`，把答案放在 completion 中；它不等同于从任意多轮对话里自动挑出所有 assistant 回合。若需要后者，应使用经过检查的自定义 labels / collator，并保持不支持的开关关闭。仅把开关改成 `False` 让训练跑起来，不代表 loss 已经只覆盖答案。[v0.29.0 的限制与 collator 实现](https://github.com/huggingface/trl/blob/v0.29.0/trl/trainer/sft_trainer.py)
+**截至 2026-10，VLM 也能用 `assistant_only_loss=True` 了：TRL v1.15.0 起支持图片数据，但要求 `transformers>=5.18.0` 和对话格式的 language-modeling 数据，更旧的 transformers 仍会报错**（[v1.15.0 发布说明](https://github.com/huggingface/trl/releases/tag/v1.15.0)）。打开它之前，仍要解码一批数据，确认有效 labels 只落在 assistant 回合上。
+
+本页最初对照 TRL v0.29.0 写成。那个版本的 VLM 不支持 `assistant_only_loss=True`，即使模板能返回 assistant mask，trainer 也会报错。如果环境固定在旧版本，单轮问答可以使用 `prompt` / `completion` 数据格式和 `completion_only_loss=True`，把答案放在 completion 中；它不等同于从任意多轮对话里自动挑出所有 assistant 回合。若需要后者，应使用经过检查的自定义 labels / collator，并保持不支持的开关关闭。仅把开关改成 `False` 让训练跑起来，不代表 loss 已经只覆盖答案。[v0.29.0 的限制与 collator 实现](https://github.com/huggingface/trl/blob/v0.29.0/trl/trainer/sft_trainer.py)
 
 | 更新范围 | 适合先验证什么 | 代价与限制 |
 | --- | --- | --- |
@@ -150,13 +152,6 @@ TensorBoard、MLflow、SwanLab 或一个本地 JSONL 都可以承担记录；先
 
 ## 反事实图片比一个总分更有用
 
-对时刻表例子，保留原图，再做“只改末班车时间”“遮住该字段”“换一张布局相同但数字不同的表”三个版本。预期分别是跟随新时间、说明证据不足、读取新数字。
-
-| 检查 | 能发现什么 | 不能单独证明什么 |
-| --- | --- | --- |
-| 去掉图片 | 文本先验是否足以猜答案 | 分数下降不自动证明视觉推理正确 |
-| 只改一个字段 | 回答是否跟随视觉事实 | 不能覆盖全部布局与语义能力 |
-| 图文冲突 | 是否能识别不一致 | 偏向图片或文字都不一定总正确 |
-| 未见模板 | 是否依赖版式记忆 | 还需要检查领域与时间迁移 |
+对时刻表例子，保留原图，再做“只改末班车时间”“遮住该字段”“换一张布局相同但数字不同的表”三个版本。预期分别是跟随新时间、说明证据不足、读取新数字。去掉图片、图文冲突、换没见过的模板这些对照各能说明什么、不能说明什么，统一列在[多模态首页的对照表](README.md#modality-checks)；换模板时，还要另查领域和时间上的迁移。
 
 评分至少同时看字段准确率、不可回答识别、输出格式、延迟和显存。报告哪些设置改善了哪些切片；没有实测结果时，就保留实验方案，不写“显著提升”。本页验证的是教学 mask 代码，尚未运行端到端 GPU 微调；实际训练可从 [Qwen3-VL 官方微调工程](https://github.com/QwenLM/Qwen3-VL/tree/main/qwen-vl-finetune)开始，并固定提交版本。

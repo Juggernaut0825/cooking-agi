@@ -4,7 +4,7 @@
 
 > 阅读时间：约 12 分钟 · 难度：必修 · 最近审阅：2026-10
 
-下一步有三个候选，概率是 `0.6、0.3、0.1`。Greedy 总选第一个；top-k 取 k=2 时留下前两个；top-p 取 p=0.8 时，也要留下前两个才够 0.8 的概率质量。留下候选以后，还要重新归一化再采样。模型没有换，输出的选择方式已经不同了。
+下一步有三个候选，概率是 `0.6、0.3、0.1`。Greedy 总选第一个；top-k 取 k=2 时留下前两个；top-p 取 p=0.8 时，也要留下前两个才够 0.8 的概率质量。留下候选以后，还要重新归一化再采样。模型没有换，输出的选择方式已经不同了。**模型只给分布；同一个分布换一种截断，候选池就不同。**
 
 ## 模型输出概率分布，解码策略负责选择 {#_1}
 
@@ -35,7 +35,7 @@ $$p_i = \frac{\exp(z_i / T)}{\sum_j \exp(z_j / T)}$$
 
 正温度不改变 token 的**排序**，只改变概率有多集中。低温不会让模型掌握新知识，也不能保证答案更正确。
 
-> 公式不能直接代入 $T=0$。有些接口把它当作 greedy 的快捷设置，另一些用单独的开关。例如 [Transformers 4.57.1](https://huggingface.co/docs/transformers/v4.57.1/en/main_classes/text_generation) 中，`do_sample=False, num_beams=1` 才是明确的 greedy 配置。
+> 公式不能直接代入 $T=0$。有些接口把它当作 greedy 的快捷设置，另一些用单独的开关。例如 [Transformers 5.20.0](https://huggingface.co/docs/transformers/v5.20.0/en/main_classes/text_generation)（2026-10 核对）中，`do_sample=False, num_beams=1` 才是明确的 greedy 配置。
 
 ## Top-k：只留概率最高的 k 个 {#top-k-k}
 
@@ -114,7 +114,7 @@ Beam search 每一步扩展候选，再按分数保留 $k$ 条。最简单的分
 
 翻译、语音识别等任务常用 beam search，并不是因为答案唯一。关键是模型分数、长度处理与任务质量是否一致。开放生成中，持续追求高似然可能带来重复，见 [Neural Text Degeneration](https://arxiv.org/abs/1904.09751)。
 
-数学题也不只能 greedy。[Self-consistency](https://arxiv.org/abs/2203.11171) 会采样多条推理路径再汇总答案。选择策略时，要一起考虑候选预算、验证方式和最终指标。
+数学题也不只能 greedy。[Self-consistency](https://arxiv.org/abs/2203.11171) 会采样多条推理路径再汇总答案；预算怎么分、用什么验证，见[并行采样与验证](../../11-frontier/test-time-compute/parallel-and-verify.md)。选择策略时，要一起考虑候选预算、验证方式和最终指标。
 
 ## 实际参数怎样设置 {#_4}
 
@@ -139,7 +139,7 @@ Beam search 每一步扩展候选，再按分数保留 $k$ 条。最简单的分
 
 **min-p**：保留概率 ≥ `min_p × 最高概率` 的 token。它按峰值设相对门槛，不是累计概率门槛；是否改善高温输出，需要在目标任务上比较。
 
-**repetition penalty 与 no-repeat n-gram 不是同一个操作**。前者调整已出现 token 的分数；后者禁止会组成重复 n-gram 的下一 token。例如历史是 `A B A`，禁止重复 bigram 时，下一个 `B` 会被屏蔽，但不是所有旧 token 都被禁止。实现可对照 [Transformers 4.57.1 的生成处理器](https://huggingface.co/docs/transformers/v4.57.1/en/internal/generation_utils#transformers.NoRepeatNGramLogitsProcessor)。
+**repetition penalty 与 no-repeat n-gram 不是同一个操作**。前者调整已出现 token 的分数；后者禁止会组成重复 n-gram 的下一 token。例如历史是 `A B A`，禁止重复 bigram 时，下一个 `B` 会被屏蔽，但不是所有旧 token 都被禁止。实现可对照 [Transformers 5.20.0 的生成处理器](https://huggingface.co/docs/transformers/v5.20.0/en/internal/generation_utils#transformers.NoRepeatNGramLogitsProcessor)。
 
 **typical sampling**：比较 token 的惊异度 $-\log p_i$ 与条件熵，而不是单按概率排名。它试图保留信息量接近当前期望的 token；依据和实验范围见 [Locally Typical Sampling](https://arxiv.org/abs/2202.00666)。
 
@@ -252,7 +252,7 @@ top-k 固定保留 $k$ 个候选；top-p 保留累积概率刚好达到 $p$ 的�
 
 先确认实际 rollout 分布 $\mu$。未变换的旧策略采样是容易核对的基线；其他采样配置也可以是有意设计，但要明确目标策略、记录的概率和校正方式。
 
-普通 PPO 的分母来自收集这批数据的旧策略，不是当前更新中的策略。若数据来自 $\mu$，却直接当作未变换的旧策略样本，估计量就改变了。还要检查支持集：$\mu$ 为零的动作无法从这批样本中恢复。
+普通 PPO 的分母来自收集这批数据的旧策略，不是当前更新中的策略。若数据来自 $\mu$，却直接当作未变换的旧策略样本，估计量就改变了。还要检查支持集：$\mu$ 为零的动作无法从这批样本中恢复（离线估计里的同一个问题见 [OPE 估计量](../../05-post-training/deep-rl/ope-estimators.md)）。
 
 </details>
 
