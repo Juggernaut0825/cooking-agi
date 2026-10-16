@@ -610,6 +610,10 @@ FIGURE_LAB = [
     ("step-evaluator-rank", "相关系数 0.98，第一名还是选错了", "A correlation of 0.98, and still the wrong winner", "step"),
     ("step-mcts-visits", "六次模拟：访问次数变成策略标签", "Six simulations: visit counts become a policy target", "step"),
     ("step-lambda-return", "从后往前算 λ-return", "Computing a λ-return backwards", "step"),
+    ("step-good-dies", "好 die 比面积掉得更快", "Good dies fall faster than die area grows", "step"),
+    ("step-fusion-traffic", "relu(x @ w + b)：字节和 CPU 时间花在哪", "relu(x @ w + b): where the bytes and the CPU time go", "step"),
+    ("step-decode-floor", "70B 的 decode 下限 = 权重字节 ÷ 总带宽", "70B decode floor = weight bytes ÷ total bandwidth", "step"),
+    ("step-gang-scheduling", "同样 24 张卡，三种放法", "The same 24 GPUs, three placements", "step"),
 ]
 for _name, _zh, _en, _kind in [(name, zh, en, "step") for name, zh, en in ALGO_LAB] + FIGURE_LAB:
     _kicker = 'data-zh="动画" data-en="Step by step"' if _kind == "step" else 'data-zh="图解" data-en="Diagram"'

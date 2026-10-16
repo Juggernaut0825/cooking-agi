@@ -90,6 +90,8 @@ This ignores the 8 KiB of $b$ itself. The table estimates time at a **teaching b
 | Bias in the GEMM epilogue (as in `addmm`), ReLU as its own kernel | 64 MiB | about 34 µs |
 | Both bias and ReLU in the GEMM epilogue | 0 | 0 |
 
+<!-- widget:step-fusion-traffic -->
+
 Now the GEMM itself: it reads at least $x$ and $w$ and writes one output, 96 MiB in total, about 50 µs at 2 TB/s; its work is $2MNK\approx1.37\times10^{11}$ FLOP, about 275 µs at a **teaching compute rate of 500 TFLOP/s**. At this shape the GEMM is compute-bound; the eager elementwise part costs about 24% of the GEMM time, and one fusion brings that to about 12%. 2 TB/s and 500 TFLOP/s are round numbers for hand calculation, not the spec of any card; real numbers depend on the SKU, the precision and the efficiency actually achieved, see [NVIDIA GPU generations](nvidia-generations.en.md) and the roofline discussion in [Performance](performance.en.md#roofline).
 
 **Change one condition:** reduce $M$ from 4096 to 8, as in decoding with only 8 tokens at a time. An intermediate shrinks to 64 KiB, and the eager elementwise part totals 256 KiB, about 0.13 µs at 2 TB/s. The GEMM still has to read all of $w$ (32 MiB, about 17 µs) while its arithmetic takes only about 0.5 µs, so it is now bound by reading weights. Assume each operator costs 5 µs of CPU time to prepare and submit (**a teaching assumption**; the real value varies with the CPU, PyTorch version and operator, and must be measured with a profiler). The two elementwise operators then spend 10 µs of CPU time to submit 0.13 µs of GPU work. Stack enough layers and the GPU waits for the CPU. Here fusion mainly saves submissions, not bytes; CUDA Graphs go further and turn a whole sequence of submissions into one.

@@ -281,3 +281,50 @@ test('lambda return: 0.8, 1.72, 1.044, 0.695; lambda 0 gives 0.45, lambda 1 give
   assert.equal(Number(end.R[0].toFixed(3)), -0.225);
   assert.equal(end.R[1], -1);
 });
+
+test('good dies: 640 / 143 / 64 sites, about 579 / 96 / 29 good, 657 / 151 / 71 whole squares, 48 pairs vs 29', () => {
+  const frames = F.goodDies(0.1), end = last(frames);
+  assert.deepEqual(end.sizes.map(z => z.sites), [640, 143, 64]);
+  assert.deepEqual(end.sizes.map(z => Number(z.Y.toFixed(3))), [0.905, 0.67, 0.449]);
+  assert.deepEqual(end.sizes.map(z => z.good), [579, 96, 29]);
+  assert.deepEqual(end.sizes.map(z => z.whole.length), [657, 151, 71]);
+  assert.equal(frames[0].count, 71);
+  assert.equal(frames[3].drop, 20);
+  assert.deepEqual([end.pairs, end.mono], [48, 29]);
+  assert.deepEqual(end.compare.map(c => [c.d0, c.pairs, c.mono]), [[0.05, 58, 43], [0.1, 48, 29], [0.2, 32, 13]]);
+  assert.deepEqual([last(F.goodDies(0.05)).pairs, last(F.goodDies(0.2)).mono], [58, 13]);
+});
+
+test('fusion traffic: 128 / 64 / 64 / 0 MiB, 67 µs = 24% of a 275 µs GEMM; at M = 8, 15 µs of CPU becomes 5', () => {
+  const frames = F.fusionTraffic();
+  assert.deepEqual(frames.slice(0, 4).map(f => f.variant.mib), [128, 64, 64, 0]);
+  assert.equal(Math.round(frames[0].gemm), 275);
+  assert.deepEqual([Math.round(frames[0].variant.time), Math.round(frames[0].variant.share * 100)], [67, 24]);
+  assert.deepEqual([Math.round(frames[1].variant.time), Math.round(frames[1].variant.share * 100)], [34, 12]);
+  assert.equal(Math.round(frames[4].gemmSmall), 17);
+  assert.equal(frames[4].elementwise.toFixed(2), '0.13');
+  const end = last(frames);
+  assert.deepEqual([frames[4].line.cpuTotal, end.line.cpuTotal], [15, 5]);
+  assert.equal(end.line.gpuEnd, frames[4].line.gpuEnd);
+});
+
+test('decode floor: 20.9 ms twice on H100, 31.1 vs 34.3, 29.2, 8.8, 3.2–3.6, 39.1 and 256 ms', () => {
+  const frames = F.decodeFloor(), by = last(frames).by, ms = id => by[id].ms.map(x => Number(x.toFixed(1)));
+  assert.deepEqual([by['h100-bf16'].n, by['h100-fp8'].n, by.v100.n, by.a100.n, by.h200.n], [2, 1, 5, 2, 1]);
+  assert.deepEqual([ms('h100-bf16'), ms('h100-fp8')], [[20.9], [20.9]]);
+  assert.deepEqual([ms('v100'), ms('a100'), ms('h200'), ms('b200'), ms('b300')], [[31.1], [34.3], [29.2], [8.8], [8.8]]);
+  assert.deepEqual(ms('rubin'), [3.6, 3.2]);
+  assert.deepEqual([ms('rtx'), Math.round(by.spark.ms[0])], [[39.1], 256]);
+  assert.equal(last(frames).shown.length, 10);
+});
+
+test('gang scheduling: 8, then 4 with 16 held, then 16 and 24 working; rings cross the network 2 and 3 times', () => {
+  const frames = F.gangScheduling(), end = last(frames);
+  assert.deepEqual(frames.slice(1, 5).map(f => [f.working, f.held]), [[8, 8], [4, 16], [16, 0], [24, 0]]);
+  assert.deepEqual(frames[1].free, {A: 4, B: 4, C: 0});
+  assert.deepEqual(frames[1].queued.map(q => q.name), ['T16 Pod 1', 'T8']);
+  assert.deepEqual(frames[3].queued.map(q => q.name), ['T16']);
+  assert.deepEqual(frames[4].queued.map(q => q.name), ['T8']);
+  assert.deepEqual(end.rings.map(r => r.cross), [2, 3]);
+  assert.deepEqual(end.all.map(s => s.working), [8, 16, 24]);
+});

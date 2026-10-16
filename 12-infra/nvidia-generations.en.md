@@ -145,6 +145,8 @@ $P=70\times10^9$ is the parameter count, $b$ the bytes per parameter, $M$ the me
 | RTX PRO 6000 Workstation Edition | 96 GB · 1.792 TB/s | 2 cards · 39.1 ms | 1 card · 39.1 ms |
 | DGX Spark (GB10) | 128 GB unified memory · 0.273 TB/s | Does not fit | 1 unit · 256 ms |
 
+<!-- widget:step-decode-floor -->
+
 The last two rows come from the [RTX PRO 6000](https://www.nvidia.com/en-us/products/workstations/professional-desktop-gpus/rtx-pro-6000/) and [DGX Spark](https://www.nvidia.com/en-us/products/workstations/dgx-spark/) product pages. Reading row by row:
 
 - **On H100, FP8 on one card has the same floor as BF16 on two**, 20.9 ms each: halving the bytes is like doubling the bandwidth, and it uses one card fewer.
