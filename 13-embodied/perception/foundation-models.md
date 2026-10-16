@@ -65,6 +65,8 @@ $f$ 是以像素计的焦距（这里 $f_x=f_y=f$），$(c_x,c_y)$ 是主点。�
 
 更常见的是仿射不变输出，尺度 $s$ 和偏移 $t$ 都不知道：$d=s\hat d+t$。[Marigold](https://arxiv.org/abs/2312.02145) 和第一版 [MoGe](https://arxiv.org/abs/2410.19115) 就是仿射不变的。设模型输出 $\hat d=(0,1,4)$。只知道前车 8 m，方程 $8=s+t$ 有无数组解：$(s,t)=(4,4)$ 给出 $(4,8,20)$，$(2,6)$ 给出 $(6,8,14)$，两组都和这一个观测吻合。再知道路面 4 m，才解出 $t=4$、$s=4$，楼房是 20 m。**仿射输出要两个已知距离。** [Depth Anything 3 的 README](https://github.com/ByteDance-Seed/Depth-Anything-3) 指出 Depth Anything 2 是 disparity（逆深度）输出：这时 $s$、$t$ 作用在 $1/d$ 上，未知数还是两个，但不能按深度直接线性换算。
 
+<!-- widget:step-depth-scale -->
+
 已知距离从哪里来：
 
 - 稀疏激光雷达：[Depth Anything V2 的 README](https://github.com/DepthAnything/Depth-Anything-V2)（2024-12-22 一条）提到 Prompt Depth Anything 用低分辨率激光雷达去“提示”模型，得到米制深度。

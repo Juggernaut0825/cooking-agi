@@ -72,6 +72,8 @@ The mean of the 10 values is 0.358 (0.359 with the 101-point version). P3 is a h
 | Keep P2 but lower its score to 0.30 | AP50 is also 0.917 | An FP ranked below every TP costs no AP | High AP means few false positives in deployment (deployment fixes one score threshold, and precision at that point is what counts) |
 | Change P3 to (21, 0, 31, 10), IoU 0.818 | AP50 unchanged; mean AP rises from 0.358 to 0.489 | AP@[.5:.95] measures localisation | Two models with the same AP50 localise equally well |
 
+<!-- widget:step-coco-ap -->
+
 ## Duplicate boxes: NMS or one-to-one matching
 
 Classic detectors produce several boxes for one object. Non-maximum suppression (NMS) post-processes the output: sort by score, keep the top box, delete other boxes whose IoU with it exceeds a threshold (say 0.5), and repeat. P1 and P2 have IoU 0.681, so P2 is deleted and AP50 rises from 0.756 to 0.917.

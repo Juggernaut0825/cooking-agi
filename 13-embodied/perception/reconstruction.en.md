@@ -84,6 +84,8 @@ Blend them front to back, one at a time:
 
 The four weights add up to 0.985, which is $1-0.015$; the remaining 1.5% goes to the background (black here). The final colour, (0.635, 0.335, 0.285), is reddish.
 
+<!-- widget:step-alpha-blend -->
+
 Three more things to notice:
 
 - **Order matters.** If the sort goes wrong and Gaussians 1 and 4 swap, the farthest, white Gaussian is blended first and the order becomes white, green, blue, red; the weights become 0.9, 0.04, 0.03 and 0.015, and the colour is (0.915, 0.94, 0.93), almost pure white: the far object shows through in front. The leftover transmittance is still 0.015, because $\prod(1-\alpha_j)$ does not depend on order; the colour does. 3DGS sorts once per tile, not per pixel, and §6 of the paper acknowledges that blending is then approximate, with the error becoming negligible as Gaussians shrink to pixel size; the "popping" mentioned in its limitations section comes partly from Gaussians suddenly swapping their front-to-back order.
