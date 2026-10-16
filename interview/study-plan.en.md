@@ -49,29 +49,14 @@ Units 1–3 help if ML is new to you. Algorithms can run alongside them; you don
 
 ## Then choose the branch you need {#roles}
 
-### MLE / Research Engineer
+What to practice first and what to take further in each direction is in the table of the [role-based guide](ai-roles-prep.en.md#routes). Below is one next exercise for each direction:
 
-Choose one [ML implementation exercise](../learn/ml-exercises/README.en.md), such as stable softmax or attention. Start with small inputs, then check outputs, gradients, and edge cases. Follow it with a training or evaluation problem relevant to the role; you don't need to read every model family.
+- <span id="mle-research-engineer"></span>**MLE / Research Engineer:** choose one [ML implementation exercise](../learn/ml-exercises/README.en.md), such as stable softmax or attention; start with small inputs, then check outputs, gradients, and edge cases. For LLM work, continue with [post-training practice](../practice/post-training/README.en.md); for recommendation and retrieval, try the [recommender walkthroughs](../practice/recommender-systems/README.en.md).
+- <span id="inference-ml-systems"></span>**Inference / ML Systems:** follow [one inference request](../06-systems/inference-frameworks.en.md) through each module's inputs and outputs, then pick a constraint: limited memory, long queues, or long requests delaying short ones. Write down two options, what each changes, and what you would need to measure. In the [system-design exercises](../learn/system-design/README.en.md), define the workload and latency target before picking components.
+- <span id="general-coding-swe"></span>**General Coding / SWE:** build your plan around [Python and algorithm patterns](leetcode.en.md) and [reading code](code-comprehension.en.md); practice one method, then change a condition and check whether it still applies. This site is organized around ML and AI systems, not every kind of SWE role; use the job description and interview guidance to decide which language, backend, or systems topics to add.
+- <span id="research-scientist"></span>**Research Scientist:** choose a paper you worked on or read carefully. Explain its question, controls, and limits, then propose an experiment that distinguishes two possible explanations. [Evaluation foundations](../07-evaluation/README.en.md) can help you check whether a metric improvement supports your interpretation. Practice the relevant implementation too; this route does not replace expertise in your research field.
 
-For LLM work, continue with [post-training practice](../practice/post-training/README.en.md). For recommendation and retrieval, try the [recommender walkthroughs](../practice/recommender-systems/README.en.md). Different directions deserve different preparation.
-
-### Inference / ML Systems
-
-Follow [one inference request](../06-systems/inference-frameworks.en.md) through each module's inputs and outputs. Pick a constraint: limited memory, long queues, or long requests delaying short ones. Write down two options, what each changes, and what you would need to measure.
-
-In the [system-design exercises](../learn/system-design/README.en.md), define the workload and latency target before picking components. Keep time for algorithms and code reading too; architecture diagrams are only part of preparation.
-
-### General Coding / SWE
-
-Build your plan around [Python and algorithm patterns](leetcode.en.md) and [reading code](code-comprehension.en.md). Practice one method, then change a condition and check whether it still applies. ML is not a prerequisite for general SWE preparation.
-
-This site is organized around ML and AI systems, not every kind of SWE role. Use the job description and interview guidance to decide which language, backend, or systems topics to add.
-
-### Research Scientist
-
-Choose a paper you worked on or read carefully. Explain its question, controls, and limits, then propose an experiment that distinguishes two possible explanations. [Evaluation foundations](../07-evaluation/README.en.md) can help you check whether a metric improvement supports your interpretation.
-
-Practice the relevant implementation too, rather than separating research discussion from engineering entirely. This route doesn't replace expertise in your particular research field.
+Whatever the direction, keep time for algorithms and code reading; architecture diagrams are only part of preparation.
 
 ## Pick a set of exercises by topic {#routes}
 
@@ -113,7 +98,7 @@ Four topics, two sets each, three exercises per set. “Start” suits a topic t
 | Distinguish reference and old policy | [Q-learning, PPO, and DPO: what is each learning?](../05-post-training/deep-rl/methods-map.en.md) | Explain each role, when it updates, and how confusing them changes the objective. | 35 min |
 | Choose a training setup | [Choosing a training stack: DDP, FSDP2, and the surrounding tools](../06-systems/training-frameworks.en.md) | Given a memory budget and GPU count, compare DDP and FSDP and list correctness checks. | 40 min |
 
-### Inference & ML systems
+### Inference & ML systems {#inference-ml-systems_1}
 
 **Start · Follow a generation request**: You can call a model API and want to understand the service behind it.
 
