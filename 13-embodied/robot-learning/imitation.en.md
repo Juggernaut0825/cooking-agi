@@ -72,6 +72,8 @@ First formula: the target velocity is $u=a-\epsilon$; substituting $\epsilon=(x-
 
 Two conclusions. First, with too few steps a generative action head falls back to the average, and noise close to the boundary between the two modes needs more steps to separate. Second, the noise decides the side: trajectories of a 1-D ODE cannot cross, so noise below 0 ends at $-1$ and noise above 0 at $+1$. π0 integrates 10 steps at inference (step size 0.1, [paper §IV](https://arxiv.org/abs/2410.24164v1)). This example uses the ideal field; a learned field adds its own errors, and one-step generation needs dedicated training methods that this note does not cover.
 
+<!-- widget:step-flow-euler-steps -->
+
 Diffusion-type models are not the only heads that can represent "several answers are correct":
 
 | Action head | Can it represent several modes? | Cost |

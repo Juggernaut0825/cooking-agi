@@ -1333,6 +1333,199 @@
     ]);
   };
 
+  /* 13-embodied/driving/bev-occupancy §2: one pixel whose ray is y = 0.25 d, depths 4, 8, 12, 16 m,
+     α = (0.1, 0.6, 0.2, 0.1), c = (2, 1), 8 m BEV cells (teaching values; LSS itself uses 0.5 m). */
+  F.liftSplat = function (alpha = [0.1, 0.6, 0.2, 0.1], c = [2, 1]) {
+    const depths = [4, 8, 12, 16], slope = 0.25, size = 8;
+    const points = depths.map(d => [d, slope * d]);
+    const lifted = alpha.map(a => c.map(x => a * x));
+    const cellOf = d => Math.floor(d / size);
+    const cells = [0, 1, 2].map(i => {
+      const members = depths.map((_, k) => k).filter(k => cellOf(depths[k]) === i);
+      return {from: i * size, to: (i + 1) * size, members, share: members.reduce((sum, k) => sum + alpha[k], 0),
+        sum: c.map((_, ch) => members.reduce((sum, k) => sum + lifted[k][ch], 0))};
+    });
+    const total = c.map((_, ch) => cells.reduce((sum, cell) => sum + cell.sum[ch], 0));
+    const peak = depths[alpha.indexOf(Math.max(...alpha))];
+    const most = cells.reduce((b, cell, i) => (cell.share > cells[b].share ? i : b), 0);
+    const ratios = points.map(([x, y]) => y / x);
+    const pair = v => `(${v.map(x => x.toFixed(1)).join(', ')})`, pct = x => Math.round(x * 100) + '%';
+    const cellName = i => `[${cells[i].from}, ${cells[i].to})`;
+    const text = {alpha: `(${alpha.join(', ')})`, c: `(${c.join(', ')})`, lifted: lifted.map(pair), sums: cells.map(cell => pair(cell.sum)),
+      shares: cells.map(cell => pct(cell.share)), total: pair(total), points: points.map(([x, y]) => `(${x}, ${y})`)};
+    const base = {depths, points, alpha, c, lifted, cells, total, ratios, peak, most, text};
+    const peakCell = cellOf(peak), wrong = 16, wrongCell = cellOf(wrong);
+    return frames([
+      {...base, stage: 0, zh: `教学设定：相机在原点，朝前（x 轴）。一个像素的射线是 y = 0.25 d，取 4 个深度 ${depths.join('、')} m，俯视坐标是 ${text.points.join('、')}。`,
+        en: `Teaching setup: the camera sits at the origin and faces forward (the x axis). One pixel's ray is y = 0.25 d; take 4 depths, ${depths.slice(0, 3).join(', ')} and ${depths[3]} m, which sit at ${text.points.slice(0, 3).join(', ')} and ${text.points[3]} seen from above.`},
+      {...base, stage: 1, zh: `网络给这个像素一个深度分布 α = ${text.alpha}，四个数加起来是 1。最可能的深度是 ${peak} m。`,
+        en: `The network gives this pixel a depth distribution α = ${text.alpha}, which sums to 1. The most likely depth is ${peak} m.`},
+      {...base, stage: 2, zh: `Lift：每个深度点拿到 c_d = α_d · c，c = ${text.c}。四个点分别是 ${text.lifted.join('、')}。`,
+        en: `Lift: each depth point gets c_d = α_d · c with c = ${text.c}. The four points carry ${text.lifted.slice(0, 3).join(', ')} and ${text.lifted[3]}.`},
+      {...base, stage: 3, zh: `Splat：落进同一格的点直接相加。${cells.map((_, i) => `${cellName(i)} 得 ${text.sums[i]}`).join('，')}；三格合计 ${text.total} = c，特征总量不变。`,
+        en: `Splat: points in the same cell are simply added. ${cells.map((_, i) => `${cellName(i)} gets ${text.sums[i]}`).join(', ')}; together ${text.total} = c, so the total is unchanged.`},
+      {...base, stage: 4, truth: peak, right: peakCell, zh: `如果车真在 ${peak} m，它的特征有 ${text.shares[peakCell]} 落进对的格子 ${cellName(peakCell)}，${text.shares[peakCell - 1]} 落在更近的格子，${text.shares[peakCell + 1]} 落在更远的格子：这就是相机 BEV 沿视线方向的拖尾。`,
+        en: `If the car really is at ${peak} m, ${text.shares[peakCell]} of its feature lands in the right cell ${cellName(peakCell)}, ${text.shares[peakCell - 1]} in a nearer cell and ${text.shares[peakCell + 1]} in a farther one: this is the smear along the line of sight in camera BEV.`},
+      {...base, stage: 5, truth: wrong, right: wrongCell, zh: `放错：车其实在 ${wrong} m，α 不变。对的格子 ${cellName(wrongCell)} 只拿到 ${text.shares[wrongCell]}，${text.shares[most]} 落在 ${cellName(most)}。俯视图里这辆车看起来近了大约 ${wrong - peak} m。`,
+        en: `Misplaced: the car is really at ${wrong} m, but α is unchanged. The right cell ${cellName(wrongCell)} gets only ${text.shares[wrongCell]}, and ${text.shares[most]} lands in ${cellName(most)}. From above, the car appears about ${wrong - peak} m too close.`},
+      {...base, stage: 6, done: true, zh: `反过来从格子取（下文的 BEV query）：中心在 ${text.points.join('、')} 的格子都满足 y / x = ${ratios[0]}，投到同一个像素。只照搬这个像素的特征，4 个格子会一模一样：歧义换了地方，没有消失。`,
+        en: `Pull from the cells instead (the BEV query, below): cells centred at ${text.points.slice(0, 3).join(', ')} and ${text.points[3]} all have y / x = ${ratios[0]} and project to the same pixel. Copying that pixel's feature would make all 4 identical: the ambiguity has moved, not gone away.`}
+    ]);
+  };
+
+  /* 13-embodied/driving/prediction-planning §5: ego 12 m/s; lead car 30 m ahead at 8 m/s; left-lane car 16 m behind
+     at 13 m/s; curb on the right; 4 s horizon. Cost terms and weights are the note's teaching values. */
+  F.trajectoryCost = function () {
+    const T = 4, ego = 12, lead = {gap: 30, v: 8}, rear = {gap: 16, v: 13};
+    const times = Array.from({length: 41}, (_, i) => i / 10);
+    const minGap = gap => Math.min(...times.map(gap));
+    const slow = (ego - lead.v) / T;   // even deceleration to the lead car's speed
+    const raw = [
+      {name: 'A', dist: ego * T, accel: 0, gap: minGap(t => lead.gap + lead.v * t - ego * t)},
+      {name: 'B', dist: ego * T - slow * T * T / 2, accel: slow, gap: minGap(t => lead.gap + lead.v * t - (ego * t - slow * t * t / 2))},
+      {name: 'C', dist: ego * T, accel: 1.5, gap: minGap(t => rear.gap - (rear.v - ego) * t)},
+      {name: 'D', rejected: true}];
+    const cands = raw.map(c => (c.rejected ? c : {...c, cost: [(ego * T - c.dist) / 4, Math.abs(c.accel), Math.max(0, 20 - c.gap) / 3]}));
+    const live = cands.filter(c => !c.rejected);
+    const J = w => live.map(c => c.cost.reduce((sum, x, i) => sum + w[i] * x, 0));
+    const pick = w => { const js = J(w); return live[js.indexOf(Math.min(...js))].name; };
+    const [A, B, C] = live;
+    const tie = (B.cost[0] + B.cost[1] - A.cost[0] - A.cost[1]) / (A.cost[2] - B.cost[2]);
+    const dominated = C.cost.every((x, i) => x >= A.cost[i]);
+    const num = x => String(Math.round(x * 100) / 100);
+    const triple = c => `(${c.cost.map(num).join(', ')})`;
+    const base = {cands, tie, dominated, T, ego, lead, rear, num};
+    const weighed = (stage, w) => ({...base, stage, w, J: J(w), pick: pick(w)});
+    const w1 = [1, 1, 1], w2 = [1, 1, 2], j1 = J(w1).map(num), j2 = J(w2).map(num);
+    return frames([
+      {...base, stage: 0, zh: `教学设定：自车 ${ego} m/s；本车道前车在 ${lead.gap} m 外，${lead.v} m/s；左车道后车在 ${rear.gap} m 后，${rear.v} m/s；右边是路缘。规划看 ${T} s。`,
+        en: `Teaching setup: ego at ${ego} m/s; the lead car is ${lead.gap} m ahead in this lane at ${lead.v} m/s; a left-lane car is ${rear.gap} m behind at ${rear.v} m/s; the curb is on the right. The horizon is ${T} s.`},
+      {...base, stage: 1, zh: '四条候选：A 保持车道和 12 m/s，B 车道内减速到 8 m/s，C 向左变道，D 向右变道。D 驶出可行驶区域，直接淘汰，不是扣分。',
+        en: 'Four candidates: A keeps the lane at 12 m/s, B slows to 8 m/s in the lane, C changes left, D changes right. D leaves the drivable area, so it is removed outright, not penalised.'},
+      {...base, stage: 2, zh: `${T} s 内的最小车距：A 每秒追近前车 ${ego - lead.v} m，${lead.gap} − ${ego - lead.v} × ${T} = ${num(A.gap)} m；B 的车距 30 − 4t + 0.5t² 在 t = ${T} 时最小，${num(B.gap)} m；C 的后车每秒追近 ${rear.v - ego} m，${rear.gap} − ${(rear.v - ego) * T} = ${num(C.gap)} m。`,
+        en: `Minimum gaps within ${T} s: A closes on the lead car at ${ego - lead.v} m/s, ${lead.gap} − ${ego - lead.v} × ${T} = ${num(A.gap)} m; B's gap 30 − 4t + 0.5t² is smallest at t = ${T}, ${num(B.gap)} m; C's follower closes at ${rear.v - ego} m/s, ${rear.gap} − ${(rear.v - ego) * T} = ${num(C.gap)} m.`},
+      {...base, stage: 3, zh: `三项代价 (c_p, c_c, c_s)：进度 (48 − 行驶距离)/4，舒适取最大加速度，安全 max(0, 20 − 最小车距)/3。A ${triple(A)}，B ${triple(B)}，C ${triple(C)}。`,
+        en: `Three costs (c_p, c_c, c_s): progress (48 − distance)/4, comfort the peak acceleration, safety max(0, 20 − minimum gap)/3. A ${triple(A)}, B ${triple(B)}, C ${triple(C)}.`},
+      {...weighed(4, w1), zh: `权重 (1, 1, 1)：J_A = ${j1[0]}，J_B = ${j1[1]}，J_C = ${j1[2]}，选 ${pick(w1)}。`,
+        en: `Weights (1, 1, 1): J_A = ${j1[0]}, J_B = ${j1[1]}, J_C = ${j1[2]}; ${pick(w1)} is chosen.`},
+      {...weighed(5, w2), zh: `安全权重加倍 (1, 1, 2)：J_A = ${j2[0]}，J_B = ${j2[1]}，J_C = ${j2[2]}，改选 ${pick(w2)}。`,
+        en: `Double the safety weight, (1, 1, 2): J_A = ${j2[0]}, J_B = ${j2[1]}, J_C = ${j2[2]}; now ${pick(w2)} is chosen.`},
+      {...base, stage: 6, done: true, below: pick([1, 1, tie - 0.5]), above: pick([1, 1, tie + 0.5]),
+        zh: `让 w_s 从 0 变到 3（w_p = w_c = 1）：A 和 B 在 w_s = ${num(tie)} 处打平，之前选 A，之后选 B。C 进度和 A 一样、舒适和安全都更差，被 A 支配，怎么调权重都选不到它。`,
+        en: `Sweep w_s from 0 to 3 with w_p = w_c = 1: A and B tie at w_s = ${num(tie)}, with A chosen below and B above. C matches A on progress and is worse on comfort and safety, so A dominates it and no weights pick it.`}
+    ]);
+  };
+
+  /* 13-embodied/driving/end-to-end §4: lane 3.5 m, car 1.8 m, v = 10 m/s, bias ε = 0.02 rad, B's gain g = 0.1 rad/m;
+     closed loop executes 0.5 s of each plan and replans. */
+  F.openClosedLoop = function (eps = 0.02, g = 0.1, v = 10, dt = 0.5, steps = 6) {
+    const lane = 3.5, car = 1.8, wheels = (lane - car) / 2, edge = lane / 2;
+    const openL2 = [1, 2, 3].map(time => v * time * eps);
+    const A = [{t: 0, y: 0, heading: 0}], B = [{t: 0, y: 0, heading: 0}];
+    for (let k = 1; k <= steps; k++) {
+      const a = A[k - 1], b = B[k - 1];
+      const ha = a.heading + eps, hb = eps - g * b.y;
+      A.push({t: k * dt, heading: ha, y: a.y + v * dt * ha});
+      B.push({t: k * dt, heading: hb, y: b.y + v * dt * hb});
+    }
+    const touch = A.findIndex(p => p.y > wheels), limit = eps / g;
+    const fa = y => y.toFixed(1), fb = y => y.toFixed(3), l2 = openL2.map(x => x.toFixed(1)).join(' / ');
+    const base = {A, B, wheels, edge, openL2, l2, touch, limit, eps, g, v, dt, fa, fb};
+    const list = [{...base, k: 0, stage: 0,
+      zh: `教学设定：车道 ${lane} m，车宽 ${car} m，车身中心偏 ${wheels.toFixed(2)} m 车轮压线。开环每帧都把车放回日志状态 y = 0，两个策略给出同一条计划 0.2t：1 / 2 / 3 s 的 L2 都是 ${l2} m。`,
+      en: `Teaching setup: a ${lane} m lane and a ${car} m car, so the wheels touch the line when the centre is ${wheels.toFixed(2)} m off. Open loop puts the car back on the logged state y = 0 every frame, and both policies give the same plan 0.2t: L2 of ${l2} m at 1 / 2 / 3 s.`}];
+    for (let k = 1; k <= steps; k++) {
+      const a = A[k], b = B[k], when = a.t.toFixed(1);
+      let zh, en;
+      if (k === 1) {
+        zh = `闭环：执行计划的前 ${dt} s，再从车实际到达的位置重新规划。t = ${when} s，A 和 B 都偏到 ${fa(a.y)} m。开环那边又放回日志，误差从零重来。`;
+        en = `Closed loop: execute the first ${dt} s of each plan, then replan from where the car actually is. At t = ${when} s both A and B are ${fa(a.y)} m off. On the open-loop side the car goes back to the log and the error starts from zero.`;
+      } else if (k === 2) {
+        zh = `t = ${when} s：A 在当前航向上再多偏 ${eps}，航向 ${a.heading.toFixed(2)}，偏移 ${fa(a.y)} m；B 看车道线往回拉，航向 ${eps} − ${g} × ${fa(B[1].y)} = ${b.heading.toFixed(2)}，偏移 ${fb(b.y)} m。`;
+        en = `t = ${when} s: A adds another ${eps} to its current heading, ${a.heading.toFixed(2)}, and is ${fa(a.y)} m off; B pulls back toward the centre, heading ${eps} − ${g} × ${fa(B[1].y)} = ${b.heading.toFixed(2)}, and is ${fb(b.y)} m off.`;
+      } else if (k === touch) {
+        zh = `t = ${when} s：A 偏移 ${fa(a.y)} m，已过 ${wheels.toFixed(2)} m，车轮在 ${A[k - 1].t.toFixed(1)} s 到 ${when} s 之间压线。B 偏移 ${fb(b.y)} m。`;
+        en = `t = ${when} s: A is ${fa(a.y)} m off, past ${wheels.toFixed(2)} m, so its wheels touched the line between ${A[k - 1].t.toFixed(1)} s and ${when} s. B is ${fb(b.y)} m off.`;
+      } else if (k === steps) {
+        zh = `t = ${when} s：A 偏移 ${fa(a.y)} m，车身中心越过 ${edge} m，进了邻车道；B 偏移 ${fb(b.y)} m，趋向 ε/g = ${limit.toFixed(1)} m。`;
+        en = `t = ${when} s: A is ${fa(a.y)} m off, its centre past ${edge} m and in the next lane; B is ${fb(b.y)} m off, heading for ε/g = ${limit.toFixed(1)} m.`;
+      } else {
+        zh = `t = ${when} s：A 航向 ${a.heading.toFixed(2)}，偏移 ${fa(a.y)} m，还在越偏越快；B 每步 y = 0.5 y + 0.1，偏移 ${fb(b.y)} m。`;
+        en = `t = ${when} s: A's heading is ${a.heading.toFixed(2)} and it is ${fa(a.y)} m off, drifting ever faster; B follows y = 0.5 y + 0.1 each step and is ${fb(b.y)} m off.`;
+      }
+      list.push({...base, k, stage: k, zh, en});
+    }
+    list.push({...base, k: steps, stage: steps + 1, done: true,
+      zh: `开环 L2 两者都是 ${l2} m，分不出来；闭环 ${A[steps].t} s 后 A 偏 ${fa(A[steps].y)} m，B 偏 ${fb(B[steps].y)} m。日志里没有 y ≠ 0 的状态，开环从没问过“偏了以后怎么办”。`,
+      en: `Open-loop L2 is ${l2} m for both, so open loop cannot tell them apart; after ${A[steps].t} s of closed loop A is ${fa(A[steps].y)} m off and B ${fb(B[steps].y)} m. The log has no state with y ≠ 0, so open loop never asks what to do after drifting.`});
+    return frames(list);
+  };
+
+  /* 13-embodied/robot-learning/imitation §3: actions a = ±1 (round the cup on the left or right), the ideal
+     velocity v*(x, t) = (tanh(xt/(1−t)²) − x)/(1 − t), n Euler steps of size 1/n from noise ε. */
+  F.flowEulerSteps = function () {
+    const velocity = (x, t) => (Math.tanh(x * t / (1 - t) ** 2) - x) / (1 - t);
+    const euler = (eps, n) => {
+      const xs = [eps];
+      for (let k = 0; k < n; k++) xs.push(xs[k] + velocity(xs[k], k / n) / n);
+      return {eps, n, xs, end: xs[n]};
+    };
+    const runs = {};
+    [0.5, 0.02, -0.5].forEach(eps => [1, 2, 5, 10].forEach(n => { runs[`${eps}/${n}`] = euler(eps, n); }));
+    const minus = x => (x < 0 ? '−' : '') + Math.abs(x);
+    const end = x => (Math.abs(x) < 1e-9 ? '0' : (x < 0 ? '−' : '') + Math.abs(x).toFixed(2));
+    const p2 = xs => xs.map(x => x.toFixed(2)), p3 = xs => xs.map(x => x.toFixed(3));
+    const table = [1, 2, 5, 10].map(n => ({n, a: end(runs[`0.5/${n}`].end), b: end(runs[`0.02/${n}`].end)}));
+    const base = {runs, table, velocity, end, minus};
+    const ten = runs['0.5/10'].xs, two = runs['0.5/2'].xs, five = runs['0.02/5'].xs;
+    return frames([
+      {...base, stage: 0, eps: 0.5, show: [], rows: 0, zh: '教学设定：动作 a = +1 从左绕、−1 从右绕，杯子正对 0。不训练网络，直接用理想速度场 v*（淡色箭头）。噪声 ε = 0.5 从 t = 0 出发，t = 1 时应到 +1 或 −1。',
+        en: 'Teaching setup: action a = +1 goes round the cup on the left, −1 on the right, and the cup is at 0. No network is trained; we use the ideal velocity field v* (faint arrows). Noise ε = 0.5 starts at t = 0 and should reach +1 or −1 by t = 1.'},
+      {...base, stage: 1, eps: 0.5, n: 1, show: ['0.5/1'], rows: 1, zh: `1 步（n = 1）：t = 0 时 tanh 0 = 0，速度是 −0.5，一步走完落在 x₁ = ${end(runs['0.5/1'].end)}，正撞杯子。和 MSE 回归一样，退回了均值。`,
+        en: `1 step (n = 1): at t = 0, tanh 0 = 0 and the velocity is −0.5, so one full step lands at x₁ = ${end(runs['0.5/1'].end)}, straight into the cup. Like MSE regression, it falls back to the mean.`},
+      {...base, stage: 2, eps: 0.5, n: 2, show: ['0.5/1', '0.5/2'], rows: 2, zh: `2 步：先到 0.5 − 0.5 × 0.5 = ${two[1]}（t = 0.5），最后一步落在 tanh(0.5) ≈ ${two[2].toFixed(2)}，停在半路。`,
+        en: `2 steps: first to 0.5 − 0.5 × 0.5 = ${two[1]} at t = 0.5, then the last step lands on tanh(0.5) ≈ ${two[2].toFixed(2)}, halfway.`},
+      {...base, stage: 3, eps: 0.5, n: 10, show: ['0.5/1', '0.5/2', '0.5/10'], rows: 3, zh: `10 步：前四步先往中间靠（${p2(ten.slice(1, 5)).join('、')}），过了一半才分开（${p2(ten.slice(5, 9)).join('、')}），第 9 步到 ${ten[9].toFixed(2)}，最后落在 tanh(${ten[9].toFixed(2)} × 90) ≈ ${ten[10].toFixed(2)}。`,
+        en: `10 steps: the first four move toward the middle (${p2(ten.slice(1, 5)).join(', ')}) and only separate past halfway (${p2(ten.slice(5, 9)).join(', ')}); step 9 reaches ${ten[9].toFixed(2)} and the last lands on tanh(${ten[9].toFixed(2)} × 90) ≈ ${ten[10].toFixed(2)}.`},
+      {...base, stage: 4, eps: 0.02, n: 10, show: ['0.02/2', '0.02/5', '0.02/10'], rows: 4, zh: `噪声靠近分界，ε = 0.02：2 步停在 ${end(runs['0.02/2'].end)}；5 步经过 ${p3(five.slice(1, 5)).join('、')}，最后到 ${end(five[5])}；10 步才到 ${end(runs['0.02/10'].end)}。`,
+        en: `Noise near the boundary, ε = 0.02: 2 steps stop at ${end(runs['0.02/2'].end)}; 5 steps pass ${p3(five.slice(1, 5)).join(', ')} and end at ${end(five[5])}; only 10 steps reach ${end(runs['0.02/10'].end)}.`},
+      {...base, stage: 5, eps: -0.5, n: 10, show: ['0.5/10', '-0.5/10'], rows: 4, zh: `对称的起点 ε = −0.5，10 步落在 ${end(runs['-0.5/10'].end)}。一维 ODE 的轨迹不会交叉：噪声大于 0 的走到 +1，小于 0 的走到 −1。`,
+        en: `The mirror start ε = −0.5 ends at ${end(runs['-0.5/10'].end)} after 10 steps. Trajectories of a 1-D ODE never cross: noise above 0 goes to +1, noise below 0 to −1.`},
+      {...base, stage: 6, done: true, eps: 0.5, n: 10, show: ['0.5/10', '-0.5/10', '0.5/1'], rows: 5, zh: `终点汇总：从 ε = 0.5 出发，n = 1、2、5、10 依次是 ${table.map(r => r.a).join('、')}；从 ε = 0.02 出发是 ${table.map(r => r.b).join('、')}。步数太少，生成式动作头会退回平均。`,
+        en: `End points: from ε = 0.5, n = 1, 2, 5 and 10 give ${table.map(r => r.a).join(', ')}; from ε = 0.02 they give ${table.map(r => r.b).join(', ')}. With too few steps, a generative action head falls back to the average.`}
+    ]);
+  };
+
+  /* 13-embodied/robot-learning/vla §2: teaching costs T_prefix = 40 ms, 10 ms per token, 3 ms per flow step, one
+     50 × 7 chunk (1 s at 50 Hz); then π0's measurement on an RTX 4090 (v1 Appendix D, Table I). */
+  F.vlaLatency = function (prefix = 40, tok = 10, flow = 3) {
+    const steps = 50, dims = 7, hz = 50, chunk = steps / hz * 1000;
+    const lanes = [{id: 'dims', n: steps * dims, cost: tok}, {id: 'fast', n: 40, cost: tok}, {id: 'flow', n: 10, cost: flow}]
+      .map(lane => ({...lane, total: prefix + lane.n * lane.cost}));
+    const [dimsLane, fastLane, flowLane] = lanes;
+    const slower = dimsLane.total / chunk, ratios = [dimsLane.total / flowLane.total, fastLane.total / flowLane.total];
+    const single = prefix + dims * tok, singleHz = 1000 / single, share = prefix / flowLane.total;
+    const measured = {parts: [14, 32, 27], network: 13};
+    measured.total = measured.parts.reduce((a, b) => a + b, 0);
+    measured.share = (measured.parts[0] + measured.parts[1]) / measured.total;
+    const ms = x => x.toLocaleString('en-US');
+    const base = {prefix, tok, flow, chunk, lanes, slower, ratios, single, singleHz, share, measured, ms};
+    return frames([
+      {...base, stage: 0, zh: `教学数字，不是实测。三种接法都先算一次前缀：图像、指令和机器人状态过一遍 VLM，T_prefix = ${prefix} ms。`,
+        en: `Teaching numbers, not measurements. All three designs first run the prefix once: images, instruction and robot state through the VLM, T_prefix = ${prefix} ms.`},
+      {...base, stage: 1, zh: `逐维 token：${steps} 步 × ${dims} 维 = ${dimsLane.n} 个 token，每个 ${tok} ms，${prefix} + ${ms(dimsLane.n * tok)} = ${ms(dimsLane.total)} ms。一块动作只管 1 秒，生成比执行慢 ${slower.toFixed(1)} 倍。`,
+        en: `Per-dimension tokens: ${steps} steps × ${dims} dimensions = ${dimsLane.n} tokens at ${tok} ms each, ${prefix} + ${ms(dimsLane.n * tok)} = ${ms(dimsLane.total)} ms. One chunk covers only 1 second, so generation is ${slower.toFixed(1)} times slower than execution.`},
+      {...base, stage: 2, zh: `FAST：压缩后设为 ${fastLane.n} 个 token，${prefix} + ${fastLane.n * tok} = ${fastLane.total} ms。在 1 秒线以内，平均跟得上，但每块要等近半秒。`,
+        en: `FAST: assume ${fastLane.n} tokens after compression, ${prefix} + ${fastLane.n * tok} = ${fastLane.total} ms. Under the 1-second line, so it keeps up on average, but each chunk takes almost half a second.`},
+      {...base, stage: 3, zh: `flow-matching 专家：前缀的 KV 缓存起来，积分 ${flowLane.n} 步，每步 ${flow} ms，${prefix} + ${flowLane.n * flow} = ${flowLane.total} ms。前缀占了 ${prefix}/${flowLane.total} ≈ ${Math.round(share * 100)}%。`,
+        en: `Flow-matching expert: with the prefix cached, ${flowLane.n} integration steps at ${flow} ms each, ${prefix} + ${flowLane.n * flow} = ${flowLane.total} ms. The prefix is ${prefix}/${flowLane.total} ≈ ${Math.round(share * 100)}% of it.`},
+      {...base, stage: 4, zh: `逐维 token 比 flow 慢约 ${dimsLane.total}/${flowLane.total} ≈ ${Math.round(ratios[0])} 倍，FAST 慢约 ${fastLane.total}/${flowLane.total} ≈ ${Math.round(ratios[1])} 倍。逐维 token 若每次只出一步：${prefix} + ${dims} × ${tok} = ${single} ms，最多约 ${Math.floor(singleHz)} Hz。`,
+        en: `Per-dimension tokens are about ${dimsLane.total}/${flowLane.total} ≈ ${Math.round(ratios[0])} times slower than flow, FAST about ${fastLane.total}/${flowLane.total} ≈ ${Math.round(ratios[1])} times. If per-dimension tokens emit one step at a time instead: ${prefix} + ${dims} × ${tok} = ${single} ms, at most about ${Math.floor(singleHz)} Hz.`},
+      {...base, stage: 5, done: true, zh: `实测对照（π0 论文附录 D 表 I，RTX 4090、3 路相机）：图像编码 ${measured.parts[0]} ms + 前缀 ${measured.parts[1]} ms + 10 步 flow ${measured.parts[2]} ms = ${measured.total} ms，放到机外推理再加 ${measured.network} ms 网络。和教学数字的 ${flowLane.total} ms 很接近。`,
+        en: `Measured, for comparison (π0 paper, Appendix D, Table I; RTX 4090, 3 cameras): image encoders ${measured.parts[0]} ms + prefix ${measured.parts[1]} ms + 10 flow steps ${measured.parts[2]} ms = ${measured.total} ms on board, plus ${measured.network} ms of network off board. Close to the teaching ${flowLane.total} ms.`}
+    ]);
+  };
+
   if (typeof module !== 'undefined' && module.exports) module.exports = {F, frames};
   if (typeof document === 'undefined' || !scope.AlgoLab) return;
 
@@ -3129,6 +3322,390 @@
         label('lead', time.parallel, k(tokens.lead));
         frame.names.forEach(n => label(n, Math.max(...frame.parallel.filter(b => b.lane === n).map(b => b.end)), k(tokens.sub)));
       }
+    };
+  }});
+
+  FIGURES['step-lift-splat'] = name => stepper(name, F.liftSplat(), {height: 236, readouts: f => [
+    ['α', f.stage >= 1 ? f.text.alpha : '—'],
+    [t('三格合计', 'three cells together'), f.stage >= 3 && f.stage <= 5 ? `${f.text.total} = c` : '—', f.stage === 3 ? 'good' : ''],
+    [t('对的格子拿到', 'right cell gets'), f.truth ? f.text.shares[f.right] : '—', f.truth === f.peak ? 'good' : f.truth ? 'bad' : ''],
+    ['y / x', f.done ? t(`4 个格子都是 ${f.ratios[0]}`, `${f.ratios[0]} for all 4`) : '—', f.done ? 'key' : '']], setup(svg) {
+    const X = x => 40 + 15 * x, Y = y => 196 - 15 * y;
+    const base = F.liftSplat()[0];
+    V.text(svg, X(0), 58, t('俯视图：射线 y = 0.25 d，8 m 一格（LSS 论文是 0.5 m）', 'Top-down: ray y = 0.25 d, 8 m cells (LSS uses 0.5 m)'), 'algo-head');
+    const cells = base.cells.map(cell => { const r = s('rect', {x: X(cell.from), y: Y(8), width: X(cell.to) - X(cell.from), height: Y(0) - Y(8), class: 'algo-cell'}); svg.append(r); return r; });
+    [4, 8, 12, 16, 20, 24].forEach(x => V.text(svg, X(x), Y(0) + 17, x === 24 ? '24 m' : String(x), 'algo-idx', 'middle'));
+    V.text(svg, X(0), Y(0) + 17, t('相机', 'camera'), 'algo-idx', 'middle');
+    const ray = s('line', {x1: X(0), y1: Y(0), x2: X(24), y2: Y(6), class: 'algo-edge'});
+    svg.append(ray, s('path', {d: `M${X(0)} ${Y(0)} l-12 -7 v14 z`, class: 'algo-cell is-look'}));
+    const sums = base.cells.map(cell => V.text(svg, X(cell.from + 4), Y(8) + 20, '', 'algo-strong', 'middle'));
+    const shares = base.cells.map(cell => V.text(svg, X(cell.from + 4), Y(8) + 38, '', 'algo-note', 'middle'));
+    const links = base.points.map(([x, y], k) => {
+      const cell = base.cells.find(c => c.members.includes(k));
+      const l = s('line', {x1: X(x), y1: Y(y), x2: X(cell.from + 4), y2: Y(8) + 26, class: 'algo-edge algo-dash'});
+      svg.append(l);
+      return l;
+    });
+    const squares = base.points.map(([x, y]) => { const r = s('rect', {x: X(x) - 8, y: Y(y) - 8, width: 16, height: 16, rx: 2, class: 'algo-cell is-look'}); svg.append(r); return r; });
+    const dots = base.points.map(([x, y]) => { const c = s('circle', {cx: X(x), cy: Y(y), r: 5, class: 'algo-cell is-look'}); svg.append(c); return c; });
+    const labels = base.points.map(([x, y]) => V.text(svg, X(x), Y(y) - 12, '', 'algo-idx', 'middle'));
+    const ring = s('circle', {r: 10, class: 'algo-edge is-keep'});
+    svg.append(ring);
+    const ringLabel = V.text(svg, 0, 0, t('车在这里', 'the car is here'), 'algo-idx algo-hit');
+    const bx = 452, bw = 30, gap = 12, unit = 180;
+    const barLayer = s('g');
+    svg.append(barLayer);
+    V.text(barLayer, bx, 58, t('深度分布 α', 'depth distribution α'), 'algo-head');
+    barLayer.append(s('line', {x1: bx - 4, x2: bx + 4 * (bw + gap) - gap + 4, y1: Y(0), y2: Y(0), class: 'algo-edge'}));
+    const bars = base.depths.map((d, i) => {
+      const x = bx + i * (bw + gap), ht = base.alpha[i] * unit;
+      const rect = s('rect', {x, y: Y(0) - ht, width: bw, height: ht, rx: 3, class: 'algo-bar'});
+      barLayer.append(rect);
+      V.text(barLayer, x + bw / 2, Y(0) - ht - 6, String(base.alpha[i]), 'algo-idx', 'middle');
+      V.text(barLayer, x + bw / 2, Y(0) + 17, `${d} m`, 'algo-idx', 'middle');
+      return rect;
+    });
+    const listLayer = s('g');
+    svg.append(listLayer);
+    V.text(listLayer, 440, 58, t('格子中心 → y / x', 'cell centre → y / x'), 'algo-head');
+    base.points.forEach(([x, y], k) => { V.text(listLayer, 440, 92 + k * 22, base.text.points[k], 'algo-note'); V.text(listLayer, 504, 92 + k * 22, `${y} / ${x} = ${base.ratios[k]}`, 'algo-note'); });
+    V.text(listLayer, 440, 92 + 4 * 22 + 6, t('→ 同一条射线，同一个像素', '→ one ray, one pixel'), 'algo-strong');
+    return frame => {
+      const st = frame.stage;
+      cells.forEach((r, i) => {
+        let cls = '';
+        if (st === 3) cls = ' is-change';
+        else if (st === 4 || st === 5) cls = i === frame.right ? ' is-keep' : (st === 5 && i === frame.most) ? ' is-bad' : ' is-change';
+        else if (st === 6) cls = ' is-out';
+        r.setAttribute('class', 'algo-cell' + cls);
+      });
+      ray.setAttribute('class', 'algo-edge' + (st === 6 ? ' is-look-line' : ''));
+      sums.forEach((node, i) => { node.textContent = st >= 3 && st <= 5 ? frame.text.sums[i] : ''; });
+      shares.forEach((node, i) => { node.textContent = st === 4 || st === 5 ? frame.text.shares[i] : ''; });
+      links.forEach(l => show(l, st === 3));
+      dots.forEach(c => show(c, st <= 5));
+      squares.forEach(r => show(r, st === 6));
+      labels.forEach((node, k) => { node.textContent = st <= 1 ? frame.text.points[k] : st === 2 ? frame.text.lifted[k] : ''; });
+      const on = Boolean(frame.truth);
+      if (on) {
+        const [x, y] = [frame.truth, frame.truth * 0.25];
+        ring.setAttribute('cx', X(x)); ring.setAttribute('cy', Y(y));
+        ringLabel.setAttribute('x', X(x) + 14); ringLabel.setAttribute('y', Y(y) + 17);
+      }
+      show(ring, on); show(ringLabel, on);
+      show(barLayer, st >= 1 && st <= 5);
+      bars.forEach((rect, i) => rect.setAttribute('class', 'algo-bar' + (on && base.depths[i] === frame.truth ? ' is-tall' : '')));
+      show(listLayer, st === 6);
+    };
+  }});
+
+  FIGURES['step-trajectory-cost'] = name => stepper(name, F.trajectoryCost(), {height: 290, readouts: f => [
+    [t('权重 (w_p, w_c, w_s)', 'weights (w_p, w_c, w_s)'), f.w ? `(${f.w.join(', ')})` : f.done ? '(1, 1, 0–3)' : '—'],
+    f.done ? ['J_A = J_B', `w_s = ${f.num(f.tie)}`, 'key'] : ['J_A · J_B · J_C', f.J ? f.J.map(f.num).join(' · ') : '—'],
+    [t('选中', 'chosen'), f.pick || (f.done ? t(`${f.below} → ${f.above}`, `${f.below} → ${f.above}`) : '—'), f.pick || f.done ? 'good' : ''],
+    f.done ? ['C', t('从不选中：被 A 支配', 'never: A dominates it'), 'bad'] : ['D', f.stage >= 1 ? t('淘汰：驶出路面', 'removed: off the road') : '—', f.stage >= 1 ? 'bad' : '']], setup(svg) {
+    const X = m => 170 + 6.5 * m;
+    const top = 36, mid = 80, curb = 124, lane = [58, 102];
+    const base = F.trajectoryCost()[0], [A, B, C] = base.cands;
+    svg.append(s('rect', {x: X(-20), y: top, width: X(65) - X(-20), height: curb - top, class: 'algo-cell'}),
+      s('line', {x1: X(-20), x2: X(65), y1: mid, y2: mid, class: 'algo-edge algo-dash'}),
+      s('rect', {x: X(-20), y: curb, width: X(65) - X(-20), height: 6, class: 'algo-cell is-cross'}));
+    V.text(svg, X(-20), curb + 20, t('路缘', 'curb'), 'algo-idx');
+    const pathLayer = s('g');
+    svg.append(pathLayer);
+    [0, 20, 40, 60].forEach(m => V.text(svg, X(m), top - 7, m === 60 ? '60 m' : String(m), 'algo-idx', 'middle'));
+    const car = (m, i, cls) => { const r = s('rect', {x: X(m) - 13, y: lane[i] - 7, width: 26, height: 14, rx: 3, class: cls}); svg.append(r); return r; };
+    car(0, 1, 'algo-cell is-look'); car(base.lead.gap, 1, 'algo-cell'); car(-base.rear.gap, 0, 'algo-cell');
+    V.text(svg, X(0), curb + 22, t(`自车 ${base.ego} m/s`, `ego ${base.ego} m/s`), 'algo-note', 'middle');
+    V.text(svg, X(base.lead.gap), curb + 22, t(`前车 ${base.lead.v} m/s`, `lead ${base.lead.v} m/s`), 'algo-note', 'middle');
+    V.text(svg, X(-base.rear.gap), top - 7, t(`后车 ${base.rear.v} m/s`, `behind ${base.rear.v} m/s`), 'algo-note', 'middle');
+    const paths = {
+      A: s('line', {x1: X(0) + 13, y1: 95, x2: X(A.dist), y2: 95}),
+      B: s('line', {x1: X(0) + 13, y1: 109, x2: X(B.dist), y2: 109}),
+      C: s('path', {d: `M${X(0) + 13} ${lane[1]} C${X(14)} ${lane[1]}, ${X(16)} ${lane[0]}, ${X(30)} ${lane[0]} L${X(C.dist)} ${lane[0]}`}),
+      D: s('path', {d: `M${X(2)} ${lane[1]} C${X(8)} ${lane[1]}, ${X(10)} ${curb + 8}, ${X(15)} ${curb + 10}`})};
+    Object.values(paths).forEach(p => pathLayer.append(p));
+    const letters = {A: V.text(svg, X(36), 91, 'A', 'algo-strong', 'middle'), B: V.text(svg, X(26), 121, 'B', 'algo-strong', 'middle'),
+      C: V.text(svg, X(30), 52, 'C', 'algo-strong', 'middle'), D: V.text(svg, X(15) + 8, curb + 14, 'D ✗', 'algo-warn')};
+    const ghosts = s('g');
+    svg.append(ghosts);
+    const ghost = (m, y) => ghosts.append(s('rect', {x: X(m) - 13, y: y - 7, width: 26, height: 14, rx: 3, class: 'algo-ghost'}));
+    const at4 = m => m + base.lead.v * base.T;
+    ghost(at4(base.lead.gap), lane[1]); ghost(-base.rear.gap + base.rear.v * base.T, lane[0]);
+    ghost(A.dist, 95); ghost(B.dist, 109); ghost(C.dist, lane[0]);
+    const gapLine = (m1, m2, y, ly, value) => {
+      ghosts.append(s('line', {x1: X(m1) + 13, x2: X(m2) - 13, y1: y, y2: y, class: 'algo-edge is-change'}));
+      V.text(ghosts, (X(m1) + X(m2)) / 2, ly, `${base.num(value)} m`, 'algo-note', 'middle');
+    };
+    gapLine(A.dist, at4(base.lead.gap), 95, 91, A.gap);
+    gapLine(B.dist, at4(base.lead.gap), 109, 121, B.gap);
+    gapLine(-base.rear.gap + base.rear.v * base.T, C.dist, lane[0], 52, C.gap);
+    V.text(ghosts, X(65), curb + 22, t('虚线框：4 s 时的位置', 'dashed: positions at 4 s'), 'algo-idx', 'end');
+    // cost table
+    const table = s('g');
+    svg.append(table);
+    const cols = [[40, 'start'], [190, 'middle'], [270, 'middle'], [345, 'middle'], [405, 'middle'], [465, 'middle'], [550, 'middle']];
+    const names = {A: t('A 保持车道', 'A keep lane'), B: t('B 减速到 8', 'B slow to 8'), C: t('C 向左变道', 'C change left'), D: t('D 向右变道', 'D change right')};
+    [t('候选', 'candidate'), t('4 s 行驶', '4 s distance'), t('最小车距', 'min gap'), 'c_p', 'c_c', 'c_s', 'J'].forEach((label, j) => V.text(table, cols[j][0], 176, label, 'algo-head', cols[j][1]));
+    const rows = ['A', 'B', 'C', 'D'].map((n, i) => {
+      const y = 198 + i * 22;
+      const back = s('rect', {x: 32, y: y - 15, width: 572, height: 20, rx: 4, class: 'algo-cell'});
+      table.append(back);
+      const cellsText = cols.map(([x, anchor], j) => V.text(table, x, y, j === 0 ? names[n] : '', j === 0 ? 'algo-note' : 'algo-val algo-small', anchor));
+      return {back, cellsText};
+    });
+    // J against w_s, with w_p = w_c = 1
+    const chart = s('g');
+    svg.append(chart);
+    const X3 = w => 90 + w * 130, Y3 = j => 270 - j * 10;
+    chart.append(s('line', {x1: X3(0), x2: X3(3), y1: Y3(0), y2: Y3(0), class: 'algo-edge'}), s('line', {x1: X3(0), x2: X3(0), y1: Y3(0), y2: Y3(9.5), class: 'algo-edge'}));
+    [0, 1, base.tie, 2, 3].forEach(w => V.text(chart, X3(w), Y3(0) + 16, w === 3 ? 'w_s = 3' : base.num(w), 'algo-idx', 'middle'));
+    [0, 3, 6, 9].forEach(j => V.text(chart, X3(0) - 6, Y3(j) + 4, String(j), 'algo-idx', 'end'));
+    V.text(chart, X3(0) - 6, Y3(9.5) - 8, 'J', 'algo-strong', 'end');
+    const Jw = (c, w) => c.cost[0] + c.cost[1] + w * c.cost[2];
+    [[A, 'algo-edge is-look-line'], [B, 'algo-edge is-change'], [C, 'algo-edge']].forEach(([c, cls]) => {
+      chart.append(s('line', {x1: X3(0), y1: Y3(Jw(c, 0)), x2: X3(3), y2: Y3(Jw(c, 3)), class: cls}));
+      V.text(chart, X3(3) + 8, Y3(Jw(c, 3)) + 4, c === C ? t('C（被 A 支配）', 'C (dominated by A)') : c.name, 'algo-strong');
+    });
+    chart.append(s('polyline', {points: [0, base.tie, 3].map(w => `${X3(w)},${Y3(Math.min(Jw(A, w), Jw(B, w)))}`).join(' '), class: 'algo-edge is-keep', fill: 'none'}),
+      s('line', {x1: X3(base.tie), x2: X3(base.tie), y1: Y3(0), y2: Y3(Jw(A, base.tie)), class: 'algo-edge algo-dash'}),
+      s('circle', {cx: X3(base.tie), cy: Y3(Jw(A, base.tie)), r: 5, class: 'algo-cell is-keep'}));
+    V.text(chart, X3(base.tie / 2), 186, t('← 选 A', '← A chosen'), 'algo-note algo-hit', 'middle');
+    V.text(chart, X3((base.tie + 3) / 2), 186, t('选 B →', 'B chosen →'), 'algo-note algo-hit', 'middle');
+    const style = {A: 'algo-edge is-look-line', B: 'algo-edge is-change', C: 'algo-edge is-look-line', D: 'algo-edge is-bad algo-dash'};
+    return frame => {
+      const st = frame.stage;
+      Object.entries(paths).forEach(([n, p]) => {
+        const chosen = frame.pick === n || (frame.done && n !== 'C' && n !== 'D');
+        p.setAttribute('class', st < 1 ? 'algo-edge is-hidden' : chosen ? 'algo-edge is-keep' : (frame.done && n === 'C') ? 'algo-edge is-out' : style[n]);
+        p.setAttribute('fill', 'none');
+        show(letters[n], st >= 1);
+      });
+      show(ghosts, st === 2);
+      show(table, st >= 1 && st <= 5);
+      show(chart, st === 6);
+      const live = ['A', 'B', 'C'];
+      rows.forEach((row, i) => {
+        const n = ['A', 'B', 'C', 'D'][i], c = base.cands[i];
+        row.back.setAttribute('class', 'algo-cell' + (n === 'D' ? ' is-bad' : frame.pick === n ? ' is-keep' : ''));
+        row.cellsText.forEach((node, j) => {
+          if (j === 0) return;
+          if (n === 'D') { node.textContent = j === 1 && st >= 1 ? t('驶出可行驶区域：淘汰', 'leaves the drivable area: removed') : ''; return; }
+          const k = live.indexOf(n);
+          const value = [null, `${base.num(c.dist)} m`, `${base.num(c.gap)} m`, base.num(c.cost[0]), base.num(c.cost[1]), base.num(c.cost[2]), frame.J ? base.num(frame.J[k]) : ''][j];
+          node.textContent = (j <= 2 && st >= 2) || (j >= 3 && j <= 5 && st >= 3) || (j === 6 && st >= 4) ? value : '';
+        });
+        if (n === 'D') { row.cellsText[1].setAttribute('x', 160); row.cellsText[1].setAttribute('text-anchor', 'start'); row.cellsText[1].setAttribute('class', 'algo-warn'); }
+      });
+    };
+  }});
+
+  FIGURES['step-open-closed-loop'] = name => stepper(name, F.openClosedLoop(), {height: 272, readouts: f => {
+    const endA = f.A[f.A.length - 1], endB = f.B[f.B.length - 1];
+    if (f.done) return [
+      [t('开环 L2 · A（m）', 'open-loop L2 · A (m)'), f.l2],
+      [t('开环 L2 · B（m）', 'open-loop L2 · B (m)'), f.l2],
+      [t(`闭环 ${endA.t} s · A`, `closed loop ${endA.t} s · A`), `${f.fa(endA.y)} m`, 'bad'],
+      [t(`闭环 ${endB.t} s · B`, `closed loop ${endB.t} s · B`), `${f.fb(endB.y)} m`, 'good']];
+    const a = f.A[f.k], b = f.B[f.k];
+    return [['t', `${a.t.toFixed(1)} s`],
+      [t('开环 L2（m）', 'open-loop L2 (m)'), f.l2],
+      [t('闭环 A 偏移', 'closed-loop A offset'), f.k ? `${f.fa(a.y)} m` : '—', f.k && a.y > f.wheels ? 'bad' : ''],
+      [t('闭环 B 偏移', 'closed-loop B offset'), f.k ? `${f.fb(b.y)} m` : '—', f.k ? 'good' : '']];
+  }, setup(svg) {
+    const base = F.openClosedLoop()[0], times = base.A.map(p => p.t), horizon = times[times.length - 1];
+    const X = time => 72 + time * 140;
+    const strip = topY => y => topY + (2.8 - y) * 26;
+    const Yo = strip(30), Yc = strip(160);
+    [[Yo, t('开环：每帧放回日志（A 和 B 输出相同）', 'Open loop: back to the log every frame (A and B identical)')],
+      [Yc, t('闭环：从车实际到达的位置重新规划', 'Closed loop: replan from where the car actually is')]].forEach(([Y, head]) => {
+      svg.append(s('rect', {x: X(0), y: Y(2.8), width: X(horizon) - X(0), height: Y(-0.6) - Y(2.8), class: 'algo-cell'}),
+        s('line', {x1: X(0), x2: X(horizon), y1: Y(base.edge), y2: Y(base.edge), class: 'algo-edge'}),
+        s('line', {x1: X(0), x2: X(horizon), y1: Y(base.wheels), y2: Y(base.wheels), class: 'algo-edge algo-dash'}),
+        s('line', {x1: X(0), x2: X(horizon), y1: Y(0), y2: Y(0), class: 'algo-edge is-out'}));
+      V.text(svg, X(0), Y(2.8) - 8, head, 'algo-head');
+      [[0, t('日志 0', 'log 0')], [base.wheels, base.wheels.toFixed(2)], [base.edge, `${base.edge} m`]].forEach(([y, label]) => V.text(svg, X(0) - 6, Y(y) + 4, label, 'algo-idx', 'end'));
+      V.text(svg, X(0.9), Y(base.edge) - 5, t('车道线', 'lane line'), 'algo-idx', 'middle');
+      V.text(svg, X(0) + 6, Y(base.wheels) - 5, t('车轮压线', 'wheels on line'), 'algo-idx');
+      V.text(svg, X(0) + 6, Y(2.4) + 4, t('邻车道', 'next lane'), 'algo-idx');
+      times.forEach(time => V.text(svg, X(time), Y(-0.6) + 14, time === horizon ? `${time.toFixed(1)} s` : time.toFixed(1), 'algo-idx', 'middle'));
+    });
+    // open loop: every frame plans 0.2t from the logged state
+    const slope = base.v * base.eps;
+    const plans = times.slice(0, -1).map(t0 => { const l = s('line', {x1: X(t0), y1: Yo(0), x2: X(horizon), y2: Yo(slope * (horizon - t0)), class: 'algo-edge is-change algo-dash'}); svg.append(l); return l; });
+    const l2 = base.openL2.map((err, i) => {
+      const time = i + 1, g = s('g');
+      g.append(s('line', {x1: X(time), x2: X(time), y1: Yo(0), y2: Yo(err), class: 'algo-edge is-bad'}));
+      V.text(g, X(time) - 4, Yo(0) + 13, `L2 ${err.toFixed(1)}`, 'algo-idx', 'end');
+      svg.append(g);
+      return g;
+    });
+    const reset = s('circle', {r: 5, cy: Yo(0), class: 'algo-cell is-look'});
+    svg.append(reset);
+    V.text(svg, X(horizon) + 10, Yo(0.3) + 4, 'A = B', 'algo-strong');
+    // closed loop
+    const lineA = s('polyline', {fill: 'none'}), lineB = s('polyline', {fill: 'none', class: 'algo-edge is-keep'});
+    svg.append(lineA, lineB);
+    const dotsA = times.map(() => { const c = s('circle', {r: 3.5}); svg.append(c); return c; });
+    const dotsB = times.map(() => { const c = s('circle', {r: 3.5, class: 'algo-cell is-keep'}); svg.append(c); return c; });
+    const labelA = V.text(svg, 0, 0, 'A', 'algo-strong', 'middle'), labelB = V.text(svg, 0, 0, 'B', 'algo-strong', 'middle');
+    const k1 = base.touch, crossT = times[k1 - 1] + (base.wheels - base.A[k1 - 1].y) / (base.A[k1].y - base.A[k1 - 1].y) * base.dt;
+    const cross = s('circle', {cx: X(crossT), cy: Yc(base.wheels), r: 4, class: 'algo-cell is-bad'});
+    svg.append(cross);
+    const crossLabel = V.text(svg, X(crossT) - 8, Yc(base.wheels) - 6, t('A 压线', 'A crosses'), 'algo-warn', 'end');
+    const endA = V.text(svg, X(horizon) + 10, Yc(base.A[base.A.length - 1].y) + 4, `A ${base.fa(base.A[base.A.length - 1].y)} m`, 'algo-warn');
+    const endB = V.text(svg, X(horizon) + 10, Yc(base.B[base.B.length - 1].y) + 4, `B ${base.fb(base.B[base.B.length - 1].y)} m`, 'algo-note algo-hit');
+    return frame => {
+      const k = frame.k, bad = k >= base.touch;
+      plans.forEach((l, i) => show(l, frame.done ? i === 0 : i === k));
+      l2.forEach(g => show(g, k === 0 || frame.done));
+      reset.setAttribute('cx', X(times[k])); show(reset, !frame.done);
+      const pts = list => list.slice(0, k + 1).map(p => `${X(p.t)},${Yc(p.y)}`).join(' ');
+      lineA.setAttribute('points', pts(base.A)); lineB.setAttribute('points', pts(base.B));
+      lineA.setAttribute('class', 'algo-edge ' + (bad ? 'is-bad' : 'is-change'));
+      dotsA.forEach((c, i) => { c.setAttribute('cx', X(base.A[i].t)); c.setAttribute('cy', Yc(base.A[i].y)); c.setAttribute('class', 'algo-cell ' + (bad ? 'is-bad' : 'is-change')); show(c, i <= k); });
+      dotsB.forEach((c, i) => { c.setAttribute('cx', X(base.B[i].t)); c.setAttribute('cy', Yc(base.B[i].y)); show(c, i <= k); });
+      labelA.setAttribute('x', X(base.A[k].t)); labelA.setAttribute('y', Yc(base.A[k].y) - 9);
+      labelB.setAttribute('x', X(base.B[k].t)); labelB.setAttribute('y', Yc(base.B[k].y) + 17);
+      show(labelA, k > 0 && !frame.done); show(labelB, k > 0 && !frame.done);
+      show(cross, bad); show(crossLabel, bad);
+      show(endA, frame.done); show(endB, frame.done);
+    };
+  }});
+
+  FIGURES['step-flow-euler-steps'] = name => stepper(name, F.flowEulerSteps(), {height: 250, readouts: f => {
+    const run = f.n ? f.runs[`${f.eps}/${f.n}`] : null;
+    return [['ε', f.done ? '±0.5' : f.minus(f.eps)], [t('Euler 步数 n', 'Euler steps n'), f.done ? '1 · 2 · 5 · 10' : f.n ? String(f.n) : '—'],
+      [t('终点 x₁', 'end point x₁'), f.done ? t('见右表', 'see the table') : run ? f.end(run.end) : '—', !run || f.done ? '' : Math.abs(run.end) > 0.99 ? 'good' : Math.abs(run.end) < 0.05 ? 'bad' : 'key']];
+  }, setup(svg) {
+    const base = F.flowEulerSteps()[0];
+    const X = time => 100 + time * 280, Y = x => 132 - x * 88;
+    V.text(svg, X(0), 22, t('淡色箭头：理想速度场 v*(x, t)，不是训练出的网络', 'Faint arrows: ideal field v*(x, t), not a trained network'), 'algo-idx');
+    const arrow = name + '-arrow';
+    svg.append(s('defs', {}, [s('marker', {id: arrow, viewBox: '0 0 10 10', refX: 8, refY: 5, markerWidth: 4, markerHeight: 4, orient: 'auto'},
+      [s('path', {d: 'M0 0 L10 5 L0 10 Z', class: 'algo-arrowhead is-blue'})])]));
+    const field = s('g');
+    svg.append(field);
+    for (let i = 0; i < 9; i++) for (let j = -3; j <= 3; j++) {
+      const time = 0.05 + i * 0.1, x = j * 0.3, dy = -88 * base.velocity(x, time), len = Math.hypot(280, dy);
+      const ux = 280 / len * 7, uy = dy / len * 7;
+      field.append(s('line', {x1: X(time) - ux, y1: Y(x) - uy, x2: X(time) + ux, y2: Y(x) + uy, class: 'algo-edge is-look-line is-out', 'marker-end': `url(#${arrow})`}));
+    }
+    svg.append(s('line', {x1: X(0), x2: X(0), y1: Y(1), y2: Y(-1), class: 'algo-edge'}), s('line', {x1: X(1), x2: X(1), y1: Y(1), y2: Y(-1), class: 'algo-edge'}),
+      s('line', {x1: X(0), x2: X(1), y1: Y(0), y2: Y(0), class: 'algo-edge algo-dash'}));
+    [[1, '+1', t('从左绕', 'round left'), 14], [0, '0', '', 0], [-1, '−1', t('从右绕', 'round right'), -14]].forEach(([x, label, side, dy]) => {
+      V.text(svg, X(0) - 8, Y(x) + 4, label, 'algo-strong', 'end');
+      if (side) V.text(svg, X(0) - 8, Y(x) + 4 + dy, side, 'algo-idx', 'end');
+    });
+    [[0, t('t = 0 噪声', 't = 0 noise')], [0.5, '0.5'], [1, t('t = 1 动作', 't = 1 action')]].forEach(([time, label]) => V.text(svg, X(time), Y(-1) + 18, label, 'algo-idx', 'middle'));
+    [1, -1].forEach(x => svg.append(s('circle', {cx: X(1), cy: Y(x), r: 7, class: 'algo-ghost'})));
+    svg.append(s('circle', {cx: X(1), cy: Y(0), r: 9, class: 'algo-cell'}));
+    V.text(svg, X(1), Y(0) + 24, t('杯子', 'cup'), 'algo-note', 'middle');
+    const styles = {1: 'is-bad', 2: 'is-change', 5: 'is-look-line', 10: 'is-keep'}, dotStyles = {1: 'is-bad', 2: 'is-change', 5: 'is-look', 10: 'is-keep'};
+    const drawn = Object.fromEntries(Object.entries(base.runs).map(([key, run]) => {
+      const g = s('g');
+      g.append(s('polyline', {points: run.xs.map((x, k) => `${X(k / run.n)},${Y(x)}`).join(' '), fill: 'none', class: 'algo-edge ' + styles[run.n]}));
+      run.xs.forEach((x, k) => g.append(s('circle', {cx: X(k / run.n), cy: Y(x), r: k === run.n ? 5 : 3, class: 'algo-cell ' + dotStyles[run.n]})));
+      V.text(g, X(1) + 14, Y(run.end) + 4, `n = ${run.n} → ${base.end(run.end)}`, 'algo-note');
+      svg.append(g);
+      return [key, g];
+    }));
+    const table = s('g');
+    svg.append(table);
+    V.text(table, 566, 36, t('终点 x₁', 'end point x₁'), 'algo-head', 'middle');
+    [[516, 'n'], [560, 'ε=0.5'], [614, 'ε=0.02']].forEach(([x, label]) => V.text(table, x, 58, label, 'algo-idx', 'middle'));
+    const cellsA = [], cellsB = [];
+    base.table.forEach((row, i) => {
+      const y = 80 + i * 22;
+      V.text(table, 516, y, String(row.n), 'algo-strong', 'middle');
+      cellsA.push(V.text(table, 560, y, row.a, 'algo-note', 'middle'));
+      cellsB.push(V.text(table, 614, y, row.b, 'algo-note', 'middle'));
+    });
+    const revealA = [1, 2, 6, 3];
+    return frame => {
+      Object.entries(drawn).forEach(([key, g]) => {
+        const on = frame.show.includes(key);
+        show(g, on);
+        g.classList.toggle('is-out', on && frame.stage === 3 && key !== '0.5/10');
+      });
+      cellsA.forEach((node, i) => show(node, frame.stage >= revealA[i]));
+      cellsB.forEach(node => show(node, frame.stage >= 4));
+    };
+  }});
+
+  FIGURES['step-vla-latency'] = name => stepper(name, F.vlaLatency(), {height: 330, readouts: f => [
+    [t('逐维 token', 'per-dim tokens'), f.stage >= 1 ? `${f.ms(f.lanes[0].total)} ms` : '—', f.stage >= 1 ? 'bad' : ''],
+    ['FAST', f.stage >= 2 ? `${f.lanes[1].total} ms` : '—'],
+    [t('flow 专家', 'flow expert'), f.stage >= 3 ? `${f.lanes[2].total} ms` : '—', f.stage >= 3 ? 'good' : ''],
+    [t('相对 flow', 'vs. flow'), f.stage >= 4 ? `≈ ${Math.round(f.ratios[0])}× · ≈ ${Math.round(f.ratios[1])}×` : '—', f.stage === 4 ? 'key' : ''],
+    [t('π0 实测', 'π0 measured'), f.done ? `${f.measured.total} ms (+${f.measured.network})` : '—', f.done ? 'key' : '']], setup(svg) {
+    const base = F.vlaLatency()[0], k = 0.4, cut = [1100, 3400];
+    const X = ms => (ms <= cut[0] ? 24 + ms * k : 24 + cut[0] * k + 24 + (ms - cut[1]) * k);
+    const names = [t('逐维 token：350 个 × 10 ms', 'per-dim tokens: 350 × 10 ms'), t('FAST：40 个 × 10 ms', 'FAST: 40 × 10 ms'), t('flow 专家：10 步 × 3 ms', 'flow expert: 10 steps × 3 ms')];
+    const ys = [46, 84, 122], bh = 14;
+    const segment = (parent, x1, x2, y, cls) => { const r = s('rect', {x: x1, y, width: Math.max(0, x2 - x1), height: bh, rx: 2, class: cls}); parent.append(r); return r; };
+    const ticks = (parent, from, to, every, y, Xf) => {
+      let d = '';
+      for (let ms = from + every; ms < to - 1e-9; ms += every) if (ms <= cut[0] || ms >= cut[1] || Xf !== X) d += `M${Xf(ms).toFixed(1)} ${y} v${bh} `;
+      if (d) parent.append(s('path', {d, class: 'algo-edge'}));
+    };
+    const lanes = base.lanes.map((lane, i) => {
+      const y = ys[i], head = V.text(svg, X(0), y - 6, names[i], 'algo-note');
+      segment(svg, X(0), X(base.prefix), y, 'algo-cell is-look');
+      const steps = s('g');
+      svg.append(steps);
+      if (lane.total <= cut[0]) segment(steps, X(base.prefix), X(lane.total), y, 'algo-cell is-change');
+      else { segment(steps, X(base.prefix), X(cut[0]), y, 'algo-cell is-change'); segment(steps, X(cut[1]), X(lane.total), y, 'algo-cell is-change'); }
+      ticks(steps, base.prefix, lane.total, lane.cost, y, X);
+      V.text(steps, X(lane.total) + 6, y + 11, `${base.ms(lane.total)} ms`, 'algo-strong');
+      return {head, steps};
+    });
+    const axisY = 146;
+    svg.append(s('line', {x1: X(0), x2: X(cut[0]), y1: axisY, y2: axisY, class: 'algo-edge'}), s('line', {x1: X(cut[1]), x2: X(3600), y1: axisY, y2: axisY, class: 'algo-edge'}));
+    [cut[0], cut[1]].forEach(ms => svg.append(s('line', {x1: X(ms) + (ms === cut[0] ? 4 : -4) - 3, x2: X(ms) + (ms === cut[0] ? 4 : -4) + 3, y1: axisY + 5, y2: axisY - 5, class: 'algo-edge'})));
+    [0, 250, 500, 750, 1000, 3500].forEach(ms => V.text(svg, X(ms), axisY + 14, ms === 3500 ? '3,500 ms' : base.ms(ms), 'algo-idx', 'middle'));
+    svg.append(s('line', {x1: X(base.chunk), x2: X(base.chunk), y1: 26, y2: axisY, class: 'algo-edge is-keep algo-dash'}));
+    V.text(svg, X(base.chunk), 20, t('1 秒：一块动作的时长', '1 s: the chunk’s duration'), 'algo-note algo-hit', 'middle');
+    // zoom: the first 100 ms
+    const Z = ms => 24 + ms * 5.4, zy = [206, 244, 282];
+    V.text(svg, Z(0), 182, t('放大前 100 ms', 'Zoom: the first 100 ms'), 'algo-head');
+    const zoom = [0, 1, 2].map(() => { const g = s('g'); svg.append(g); return g; });
+    V.text(zoom[0], Z(0), zy[0] - 6, t(`token 接法：每个 token ${base.tok} ms，一直排到 ${base.lanes[1].total} / ${base.ms(base.lanes[0].total)} ms`, `token designs: ${base.tok} ms per token, out to ${base.lanes[1].total} / ${base.ms(base.lanes[0].total)} ms`), 'algo-note');
+    segment(zoom[0], Z(0), Z(base.prefix), zy[0], 'algo-cell is-look');
+    const zTok = s('g');
+    zoom[0].append(zTok);
+    segment(zTok, Z(base.prefix), Z(100), zy[0], 'algo-cell is-change');
+    ticks(zTok, base.prefix, 100.5, base.tok, zy[0], Z);
+    V.text(zTok, Z(100) + 6, zy[0] + 11, '→', 'algo-strong');
+    V.text(zoom[0], Z(base.prefix / 2), zy[0] + 11, t(`前缀 ${base.prefix}`, `prefix ${base.prefix}`), 'algo-idx', 'middle');
+    V.text(zoom[1], Z(0), zy[1] - 6, t('flow 专家：10 步，每步 3 ms', 'flow expert: 10 steps, 3 ms each'), 'algo-note');
+    segment(zoom[1], Z(0), Z(base.prefix), zy[1], 'algo-cell is-look');
+    V.text(zoom[1], Z(base.prefix / 2), zy[1] + 11, t(`前缀 ${base.prefix}`, `prefix ${base.prefix}`), 'algo-idx', 'middle');
+    const zFlow = s('g');
+    zoom[1].append(zFlow);
+    segment(zFlow, Z(base.prefix), Z(base.lanes[2].total), zy[1], 'algo-cell is-change');
+    ticks(zFlow, base.prefix, base.lanes[2].total, base.flow, zy[1], Z);
+    V.text(zFlow, Z(base.lanes[2].total) + 6, zy[1] + 11, `${base.lanes[2].total} ms${t('（教学数字）', ' (teaching)')}`, 'algo-strong');
+    const m = base.measured, edges = [0, m.parts[0], m.parts[0] + m.parts[1], m.total];
+    V.text(zoom[2], Z(0), zy[2] - 6, t('π0 实测（RTX 4090，3 路相机）', 'π0 measured (RTX 4090, 3 cameras)'), 'algo-note');
+    segment(zoom[2], Z(edges[0]), Z(edges[1]), zy[2], 'algo-cell is-look');
+    segment(zoom[2], Z(edges[1]), Z(edges[2]), zy[2], 'algo-cell is-look');
+    segment(zoom[2], Z(edges[2]), Z(edges[3]), zy[2], 'algo-cell is-change');
+    ticks(zoom[2], edges[2], edges[3], m.parts[2] / 10, zy[2], Z);
+    zoom[2].append(s('rect', {x: Z(m.total), y: zy[2], width: Z(m.total + m.network) - Z(m.total), height: bh, rx: 2, class: 'algo-ghost'}));
+    [[t('图像', 'images'), m.parts[0]], [t('前缀', 'prefix'), m.parts[1]], ['flow', m.parts[2]]].forEach(([label, value], i) =>
+      V.text(zoom[2], (Z(edges[i]) + Z(edges[i + 1])) / 2, zy[2] + bh + 13, `${label} ${value}`, 'algo-idx', 'middle'));
+    V.text(zoom[2], (Z(m.total) + Z(m.total + m.network)) / 2, zy[2] + bh + 13, t(`网络 +${m.network}`, `network +${m.network}`), 'algo-idx', 'middle');
+    V.text(zoom[2], Z(m.total + m.network) + 6, zy[2] + 11, `${m.total} ms${t('（机载）', ' on board')}`, 'algo-strong');
+    const zAxis = zy[2] + bh + 26;
+    svg.append(s('line', {x1: Z(0), x2: Z(100), y1: zAxis, y2: zAxis, class: 'algo-edge'}));
+    [0, 20, 40, 60, 80, 100].forEach(ms => V.text(svg, Z(ms), zAxis + 14, ms === 100 ? '100 ms' : String(ms), 'algo-idx', 'middle'));
+    return frame => {
+      const st = frame.stage;
+      lanes.forEach((lane, i) => show(lane.steps, st >= i + 1));
+      show(zTok, st >= 1);
+      show(zFlow, st >= 3);
+      show(zoom[2], st >= 5);
     };
   }});
 

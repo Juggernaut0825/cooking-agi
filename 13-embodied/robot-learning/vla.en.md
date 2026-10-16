@@ -59,6 +59,8 @@ Per-dimension tokens are about $3540/70\approx51$ times slower than flow, FAST a
 
 Now compare with real measurements. The π0 paper ([v1 Appendix D, Table I](https://arxiv.org/abs/2410.24164v1)) measured on an RTX 4090 with 3 cameras: image encoders 14 ms, prefix forward pass 32 ms, 10 flow steps 27 ms in total, 73 ms on board; for a mobile robot running inference off board over WiFi, network latency adds 13 ms. The FAST paper (§VI-E) reports that, also on an RTX 4090, the diffusion π0 produces a 1-second chunk in under 100 ms while π0-FAST needs about 750 ms per chunk, because it decodes 30–60 tokens and each one goes through the full 2B-parameter backbone rather than a 300M expert. The authors also say this latency did not hurt performance on the static manipulation tasks they tested.
 
+<!-- widget:step-vla-latency -->
+
 What this example does **not** tell you:
 
 - Sequential steps and policy quality are separate questions: π0-FAST takes far more sequential steps, and its authors report that it matches π0 in success rate.
