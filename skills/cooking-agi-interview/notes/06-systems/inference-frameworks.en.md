@@ -1,0 +1,167 @@
+<!-- source: https://github.com/tianyi-zhang-02/cooking-agi/blob/main/06-systems/inference-frameworks.en.md -->
+# vLLM and SGLang: what a generation engine actually does
+
+[中文](inference-frameworks.md) · **English**
+
+> Checked 2026-10-12 against vLLM v0.31.0 (2026-10-05) and SGLang v0.5.21 (2026-10-02) documentation; source links are pinned to main-branch commits from 2026-10-10. Numbers below are teaching examples, not framework benchmark results.
+
+If `generate()` can answer a question, why add an engine? A service has many users: short and long requests arrive together, clients disconnect, and several questions may share the same document. An engine organizes that work rather than giving each request exclusive use of the GPU from scratch.
+
+Start with [prefill, decode, and KV caching](../00-foundations/deep-dives/kv-cache-and-inference.en.md). [A request through the service](llm-serving.en.md) follows execution more closely; this page focuses on architecture and selection.
+
+## Application, engine, and kernels
+
+- 01 / ApplicationDecide what to doAuthorization, retrieval, tools, prompts, and deadlines. Do not pass unauthorized evidence to a model and hope it keeps it secret.
+- 02 / Generation engineSchedule work and reuse stateQueues, batches, KV management, workers, sampling, and output: the role of vLLM or SGLang.
+- 03 / Runtime and kernelsExecute the current workModel execution, attention, matrix multiplication, and communication. A faster kernel may leave queueing untouched.
+
+These are responsibilities, not a required process layout. The engine is not the entire production security boundary.
+
+[vLLM V1 architecture](https://docs.vllm.ai/en/v0.31.0/design/arch_overview/) separates input/output handling in API servers, scheduling and cache management in engine cores, and model execution in GPU workers; data-parallel deployments add a DP coordinator. Process counts depend on deployment. SGLang has its own request, scheduling, and execution paths; vLLM class names are not universal terminology.
+
+More concretely, the [pinned SGLang Engine](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/entrypoints/engine.py#L238) separates tokenization, scheduling, and detokenization:
+
+```text
+request → TokenizerManager → Scheduler → model execution
+            ↑                                ↓
+      response text ← DetokenizerManager ← output token IDs
+```
+
+TokenizerManager handles inputs and request results; Scheduler selects batches; the execution path runs forward passes; DetokenizerManager converts tokens to text. This omits multi-GPU topology and cross-instance routing, rather than promising exactly three processes in every deployment. It also helps diagnosis: low GPU load with slow requests may call for inspecting input preparation and output handling, not only attention kernels.
+
+## Trace both implementations side by side
+
+Follow vLLM down the left column, then SGLang down the right. Arrows label what crosses an interface; they do not mean copying the whole model or KV cache at every step. This diagram covers ordinary autoregressive text generation; multimodal input and speculation add branches. It is drawn one step at a time, but with compatible configurations both engines default to letting the CPU schedule the next step while the GPU runs the current one (vLLM calls this async scheduling, SGLang the overlap scheduler).
+
+<h3>vLLM V1</h3>
+- API server / AsyncLLMValidate and prepare input; track requests and streaming output↓ token IDs, sampling settings, request ID
+- EngineCore → SchedulerQueues, compute budgets, KV block allocation↓ SchedulerOutput: request updates, token counts, block IDs
+- Executor → GPU workersDispatch scheduling results to workers that hold model shards↓ SchedulerOutput → the worker's model runner
+- Model runner → kernelsPrepare input tensors and attention metadata, then run the model, access KV, and sample↑ tokens / execution results return to scheduling and output
+
+<h3>SGLang SRT</h3>
+- HTTP → TokenizerManagerInput processing, request state, returned results↓ tokenized request
+- Scheduler + cache / poolsWaiting and running requests, prefix matching, cache locations↓ ScheduleBatch; converted to ForwardBatch inside the worker
+- Model worker → ModelRunnerExecute the scheduled batch; not a separate serving service↓ input tensors and attention metadata
+- Model → attention backendRun kernels, update KV, send output through detokenization↑ DetokenizerManager → TokenizerManager
+
+Unfinished requests continue into the next iteration. These are responsibility maps, not matching process diagrams. SGLang's ModelRunner belongs to the scheduler's execution path; a box does not imply a separate process.
+
+For vLLM process boundaries, see the [architecture documentation](https://docs.vllm.ai/en/v0.31.0/design/arch_overview/), then follow [EngineCore](https://github.com/vllm-project/vllm/blob/10cc2f6ae2c9ba7cc5841ece95e27d0562aef1bf/vllm/v1/engine/core.py). It passes `SchedulerOutput` to the executor; the worker's model runner combines it with local request state to prepare tokens, positions, and attention metadata. The scheduler does not assemble all model-input tensors beforehand. The pinned commit prefers [Model Runner V2](https://github.com/vllm-project/vllm/blob/10cc2f6ae2c9ba7cc5841ece95e27d0562aef1bf/vllm/v1/worker/gpu/model_runner.py) for compatible configurations; unsupported features, missing Triton, some ROCm model defaults, or explicit settings can instead select the older [GPUModelRunner](https://github.com/vllm-project/vllm/blob/10cc2f6ae2c9ba7cc5841ece95e27d0562aef1bf/vllm/v1/worker/gpu_model_runner.py). The SGLang path is checked against a fixed commit: [Scheduler.run_batch](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/managers/scheduler.py#L4405), the [worker's batch conversion and forward call](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/managers/tp_worker.py#L598), and [ModelRunner](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/model_executor/model_runner.py). These are reading coordinates, not names to memorize.
+
+Suppose request R has six prompt tokens and the first four belong to reusable complete cache blocks. A hit does not finish the request: the scheduler must validate reuse, allocate writable space for two remaining tokens, and find iteration budget. After computation, sampling produces the first new token X. **X's KV does not exist merely because X was sampled.** Feeding X into the next iteration creates its KV and predicts the next token. For a fully cached prompt, obtaining next-token logits still depends on the implementation, such as recomputing the last position. A cache is not a stored answer.
+
+Distinguish two kinds of traffic:
+
+- **Control messages:** request metadata, cancellation, execution plans, completion notices. API-to-engine IPC does not imply sending weights with each message.
+- **Tensor transfers:** TP collectives, PP activations, and moving KV between devices or instances. These have concrete bandwidth, synchronization, and topology costs.
+
+## What sits beneath model execution?
+
+| Layer | Responsibility | A useful follow-up |
+| --- | --- | --- |
+| Model runner | Prepare tokens, positions, cache indices, and model calls | How does a changing batch become executable tensors? Why do shapes affect execution paths? |
+| Model layers and attention backend | QKV projections, attention, MLPs, KV reads/writes | How do prefill and decode shapes differ? How does GQA affect the cache? |
+| Compilation, kernels, CUDA Graphs | Generate or select kernels; reduce launch and scheduling overhead | Capture constraints on shapes and buffers; fallback paths when they do not fit |
+| GPU memory and communication | HBM holds weights and KV; registers / shared memory reuse local data; devices exchange tensors | Compute, HBM bandwidth, or interconnect bound? Can transfers overlap useful computation? |
+
+PyTorch, Triton, CUDA, and vendor libraries appear in different backends; they are not a fixed series of services that every request traverses. CUDA Graphs primarily reduce CPU overhead for launching GPU work. They do not make KV storage free or eliminate TP communication. FlashAttention's IO optimization and paged KV management also address different layers: how attention is computed versus how cached state is allocated and addressed. See [attention kernels and cache layouts](../00-foundations/deep-dives/attention-kernels.en.md).
+
+Continue through the pinned [SGLang ModelRunner](https://github.com/sgl-project/sglang/blob/436d73ddda02d17d6d56e770a5362ebd5dd95ac0/python/sglang/srt/model_executor/model_runner.py) for execution choices. If you have only read a backend, say so; source reading is not measured optimization experience.
+
+## Several GPUs can mean different things
+
+- Split requests / ReplicasRequest A → replica 1Request B → replica 2Complete replicas handle different requests. Capacity may grow, but weights are duplicated and a selected replica may not hold the warm prefix.
+- Split the model / TPOne request → GPU 0 + GPU 1Devices compute different parts of the same layer. These are not independent requests; layer-level communication can be expensive on a weak interconnect.
+- Split stages / P–DPrefill worker → KV → decode workerSchedule different compute shapes separately, at the cost of KV transfers, routing, and two queues. Slow decode alone is not a reason to split.
+
+These choices can combine. “Replica” here means a complete inference replica, not every MoE DP / EP topology.
+
+For a teaching configuration with eight GPUs, TP=2 and four complete replicas means a request uses one two-GPU group, with four groups scheduling requests independently. It does not mean every request automatically uses all eight GPUs. Whether this beats TP=8 depends on model fit, KV headroom, single-request latency, arrivals, and interconnects. Start with the [memory budget](../00-foundations/deep-dives/kv-cache-and-inference.en.md#inference-budget), then measure representative traffic.
+
+## Refill a batch as requests finish
+
+Take an idealized decode schedule. A and B have completed prefill and need two and five more tokens. C is ready and needs three. Each round accommodates two requests, producing one token each; ignore every other cost.
+
+| Rounds | Wait for the entire batch | Refill between rounds |
+| --- | --- | --- |
+| 1–2 | A, B | A, B |
+| 3–5 | B, with one empty slot | B, C |
+| 6–8 | C | Finished |
+
+Eight rounds versus five is a scheduling result under these assumptions, not a measured speedup. Real prefill, KV capacity, and history reads matter. Continuous batching does not admit unlimited work: requests still need queues, limits, or rejection when budgets are exhausted.
+
+## Two ways to organize prefix reuse
+
+Both engines support prefix reuse, and both turn it on by default (vLLM's `--enable-prefix-caching`, SGLang's radix cache). “vLLM manages memory; SGLang does caching” is not a useful distinction. What still differs is the index structure, the default granularity, and the eviction policy.
+
+| Question | vLLM V1 | SGLang radix tree (default `UnifiedRadixCache`) |
+| --- | --- | --- |
+| How is reusable state organized? | Prefix-dependent block hashes and a block pool, looked up by hash | A tree of shared token paths; v0.5.21 prefers a Rust tree core, with Python fallbacks for incompatible platforms or features |
+| What is the reuse boundary? | Base default: 16-token blocks; the model, attention backend, and configuration can change the size. Only full blocks are reused | Page size 1 by default, so a match can stop at any token; some backends or models raise the page to 64, 128, and so on, and matches then align down to whole pages |
+| How is state managed? | Reference counts, an LRU free queue for eviction, reallocation | Locking, references, node splitting; LRU by default, with LFU, SLRU, priority, and T-LRU as options |
+| What cannot be inferred? | Blocks do not prove better service performance | Trees do not prove better performance for every workload |
+
+Defaults are not universal guarantees. Check vLLM's [runner and async-scheduling conditions](https://github.com/vllm-project/vllm/blob/10cc2f6ae2c9ba7cc5841ece95e27d0562aef1bf/vllm/config/vllm.py#L709), its [cache configuration](https://github.com/vllm-project/vllm/blob/10cc2f6ae2c9ba7cc5841ece95e27d0562aef1bf/vllm/config/cache.py#L67), and SGLang's [tree-core fallback conditions](https://github.com/sgl-project/sglang/blob/v0.5.21/python/sglang/srt/mem_cache/unified_cache/tree_core_registry.py#L44). Confirm the resolved configuration in startup logs before benchmarking.
+
+See the pinned implementations and page-alignment example in [cache lifecycle](../00-foundations/deep-dives/attention-kernels.en.md#cache-lifecycle). The [original SGLang paper](https://arxiv.org/abs/2312.07104) explains RadixAttention's context, not the complete feature boundary of today's products.
+
+Suppose two requests share a 2,000-token document and each appends a 100-token question. The second may avoid recomputing shared prefill. Its new answer still attends to prefix KV. Reuse saves computation; it does not remove history. Weights, adapters, token IDs, positions, and multimodal inputs must be compatible too. Visually identical text is not sufficient.
+
+Multi-tenant reuse also needs isolation. Cache-dependent timing can reveal whether content was present; caching is not authorization. [vLLM cache salting](https://docs.vllm.ai/en/v0.31.0/design/prefix_caching/) provides one reuse-isolation mechanism, and SGLang's OpenAI-compatible API also accepts `cache_salt`. The service must still assign trusted groups rather than letting clients claim another tenant's group.
+
+## HiCache moves beyond GPU memory
+
+[SGLang HiCache](https://docs.sglang.io/docs/advanced_features/hicache_design) extends KV storage across GPU memory, host memory, and storage backends. GPU and host tiers belong to inference instances; cross-instance reuse depends on the storage backend and namespace configuration. Two machines' RAM is not automatically one shared cache. vLLM now offers the same kind of tiering: the [OffloadingConnector](https://docs.vllm.ai/en/v0.31.0/features/kv_offloading_usage/) copies finished full blocks into CPU memory and can add secondary tiers such as files or object storage, or you can plug in LMCache or Mooncake Store instead. Neither engine turns this on by default.
+
+Consider hypothetical serial costs: recomputing a prefix takes 80 ms; restoring its KV takes 30 ms plus 5 ms for lookup and scheduling. Reuse could save about 45 ms. If transfer takes 100 ms instead, this reuse can lose. Real overlap needs a trace; this arithmetic only explains the decision.
+
+Measure reused tokens, transferred bytes, restore time, and miss overhead alongside hit rate. Many short-prefix hits may save less work than a few long-prefix hits.
+
+## Diagnose before adding another optimization
+
+| Symptom | Inspect first | Options to compare | Possible cost |
+| --- | --- | --- | --- |
+| Slow first token | Queueing, tokenization, prefill, cache | Chunking, prefix reuse, replicas | TTFT / ITL tradeoff; more memory |
+| Uneven streaming | Decode batches, KV reads, contention | Scheduling, quantization, kernels, prefill/decode separation | Quality, transfers, operational complexity |
+| Model does not fit | Weights, KV, workspace separately | Quantization, TP / PP | Communication and hardware constraints |
+| Invalid JSON | Whether output constraints are enabled | Constrained decoding and validation | Valid syntax still permits false content |
+| Speculative decoding is slower | Draft cost, acceptance, verification batch | Change or disable the draft method | Extra state and verification work |
+
+As of 2026-10 (vLLM v0.31.0, SGLang v0.5.21), most mechanisms exist in both engines: paged KV management, prefix reuse on by default, continuous batching and chunked prefill, CPU scheduling overlapped with GPU execution, CUDA graphs, EAGLE / MTP / n-gram speculative decoding, structured output through xgrammar and others, TP / PP / DP + EP, prefill/decode disaggregation, and tiered KV storage. Shared features do not make the engines interchangeable: scheduling paths, cache structures, and feature compatibility still matter. The prefix index is a block-hash table in vLLM and a radix tree in SGLang, with base defaults of 16 versus 1 token; actual granularity depends on the backend and model. vLLM schedules decode tokens first and fills the rest of the same batch with prefill chunks, while SGLang by default runs a prefill batch whenever new prefill work is ready and mixes the two only with `--enable-mixed-chunk`. vLLM uses torch.compile by default and SGLang does not. SGLang builds prefill/decode roles and a router into the engine, while vLLM disaggregates through KV connectors that its docs still mark experimental.
+
+Compare a **versioned model/hardware/feature combination**, not slogans about which engine is for agents or concurrency. FSDP handles [training state](training-frameworks.en.md); it is not another generation engine in this comparison.
+
+## Design a meaningful comparison
+
+A single “hello” request is insufficient. Include short questions, long documents, shared-prefix conversations, bursts, and cancellations. Record input and actual output lengths. Fix weights, tokenizer, chat template, sampling, and hardware; separate cold starts from warmed runs.
+
+| Report | Reason |
+| --- | --- |
+| TTFT, ITL, end-to-end p50 / p95 / p99 | Throughput hides waiting; short outputs still contribute TTFT |
+| Input and output token throughput separately | They represent different computation |
+| Requests/s meeting quality and latency requirements | Timeouts do not have the same value as useful completions |
+| Timeouts, cancellations, rejections, OOMs, errors | Successful requests alone create survivor bias |
+| GPU / CPU memory, network traffic, total cost | The bottleneck may move away from the GPU |
+
+An open-arrival test keeps sending on schedule and exposes queue buildup. A closed-loop test waits for prior completions, so offered load can fall when the system slows. Both are useful if labeled, with offered and completed work reported. A shared seed does not guarantee identical generated text across engines, batches, or kernels; run quality and format regressions separately.
+
+The outcome should be a reproducible record: versions, configuration, inputs, results, and failures. Continue with [serving and feedback](../practice/ml-system/serving-and-feedback.en.md) to place the engine inside a product.
+
+## Explain the path before listing features
+
+One short opening can establish the scope:
+
+> I would trace a request first. The application handles access, prompts, and incoming traffic. The engine owns queues, compute budgets, and KV state, and schedules each iteration. Workers execute the model and kernels, then return results for streaming. Input/output lengths, arrival rate, and latency targets tell me which bottleneck to investigate before changing batches, replicas, or model/stage partitioning.
+
+That is an answer structure, not a script. Continue into a part you know well:
+
+| Follow-up | Explain | Evidence to bring |
+| --- | --- | --- |
+| Why is a service slow despite a high prefix hit rate? | How many tokens hit, and on which replica? Queues, decode, and transfers remain after prefill reuse | Phase traces, reused tokens, cold/warm comparisons |
+| What happens when KV is full? | Wait, reject, evict reclaimable blocks, preempt, or recompute; distinguish reclaimable cache from state still used by active requests | Capacity, references, preemption/recomputation, tail latency |
+| Is TP=4 always faster than TP=2? | Less work per device can come with more communication or a larger communication share; small batches may underutilize hardware | Compute/collective timings, interconnect, batch and model structure |
+| A client disconnected but memory did not drop—is that a leak? | Check termination and references; retaining a memory pool does not mean continuing to serve the request | Request lifecycle, active blocks versus idle pool, not process memory alone |
+| How would you demonstrate an improvement? | Match versions and traffic; compare completions meeting quality and latency targets, cost, and errors | Open-arrival testing, failures, reproducible settings—not just tokens/s |
+
+Read source by following a request object into a batch, cache indices, and execution. You do not need to read the repository in file order. For the broader preparation route, see [RE / MLE and inference interviews](../interview/ai-roles-prep.en.md#inference). This chapter checks source and teaching examples; it does not run GPU benchmarks for either framework.

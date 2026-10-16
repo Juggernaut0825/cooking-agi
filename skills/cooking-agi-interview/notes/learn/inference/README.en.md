@@ -1,0 +1,56 @@
+<!-- source: https://github.com/tianyi-zhang-02/cooking-agi/blob/main/learn/inference/README.en.md -->
+# Inference: from the next token to a complete request
+
+[中文](README.md) · **English**
+
+“The model is slow” is not specific enough. The input may be long, caches may fill memory, or requests may wait for one another. Locate the delay before choosing an optimization.
+
+## Follow one request
+
+```text
+input text → token IDs → prefill → first token
+                                      ↓
+                   update KV cache ← decode → sample next token
+                                      ↓
+                              stop and release state
+```
+
+This simplified autoregressive path does not prescribe a scheduler. Prefill processes the existing context; decode uses cached state to continue generation. Sampling decides which token to select, while caching decides which state to retain and read. They solve different problems.
+
+## Similar names, different interventions
+
+| Method | Main intervention | What does not follow |
+| --- | --- | --- |
+| Temperature / top-p | Token selection from the output distribution | More randomness does not imply greater capability |
+| KV cache | Reuse of prefix keys / values | Caching does not remove subsequent reads of history |
+| MQA / GQA | Number and sharing of KV heads | Memory reduction is not end-to-end speedup |
+| RoPE / YaRN | Position representation and long-context handling | Accepting a long input is not using its evidence well |
+| [NoPE and sequence order](../../00-foundations/deep-dives/nope-and-order.en.md) | No added explicit position encoding; order information has to come from elsewhere | It does not remove order information, and it is not training-free context extension |
+| FlashAttention | Attention-related memory traffic | Dense attention pairs do not disappear |
+| PagedAttention | Physical allocation and sharing of KV state | It does not make attention sparse |
+| MLA | Representation stored for each position | Compressing state differs from reading fewer positions |
+| Sparse attention | Query–key pairs included in computation | Omitted pairs are not necessarily unimportant |
+
+Start with generation and caching below, then move to long context and efficient attention. If you already understand decoders, find the particular mechanism you need to distinguish.
+
+## Chapter contents
+
+For the engines that serve a model, read [vLLM and SGLang](../../06-systems/inference-frameworks.en.md): separate the application, engine, and kernels, then examine batching, prefix reuse, HiCache, and benchmarking. Mechanisms live here; product integration and ownership belong in [engineering practice](../../practice/ml-system/README.en.md).
+
+To follow a request through an actual service, read [a request through the system](../../06-systems/llm-serving.en.md). It connects input preparation, queues, caching, model execution, and output, then uses a chunking example to explain first-token versus streaming latency. If you already deploy models, jump to the [KV memory budget](../../00-foundations/deep-dives/kv-cache-and-inference.en.md#inference-budget) or [cache eviction](../../00-foundations/deep-dives/attention-kernels.en.md#cache-lifecycle).
+
+Once decode and caching are clear, [DFlash and MTP](../../00-foundations/deep-dives/dflash.en.md) examines reducing target-model rounds: follow drafting and verification, then rejection, cache rollback, and costs. Beginners do not need every acceleration method first.
+
+## A small performance diagnosis
+
+Suppose a request waits 800 ms for its first token, then receives a token every 20 ms. These intervals answer different questions. The first can include queuing, prefill, and the first generation step; the second is closer to ongoing decode. Reporting only average tokens/s hides the distinction.
+
+If inputs grow longer, inspect prefill and cache reads. If concurrency delays the first token, inspect queuing, scheduling, and resource contention. This example illustrates measurement decomposition, not proof of a particular bottleneck.
+
+| Hold fixed when comparing | Report alongside it |
+| --- | --- |
+| Model, weights, tokenizer, precision | Output quality and numerical tolerance |
+| Input/output length distributions, concurrency | Time to first token, inter-token intervals, end-to-end latency |
+| Hardware, batch, cache state | Useful throughput, peak memory, tail latency |
+
+Training-side memory belongs in [pretraining and training mechanics](../pretraining/README.en.md), rather than an inference-cache checklist. Version-specific claims still need the model report and implementation.
