@@ -1060,6 +1060,127 @@
     ]);
   };
 
+  // up to three decimals, at least two, as the notes write them: 0.80, 0.825, 0.53
+  function short(x) { const v = (Math.round(x * 1000) / 1000).toFixed(3); return v.endsWith('0') ? v.slice(0, -1) : v; }
+
+  /* 06-systems/decision-support §4: confidence groups H (60% of cases, AI 0.95) and L (40%, AI 0.575), the person
+     at 0.70 in both (teaching numbers). Team accuracy = Σ P(g)·[r_g·a_g + (1 − r_g)·h_g], six reliance policies. */
+  F.relianceGroups = function (share = [0.6, 0.4], ai = [0.95, 0.575], person = 0.70) {
+    const team = (r, a) => share.reduce((sum, p, g) => sum + p * (r[g] * a[g] + (1 - r[g]) * person), 0);
+    const overall = team([1, 1], ai), flat = [overall, overall];
+    const policies = [['person', [0, 0], ai], ['ai', [1, 1], ai], ['signal', [1, 0], ai], ['over', [1, 0.5], ai], ['under', [2 / 3, 0], ai], ['flat', [1, 0], flat]]
+      .map(([id, r, a]) => ({id, r, a, acc: team(r, a)}));
+    const [, , best, over, under, blind] = policies.map(p => p.acc);
+    const agree = ai[1] * person + (1 - ai[1]) * (1 - person);
+    const hPart = share[0] * ai[0], lPart = share[1] * person, h = short(person);
+    const pts = x => String(Math.round(x * 1000) / 10);
+    const at = shown => ({share, person, policies, overall, shown, now: shown - 1});
+    return frames([
+      {...at(1), zh: `教学数字。按 AI 显示的把握把案例分成两组：高把握组 H 占 ${pts(share[0])}%，低把握组 L 占 ${pts(share[1])}%。柱宽是占比，柱高是这组的准确率。人单独判断，两组都是 ${h}。`,
+        en: `Teaching numbers. Split the cases by the confidence the AI displays: a high-confidence group H with ${pts(share[0])}% of cases and a low-confidence group L with ${pts(share[1])}%. Width is the share, height the accuracy in that group. The person alone is ${h} in both.`},
+      {...at(2), zh: `只靠 AI：H 组 ${ai[0]}，L 组 ${ai[1]}。面积相加就是总体准确率：${share[0]}×${ai[0]} + ${share[1]}×${ai[1]} = ${short(overall)}。`,
+        en: `AI only: ${ai[0]} in H, ${ai[1]} in L. The areas add up to overall accuracy: ${share[0]}×${ai[0]} + ${share[1]}×${ai[1]} = ${short(overall)}.`},
+      {...at(3), zh: `高把握照做，低把握自己判断：${share[0]}×${ai[0]} + ${share[1]}×${h} = ${short(hPart)} + ${short(lPart)} = ${short(best)}，高于两条基线。L 组里人比 AI 准，把握信号正好把这组挑了出来。`,
+        en: `Follow when confident, decide alone when not: ${share[0]}×${ai[0]} + ${share[1]}×${h} = ${short(hPart)} + ${short(lPart)} = ${short(best)}, above both lines. In L the person beats the AI, and the confidence signal picks out exactly that group.`},
+      {...at(4), zh: `过度依赖：低把握时也照做一半。${short(hPart)} + ${share[1]}×(0.5×${ai[1]} + 0.5×${h}) = ${short(over)}，比 AI 多出的 ${pts(best - overall)} 个点只剩 ${pts(over - overall)} 个。`,
+        en: `Over-reliance: also follow half of the low-confidence advice. ${short(hPart)} + ${share[1]}×(0.5×${ai[1]} + 0.5×${h}) = ${short(over)}; the ${pts(best - overall)}-point gain over the AI shrinks to ${pts(over - overall)}.`},
+      {...at(5), zh: `依赖不足：高把握时也推翻三分之一。${share[0]}×(⅔×${ai[0]} + ⅓×${h}) + ${short(lPart)} = ${short(under)}，退回到 AI 单独的水平，等于没加人。`,
+        en: `Under-reliance: also override a third of the confident advice. ${share[0]}×(⅔×${ai[0]} + ⅓×${h}) + ${short(lPart)} = ${short(under)}, back to the AI alone, as if no person were involved.`},
+      {...at(6), zh: `同样按把握做，但把握信号没有信息：AI 在两组都是 ${short(overall)}。${share[0]}×${short(overall)} + ${share[1]}×${h} = ${short(blind)}，团队低于 AI 单独。`,
+        en: `The same rule with a confidence signal that carries no information, the AI at ${short(overall)} in both groups: ${share[0]}×${short(overall)} + ${share[1]}×${h} = ${short(blind)}, below the AI alone.`},
+      {...at(6), now: 2, agree, done: true,
+        zh: `同意不等于依赖。第三种做法在 L 组完全自己判断（r = 0），仍有 ${ai[1]}×${h} + ${short(1 - ai[1])}×${short(1 - person)} = ${short(agree)} 的案例和 AI 一致：二选一时，两边都错也算一致。要分开依赖和碰巧一致，得先记下人的初判。`,
+        en: `Agreement is not reliance. The third policy judges L entirely alone (r = 0), yet ${ai[1]}×${h} + ${short(1 - ai[1])}×${short(1 - person)} = ${short(agree)} of those cases agree with the AI: in a binary choice, both being wrong also counts. Telling reliance from coincidence needs the person's initial judgement.`}
+    ]);
+  };
+
+  /* 07-evaluation/eval-observability §5–6 (made-up teaching numbers): a judge with s = 0.95, t = 0.85 on a true pass
+     rate p = 0.90, 1% of 100,000 requests judged a day; a slice with 2% of traffic; then the judge drifts to t = 0.75. */
+  F.judgeSampling = function ({s = 0.95, t = 0.85, p = 0.90, traffic = 100000, rate = 0.01, slice = 0.02, sliceRate = 0.25,
+    sliceFall = [0.90, 0.60], passed = 17, drift = [0.75, 0.886]} = {}) {
+    const z = 1.96, power = 0.84, j = s + t - 1;
+    const pct = (x, d = 0) => (x * 100).toFixed(d) + '%', pt = x => (x * 100).toFixed(1);
+    const cells = (pp, tt) => ({p: pp, t: tt, tp: s * pp, fn: (1 - s) * pp, fp: (1 - tt) * (1 - pp), tn: tt * (1 - pp)});
+    const now = cells(p, t), q = now.tp + now.fp, n = Math.round(traffic * rate);
+    const se = m => Math.sqrt(q * (1 - q) / m) / j, mde = m => (z + power) * Math.SQRT2 * se(m);
+    const pHat = (q + t - 1) / j, raw = Math.sqrt(q * (1 - q) / n), half = z * se(n), mdeAll = mde(n);
+    const sliceN = Math.round(traffic * slice * rate);
+    const wilson = (k, m) => {
+      const f = k / m, d = 1 + z * z / m, c = (f + z * z / (2 * m)) / d, w = z / d * Math.sqrt(f * (1 - f) / m + z * z / (4 * m * m));
+      return [c - w, c + w];
+    };
+    const [lo, hi] = wilson(passed, sliceN), fall = Math.round((sliceFall[0] - sliceFall[1]) * 100), move = slice * (sliceFall[0] - sliceFall[1]);
+    const strat = Math.round(traffic * slice * sliceRate), rest = Math.round(traffic * (1 - slice) * rate);
+    const sliceHalf = z * se(strat), sliceMde = mde(strat);
+    const [t2, p2] = drift, later = cells(p2, t2), q2 = later.tp + later.fp;
+    const base = {s, t, p, q, n, pHat, half, mdeAll, slice, sliceN, passed, lo, hi, sliceFall, move, strat, rest, sliceHalf, sliceMde, t2, p2, q2};
+    const calls = (strat + rest).toLocaleString('en-US');
+    return frames([
+      {...base, stage: 0, view: 'overall', cells: now,
+        zh: `教学用的虚构数字。按人工标准，线上回答 ${pct(p)} 合格、${pct(1 - p)} 不合格。左边方块的宽度就是流量份额。`,
+        en: `Made-up teaching numbers. By the human standard, ${pct(p)} of production answers pass and ${pct(1 - p)} fail. Widths in the square on the left are shares of traffic.`},
+      {...base, stage: 1, view: 'overall', cells: now, judged: true,
+        zh: `judge 放过合格回答的 s = ${s}、不合格回答的 1 − t = ${short(1 - t)}：${s}×${short(p)} = ${short(now.tp)}，加上 ${short(1 - t)}×${short(1 - p)} = ${short(now.fp)}，judge 看到的通过率 q = ${short(q)}。`,
+        en: `The judge passes s = ${s} of good answers and 1 − t = ${short(1 - t)} of bad ones: ${s}×${short(p)} = ${short(now.tp)} plus ${short(1 - t)}×${short(1 - p)} = ${short(now.fp)}, so the judge sees q = ${short(q)}.`},
+      {...base, stage: 2, view: 'overall', cells: now, judged: true,
+        zh: `用已知的 s、t 反解：p̂ = (${short(q)} + ${t} − 1)/${short(j)} = ${short(pHat)}。每天评 ${n.toLocaleString('en-US')} 条，SE = ${raw.toFixed(4)}/${short(j)} = ${se(n).toFixed(4)}，95% 区间是 ${pct(pHat)} ± ${pt(half)} 个百分点。`,
+        en: `Invert with the known s and t: p̂ = (${short(q)} + ${t} − 1)/${short(j)} = ${short(pHat)}. With ${n.toLocaleString('en-US')} judged a day, SE = ${raw.toFixed(4)}/${short(j)} = ${se(n).toFixed(4)}, so the 95% interval is ${pct(pHat)} ± ${pt(half)} points.`},
+      {...base, stage: 3, view: 'overall', cells: now, judged: true,
+        zh: `日环比要有八成把握报警：MDE ≈ ${(z + power).toFixed(1)} × ${Math.SQRT2.toFixed(3)} × ${se(n).toFixed(4)} ≈ ${pt(mdeAll)} 个百分点。真实通过率得从 ${pct(p)} 掉到 ${pct(p - mdeAll, 1)}。`,
+        en: `For a day-over-day alarm with 80% power, MDE ≈ ${(z + power).toFixed(1)} × ${Math.SQRT2.toFixed(3)} × ${se(n).toFixed(4)} ≈ ${pt(mdeAll)} points: the true pass rate has to fall from ${pct(p)} to ${pct(p - mdeAll, 1)}.`},
+      {...base, stage: 4, view: 'slice', cells: now, judged: true,
+        zh: `换成占流量 ${pct(slice)} 的切片：${pct(rate)} 抽样每天只评 ${sliceN} 条。${passed}/${sliceN} 通过时，Wilson 区间是 ${pct(lo)} 到 ${pct(hi)}。切片从 ${pct(sliceFall[0])} 跌到 ${pct(sliceFall[1])}，整体只降 ${slice} × ${fall} = ${pt(move)} 个点。`,
+        en: `Now a slice with ${pct(slice)} of traffic: at ${pct(rate)} sampling only ${sliceN} are judged a day. With ${passed} of ${sliceN} passing, the Wilson interval runs from ${pct(lo)} to ${pct(hi)}. The slice falls from ${pct(sliceFall[0])} to ${pct(sliceFall[1])}, yet the overall rate drops only ${slice} × ${fall} = ${pt(move)} points.`},
+      {...base, stage: 5, view: 'slice', cells: now, judged: true,
+        zh: `对这个切片单独抽 ${pct(sliceRate)}：${strat} + ${rest} = ${calls} 次 judge 调用，切片的 MDE 降到约 ${pt(sliceMde)} 个百分点，${fall} 个点的下跌看得见了。`,
+        en: `Sample this slice separately at ${pct(sliceRate)}: ${strat} + ${rest} = ${calls} judge calls a day, and the slice's MDE drops to about ${pt(sliceMde)} points, so a ${fall}-point fall now shows.`},
+      {...base, stage: 6, view: 'overall', cells: later, judged: true, done: true,
+        zh: `一个月后 judge 换了版本，t 从 ${t} 降到 ${t2}；真实通过率同时降到 ${pct(p2, 1)}。judge 看到 ${s}×${p2} + ${short(1 - t2)}×${short(1 - p2)} ≈ ${q2.toFixed(3)}，曲线是平的。只有用锚点集分开重测 s 和 t，才看得出 t 变了。`,
+        en: `A month later the judge changes version and t drops from ${t} to ${t2}, while the true pass rate falls to ${pct(p2, 1)}. The judge sees ${s}×${p2} + ${short(1 - t2)}×${short(1 - p2)} ≈ ${q2.toFixed(3)}: a flat curve. Only re-measuring s and t separately on an anchor set shows that t moved.`}
+    ]);
+  };
+
+  /* 10-agents/single-vs-multi-agent §5 (teaching numbers): three independent subquestions, 4 tool calls each at
+     10 s and 4k tokens; a 3k fixed prompt per context, a 2k answer, 0.5k briefs, 1k summaries, 10 s to plan and to synthesise. */
+  F.subagentTimeline = function ({subs = 3, calls = 4, step = 10, ret = 4, prompt = 3, answer = 2, brief = 0.5, summary = 1,
+    s1 = 0.90, s2 = 0.95, drops = [0.02, 0.10]} = {}) {
+    const names = ['A', 'B', 'C'].slice(0, subs);
+    const block = (lane, start, kind) => ({lane, start, end: start + step, kind});
+    const single = Array.from({length: subs * calls}, (_, k) => block('single', k * step, 'tool'));
+    single.push(block('single', subs * calls * step, 'step'));
+    const parallel = [block('lead', 0, 'step')];
+    names.forEach(lane => { for (let k = 0; k < calls; k++) parallel.push(block(lane, step + k * step, 'tool')); });
+    parallel.push(block('lead', step + calls * step, 'step'));
+    const chained = [block('lead', 0, 'step')], phases = [step];
+    let clock = step;
+    names.forEach(lane => {
+      for (let k = 0; k < calls; k++) chained.push(block(lane, clock + k * step, 'tool'));
+      clock += calls * step; phases.push(calls * step);
+      chained.push(block('lead', clock, 'step'));
+      clock += step; phases.push(step);
+    });
+    const end = list => Math.max(...list.map(b => b.end));
+    const time = {single: end(single), parallel: end(parallel), chained: end(chained)};
+    const tokens = {single: prompt + subs * calls * ret + answer, lead: prompt + subs * brief + subs * summary + answer, sub: prompt + brief + calls * ret + summary};
+    tokens.multi = tokens.lead + subs * tokens.sub;
+    const rise = tokens.multi / tokens.single - 1;
+    const cube = x => x ** subs, pSingle = cube(s1), pMulti = drops.map(d => cube(s2 * (1 - d))), dStar = 1 - s1 / s2;
+    const k = x => `${x}k`, pc = x => `${Math.round(x * 100)}%`;
+    const base = {names, single, parallel, chained, time, tokens, rise, pSingle, pMulti, dStar, drops, s1, s2};
+    return frames([
+      {...base, stage: 0, zh: `教学数字：查 A、B、C 三家图书馆的节假日规则，每家要 ${calls} 次工具调用，每次 ${step} 秒、返回 ${k(ret)} token。单 agent 依次做完 ${subs * calls} 次，再用 ${step} 秒写答案：${subs * calls}×${step} + ${step} = ${time.single} 秒。Token 是 ${prompt} + ${subs * calls}×${ret} + ${answer} = ${k(tokens.single)}，全在一个上下文里。`,
+        en: `Teaching numbers: find the holiday rules of libraries A, B and C, ${calls} tool calls each, every call ${step} s and ${k(ret)} tokens back. The single agent runs all ${subs * calls} in a row, then spends ${step} s on the answer: ${subs * calls}×${step} + ${step} = ${time.single} s. Tokens: ${prompt} + ${subs * calls}×${ret} + ${answer} = ${k(tokens.single)}, all in one context.`},
+      {...base, stage: 1, zh: `拆开：协调者规划 ${step} 秒，三个子 agent 各做 ${calls} 次调用、同时进行，协调者再汇总 ${step} 秒：${step} + ${calls}×${step} + ${step} = ${time.parallel} 秒。不是 ${time.single} 秒的三分之一，因为规划和汇总没法并行。`,
+        en: `Split it: the lead plans for ${step} s, three subagents run ${calls} calls each at the same time, and the lead synthesises for ${step} s: ${step} + ${calls}×${step} + ${step} = ${time.parallel} s. Not a third of ${time.single} s, because planning and synthesis cannot run in parallel.`},
+      {...base, stage: 2, zh: `Token 账：协调者 ${prompt} + ${subs * brief} + ${subs * summary} + ${answer} = ${k(tokens.lead)}，每个子 agent ${prompt} + ${brief} + ${calls * ret} + ${summary} = ${k(tokens.sub)}，三个共 ${k(subs * tokens.sub)}。合计 ${k(tokens.multi)}，比单 agent 多约 ${pc(rise)}；最长的单个上下文却从 ${k(tokens.single)} 降到 ${k(tokens.sub)}。`,
+        en: `The token bill: the lead uses ${prompt} + ${subs * brief} + ${subs * summary} + ${answer} = ${k(tokens.lead)}, each subagent ${prompt} + ${brief} + ${calls * ret} + ${summary} = ${k(tokens.sub)}, ${k(subs * tokens.sub)} for all three. That is ${k(tokens.multi)} in all, about ${pc(rise)} more than the single agent, yet the longest single context falls from ${k(tokens.single)} to ${k(tokens.sub)}.`},
+      {...base, stage: 3, zh: `答对要三个关键事实都保住。单 agent 在长上下文里每个保住 ${s1.toFixed(2)}：${s1}³ = ${pSingle.toFixed(3)}。子 agent 是 ${s2}，但摘要以概率 d 漏掉它：d = ${pc(drops[0])} 时 ${pMulti[0].toFixed(3)}，d = ${pc(drops[1])} 时 ${pMulti[1].toFixed(3)}。持平点 d* = 1 − ${s1.toFixed(2)}/${s2} ≈ ${(dStar * 100).toFixed(1)}%。`,
+        en: `A right answer needs all three key facts. The single agent keeps each with ${s1.toFixed(2)} in its long context: ${s1}³ = ${pSingle.toFixed(3)}. A subagent keeps it with ${s2}, but its summary drops it with probability d: ${pMulti[0].toFixed(3)} at d = ${pc(drops[0])}, ${pMulti[1].toFixed(3)} at d = ${pc(drops[1])}. They break even at d* = 1 − ${s1.toFixed(2)}/${s2} ≈ ${(dStar * 100).toFixed(1)}%.`},
+      {...base, stage: 4, done: true, zh: `让子问题先后依赖：A → B → C。并行宽度变成 1：${phases.join(' + ')} = ${time.chained} 秒，比单 agent 慢 ${time.chained - time.single} 秒。并行只在子问题互相独立时省时间；规划和汇总始终串行。`,
+        en: `Make the subquestions sequential, A → B → C. The parallel width drops to 1: ${phases.join(' + ')} = ${time.chained} s, ${time.chained - time.single} s slower than the single agent. Parallelism saves time only when the subquestions are independent; planning and synthesis stay serial.`}
+    ]);
+  };
+
   if (typeof module !== 'undefined' && module.exports) module.exports = {F, frames};
   if (typeof document === 'undefined' || !scope.AlgoLab) return;
 
@@ -2357,6 +2478,234 @@
         n.circle.setAttribute('class', 'algo-cell' + (frame.wrong && i === 2 ? ' is-bad' : now ? ' is-change' : frame.R[i] != null && frame.stage >= 1 ? ' is-keep' : ''));
       });
       back.forEach((p, i) => p.classList.toggle('is-hidden', !(frame.R[i] != null && frame.stage >= 2)));
+    };
+  }});
+
+  FIGURES['step-reliance-groups'] = name => stepper(name, F.relianceGroups(), {height: 300, readouts: f => {
+    const diff = x => (Math.abs(x) < 1e-9 ? '0' : (x > 0 ? '+' : '−') + short(Math.abs(x)));
+    const tone = x => (Math.abs(x) < 1e-9 ? '' : x > 0 ? 'good' : 'bad');
+    if (f.agree != null) return [[t('L 组采纳 AI 的比例', 'L: share adopting the AI'), 'r = 0'], [t('L 组和 AI 一致的比例', 'L: share agreeing with the AI'), short(f.agree), 'bad']];
+    const acc = f.policies[f.now].acc;
+    return [[t('团队准确率', 'team accuracy'), short(acc), 'key'],
+      [t('比人单独', 'vs person alone'), diff(acc - f.person), tone(acc - f.person)],
+      [t('比 AI 单独', 'vs AI alone'), f.now >= 1 ? diff(acc - f.overall) : '—', f.now >= 1 ? tone(acc - f.overall) : '']];
+  }, setup(svg) {
+    const first = F.relianceGroups()[0], share = first.share;
+    const x0 = 70, colW = 76, gap = 14, base = 246, unit = 190, Y = v => base - v * unit, right = x0 + 6 * colW + 5 * gap;
+    // English names take two lines so neighbouring columns do not collide
+    const names = [['只靠人', 'person\nonly'], ['只靠 AI', 'AI\nonly'], ['按把握', 'follow\nsignal'], ['过度依赖', 'over-\nreliance'], ['依赖不足', 'under-\nreliance'], ['信号没信息', 'no-info\nsignal']];
+    const frac = r => (Math.abs(r - 2 / 3) < 1e-9 ? '⅔' : String(r));
+    [['is-look', t('照 AI 的建议', 'follow the AI')], ['is-keep', t('人自己判断', 'person decides')]].forEach(([cls, label], i) => {
+      svg.append(s('rect', {x: x0 + i * 150, y: 14, width: 14, height: 14, rx: 3, class: 'algo-cell ' + cls}));
+      V.text(svg, x0 + i * 150 + 20, 26, label, 'algo-note');
+    });
+    svg.append(s('line', {x1: x0 + 300, y1: 21, x2: x0 + 320, y2: 21, class: 'algo-edge is-change'}));
+    V.text(svg, x0 + 326, 26, t('团队准确率', 'team accuracy'), 'algo-note');
+    svg.append(s('line', {x1: x0 - 6, y1: base, x2: right + 6, y2: base, class: 'algo-edge'}));
+    [...new Set([0, first.person, first.overall, ...first.policies[1].a])].forEach(v => V.text(svg, x0 - 10, Y(v) + 4, v ? short(v) : '0', 'algo-idx', 'end'));
+    const cols = first.policies.map((pol, i) => {
+      const x = x0 + i * (colW + gap), g = s('g');
+      svg.append(g);
+      [0, 1].forEach(k => {
+        const from = x + (k ? share[0] * colW : 0), w = share[k] * colW, wAi = pol.r[k] * w;
+        if (wAi > 2) g.append(s('rect', {x: from + 1, y: Y(pol.a[k]), width: wAi - 2, height: pol.a[k] * unit, rx: 2, class: 'algo-cell is-look'}));
+        if (w - wAi > 2) g.append(s('rect', {x: from + wAi + 1, y: Y(first.person), width: w - wAi - 2, height: first.person * unit, rx: 2, class: 'algo-cell is-keep'}));
+        V.text(g, wAi >= w - wAi ? from + wAi / 2 : from + wAi + (w - wAi) / 2, base - 8, k ? 'L' : 'H', 'algo-idx', 'middle');
+      });
+      g.append(s('line', {x1: x - 4, x2: x + colW + 4, y1: Y(pol.acc), y2: Y(pol.acc), class: 'algo-edge is-change'}));
+      const lines = t(...names[i]).split('\n'), below = base + 18 + 14 * (lines.length - 1);
+      lines.forEach((line, n) => V.text(g, x + colW / 2, base + 18 + 14 * n, line, 'algo-head', 'middle'));
+      V.text(g, x + colW / 2, below + 16, `r ${frac(pol.r[0])}, ${frac(pol.r[1])}`, 'algo-idx', 'middle');
+      return {g, value: V.text(g, x + colW / 2, below + 34, short(pol.acc), 'algo-strong', 'middle')};
+    });
+    const refs = [[first.person, t('人单独', 'person')], [first.overall, t('AI 单独', 'AI')]].map(([v, label]) => {
+      const g = s('g');
+      g.append(s('line', {x1: x0 - 6, x2: right + 6, y1: Y(v), y2: Y(v), class: 'algo-edge algo-dash'}));
+      V.text(g, right + 10, Y(v) + 4, label, 'algo-note');
+      svg.append(g);
+      return g;
+    });
+    const lx = x0 + 2 * (colW + gap) + share[0] * colW, lw = share[1] * colW;
+    const agree = s('g');
+    agree.append(s('line', {x1: lx + 1, x2: lx + lw - 1, y1: 0, y2: 0, class: 'algo-edge is-bad algo-dash'}));
+    const agreeText = V.text(agree, lx + lw / 2, 0, '', 'algo-strong', 'middle');
+    svg.append(agree);
+    return frame => {
+      cols.forEach((c, i) => {
+        show(c.g, i < frame.shown);
+        c.value.setAttribute('class', i === frame.now ? 'algo-strong' : 'algo-note');
+      });
+      show(refs[1], frame.shown >= 2);
+      show(agree, frame.agree != null);
+      if (frame.agree != null) {
+        agree.firstChild.setAttribute('y1', Y(frame.agree)); agree.firstChild.setAttribute('y2', Y(frame.agree));
+        agreeText.setAttribute('y', Y(frame.agree) + 15); agreeText.textContent = short(frame.agree);
+      }
+    };
+  }});
+
+  FIGURES['step-judge-sampling'] = name => stepper(name, F.judgeSampling(), {height: 290, readouts: f => {
+    const pct = (x, d = 0) => (x * 100).toFixed(d) + '%', pt = x => (x * 100).toFixed(1), pts = t(' 个百分点', ' points');
+    const truth = [t('真实通过率', 'true pass rate'), pct(f.p)], corrected = [t('校正后 p̂', 'corrected p̂'), `${pct(f.pHat)} ± ${pt(f.half)}`];
+    return [
+      [truth, ['q', '—']],
+      [truth, [t('judge 通过率 q', 'judge pass rate q'), `${short(f.cells.tp)} + ${short(f.cells.fp)} = ${short(f.q)}`, 'key']],
+      [['q', short(f.q)], [...corrected, 'key']],
+      [corrected, [t('日环比 MDE', 'day-over-day MDE'), `≈ ${pt(f.mdeAll)}${pts}`, 'key']],
+      [[t('切片每天评判', 'slice judged a day'), String(f.sliceN)], ['Wilson', `${pct(f.lo)}–${pct(f.hi)}`, 'bad'], [t('整体变化', 'overall change'), `−${pt(f.move)}${pts}`, 'bad']],
+      [[t('每天 judge 调用', 'judge calls a day'), `${f.strat} + ${f.rest} = ${(f.strat + f.rest).toLocaleString('en-US')}`], [t('切片 MDE', 'slice MDE'), `≈ ${pt(f.sliceMde)}${pts}`, 'good']],
+      [['t', `${f.t} → ${f.t2}`, 'bad'], [t('真实通过率', 'true pass rate'), `${pct(f.p)} → ${pct(f.p2, 1)}`, 'bad'], ['q', `${short(f.q)} → ${f.q2.toFixed(3)}`, 'key']]
+    ][f.stage];
+  }, setup(svg) {
+    const sx = 34, sy = 44, side = 170, cx0 = 300, cw = 230, cy0 = 44, ch = 150, xm = cx0 + cw / 2, x1 = cx0 + cw;
+    const pct = x => (x * 100).toFixed(1).replace(/\.0$/, '') + '%', pt = x => (x * 100).toFixed(1), four = x => String(Math.round(x * 10000) / 10000);
+    const scale = {overall: [0.80, 0.95], slice: [0.50, 1.00]}, tickSets = {overall: [0.80, 0.85, 0.90, 0.95], slice: [0.5, 0.6, 0.7, 0.8, 0.9, 1]};
+    V.text(svg, sx, 26, t('人工标准 × judge 判定', 'human label × judge verdict'), 'algo-head');
+    const box = {};
+    ['tp', 'fn', 'fp', 'tn'].forEach(k => { box[k] = s('rect', {rx: 2, class: 'algo-cell'}); svg.append(box[k]); });
+    const tpText = V.text(svg, 0, 0, '', 'algo-strong', 'middle'), fpText = V.text(svg, sx + side + 6, 0, '', 'algo-note');
+    const passText = V.text(svg, 0, sy + side + 18, '', 'algo-head', 'middle'), failText = V.text(svg, 0, sy + side + 18, '', 'algo-head', 'middle');
+    const legend = s('g');
+    [['is-look', t('judge 判通过', 'judge passes')], ['', t('judge 判不通过', 'judge fails')]].forEach(([cls, label], i) => {
+      legend.append(s('rect', {x: sx + i * 118, y: sy + side + 32, width: 14, height: 14, rx: 3, class: 'algo-cell ' + cls}));
+      V.text(legend, sx + i * 118 + 20, sy + side + 44, label, 'algo-note');
+    });
+    svg.append(legend);
+    const head = V.text(svg, cx0, 26, '', 'algo-head');
+    svg.append(s('line', {x1: cx0, y1: cy0, x2: cx0, y2: cy0 + ch, class: 'algo-edge'}), s('line', {x1: cx0, y1: cy0 + ch, x2: x1, y2: cy0 + ch, class: 'algo-edge'}));
+    V.text(svg, x1, cy0 + ch + 16, t('天 →', 'days →'), 'algo-idx', 'end');
+    const ticks = Array.from({length: 6}, () => V.text(svg, cx0 - 6, 0, '', 'algo-idx', 'end'));
+    const band = s('rect', {class: 'algo-band'}), marker = s('line', {x1: xm, x2: xm, y1: cy0, y2: cy0 + ch, class: 'algo-edge algo-dash'});
+    const trueLine = s('polyline', {class: 'algo-edge algo-dash'}), sliceLine = s('polyline', {class: 'algo-edge is-change'}), judgeLine = s('polyline', {class: 'algo-edge is-look-line'});
+    const bracket = s('path', {class: 'algo-edge'});
+    svg.append(band, marker, trueLine, sliceLine, judgeLine, bracket);
+    const bandText = V.text(svg, cx0 + 6, 0, '', 'algo-idx'), bracketText = V.text(svg, xm + 20, 0, '', 'algo-idx');
+    const ends = {truth: V.text(svg, x1 + 6, 0, '', 'algo-note'), judge: V.text(svg, x1 + 6, 0, '', 'algo-note'), slice: V.text(svg, x1 + 6, 0, '', 'algo-note')};
+    const notes = [V.text(svg, xm + 6, cy0 + 14, t('judge 换版本', 'judge update'), 'algo-note'), V.text(svg, xm + 6, cy0 + 32, '', 'algo-strong')];
+    const put = (r, x, y, w, h, cls) => {
+      [['x', x], ['y', y], ['width', Math.max(0, w)], ['height', Math.max(0, h)]].forEach(([k, v]) => r.setAttribute(k, v));
+      r.setAttribute('class', 'algo-cell' + (cls ? ' ' + cls : ''));
+    };
+    return frame => {
+      const c = frame.cells, wP = c.p * side, xf = sx + wP + 1, wf = side - wP - 1, judged = Boolean(frame.judged);
+      put(box.tp, sx, sy, wP - 1, judged ? frame.s * side - 1 : side, judged ? 'is-look' : '');
+      put(box.fn, sx, sy + frame.s * side + 1, wP - 1, (1 - frame.s) * side - 1, judged ? '' : 'is-hidden');
+      put(box.fp, xf, sy, wf, judged ? (1 - c.t) * side - 1 : side, judged ? 'is-look' : '');
+      put(box.tn, xf, sy + (1 - c.t) * side + 1, wf, c.t * side - 1, judged ? '' : 'is-hidden');
+      tpText.setAttribute('x', sx + wP / 2); tpText.setAttribute('y', sy + frame.s * side / 2 + 5);
+      tpText.textContent = judged ? four(c.tp) : '';
+      fpText.setAttribute('y', sy + (1 - c.t) * side / 2 + 4);
+      fpText.textContent = judged ? four(c.fp) : '';
+      passText.setAttribute('x', sx + wP / 2); passText.textContent = `${t('合格', 'pass')} ${pct(c.p)}`;
+      failText.setAttribute('x', sx + wP + (side - wP) / 2); failText.textContent = `${t('不合格', 'fail')} ${pct(1 - c.p)}`;
+      show(legend, judged);
+
+      const view = frame.view, [lo, hi] = scale[view], Y = v => cy0 + (hi - v) / (hi - lo) * ch, st = frame.stage;
+      head.textContent = view === 'slice' ? t(`每天的通过率：占流量 ${pct(frame.slice)} 的切片`, `daily pass rate: a ${pct(frame.slice)} slice`) : t('每天的通过率：整体', 'daily pass rate: overall');
+      ticks.forEach((node, i) => { const v = tickSets[view][i]; node.textContent = v == null ? '' : pct(v); node.setAttribute('y', v == null ? 0 : Y(v) + 4); });
+      const path = (a, b) => `${cx0},${Y(a)} ${xm},${Y(a)} ${xm},${Y(b)} ${x1},${Y(b)}`;
+      const after = st === 3 ? frame.p - frame.mdeAll : st >= 4 && st <= 5 ? frame.p - frame.move : st === 6 ? frame.p2 : frame.p;
+      trueLine.setAttribute('points', path(frame.p, after));
+      ends.truth.setAttribute('y', Y(after) + 4);
+      ends.truth.textContent = `${view === 'slice' ? t('整体', 'overall') : t('真实', 'true')} ${pct(after)}`;
+      const judgeOn = st === 1 || st === 2 || st === 6, later = st === 6 ? frame.q2 : frame.q;
+      show(judgeLine, judgeOn);
+      judgeLine.setAttribute('points', path(frame.q, later));
+      ends.judge.setAttribute('y', Y(later) + 4);
+      ends.judge.textContent = judgeOn ? `judge ${st === 6 ? pt(later) + '%' : pct(later)}` : '';
+      show(sliceLine, view === 'slice');
+      sliceLine.setAttribute('points', path(frame.sliceFall[0], frame.sliceFall[1]));
+      ends.slice.setAttribute('y', Y(frame.sliceFall[1]) + 4);
+      ends.slice.textContent = view === 'slice' ? `${t('切片', 'slice')} ${pct(frame.sliceFall[1])}` : '';
+      const range = st === 2 || st === 3 ? [frame.pHat - frame.half, frame.pHat + frame.half] : st === 4 ? [frame.lo, frame.hi] : st === 5 ? [frame.sliceFall[0] - frame.sliceHalf, frame.sliceFall[0] + frame.sliceHalf] : null;
+      if (range) put(band, cx0 + 1, Y(range[1]), (st === 2 ? cw : cw / 2) - 2, Y(range[0]) - Y(range[1]), '');
+      band.setAttribute('class', 'algo-band' + (range ? '' : ' is-hidden'));
+      bandText.textContent = st === 2 || st === 3 ? `p̂ ${pct(frame.pHat)} ± ${pt(frame.half)}` : st === 4 ? `${frame.passed}/${frame.sliceN} → ${Math.round(frame.lo * 100)}%–${Math.round(frame.hi * 100)}%`
+        : st === 5 ? `p̂ ${pct(frame.sliceFall[0])} ± ${pt(frame.sliceHalf)}` : '';
+      if (range) bandText.setAttribute('y', st === 4 ? Y(range[0]) - 8 : st === 5 ? Y(range[1]) - 5 : Y(range[1]) + 13);
+      const drop = st === 3 ? [frame.p, frame.p - frame.mdeAll, frame.mdeAll] : st === 5 ? [frame.sliceFall[0], frame.sliceFall[0] - frame.sliceMde, frame.sliceMde] : null;
+      show(bracket, Boolean(drop));
+      if (drop) {
+        const ya = Y(drop[0]), yb = Y(drop[1]);
+        bracket.setAttribute('d', `M${xm + 6} ${ya} h8 M${xm + 10} ${ya} V${yb} M${xm + 6} ${yb} h8`);
+        bracketText.setAttribute('y', (ya + yb) / 2 + 4);
+      }
+      bracketText.textContent = drop ? `MDE ${pt(drop[2])}` : '';
+      show(marker, st === 6);
+      notes.forEach(n => show(n, st === 6));
+      notes[1].textContent = `${t('锚点集：', 'anchor set: ')}t ${frame.t} → ${frame.t2}`;
+    };
+  }});
+
+  FIGURES['step-subagent-timeline'] = name => stepper(name, F.subagentTimeline(), {height: 270, readouts: f => {
+    const k = x => `${x}k`, pc = x => `${Math.round(x * 100)}%`;
+    if (f.stage === 3) return [[t('单 agent', 'single agent'), `${f.s1}³ = ${f.pSingle.toFixed(3)}`],
+      [t(`多 agent，d = ${pc(f.drops[0])}`, `multi, d = ${pc(f.drops[0])}`), f.pMulti[0].toFixed(3), 'good'],
+      [t(`多 agent，d = ${pc(f.drops[1])}`, `multi, d = ${pc(f.drops[1])}`), f.pMulti[1].toFixed(3), 'bad'],
+      [t('持平点 d*', 'break-even d*'), `≈ ${(f.dStar * 100).toFixed(1)}%`, 'key']];
+    const {time, tokens} = f;
+    return [
+      f.stage === 4 ? [t('墙钟时间（先后依赖）', 'wall clock, sequential'), `${time.single} s → ${time.chained} s`, 'bad']
+        : [t('墙钟时间', 'wall clock'), f.stage >= 1 ? `${time.single} s → ${time.parallel} s` : `${time.single} s`, f.stage === 1 ? 'good' : ''],
+      [t('Token', 'tokens'), f.stage >= 2 ? `${k(tokens.single)} → ${k(tokens.multi)}` + t(`（+${pc(f.rise)}）`, ` (+${pc(f.rise)})`) : k(tokens.single), f.stage === 2 ? 'bad' : ''],
+      [t('最长上下文', 'longest context'), f.stage >= 2 ? `${k(tokens.single)} → ${k(tokens.sub)}` : k(tokens.single), f.stage === 2 ? 'good' : '']];
+  }, setup(svg) {
+    const first = F.subagentTimeline()[0], X = sec => 100 + 3 * sec, bh = 22, axisY = 212, k = x => `${x}k`, pc = x => `${Math.round(x * 100)}%`;
+    const top = {single: 34, lead: 88};
+    first.names.forEach((n, i) => { top[n] = 118 + 30 * i; });
+    const laneText = [['single', t('单 agent', 'single agent')], ['lead', t('协调者', 'lead')], ...first.names.map(n => [n, t(`子 agent ${n}`, `sub ${n}`)])]
+      .map(([lane, label]) => ({lane, node: V.text(svg, 16, top[lane] + 15, label, 'algo-head')}));
+    svg.append(s('line', {x1: X(0), y1: axisY, x2: X(170), y2: axisY, class: 'algo-edge'}));
+    for (let sec = 0; sec <= 160; sec += 20) {
+      svg.append(s('line', {x1: X(sec), x2: X(sec), y1: axisY, y2: axisY + 4, class: 'algo-edge'}));
+      V.text(svg, X(sec), axisY + 17, String(sec), 'algo-idx', 'middle');
+    }
+    V.text(svg, X(170), axisY + 17, t('秒', 's'), 'algo-idx', 'middle');
+    [['is-look', t('工具调用（10 秒）', 'tool call (10 s)')], ['is-change', t('规划、汇总、写答案（各 10 秒）', 'plan, synthesise, answer (10 s each)')]].forEach(([cls, label], i) => {
+      svg.append(s('rect', {x: X(0) + i * 170, y: axisY + 30, width: 14, height: 14, rx: 3, class: 'algo-cell ' + cls}));
+      V.text(svg, X(0) + i * 170 + 20, axisY + 42, label, 'algo-note');
+    });
+    const layer = (list, ghost) => {
+      const g = s('g');
+      list.forEach(b => g.append(s('rect', {x: X(b.start) + 1.5, y: top[b.lane], width: 3 * (b.end - b.start) - 3, height: bh, rx: 4,
+        class: 'algo-cell ' + (ghost ? 'algo-ghost' : b.kind === 'tool' ? 'is-look' : 'is-change')})));
+      svg.append(g);
+      return g;
+    };
+    const single = layer(first.single), ghost = layer(first.parallel, true), parallel = layer(first.parallel), chained = layer(first.chained);
+    const ends = Object.fromEntries(Object.keys(top).map(lane => [lane, V.text(svg, 0, top[lane] + 15, '', 'algo-note')]));
+    const marker = s('line', {x1: X(first.time.parallel), x2: X(first.time.parallel), y1: top.lead - 6, y2: axisY, class: 'algo-edge algo-dash'});
+    svg.append(marker);
+    const markerText = V.text(svg, X(first.time.parallel), top.lead - 12, t(`并行时 ${first.time.parallel} 秒`, `${first.time.parallel} s in parallel`), 'algo-note', 'middle');
+    const inset = s('g'), ix = 290, barX = 496, barW = 100;
+    inset.append(s('rect', {x: ix, y: top.lead - 6, width: 320, height: axisY - top.lead - 2, rx: 8, class: 'algo-cell'}));
+    V.text(inset, ix + 12, top.lead + 14, t('三个事实都保住的概率', 'chance all three facts survive'), 'algo-head');
+    [[t('单 agent', 'single'), first.pSingle, ''], ...first.drops.map((d, i) => [t(`多 agent，d = ${pc(d)}`, `multi, d = ${pc(d)}`), first.pMulti[i], first.pMulti[i] > first.pSingle ? 'is-keep' : 'is-bad'])]
+      .forEach(([label, value, cls], i) => {
+        const y = top.lead + 38 + i * 26;
+        V.text(inset, ix + 12, y, label, 'algo-note');
+        V.text(inset, barX - 8, y, value.toFixed(3), 'algo-strong', 'end');
+        inset.append(s('rect', {x: barX, y: y - 11, width: value * barW, height: 14, rx: 3, class: 'algo-cell ' + cls}));
+      });
+    inset.append(s('line', {x1: barX + first.pSingle * barW, x2: barX + first.pSingle * barW, y1: top.lead + 20, y2: top.lead + 98, class: 'algo-edge algo-dash'}));
+    svg.append(inset);
+    return frame => {
+      const st = frame.stage, {time, tokens} = frame;
+      show(parallel, st >= 1 && st <= 3); show(ghost, st === 4); show(chained, st === 4);
+      [single, parallel].forEach(g => g.classList.toggle('is-out', st === 3));
+      laneText.forEach(({lane, node}) => node.classList.toggle('is-dim', st === 0 && lane !== 'single'));
+      show(inset, st === 3); show(marker, st === 4); show(markerText, st === 4);
+      const label = (lane, sec, text) => { ends[lane].setAttribute('x', X(sec) + 6); ends[lane].textContent = text; };
+      Object.values(ends).forEach(node => { node.textContent = ''; });
+      if (st === 0) label('single', time.single, `${time.single} s · ${k(tokens.single)}`);
+      if (st === 1 || st === 4) label('single', time.single, `${time.single} s`);
+      if (st === 1) label('lead', time.parallel, `${time.parallel} s`);
+      if (st === 4) label('lead', time.chained, `${time.chained} s`);
+      if (st === 2) {
+        label('single', time.single, k(tokens.single));
+        label('lead', time.parallel, k(tokens.lead));
+        frame.names.forEach(n => label(n, Math.max(...frame.parallel.filter(b => b.lane === n).map(b => b.end)), k(tokens.sub)));
+      }
     };
   }});
 

@@ -610,6 +610,9 @@ FIGURE_LAB = [
     ("step-evaluator-rank", "相关系数 0.98，第一名还是选错了", "A correlation of 0.98, and still the wrong winner", "step"),
     ("step-mcts-visits", "六次模拟：访问次数变成策略标签", "Six simulations: visit counts become a policy target", "step"),
     ("step-lambda-return", "从后往前算 λ-return", "Computing a λ-return backwards", "step"),
+    ("step-reliance-groups", "按组相加：团队什么时候超过 AI", "Adding up the groups: when the team beats the AI", "step"),
+    ("step-judge-sampling", "抽样评判：多大的退化看得见", "Sampled judging: how large a regression shows up", "step"),
+    ("step-subagent-timeline", "并行子 agent 省下多少时间", "What parallel subagents save in wall-clock time", "step"),
 ]
 for _name, _zh, _en, _kind in [(name, zh, en, "step") for name, zh, en in ALGO_LAB] + FIGURE_LAB:
     _kicker = 'data-zh="动画" data-en="Step by step"' if _kind == "step" else 'data-zh="图解" data-en="Diagram"'

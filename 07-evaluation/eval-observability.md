@@ -196,6 +196,8 @@ for n, (p_hat, half_width, mde) in rows.items():
 
 接着用上一节的数字。一个月后，judge 的提供方在同一别名下更新了模型，新版本对不合格回答更宽松：$t$ 从 0.85 降到 0.75。与此同时，产品真的退化了一点，真实通过率从 90% 降到约 88.6%。judge 看到的通过率是 $0.95\times0.886+0.25\times0.114\approx0.870$，仍是 87%。两件事刚好抵消，曲线是平的。
 
+<!-- widget:step-judge-sampling -->
+
 能做的事：
 
 - 固定 judge 的模型版本（记下 judge 调用的 `gen_ai.response.model`）、rubric 版本和解析规则。任何一项变了，就当作换了一把尺子，重新建基线，不要把前后曲线接成一条。

@@ -69,6 +69,8 @@ This points the same way as the meta-analysis: when the AI is stronger on averag
 
 The formula leaves out two things. First, a person can sometimes spot wrong advice within a group, making $r_g$ high when the AI is right and low when it is wrong; that is what explanations and evidence aim for, but they can also backfire, which is exactly what Bansal et al. saw when explanations increased acceptance regardless of correctness. Second, "agreement" seen in production is not "reliance". In group $L$, even when the person judges completely independently, $0.575\times0.70+0.425\times0.30=0.53$ of cases agree with the AI by coincidence (in a binary choice, both being wrong also produces agreement). To separate real reliance from coincidental agreement, you need the person's initial judgement.
 
+<!-- widget:step-reliance-groups -->
+
 ## Five design levers and their evidence
 
 Most studies below are crowd-sourced or small-sample lab tasks in which the experimenters set the AI's accuracy, often unlike your system's; the same lever gives different results in different studies, and each case is flagged below.

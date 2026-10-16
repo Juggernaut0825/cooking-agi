@@ -196,6 +196,8 @@ Signals computed on every request can alert quickly. Quality signals from a judg
 
 Continue with the numbers from the worked example. A month later, the judge's provider updates the model behind the same alias, and the new version is more lenient on bad answers: $t$ drops from 0.85 to 0.75. At the same time the product really does regress a little, with the true pass rate falling from 90% to about 88.6%. The judge now sees $0.95\times0.886+0.25\times0.114\approx0.870$, still 87%. The two changes cancel and the curve stays flat.
 
+<!-- widget:step-judge-sampling -->
+
 What you can do:
 
 - Pin the judge's model version (record `gen_ai.response.model` of the judge call), the rubric version and the parsing rules. If any of them changes, treat it as a new ruler: rebuild the baseline instead of splicing the before and after curves into one.
