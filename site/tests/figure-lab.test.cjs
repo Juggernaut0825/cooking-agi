@@ -281,3 +281,56 @@ test('lambda return: 0.8, 1.72, 1.044, 0.695; lambda 0 gives 0.45, lambda 1 give
   assert.equal(Number(end.R[0].toFixed(3)), -0.225);
   assert.equal(end.R[1], -1);
 });
+
+test('lift-splat: lifted (0.2, 0.1) … (0.2, 0.1), cells (0.2, 0.1) / (1.6, 0.8) / (0.2, 0.1) sum to c, 80% vs 10% in the right cell', () => {
+  const frames = F.liftSplat();
+  assert.deepEqual(frames[2].lifted.map(v => round(v, 2)), [[0.2, 0.1], [1.2, 0.6], [0.4, 0.2], [0.2, 0.1]]);
+  assert.deepEqual(frames[3].cells.map(c => round(c.sum, 2)), [[0.2, 0.1], [1.6, 0.8], [0.2, 0.1]]);
+  assert.deepEqual(round(frames[3].total, 2), [2, 1]);
+  assert.deepEqual([frames[4].right, frames[4].text.shares[frames[4].right]], [1, '80%']);
+  assert.deepEqual([frames[5].right, frames[5].text.shares[frames[5].right], frames[5].most], [2, '10%', 1]);
+  const end = last(frames);
+  assert.equal(end.done, true);
+  assert.deepEqual(end.ratios, [0.25, 0.25, 0.25, 0.25]);
+});
+
+test('trajectory cost: gaps 14 / 22 / 12, J = 2, 3, 4.17 picks A, (1, 1, 2) gives 4, 3, 6.83 and B, tie at w_s = 1.5', () => {
+  const frames = F.trajectoryCost();
+  const [A, B, C, D] = frames[0].cands;
+  assert.deepEqual([A.gap, B.gap, C.gap], [14, 22, 12]);
+  assert.deepEqual([A.cost, B.cost, round(C.cost, 2)], [[0, 0, 2], [2, 1, 0], [0, 1.5, 2.67]]);
+  assert.equal(D.rejected, true);
+  assert.deepEqual([round(frames[4].J, 2), frames[4].pick], [[2, 3, 4.17], 'A']);
+  assert.deepEqual([round(frames[5].J, 2), frames[5].pick], [[4, 3, 6.83], 'B']);
+  const end = last(frames);
+  assert.deepEqual([end.tie, end.dominated, end.below, end.above], [1.5, true, 'A', 'B']);
+});
+
+test('open vs closed loop: L2 0.2 / 0.4 / 0.6 for both; A 0.1 … 2.1 m, B 0.100 … 0.197 m, wheels on the line by 2.0 s', () => {
+  const frames = F.openClosedLoop(), end = last(frames);
+  assert.deepEqual(round(end.openL2, 2), [0.2, 0.4, 0.6]);
+  assert.deepEqual(end.A.slice(1).map(p => end.fa(p.y)), ['0.1', '0.3', '0.6', '1.0', '1.5', '2.1']);
+  assert.deepEqual(end.B.slice(1).map(p => end.fb(p.y)), ['0.100', '0.150', '0.175', '0.188', '0.194', '0.197']);
+  assert.equal(end.A[end.touch].t, 2);
+  assert.equal(end.wheels, 0.85);
+  assert.equal(Number(end.limit.toFixed(3)), 0.2);
+});
+
+test('flow Euler steps: n = 1, 2, 5, 10 end at 0, 0.46, 1.00, 1.00 from 0.5 and 0, 0.02, 0.57, 1.00 from 0.02', () => {
+  const frames = F.flowEulerSteps(), end = last(frames);
+  assert.deepEqual(end.table.map(r => r.a), ['0', '0.46', '1.00', '1.00']);
+  assert.deepEqual(end.table.map(r => r.b), ['0', '0.02', '0.57', '1.00']);
+  assert.deepEqual(end.runs['0.5/10'].xs.slice(1, 10).map(x => x.toFixed(2)), ['0.45', '0.41', '0.37', '0.35', '0.35', '0.40', '0.53', '0.69', '0.84']);
+  assert.deepEqual(end.runs['0.02/5'].xs.slice(1, 5).map(x => x.toFixed(3)), ['0.016', '0.013', '0.014', '0.033']);
+  assert.equal(end.end(end.runs['-0.5/10'].end), '−1.00');
+});
+
+test('VLA latency: 3,540 / 440 / 70 ms, about 51× and 6×, 110 ms one step at a time, π0 measured 73 ms', () => {
+  const frames = F.vlaLatency(), end = last(frames);
+  assert.deepEqual(end.lanes.map(l => l.total), [3540, 440, 70]);
+  assert.equal(Number(end.slower.toFixed(1)), 3.5);
+  assert.deepEqual(end.ratios.map(Math.round), [51, 6]);
+  assert.deepEqual([end.single, Math.floor(end.singleHz)], [110, 9]);
+  assert.equal(Math.round(end.share * 100), 57);
+  assert.deepEqual([end.measured.total, Math.round(end.measured.share * 100)], [73, 63]);
+});

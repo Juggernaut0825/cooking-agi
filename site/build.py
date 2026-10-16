@@ -610,6 +610,11 @@ FIGURE_LAB = [
     ("step-evaluator-rank", "相关系数 0.98，第一名还是选错了", "A correlation of 0.98, and still the wrong winner", "step"),
     ("step-mcts-visits", "六次模拟：访问次数变成策略标签", "Six simulations: visit counts become a policy target", "step"),
     ("step-lambda-return", "从后往前算 λ-return", "Computing a λ-return backwards", "step"),
+    ("step-lift-splat", "一个像素摊进三格：特征沿视线拖尾", "One pixel into three cells: features smear along the ray", "step"),
+    ("step-trajectory-cost", "权重挑轨迹，硬约束先淘汰", "Weights pick a trajectory; hard constraints remove one first", "step"),
+    ("step-open-closed-loop", "开环 L2 一样，闭环结局相反", "Same open-loop L2, opposite closed-loop outcomes", "step"),
+    ("step-flow-euler-steps", "Euler 步数太少，动作退回均值", "Too few Euler steps fall back to the mean", "step"),
+    ("step-vla-latency", "一块 50 × 7 的动作，时间花在哪", "Where the time goes in one 50 × 7 action chunk", "step"),
 ]
 for _name, _zh, _en, _kind in [(name, zh, en, "step") for name, zh, en in ALGO_LAB] + FIGURE_LAB:
     _kicker = 'data-zh="动画" data-en="Step by step"' if _kind == "step" else 'data-zh="图解" data-en="Diagram"'

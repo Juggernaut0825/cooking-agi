@@ -99,6 +99,8 @@ The table says three more things:
 2. **D is rejected, not penalised.** Leaving the road is not "minus 10 points" but not allowed; a finite penalty can always be outweighed by a large enough gain, see the section on constraints in [planning and LQR](../../05-post-training/deep-rl/planning-and-control.en.md).
 3. **A truncated horizon misleads.** At $t=4$ s, A is 14 m behind the lead car and still closing at 4 m/s; a 4 s cost cannot see how close A gets in seconds 5 and 6. Lengthen the horizon, or add a time-to-collision term, and A's cost rises. NAVSIM's score in note 3 includes exactly such a time-to-collision term.
 
+<!-- widget:step-trajectory-cost -->
+
 ## Why a rule-based planner is still a strong baseline
 
 [PDM](https://arxiv.org/abs/2306.07962) (Dauner et al., CoRL 2023) does all of the above thoroughly. PDM-Closed first searches the route graph for the lane centreline to follow, then uses IDM (a car-following model) to generate the longitudinal speed along it: five target speeds at 20%, 40%, 60%, 80% and 100% of the speed limit, each with three lateral offsets of −1 m, 0 and +1 m, giving 15 candidates of 4 s at 10 Hz. Other vehicles are extrapolated at constant velocity. Each candidate is simulated with nuPlan's own LQR controller and kinematic bicycle model, scored by rules close to nuPlan's evaluation (rule compliance, progress, comfort), and the best is taken; if the best is expected to collide within 2 s, the output becomes an emergency brake.

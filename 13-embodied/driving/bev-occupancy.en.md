@@ -53,6 +53,8 @@ At the paper's real resolution (0.5 m cells, one depth per 1 m), neighbouring de
 - **Flatter.** $\alpha=(0.25,0.25,0.25,0.25)$: each depth point gets $(0.5,0.25)$, so $[8,16)$ receives $(1.0,0.5)$ and the other two cells $(0.5,0.25)$ each. Every position on the ray has the same representation; the paper likens it to OFT. In the paper's words, the network can therefore choose between placing the feature at one location and spreading it along the whole ray when depth is ambiguous.
 - **Misplaced.** The car is really at 16 m, but $\alpha$ is still $(0.1,0.6,0.2,0.1)$: the right cell $[16,24)$ gets only 10%, and most lands in $[8,16)$. In the top-down map the car appears about 8 m too close. Camera depth error turns directly into position error in BEV; this is the most direct motivation for fusing cameras with lidar.
 
+<!-- widget:step-lift-splat -->
+
 ## The paper's real settings and cost
 
 The LSS paper's settings (§4.1): depths limited to between 4 m and 45 m, one every 1 m; input images resized and cropped to 128×352; a 200×200 BEV grid. An $H\times W$ feature map produces $|D|\cdot HW$ points (here $|D|=41$), times the number of cameras, so the point count is large. Section 4.2 does the sum pooling with a "cumsum trick": sort points by cell index, take a cumulative sum over features, and subtract at each segment boundary; the authors derive this layer's analytic gradient, which doubles training speed. The paper reports the full forward pass at 35 Hz on a Titan V, an author measurement on 2020 hardware.

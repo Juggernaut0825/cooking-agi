@@ -73,6 +73,8 @@ A's heading grows by 0.02 per step and its offset grows as $0.05\,k(k+1)$: the w
 
 Open loop cannot tell them apart because the log contains no state with $y\neq0$; "what do you do after drifting" is never asked. Change one condition: a policy that ignores the road entirely and just extrapolates the current speed and heading has an open-loop L2 of 0 on this straight road, a perfect score. Policy A is exactly such an "ego-state extrapolator" with a small bias added.
 
+<!-- widget:step-open-closed-loop -->
+
 ## Why nuScenes open-loop metrics are no longer trusted
 
 nuScenes open-loop planning evaluation compares the model's predicted ego trajectory with the logged one, reporting L2 error and collision rate at 1, 2 and 3 s. Some primary results:
