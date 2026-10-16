@@ -59,6 +59,8 @@ The corrected variance is smaller than either the prediction's or the measuremen
 
 In the last row, $S=\check P+R=2$ is the innovation's variance. $e^2/S$ is the normalised innovation squared (NIS); when the model is right it follows a $\chi^2$ distribution with 1 degree of freedom, whose 95% quantile is about 3.84. Barfoot, Section 5.1.2, uses NIS to test whether a filter is consistent; using it to screen measurements one at a time is gating: 18 is far above 3.84, so this measurement is rejected.
 
+<!-- widget:step-kalman-1d -->
+
 ## From one dimension to SORT: a box has a state too
 
 [SORT (2016)](https://arxiv.org/abs/1602.00763) writes each target's state as $[u,v,s,r,\dot u,\dot v,\dot s]$: box centre, area, aspect ratio, and the rates of change of the first three; the aspect ratio is treated as constant. The motion model is linear constant velocity and ignores other targets and camera motion. The equations are exactly the one-dimensional ones with numbers replaced by matrices (Barfoot eq. 3.131):

@@ -610,6 +610,11 @@ FIGURE_LAB = [
     ("step-evaluator-rank", "相关系数 0.98，第一名还是选错了", "A correlation of 0.98, and still the wrong winner", "step"),
     ("step-mcts-visits", "六次模拟：访问次数变成策略标签", "Six simulations: visit counts become a policy target", "step"),
     ("step-lambda-return", "从后往前算 λ-return", "Computing a λ-return backwards", "step"),
+    ("step-pixel-ray", "一个像素是一条射线：地面或第二台相机定出深度", "A pixel is a ray: the ground or a second camera fixes the depth", "step"),
+    ("step-kalman-1d", "一维 Kalman：预测变宽，修正变窄", "1D Kalman: prediction widens, correction narrows", "step"),
+    ("step-coco-ap", "5 个预测怎样算出 AP@[.5:.95]", "From 5 predictions to AP@[.5:.95]", "step"),
+    ("step-depth-scale", "相对深度要一个已知距离，仿射深度要两个", "Relative depth needs one known distance, affine needs two", "step"),
+    ("step-alpha-blend", "从前往后叠四个 Gaussian：顺序改颜色，不改透射率", "Blending four Gaussians front to back: order changes the colour, not the transmittance", "step"),
 ]
 for _name, _zh, _en, _kind in [(name, zh, en, "step") for name, zh, en in ALGO_LAB] + FIGURE_LAB:
     _kicker = 'data-zh="动画" data-en="Step by step"' if _kind == "step" else 'data-zh="图解" data-en="Diagram"'

@@ -65,6 +65,8 @@ That is why many models output only relative depth. Take three pixels in one ima
 
 More common is affine-invariant output, where both the scale $s$ and the shift $t$ are unknown: $d=s\hat d+t$. [Marigold](https://arxiv.org/abs/2312.02145) and the first [MoGe](https://arxiv.org/abs/2410.19115) are affine-invariant. Suppose the model outputs $\hat d=(0,1,4)$. Knowing only that the car is at 8 m, the equation $8=s+t$ has infinitely many solutions: $(s,t)=(4,4)$ gives $(4,8,20)$ and $(2,6)$ gives $(6,8,14)$, and both agree with that one observation. Only when you also know the road is at 4 m do you get $t=4$, $s=4$ and a building at 20 m. **Affine output needs two known distances.** The [Depth Anything 3 README](https://github.com/ByteDance-Seed/Depth-Anything-3) points out that Depth Anything 2 outputs disparity (inverse depth): then $s$ and $t$ act on $1/d$, there are still two unknowns, but you cannot convert linearly in depth.
 
+<!-- widget:step-depth-scale -->
+
 Where can a known distance come from?
 
 - Sparse lidar: the [Depth Anything V2 README](https://github.com/DepthAnything/Depth-Anything-V2) (entry of 2024-12-22) mentions Prompt Depth Anything, which uses low-resolution lidar to "prompt" the model and get metric depth.

@@ -118,6 +118,8 @@ Our point has disparity $d=860-810=50$ px, so $Z=1000\times0.5/50=10$ m, matchin
 
 Now the error. Differentiating $Z=fb/d$ with respect to $d$ gives $|\partial Z/\partial d|=Z^2/(fb)$. At 10 m, a 1 px disparity error is a 0.2 m depth error; at 40 m the disparity is only 12.5 px and a 1 px error becomes 3.2 m. **Triangulated depth error grows with the square of distance**, which is the direct reason stereo and multi-view ranging get worse far away. A longer baseline $b$ or focal length $f$ helps, at a price: the two cameras share less field of view up close, and the two images look more different, so matching gets harder.
 
+<!-- widget:step-pixel-ray -->
+
 The general case (rotation, more than two views) has no formula this tidy. With noise the two rays do not meet. The usual approach is a linear method for a first estimate, then minimising reprojection error: the 3D point should project back as close as possible to the observed pixel in every image. Putting the camera poses into the same least-squares problem is bundle adjustment (Barfoot, 2nd ed., Section 10.1), where [note 5](reconstruction.en.md) picks up.
 
 ## When one homography is enough
