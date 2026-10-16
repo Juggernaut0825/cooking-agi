@@ -94,6 +94,8 @@ The formula shows that **any accuracy gain from splitting comes entirely from $s
 
 Now change one condition: the subquestions become sequential. First check whether library A switched to the city's new notice, then use that notice to check library B, then library C. The parallel width drops to 1, and the multi-agent time becomes $10+40+10+40+10+40+10=160$ seconds, slower than the single agent's 130; tokens stay around 71k; and A's finding is retold twice, through "summary → coordinator → next brief". The split keeps only one benefit, context isolation, and costs an extra 30 seconds and about 18k tokens.
 
+<!-- widget:step-subagent-timeline -->
+
 Change a different condition: the three subquestions are independent again, but each must decide whether "holiday" includes the eve of a public holiday (many libraries close early that day). If the brief does not say, and each subagent independently picks one reading with probability 0.8 and the other with 0.2, the three results use a consistent definition with probability only $0.8^3+0.2^3=0.52$. A single agent makes this decision once, so its results are consistent by construction, though possibly consistently wrong. The fix is to put the definition into every brief, or to check definitions explicitly during synthesis, not to add another agent.
 
 ## How to choose: start from the shape of the task

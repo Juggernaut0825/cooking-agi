@@ -323,3 +323,39 @@ test('cache walk: row walk 1/16 then 256/4096, column walk 64/64, 65/65, 4096/40
   assert.equal(frames[4].useful, 4);
   assert.deepEqual(end.bars, [256, 4096, 256]);
 });
+
+test('reliance groups: AI 0.80; teams 0.70, 0.80, 0.85, 0.825, 0.80, 0.76; chance agreement in L 0.53', () => {
+  const frames = F.relianceGroups(), end = last(frames);
+  assert.equal(Number(frames[1].overall.toFixed(3)), 0.8);
+  assert.equal(frames[2].shown, 3);
+  assert.deepEqual(end.policies.map(p => Number(p.acc.toFixed(3))), [0.7, 0.8, 0.85, 0.825, 0.8, 0.76]);
+  assert.equal(Number(end.agree.toFixed(3)), 0.53);
+  assert.equal(end.shown, 6);
+});
+
+test('judge sampling: q 0.87, corrected 0.90 ± 2.6, MDE 5.3, Wilson 64–95%, 1,480 calls, slice MDE 7.4, drift still 0.870', () => {
+  const frames = F.judgeSampling(), end = last(frames);
+  assert.equal(Number(frames[1].q.toFixed(3)), 0.87);
+  assert.deepEqual([frames[1].cells.tp, frames[1].cells.fp].map(x => Number(x.toFixed(3))), [0.855, 0.015]);
+  assert.equal(Number(frames[2].pHat.toFixed(3)), 0.9);
+  assert.equal(Number((frames[2].half * 100).toFixed(1)), 2.6);
+  assert.equal(Number((frames[3].mdeAll * 100).toFixed(1)), 5.3);
+  assert.equal(frames[4].sliceN, 20);
+  assert.deepEqual([frames[4].lo, frames[4].hi].map(x => Math.round(x * 100)), [64, 95]);
+  assert.equal(Number((frames[4].move * 100).toFixed(1)), 0.6);
+  assert.equal(frames[5].strat + frames[5].rest, 1480);
+  assert.equal(Number((frames[5].sliceMde * 100).toFixed(1)), 7.4);
+  assert.equal(end.q2.toFixed(3), '0.870');
+  assert.equal(end.cells.t, 0.75);
+});
+
+test('subagent timeline: 130 s, 60 s, 160 s; 53k vs 71k (+34%), longest 20.5k; 0.729, 0.807, 0.625, d* 5.3%', () => {
+  const frames = F.subagentTimeline(), end = last(frames);
+  assert.deepEqual(end.time, {single: 130, parallel: 60, chained: 160});
+  assert.deepEqual([end.tokens.single, end.tokens.lead, end.tokens.sub, end.tokens.multi], [53, 9.5, 20.5, 71]);
+  assert.equal(Math.round(end.rise * 100), 34);
+  assert.equal(Number(frames[3].pSingle.toFixed(3)), 0.729);
+  assert.deepEqual(frames[3].pMulti.map(x => Number(x.toFixed(3))), [0.807, 0.625]);
+  assert.equal(Number((frames[3].dStar * 100).toFixed(1)), 5.3);
+  assert.equal(end.chained.filter(b => b.lane === 'lead').length, 4);
+});
