@@ -1322,8 +1322,8 @@ image = "2407.14435-fig1.webp"
 width = 1600
 height = 355
 changes = "converted"
-zh = "为什么 JumpReLU（或 TopK）比 ReLU 更适合 SAE：特征不激活时预激活值也不总是负的，ReLU 会留下假阳性；靠调低编码器偏置去掉假阳性，又会系统性地低估激活值（收缩）；JumpReLU 用一个独立阈值截掉阈值以下的值，阈值以上原样保留。"
-en = "A toy model of why JumpReLU (or TopK) beats ReLU for SAEs: when a feature is inactive its pre-activation is low but not always negative, so ReLU lets false positives through; lowering the encoder bias removes them but systematically underestimates magnitudes (shrinkage); JumpReLU's separate threshold screens out values below it and leaves those above untouched."
+zh = "为什么 JumpReLU 比 ReLU 更适合 SAE：特征不激活时预激活值也不总是负的，ReLU 会留下假阳性；靠调低编码器偏置去掉假阳性，又会系统性地低估激活值（收缩）；JumpReLU 用一个独立阈值截掉阈值以下的值，阈值以上原样保留。"
+en = "A toy model of why JumpReLU beats ReLU for SAEs: when a feature is inactive its pre-activation is low but not always negative, so ReLU lets false positives through; lowering the encoder bias removes them but systematically underestimates magnitudes (shrinkage); JumpReLU's separate threshold screens out values below it and leaves those above untouched."
 
 [[figure]]
 id = "transcoder-vs-sae"
