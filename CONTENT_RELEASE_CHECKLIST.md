@@ -1,5 +1,10 @@
 # 内容发布验收
 
+## 删除 quant 源文件（2026-10-15，Claude Code）
+
+- 站主决定不再放 quant 内容。`quant/` 早已不在 `nav.toml`、不生成页面，这次把仓库里剩下的 30 篇源文件（中英各一份）和两个配套脚本一起删除，同时删掉只测试这些文件的 `test_quant_review.py`、`test_probability_proofs.py`，并把 `quant` 从 `leakcheck.py` 的扫描列表里去掉。git 历史里可以找回。
+- 已发布的笔记里没有指向 quant 的链接（PR #97 里感知笔记的 4 处已改成纯文字）；`test_retired_sections.py` 和 `test_language_entry.py` 里“不得链接 quant”的检查保留。
+
 ## 前沿观察、AI 基础设施与具身智能（2026-10-15，Claude Code）
 
 - 学习笔记新增第四个区块「前沿观察」（`11-frontier/`）。世界模型（7 篇）和递归自我改进（5 篇）两组写成正式笔记；测试时计算、用 RL 训练 agent、机制可解释性三组是待审核草稿。快速变化的领域按“已经定下的 / 还在变的 / 接下来看什么”来写。
