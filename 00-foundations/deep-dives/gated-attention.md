@@ -6,7 +6,7 @@
 
 ## 门放在哪里？
 
-先回忆一个 head 的计算。输入是 $X$，投影后得到 $Q_h,K_h,V_h$：
+先回忆一个 head 的计算。输入是 $X$，投影后得到 $Q_h,K_h,V_h$；原论文用 pre-norm 后的隐藏状态作为 $X$，门的投影也从这里出发：
 
 $$
 O_h=\operatorname{softmax}\left(\frac{Q_hK_h^\top}{\sqrt{d_h}}+M\right)V_h.
@@ -22,11 +22,11 @@ $$
 headwise gate 给每个 token、每个 head 一个数；elementwise gate 则给 head 内每个维度一个数。不要把 headwise 理解成“整个训练过程每个 head 只有一个固定开关”：门仍取决于当前 token 的表示。
 
 ```text
-输入 ─→ Q/K/V ─→ SDPA ─→ × gate ─→ 拼接各个 head ─→ 输出投影
-  └────────────→ sigmoid ──┘
+输入 ─→ Q/K/V ─→ SDPA ──────────→ × gate ─→ 拼接各个 head ─→ 输出投影
+  └────────────→ 门的投影 ─→ sigmoid ─┘
 ```
 
-各个门使用 sigmoid，互相独立，不需要加起来等于 1。与 softmax 竞争不同，所有 head 都可以少传一点，也可以同时多传。
+各个门分别使用 sigmoid，不经过共同的 softmax 归一化，因此不需要加起来等于 1；这不代表门值在统计上独立。与 softmax 竞争不同，所有 head 都可以少传一点，也可以同时多传。
 
 ## 两个 head，手算一次
 
@@ -72,7 +72,7 @@ assert gated_heads([[4, -2]], [0]) == [[2.0, -1.0]]
 
 从优化看，门引入了新参数与新梯度。sigmoid 的导数是 $g(1-g)$，在 0.5 附近最大；接近 0 或 1 时变小。把门的 logits 初始化得很大、让门值接近 1 来近似 identity，也可能让门难学。
 
-[原论文](https://arxiv.org/abs/2505.06708) 比较了不同门的位置与形式，并分析了 attention sink 和训练稳定性。应把这些看成其训练设置下的证据，而不是“给任意模型加门都能消除 attention sink”。sink 也不能只靠看一张注意力热图判断。
+[原论文](https://arxiv.org/abs/2505.06708) 比较了不同门的位置与形式，并分析了 attention sink 和训练稳定性。应把这些看成其训练设置下的证据，而不是“给任意模型加门都能消除 attention sink”。一张注意力热图能显示当前样本的权重集中，但要判断是否存在持续的 sink，还需跨样本、层和 head 统计。
 
 ## 怎样做一个有意义的对照？
 

@@ -23,14 +23,14 @@ STaR treats it as an approximation to policy gradient on a 0/1 reward: wrong sam
 <details class="interview" markdown="1">
 <summary>Why does training on your own data saturate within a few rounds?</summary>
 
-Song et al. define the generation-verification gap: how much the true score rises when samples are reweighted by the verifier. If the update learns the reweighted distribution to within $\varepsilon$, one round's gain is about the gap plus or minus $\varepsilon$. They measured the gap falling to near zero within two or three rounds, non-positive gaps for small models under most verification methods, and falling pass@k at large $k$. ReST-EM sees diminishing returns after a couple of iterations; Self-Rewarding ran only 3 iterations and its authors expect saturation. Without new information from outside, the loop has nothing to learn.
+This is not a law of all self-training. Song et al.'s generation-verification gap measures the true utility gain from verifier reweighting; under a utility update error bounded by $\varepsilon$, one round's gain lies within the gap plus or minus $\varepsilon$. Their experiments reached near-zero gap within two or three rounds and lost pass@k at large $k$. ReST-EM used external answer keys or tests yet also saw diminishing returns, attributed to problem-set overfitting. Self-Rewarding ran only three rounds, and its authors expected saturation. Separate observations and expectations from universal theorems; see the [main note](generate-verify-train.en.md) for sources and conditions.
 
 </details>
 
 <details class="interview" markdown="1">
 <summary>A model is truly correct 40% of the time, and the tests accept 10% of wrong solutions. After filtering by the tests and fine-tuning, how high can true correctness go?</summary>
 
-This is a teaching assumption. Accepted samples make up $0.40+0.60\times0.10=0.46$, of which $0.40/0.46\approx87\%$ are correct. If fine-tuning imitates them perfectly, true correctness reaches 87% while the tests show 100%. In the next round the tests treat "correct" and "wrong but passing" alike, the gap is 0, and the loop stops at 87%. With a 30% false-accept rate the ceiling is 69%; at 2% it rises to about 97%. Raising the ceiling means strengthening the verifier, for example with hidden tests and edge cases.
+One condition is missing: do the tests accept all correct solutions? If so, with fixed problems, fixed tests and perfect imitation, acceptance is $0.40+0.60\times0.10=0.46$ and precision is $0.40/0.46\approx87\%$. Everything still passes next round, so the distribution stays unchanged. If only half the correct solutions pass, precision becomes $0.20/(0.20+0.06)\approx76.9\%$. These are conditional-probability and perfect-imitation results, not a universal fine-tuning ceiling; real training may generalise. See the [main note's assumptions and counterexample](generate-verify-train.en.md).
 
 </details>
 

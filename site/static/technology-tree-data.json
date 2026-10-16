@@ -3,6 +3,96 @@
   "reviewed": "2026-10-12",
   "nodes": [
     {
+      "id": "dreamer-2019",
+      "year": 2019,
+      "kind": "research",
+      "status": "adopted",
+      "topic": "models",
+      "track": "rl",
+      "title": {
+        "zh": "Dreamer · 在学到的环境里练策略",
+        "en": "Dreamer · learning a policy in imagination"
+      },
+      "hook": {
+        "zh": "先学动作会带来什么，再沿着想象的轨迹改进策略。",
+        "en": "Learn what actions lead to, then improve a policy along imagined trajectories."
+      },
+      "body": {
+        "zh": "反复和环境交互很费时间。Dreamer 从已有经历学一个紧凑的环境模型，在模型预测的轨迹上训练策略和价值函数，再回到环境里收集新经历。2019 年的预印本把这套方法用于从图像学习控制，后来发展为 Dreamer 系列。",
+        "en": "Environment interaction is costly. Dreamer learns compact dynamics from experience, trains a policy and value function on imagined trajectories, then collects more experience in the environment. Its 2019 preprint applied this loop to visual control; later Dreamer versions developed it further."
+      },
+      "detail": {
+        "zh": "想象时预测的是潜在状态和奖励，不必每一步都生成图片。价值函数补上有限想象长度之外的回报；原版 Dreamer 沿可微的动力学模型把梯度传回策略。年份按 2019 年预印本计，论文发表于 ICLR 2020。",
+        "en": "Imagination predicts latent states and rewards rather than rendering every image. A value function estimates returns beyond the finite horizon; the original Dreamer backpropagates through differentiable dynamics to train the policy. The date follows the 2019 preprint; the paper appeared at ICLR 2020."
+      },
+      "limit": {
+        "zh": "模型预测错了，策略也可能学会利用这些错误；仍要回到实际环境验证。",
+        "en": "A policy can exploit model errors, so performance still needs checking in the actual environment."
+      },
+      "sources": [
+        [
+          "Dreamer · preprint 2019 / ICLR 2020, §§2–4",
+          "https://arxiv.org/html/1912.01603v3"
+        ],
+        [
+          "DreamerV3 · 2023 preprint",
+          "https://arxiv.org/abs/2301.04104"
+        ]
+      ],
+      "notes": [
+        {
+          "path": "11-frontier/world-models/dreamer.md",
+          "title": {
+            "zh": "Dreamer：模型、想象与策略训练",
+            "en": "Dreamer: dynamics, imagination and policy learning"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ijepa-2023",
+      "year": 2023,
+      "kind": "research",
+      "status": "historical",
+      "topic": "models",
+      "track": "vision",
+      "title": {
+        "zh": "I-JEPA · 预测图像表示",
+        "en": "I-JEPA · predicting image representations"
+      },
+      "hook": {
+        "zh": "看一部分图像，预测其他区域的表示，而不是补齐像素。",
+        "en": "Use visible image regions to predict other regions' representations, rather than their pixels."
+      },
+      "body": {
+        "zh": "补全图像不一定要把每个像素画回来。I-JEPA 用可见区域去预测目标区域的表示，训练信号来自另一个编码器。2023 年论文用分类和迁移任务检验学到的特征，为 JEPA 提供了一个具体的图像实现。",
+        "en": "Completing an image need not mean reconstructing every pixel. I-JEPA predicts target-region representations from visible context, using another encoder to supply targets. The 2023 paper evaluates the learned features on classification and transfer tasks, providing a concrete image-based JEPA."
+      },
+      "detail": {
+        "zh": "上下文编码器只看可见区域；目标编码器看完整图像，再选出目标位置的表示。目标编码器用上下文编码器的指数移动平均更新。这里预测的是同一张图的区域，并没有学习“做一个动作后世界会怎样变化”。",
+        "en": "The context encoder sees only visible patches. The target encoder sees the full image before target positions are selected, and is updated by an exponential moving average of the context encoder. This predicts regions of one image, not how the world changes after an action."
+      },
+      "limit": {
+        "zh": "学到图像表示和学会控制是两件事；接到机器人上还需要动作模型与评测。",
+        "en": "Learning image features is not learning control; robotics requires an action model and its own evaluation."
+      },
+      "sources": [
+        [
+          "I-JEPA · CVPR 2023, §3",
+          "https://arxiv.org/html/2301.08243v3"
+        ]
+      ],
+      "notes": [
+        {
+          "path": "11-frontier/world-models/jepa.md",
+          "title": {
+            "zh": "从 I-JEPA 到动作条件预测",
+            "en": "From I-JEPA to action-conditioned prediction"
+          }
+        }
+      ]
+    },
+    {
       "id": "mycin",
       "year": 1975,
       "kind": "system",
@@ -584,6 +674,7 @@
     },
     {
       "id": "clip",
+      "notes": [{"path": "03-multimodal-learning/clip.md", "title": {"zh": "CLIP 的训练目标与推理", "en": "CLIP training and inference"}}],
       "year": 2021,
       "kind": "research",
       "status": "adopted",
@@ -720,6 +811,7 @@
     },
     {
       "id": "vllm",
+      "notes": [{"path": "06-systems/inference-frameworks.md", "title": {"zh": "vLLM 与 SGLang：请求经过哪些模块", "en": "vLLM and SGLang: following a request"}}],
       "year": 2023,
       "kind": "system",
       "status": "adopted",
@@ -754,6 +846,7 @@
     },
     {
       "id": "rt2",
+      "notes": [{"path": "13-embodied/robot-learning/vla.md", "title": {"zh": "VLA 怎样把视觉和语言变成动作", "en": "How VLAs turn vision and language into actions"}}],
       "year": 2023,
       "kind": "system",
       "status": "historical",
@@ -784,6 +877,7 @@
     },
     {
       "id": "grpo",
+      "notes": [{"path": "05-post-training/deep-rl/methods-map.md", "title": {"zh": "Q-learning、PPO、GRPO 与 DPO", "en": "Q-learning, PPO, GRPO and DPO"}}],
       "year": 2024,
       "kind": "research",
       "status": "adopted",
@@ -1536,6 +1630,7 @@
     },
     {
       "id": "distributed-kubernetes-v1-2015",
+      "notes": [{"path": "12-infra/kubernetes.md", "title": {"zh": "GPU 集群怎样分配资源", "en": "Scheduling a GPU cluster"}}],
       "year": 2015,
       "kind": "system",
       "status": "historical",
@@ -1660,6 +1755,7 @@
     },
     {
       "id": "nvidia-cuda-2006",
+      "notes": [{"path": "12-infra/cuda.md", "title": {"zh": "CUDA：线程、内存与 kernel", "en": "CUDA: threads, memory and kernels"}}],
       "year": 2006,
       "kind": "system",
       "status": "adopted",
@@ -1922,6 +2018,7 @@
     },
     {
       "id": "nvidia-hopper-2022",
+      "notes": [{"path": "12-infra/nvidia-generations.md", "title": {"zh": "NVIDIA 各代 GPU 的变化", "en": "How NVIDIA GPU generations differ"}}],
       "year": 2022,
       "kind": "system",
       "status": "historical",
@@ -2380,6 +2477,7 @@
     },
     {
       "id": "chips-roofline-report-2008",
+      "notes": [{"path": "12-infra/performance.md", "title": {"zh": "用 Roofline 判断瓶颈", "en": "Finding bottlenecks with Roofline"}}],
       "year": 2008,
       "kind": "research",
       "status": "historical",
@@ -2436,16 +2534,16 @@
         "en": "HDFS · Spreading large files across machines"
       },
       "hook": {
-        "zh": "一台机器管目录，许多台机器存数据块，坏一台也不丢。",
-        "en": "One node tracks the files, while many others store the blocks with copies to survive failures."
+        "zh": "文件切成块、分散存多份，用副本应对存储节点故障。",
+        "en": "Files become replicated blocks spread across machines, so a storage-node failure need not lose data."
       },
       "body": {
         "zh": "大文件分散存到很多机器上，就得应付机器故障。2010 年的 HDFS 论文给出了分工：NameNode 管目录和数据块的位置，DataNode 保存数据块，每块存多份副本。存储和计算放在同一批服务器上，任务就能在数据旁边运行。",
         "en": "Spreading large files over many machines means coping with machine failures. The 2010 HDFS paper set out a division of labor: a NameNode tracks the directory tree and where each block lives, DataNodes store the blocks, and each block is kept in several replicas. Storage and computation share the same servers, so tasks can run next to their data."
       },
       "limit": {
-        "zh": "它只允许一个写者、多个读者，为大文件吞吐而设计，给不了数据库那样的事务。",
-        "en": "Its single-writer, many-reader model targets large-file throughput and offers no database-style transactions."
+        "zh": "数据块副本不等于整个系统不会停机；早期 NameNode 仍是单点。",
+        "en": "Replicated blocks did not make the whole system fault-proof; the early NameNode remained a single point of failure."
       },
       "sources": [
         [
@@ -2950,16 +3048,16 @@
         "en": "Scaling laws · Predicting language-model loss from scale"
       },
       "hook": {
-        "zh": "损失随模型、数据和算力按幂律下降，可以提前算出来。",
-        "en": "Loss falls predictably, as a power law in model size, data, and compute."
+        "zh": "在实验范围内，用规模与损失的关系估算下一次训练。",
+        "en": "Measured relationships between scale and loss help estimate the next training run."
       },
       "body": {
-        "zh": "给定一笔算力，模型该多大、数据该多少？Kaplan 等人训练了一批 Transformer 语言模型，发现测试损失分别随参数量、数据量和算力按幂律下降，有的趋势跨了七个数量级以上。由此能算出最划算的分配：算力主要用来扩大模型，数据适度增加，而且不必训到收敛。",
-        "en": "Given a compute budget, how big should a model be and how much data should it see? Kaplan and colleagues trained a range of Transformer language models and found that test loss falls as a power law in parameters, data, and compute, each taken separately, with some trends spanning more than seven orders of magnitude. The best split follows: spend compute mainly on a bigger model, add data moderately, and stop before convergence."
+        "zh": "给定一笔算力，模型该多大、数据该多少？Kaplan 等人在一批 Transformer 实验中，分别拟合参数量、数据量和算力与测试损失的关系。按他们当时的设置，增加预算时应更多地扩大模型，适度增加数据，并在收敛前停训。后来的研究重新估计了这个比例。",
+        "en": "How should a fixed compute budget be split between model size and data? Kaplan and colleagues fitted relationships between test loss and parameters, data, and compute across Transformer experiments. Under their setup, a growing budget favored larger models, more modest data growth, and stopping before convergence. Later work revised that allocation."
       },
       "detail": {
-        "zh": "几条结论可以直接用。模型每大 8 倍，数据只要多约 5 倍，就不会因为数据不够吃亏。算力增加时，最优模型大小约按算力的 0.73 次方增长，训练步数只按 0.03 次方。多出来的算力，主要该换成更大的模型。\n\n2022 年的 Chinchilla 论文给出另一种分配。作者训了 400 多个模型，认为模型和数据应同比例增长。据此训练的 Chinchilla 有 700 亿参数，和 2800 亿参数的 Gopher 算力相同，在大量下游任务上胜过它。",
-        "en": "Several results could be used directly. Each time the model grows 8 times, about 5 times more data avoids a penalty from too little data. As compute grows, the best model size grows roughly as compute to the power 0.73, and training steps as only 0.03. Extra compute should mostly buy a larger model.\n\nIn 2022, DeepMind's Chinchilla paper reached a different split. After training more than 400 models, its authors concluded that model size and training data should grow in equal proportion. Chinchilla itself, with 70 billion parameters, used the same compute as the 280-billion-parameter Gopher and outperformed it across a large range of downstream tasks."
+        "zh": "这些比例来自拟合：2020 年论文估计，计算最优的模型大小约按算力的 0.73 次方增长，训练步数约按 0.03 次方增长。换数据、训练设置或预算范围后，不能直接把这些指数当常数套用。\n\n2022 年 Chinchilla 论文训练了 400 多个模型，得到模型与数据更接近同比例增长的分配。700 亿参数的 Chinchilla 用与 2800 亿参数 Gopher 相近的训练算力，在所报告的多项下游评估中表现更好。两篇论文的差别，也说明“缩放规律”需要在具体设置下重新估计。",
+        "en": "The ratios were fitted, not universal constants: the 2020 paper estimated compute-optimal model size growing roughly as compute to the power 0.73, and training steps as 0.03. Different data, training setups, or budget ranges require checking those estimates again.\n\nIn 2022, the Chinchilla paper trained over 400 models and found an allocation closer to equal growth in model size and data. Its 70-billion-parameter model used a training compute budget comparable to the 280-billion-parameter Gopher and did better on many reported downstream evaluations. The contrast shows why a scaling fit must be tied to its experimental setup."
       },
       "limit": {
         "zh": "这是在一个数据集上拟合出的经验规律，预测的是损失，不直接预测下游能力。",
@@ -3020,6 +3118,7 @@
     },
     {
       "id": "segment-anything-2023",
+      "notes": [{"path": "13-embodied/perception/foundation-models.md", "title": {"zh": "感知基础模型：能力与限制", "en": "Perception foundation models and their limits"}}],
       "year": 2023,
       "kind": "research",
       "status": "historical",
@@ -3118,8 +3217,8 @@
         "en": "C · taking the Unix kernel out of assembly"
       },
       "hook": {
-        "zh": "给 B 语言加上类型，Unix 内核从此不用汇编写。",
-        "en": "Adding types to the B language let the Unix kernel move from assembly to C."
+        "zh": "给 B 语言加上类型，让 Unix 内核的大部分代码能用 C 写。",
+        "en": "Adding types to B made it possible to write most of the Unix kernel in C."
       },
       "body": {
         "zh": "Unix 起初用汇编写。Thompson 做的高级语言 B 没有类型，数据全是机器字，在按字节寻址的 PDP-11 上处理字符和指针很别扭。Ritchie 从 1971 年起给 B 加字符类型、数组、指针和结构，改名叫 C。1973 年夏天，内核用 C 重写。",
@@ -3292,6 +3391,7 @@
     },
     {
       "id": "software-pytorch-2017",
+      "notes": [{"path": "12-infra/frameworks.md", "title": {"zh": "从 PyTorch 到 GPU kernel", "en": "From PyTorch to GPU kernels"}}],
       "year": 2017,
       "kind": "system",
       "status": "adopted",
@@ -3860,16 +3960,16 @@
         "en": "GPL · keeping modified programs shareable"
       },
       "hook": {
-        "zh": "谁都能改、能卖，但发出去时得附上源代码。",
-        "en": "Anyone could change or sell the program, but distributing it meant handing over the source."
+        "zh": "允许修改和分发，也要求接收者能按条款取得源码。",
+        "en": "It permits changes and distribution while preserving recipients' access to source code under its terms."
       },
       "body": {
-        "zh": "许可太宽松时，别人可以把自由软件改一改、只发编译好的程序，再禁止分享。1989 年的 GPL 规定：谁都能复制、修改、分发，甚至收费。但分发时要附上源代码，并按同样的条款授权给所有人。",
-        "en": "When free software was released under a very permissive license, others could modify it, ship only compiled programs, and forbid sharing. The 1989 GPL let anyone copy, modify, and distribute a program, even for a fee. But whoever distributed it had to provide the source code and license the whole work to everyone under the same terms."
+        "zh": "自由软件被改过以后，后来的使用者还能继续分享和修改吗？1989 年的 GPL 把这些权利写进许可：允许复制、修改和分发，也允许收取分发费用；分发受许可约束的作品时，要保留相应授权，并按条款提供源码或取得源码的途径。",
+        "en": "Could later users still share and modify a changed program? The 1989 GPL preserved those rights through licensing. It allowed copying, modification, distribution, and distribution fees, while requiring covered works to retain the license and provide source code or a permitted way to obtain it."
       },
       "detail": {
-        "zh": "条款写得很具体。只发编译好的程序时，要么附上完整源代码，要么附一份至少三年有效的书面承诺，只收分发成本就提供源码。所谓源代码，指的是改这个作品时首选的那种形式。\n\n它也划了边界。和别的独立作品放在同一个存储介质上，只算“单纯聚合”，不会把对方拉进这份许可。程序写明适用“任何更新版本”的，使用者可以按新版办。",
-        "en": "The terms are concrete. Shipping a compiled program requires either the complete source or a written offer, valid for at least three years, to supply it for no more than the cost of distribution. Source code means the preferred form of the work for making changes.\n\nIt also set limits. Putting an independent work on the same storage medium is mere aggregation and does not bring that work under the license. If a program says “any later version” applies, users may follow the newer terms."
+        "zh": "分发可执行程序时，第 3 条列了几种方式：附上对应源码，或附上至少三年有效的书面供源承诺；特定的非商业再分发，还可传递收到的源码获取信息。具体条件以条款为准。源码指修改作品时首选的形式。\n\n和独立作品放在同一存储介质上，只算“单纯聚合”，不会因此让对方也适用 GPL。程序明确允许“任何更新版本”时，使用者还可选择后续版本。",
+        "en": "Section 3 permits accompanying source, a written source offer valid for at least three years, or, for a specified noncommercial redistribution case, passing on source-access information. Each option has conditions. Source means the preferred form for modification.\n\nMerely placing an independent work on the same medium does not bring it under the GPL. A program's “any later version” notice also permits choosing a later license version."
       },
       "limit": {
         "zh": "交源码的义务只在分发时才有，许可也不担保代码质量。",
@@ -3879,6 +3979,10 @@
         [
           "GNU General Public License, version 1, February 1989 (gnu.org), preamble and §§0–7",
           "https://www.gnu.org/licenses/old-licenses/gpl-1.0.html"
+        ],
+        [
+          "Same GPL v1 text · SPDX license-list mirror, §3 source-distribution options",
+          "https://raw.githubusercontent.com/spdx/license-list-data/main/text/GPL-1.0-only.txt"
         ],
         [
           "Stallman · The GNU Project, sections on the X Window System and copyleft (the GNU project's account)",
@@ -4154,8 +4258,8 @@
         "en": "Differential privacy · Sizing noise to one person's influence"
       },
       "hook": {
-        "zh": "换掉任何一个人，公布的结果都几乎不变。",
-        "en": "Swap out any one person, and the published answers barely change."
+        "zh": "只换一个人的记录，输出结果的概率分布变化受到限制。",
+        "en": "Changing one person's record has a bounded effect on the distribution of outputs."
       },
       "body": {
         "zh": "统计机构想公布汇总数字，又不想暴露某个人。只公布汇总也不保险：允许无限次提问、回答只带一点噪声，攻击者几乎能还原整个数据库。2006 年，Dwork 等人把隐私写成一个条件：换掉任何一行，回答的分布只能变一点点。按一行数据最多能改变结果多少来加噪声，就能做到。",
@@ -4166,8 +4270,8 @@
         "en": "The simplest case is a count. Each person is a row with value 0 or 1, and the query asks how many 1s there are. Replacing one person changes the answer by at most 1, so the sensitivity is 1, and adding Laplace noise of scale 1/ε is enough. A smaller ε hides each person better and needs more noise.\n\nThe paper called its definition ε-indistinguishability; the later standard name is differential privacy. The U.S. Census Bureau says it moved to a protection framework based on differential privacy for the 2020 Census."
       },
       "limit": {
-        "zh": "它管的是单个人的影响，挡不住统计结果揭示群体规律；问得越多，噪声也得越大。",
-        "en": "It limits one person's influence, not what statistics reveal about groups, and more questions demand more noise."
+        "zh": "多次查询要合算隐私预算；它也不阻止统计结果揭示群体规律。",
+        "en": "Repeated queries need a combined privacy budget; population-level patterns can still be learned."
       },
       "sources": [
         [
@@ -4280,8 +4384,8 @@
         "en": "EUV lithography · Printing chips with 13.5 nm light"
       },
       "hook": {
-        "zh": "改用 13.5 纳米的极紫外光，细线条一次就能印出来。",
-        "en": "Switching to 13.5 nm light let the finest lines print in a single exposure."
+        "zh": "改用 13.5 纳米的光，让部分精细图形少做几次曝光。",
+        "en": "Using 13.5 nm light reduces the patterning steps needed for some fine features."
       },
       "body": {
         "zh": "芯片上的图形用光刻制造。193 纳米 DUV 在一些精细图形上需要多重图形化，工序和成本随之增加。EUV 使用 13.5 纳米光，在合适的层和工艺中能减少这些步骤，不代表所有层都只需一次曝光。相关实验从 1980 年代开始；到 2019 年，采用 EUV 工艺的芯片进入商用产品。",
@@ -4704,12 +4808,12 @@
       "topic": "data",
       "track": "datasets",
       "title": {
-        "zh": "LAION-5B · 公开 58.5 亿对网络图文",
-        "en": "LAION-5B · Releasing 5.85 billion web image–text pairs"
+        "zh": "LAION-5B · 把网络图文整理成开放索引",
+        "en": "LAION-5B · An open index of web images and text"
       },
       "hook": {
-        "zh": "大厂的图文数据不公开，它一口气公开了 58.5 亿对。",
-        "en": "Big labs kept their image–text data private; LAION-5B released 5.85 billion pairs."
+        "zh": "公开 58.5 亿条图文配对的链接和元数据，图片另行获取。",
+        "en": "It released URLs and metadata for 5.85 billion image–text pairs, not the image files."
       },
       "body": {
         "zh": "CLIP 用 4 亿对图文训练，数据没公开；在 LAION 自己 2021 年放出 4 亿对的 LAION-400M 之前，公开的英文图文数据集最大约 1 亿对。大规模图文研究于是集中在少数几家公司。LAION-5B 从网页里挑出带 alt 文本的图片，按 CLIP 算的图文相似度筛选，公开了 58.5 亿对，图片要使用者自己下载。",
@@ -4926,12 +5030,12 @@
         "en": "PUE · measuring how much power reaches IT equipment"
       },
       "hook": {
-        "zh": "机房总耗电除以 IT 设备耗电，越接近 1 越省。",
+        "zh": "总能耗除以 IT 能耗，看供电、冷却等开销占多少。",
         "en": "PUE divides total facility energy by IT energy, and values near 1.0 mean little overhead."
       },
       "body": {
-        "zh": "机房的电不全给服务器、存储和网络设备，配电损耗和冷却也在耗电。2007 年，行业联盟 The Green Grid 发布 PUE：机房总能耗除以 IT 设备能耗。它最小是 1.0，越接近 1.0，设施本身多耗的电越少。",
-        "en": "A datacenter's electricity does not all go to servers, storage, and network equipment; power distribution losses and cooling draw from it too. In 2007 the industry consortium The Green Grid published PUE: total facility energy divided by IT equipment energy. PUE cannot go below 1.0, and the closer it gets, the less extra energy the facility itself uses."
+        "zh": "机房的电不全给服务器、存储和网络设备，配电损耗和冷却也在耗电。2007 年，The Green Grid 发布 PUE：机房总能耗除以 IT 设备能耗。越接近 1，说明每给 IT 设备供一度电，设施额外消耗得越少；总耗电还取决于 IT 设备用了多少电。",
+        "en": "A datacenter also spends electricity on cooling and power distribution. In 2007, The Green Grid introduced PUE: total facility energy divided by IT equipment energy. A value closer to 1 means less facility overhead per unit of IT energy; total consumption still depends on how much energy the IT equipment uses."
       },
       "detail": {
         "zh": "举个算例：一座机房一年从电网取电 1,500 万千瓦时，其中 1,000 万送到了 IT 设备。它的 PUE 就是 1.5。伯克利国家实验室测过 22 座机房。它们的 PUE 在 1.3 到 3.0 之间。\n\n数字要看口径。Google 报告整个机队 2025 年的平均 PUE 是 1.09，并说把变电站、变压器这些开销都算了进去；这是 Google 自己的测量。",
@@ -6562,6 +6666,12 @@
           ]
         },
         {
+          "id": "imagined-control",
+          "title": {"zh": "在模型里学习控制", "en": "Learning control in a model"},
+          "summary": {"zh": "学到环境怎样变化以后，可以用预测出来的轨迹练习。Dreamer 把动力学模型、价值估计和策略学习放进同一个循环。", "en": "Learned dynamics let an agent practice on predicted trajectories. Dreamer combines a dynamics model, value estimates and policy learning in one loop."},
+          "works": ["dreamer-2019"]
+        },
+        {
           "id": "visual-models",
           "title": {
             "zh": "视觉、生成与图文学习",
@@ -6758,6 +6868,12 @@
             "nvidia-hopper-2022",
             "amd-cdna3-mi300-2023"
           ]
+        },
+        {
+          "id": "predictive-representations",
+          "title": {"zh": "预测表示，而不是像素", "en": "Predicting representations rather than pixels"},
+          "summary": {"zh": "I-JEPA 在表示空间比较预测和目标，研究怎样从图像中学出可迁移的特征。", "en": "I-JEPA compares predictions with targets in representation space to learn transferable visual features."},
+          "works": ["ijepa-2023"]
         },
         {
           "id": "perception-without-finetuning",
@@ -7451,6 +7567,11 @@
     }
   ],
   "connections": [
+    {
+      "from": "ijepa-2023", "to": "vit", "type": "uses",
+      "description": {"zh": "I-JEPA 的上下文编码器、目标编码器和预测器都采用 ViT；改动主要在训练目标和遮挡方式。", "en": "I-JEPA uses ViTs for its context encoder, target encoder and predictor, changing the prediction objective and masking scheme."},
+      "source": "https://arxiv.org/html/2301.08243v3"
+    },
     {
       "from": "alexnet",
       "to": "imagenet-2009",

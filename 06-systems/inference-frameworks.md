@@ -108,7 +108,7 @@ SGLang 的上述执行选择可以在固定版本的 [ModelRunner](https://githu
 
 ### 部署时的 DP，不一定是互不相干的副本 {#moe-deployment}
 
-训练里的 DDP 同步梯度；推理里的 data parallelism 通常分配请求。对于 MoE，还要看专家是否跨副本共享。按 2026-10-09 核对的 [vLLM EP 部署说明](https://docs.vllm.ai/en/latest/serving/expert_parallel_deployment/)，启用 EP 时，专家组大小为 TP × DP；attention 的复制或切分与专家分布不是同一件事。这是该框架的组合方式，不是所有系统的定义。
+训练里的 DDP 同步梯度；推理里的 data parallelism 通常分配请求。对于 MoE，还要看专家是否跨副本共享。按 2026-10-09 核对的 [vLLM EP 部署说明](https://docs.vllm.ai/en/latest/serving/expert_parallel_deployment/)，在本节 PCP=1（不额外划分 prefill 上下文）的假设下，启用 EP 时专家组大小为 TP × DP；attention 的复制或切分与专家分布不是同一件事。这不是所有系统的定义。[v0.31.0 参数文档](https://docs.vllm.ai/en/v0.31.0/configuration/engine_args/#--data-parallel-size)把更一般的 MoE 分片规模写为 TP × PCP × DP；下面四卡算例保持 PCP=1。
 
 用一个**虚构权重账**：可切分的非专家权重共 6 GiB，路由专家共 42 GiB，部署在 4 张卡上。暂不计复制的小张量、量化元数据、KV 和 workspace：
 
@@ -161,11 +161,13 @@ PP 可以减少跨卡协作的频率，但也带来顺序依赖：只有一条�
 | 观察点 | vLLM V1 | SGLang 的 radix 树（默认 `UnifiedRadixCache`） |
 | --- | --- | --- |
 | 怎么组织可复用前缀 | 带前缀关系的块哈希与 block pool，按哈希查块 | 用树表示共同的 token 路径；v0.5.21 的树核心优先用 Rust，不兼容的平台或功能会回退到 Python |
-| 复用边界 | 基础默认值为每 16 个 token 一块；实际大小受模型、attention backend 与配置影响，只复用完整块 | 默认 page size 为 1，可以停在任意 token；部分后端或模型把 page 调到 64、128 等，就向下对齐到整页 |
+| 复用边界 | 基础默认块长为 16；通常按完整哈希单元匹配。v0.31.0 的 `prefix_match_unit` 可细于物理 KV 块，只要各缓存组块长都能被它整除；匹配粒度不等于状态存储频率 | 默认 page size 为 1，可以停在任意 token；部分后端或模型把 page 调到 64、128 等，就向下对齐到整页 |
 | 生命周期 | 引用计数、空闲队列按 LRU 驱逐、重新分配 | 锁定、引用、节点拆分；默认 LRU，也可选 LFU、SLRU、priority、T-LRU |
 | 不能直接推出什么 | 块组织不等于整个服务更快 | 树组织不等于任意 workload 都更快 |
 
 默认值不是通用承诺。实际选择可查 vLLM 的 [runner 与异步调度条件](https://github.com/vllm-project/vllm/blob/10cc2f6ae2c9ba7cc5841ece95e27d0562aef1bf/vllm/config/vllm.py#L709)、[cache 配置](https://github.com/vllm-project/vllm/blob/10cc2f6ae2c9ba7cc5841ece95e27d0562aef1bf/vllm/config/cache.py#L67)，以及 SGLang 的 [tree core 回退条件](https://github.com/sgl-project/sglang/blob/v0.5.21/python/sglang/srt/mem_cache/unified_cache/tree_core_registry.py#L44)。部署时再核对启动日志里的最终配置。
+
+例如，[v0.31.0 配置文档](https://docs.vllm.ai/en/v0.31.0/configuration/engine_args/#--prefix-match-unit)允许混合模型的 1024-token 物理块采用 32-token 匹配边界；这不保证任意内部位置都有可恢复状态。对应定义也见[该版本源码](https://github.com/vllm-project/vllm/blob/v0.31.0/vllm/config/cache.py)。
 
 实现细节可对照已有的[缓存生命周期与页对齐算例](../00-foundations/deep-dives/attention-kernels.md#cache-lifecycle)，其中固定了 vLLM 与 SGLang 源码版本。[SGLang 原论文](https://arxiv.org/abs/2312.07104)解释了 RadixAttention 的背景；不要把论文发表时的功能边界当成今天的完整产品对比。
 

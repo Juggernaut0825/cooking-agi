@@ -172,7 +172,7 @@ A 再把 3 个新 tokens 送入模型、形成它们的 K/V 后，可填满已�
 
 上图的尾块空槽叫**内部碎片（internal fragmentation）**。另一种情况是空闲空间散在几处，总量够，却放不下一段要求连续的大缓存，这是**外部碎片（external fragmentation）**。所有块大小相同，所以分页消除了外部碎片；按需分配小块，又把内部碎片限制在每个请求最后一个未填满的块里。块表和这些尾块空槽仍有成本。
 
-还要分清论文里的共享机制与当前框架实际开放的功能。[vLLM 的 prefix caching 说明](https://docs.vllm.ai/en/latest/design/prefix_caching/)目前按完整块复用缓存，并把前缀、token IDs 及 adapter / 多模态信息等纳入缓存键。不能据此假定它会复用任意半满尾块。
+还要分清物理块、匹配单元和可恢复的缓存状态。下面的小例子按完整块匹配；但 [vLLM v0.31.0 的配置](https://github.com/vllm-project/vllm/blob/v0.31.0/vllm/config/cache.py)允许 `prefix_match_unit` 小于物理块，只要它能整除各缓存组的块长。匹配更细，不代表每个位置都保存了可恢复状态，也不是任意半满尾块都能复用。缓存键还要区分前缀、token IDs、adapter 与多模态输入。
 
 <span id="cache-lifecycle"></span>
 

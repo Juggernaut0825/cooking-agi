@@ -1456,6 +1456,28 @@ def strip_tags(h):
     return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", h)).strip()
 
 
+class AnchorIds(HTMLParser):
+    def __init__(self, body):
+        super().__init__()
+        self.identifiers = set()
+        self.feed(body)
+
+    def handle_starttag(self, tag, attributes):
+        identifier = dict(attributes).get("id")
+        if identifier is not None:
+            self.identifiers.add(identifier)
+
+
+def add_question_anchors(body):
+    identifiers = AnchorIds(body).identifiers
+    if "interview" not in identifiers:
+        body = re.sub(r'(<h[23] id="[^"]*">)(?=[^<]*(?:面试|[Ii]nterview))',
+                      r'<a id="interview"></a>\1', body, count=1)
+    if "self-check" not in identifiers:
+        body = body.replace('<div class="taste-check', '<div id="self-check" class="taste-check', 1)
+    return body
+
+
 def build_page(page: Page, terms, repo: str, known: set):
     raw = page.src.read_text(encoding="utf-8")
     # A NUL byte means some editing pass left a placeholder behind and ate the
@@ -1511,8 +1533,7 @@ def build_page(page: Page, terms, repo: str, known: set):
         body, used = annotate(body, glossary_for_page(page, terms))
     body = rewrite_links(body, page, repo, known)
     # stable targets for the question bank, whatever the heading slug turned out to be
-    body = re.sub(r'(<h[23] id="[^"]*">)(?=[^<]*(?:面试|[Ii]nterview))', r'<a id="interview"></a>\1', body, count=1)
-    body = body.replace('<div class="taste-check', '<div id="self-check" class="taste-check', 1)
+    body = add_question_anchors(body)
     page.body = wrap_tables(body)
     page.toc = [{"id": t["id"], "name": strip_tags(t["name"]), "level": t["level"],
                  "children": [{"id": c["id"], "name": strip_tags(c["name"])}
@@ -1749,6 +1770,8 @@ def page_header_html(page):
     if page.section.get("group") == "study":
         labels["article"] = "阅读导航" if zh else "Reading guide"
     read = f"约 {page.read_minutes} 分钟" if zh else f"{page.read_minutes} min read"
+    if page.kind in {"home", "index"}:
+        read = "按需选读" if zh else "Browse by topic"
     position = ((f"本章 {page.position} / {page.section_count} 篇" if zh else f"Note {page.position} of {page.section_count}")
                 if page.kind not in {"home", "project"} and page.section_count > 1 else "")
     reviewed = (("最近核对 " if zh else "Reviewed ") + page.reviewed
@@ -2074,7 +2097,10 @@ def reading_controls_html(page):
     if sibling.url == "index.html":
         target += "?lang=en"
     href = html.escape(page.rel(target), quote=True)
+    shared = AnchorIds(getattr(page, "body", "")).identifiers & AnchorIds(getattr(sibling, "body", "")).identifiers
+    anchors = html.escape(json.dumps(sorted(shared | {"content"}), ensure_ascii=False), quote=True)
     return (f'<a class="lang-btn" href="{href}" lang="{language}" hreflang="{language}" data-language-switch="{"en" if chinese else "zh"}" '
+            f'data-language-anchors="{anchors}" '
             f'aria-label="{description}" title="{description}">{label}</a>')
 
 
@@ -2300,6 +2326,7 @@ def main():
     index = []
     for page in pages:
         build_page(page, terms, nav['site']['repo'], known)
+    for page in pages:
         dest = OUT / page.out_rel
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(assemble(page, sections, people, nav, built, template),

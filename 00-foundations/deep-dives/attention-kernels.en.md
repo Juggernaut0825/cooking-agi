@@ -172,7 +172,7 @@ The [PagedAttention paper](https://arxiv.org/abs/2309.06180) develops this mappi
 
 Unused slots inside allocated tail blocks are **internal fragmentation**. **External fragmentation** occurs when enough free space exists in total but is scattered into gaps too small for a required contiguous allocation. Because all blocks have the same size, paging eliminates external fragmentation; allocating small blocks on demand also confines internal fragmentation to each request's last partially filled block. Block tables and those tail slots still cost memory.
 
-Separate a paper's sharing mechanisms from the features a framework currently implements. [vLLM's prefix-caching documentation](https://docs.vllm.ai/en/latest/design/prefix_caching/) describes reusing full blocks and including prefixes, token IDs, and adapter / multimodal information in cache keys. Do not assume arbitrary partially filled tails are reusable.
+Separate physical blocks, matching units, and recoverable cache states. The example below matches full blocks, but [vLLM v0.31.0](https://github.com/vllm-project/vllm/blob/v0.31.0/vllm/config/cache.py) allows `prefix_match_unit` to be smaller than a physical block if it divides every cache group's block size. Finer matching does not mean a recoverable state is stored at every position, or that any partially filled tail can be reused. Cache keys also distinguish prefixes, token IDs, adapters, and multimodal inputs.
 
 <span id="cache-lifecycle"></span>
 

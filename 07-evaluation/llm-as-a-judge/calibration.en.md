@@ -27,7 +27,7 @@ These 12 examples are **deliberately constructed teaching data**, split into RAG
 
 Follow the individual tiles instead of watching only the percentages:
 
-1. Keep all cases, a 3.5 threshold, and review off. R4, A4 and A5 are approved although the human marked them as failures; R4 (4.1) and A4 (4.5) even score high. **A high score isn't evidence of correctness.**
+1. Keep all cases, a 3.5 threshold, and review off. R4, A4 and A5 are approved although the human marked them as failures; R4 (4.1) and A4 (4.5) even score high. **A high score does not guarantee a correct judgment.**
 2. Raise the threshold to 4.0. False approvals fall from 3 to 2, while false rejections rise from 2 to 3. Accuracy stays at 7/12. The total looks unchanged, but the mistakes differ.
 3. Turn on human review. Six cases leave the automatic decision set, so only six remain in the table. You haven't eliminated six errors; you've handed six decisions to a person.
 
@@ -58,13 +58,15 @@ If 95 of 100 cases are passes, an always-pass judge achieves 95% accuracy while 
 ## Agreement, correlation, calibration, and stability
 
 - **Agreement:** whether the judge and human give the same category for an item.
-- **Correlation:** whether rankings agree; high correlation doesn't imply correct item-level decisions.
+- **Rank correlation:** whether rankings agree; high rank correlation doesn't imply correct item-level decisions. Correlation also includes measures of linear association such as Pearson, so not every correlation coefficient measures ordering.
 - **Calibration:** whether predictions interpreted as 0.8 pass probability actually pass about 80% of the time.
 - **Reliability / stability:** repeatability across runs or order changes; consistently wrong is still consistent.
 
 Cohen's kappa can supplement raw agreement but depends on class distribution and annotation assumptions. Work it once on the 12 cases above: at threshold 3.5 the judge and the human agree on 7, so raw agreement is $p_o=7/12$; the judge approves 7/12 and the human passes 6/12, so chance agreement is $p_e=\tfrac{7}{12}\cdot\tfrac{6}{12}+\tfrac{5}{12}\cdot\tfrac{6}{12}=0.5$ and $\kappa=(7/12-0.5)/0.5\approx0.17$. At threshold 4.0 they still agree on 7, the judge approves 5/12, $p_e$ is again 0.5, and κ is again 0.17. The two thresholds share a kappa but make different mixes of false approvals and false rejections. Weighted kappa may suit ordinal labels; Spearman or Kendall suit rankings. Don't choose whichever metric looks best and discard the rest.
 
 Without additional calibration, 4/5, token probability, and self-reported confidence are not correctness probabilities. Agreement among models is not automatically independent evidence.
+
+Consider two fictional groups of ten, with eight passes in the higher-scoring group and two in the lower. Predicting 0.5 for everyone is calibrated overall on these twenty cases but cannot distinguish the groups. Predicting 0.99 and 0.90 orders the groups correctly while overstating both pass rates. Changing those predictions to 0.8 and 0.2 preserves the group order and matches their observed frequencies. This sample calculation does not establish calibration on new data. Fit a calibration mapping separately from evaluating it. Strictly increasing mappings preserve ranking; non-strict monotonic methods such as isotonic regression can introduce ties and change ranking metrics. [scikit-learn: probability calibration and ranking](https://scikit-learn.org/stable/modules/calibration.html)
 
 ## Can we trust a small improvement?
 

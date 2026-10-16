@@ -76,7 +76,7 @@ end-of-message / EOS、命中其他 stop condition，或达到长度上限。
 <div class="concept-title-en" role="heading" aria-level="3">1. Inference: the final assistant marker is the generation boundary</div>
 
 After the user submits structured messages, the application uses a
-[chat template and tokenizer](tokenization.md) to create token IDs with role boundaries.
+[chat template and tokenizer](tokenization.en.md) to create token IDs with role boundaries.
 A typical prompt ends at the assistant-start marker:
 
 ```text
@@ -168,7 +168,7 @@ MHA 变为 GQA 或 MQA。
 
 截至 2026-10，开源模型里还有三类常见变化：Qwen3、Gemma 3 在 q/k 上再做一次
 [QK-norm](normalization.md#qk-norm)；DeepSeek-V3 用 [MLA](../deep-dives/latent-and-sparse-attention.md)
-只缓存低维 latent；[Qwen3.5-397B-A17B](https://huggingface.co/Qwen/Qwen3.5-397B-A17B)（2026-02）的 60 层里，45 层是
+缓存低维 KV latent **以及解耦 RoPE 的 key 分量**，不是只有 latent（[报告 §2.1.1](https://arxiv.org/html/2412.19437v2#S2.SS1.SSS1)）；[Qwen3.5-397B-A17B](https://huggingface.co/Qwen/Qwen3.5-397B-A17B)（2026-02）的 60 层里，45 层是
 [Gated DeltaNet](../deep-dives/gated-deltanet.md) 这种固定大小的循环状态，只有 15 层是
 [Gated Attention](../deep-dives/gated-attention.md)，按 3:1 交替。
 
@@ -203,10 +203,10 @@ of LayerNorm, RoPE instead of additive sinusoidal positions, SwiGLU instead of a
 FFN, and sometimes GQA or MQA instead of standard MHA.
 
 As of October 2026, open models show three more common changes: Qwen3 and Gemma 3 add
-[QK-norm](normalization.md#qk-norm) on q and k; DeepSeek-V3 caches only a low-dimensional latent with
-[MLA](../deep-dives/latent-and-sparse-attention.md); and in [Qwen3.5-397B-A17B](https://huggingface.co/Qwen/Qwen3.5-397B-A17B) (February 2026), 45 of 60 layers are
-[Gated DeltaNet](../deep-dives/gated-deltanet.md) layers with a fixed-size recurrent state and only 15 are
-[Gated Attention](../deep-dives/gated-attention.md) layers, in a 3:1 pattern.
+[QK-norm](normalization.en.md#qk-norm) on q and k; DeepSeek-V3's
+[MLA](../deep-dives/latent-and-sparse-attention.en.md) caches a low-dimensional KV latent **and the decoupled RoPE key component**, not the latent alone ([report §2.1.1](https://arxiv.org/html/2412.19437v2#S2.SS1.SSS1)); and in [Qwen3.5-397B-A17B](https://huggingface.co/Qwen/Qwen3.5-397B-A17B) (February 2026), 45 of 60 layers are
+[Gated DeltaNet](../deep-dives/gated-deltanet.en.md) layers with a fixed-size recurrent state and only 15 are
+[Gated Attention](../deep-dives/gated-attention.en.md) layers, in a 3:1 pattern.
 
 </div>
 </section>
@@ -225,11 +225,13 @@ As of October 2026, open models show three more common changes: Qwen3 and Gemma 
 | RoPE | 每层把 Q/K 按位置旋转，V 不转 | 位置只以 $n-m$ 进入点积，分数仍取决于内容；远超训练长度仍要 RoPE scaling | [Transformer 架构](../transformer.md#rope)、[RoPE 与长上下文](../deep-dives/position-and-context.md) |
 | Pre-norm + RMSNorm | norm 移进分支；只除以均方根，不减均值、没有 bias | 主干留下 identity path，堆完所有 block 还要 final norm；“用了 RMSNorm”不等于模型更好 | [归一化](normalization.md#_3) |
 | SwiGLU | FFN 多一个门控投影 | 门是 SiLU，不是概率，可以为负；三个矩阵时隐藏宽度常取约 $\tfrac83d$，保持参数预算 | [FFN 与门控](ffn-and-gates.md) |
-| GQA / MQA | 多个 query head 共享一组 K/V head | 共享 K/V 的头仍因 Q 不同而有不同的注意力分布；省的是 KV cache，不是总参数 | [KV cache 与推理成本](../deep-dives/kv-cache-and-inference.md) |
-| KV cache | 保存历史 K/V，新一步只算 $q_t,k_t,v_t$ | 权重、前缀、位置和可见范围相同且关闭 dropout 时，才与重算前缀等价；随层数、长度和 KV head 数线性增长 | [KV cache 与推理成本](../deep-dives/kv-cache-and-inference.md) |
-| FlashAttention | Q/K/V 分块，在 GPU 片上存储里逐块计算，用 online softmax 维护归一化 | 算的是同一个 attention，不是稀疏近似；FLOP 仍约 $O(L^2)$，省的是显存读写 | [Attention kernel](../deep-dives/attention-kernels.md)、[GPU 内存层级](../../12-infra/gpu-architecture.md)、[CUDA tiling](../../12-infra/cuda.md#tiling) |
+| GQA / MQA | 多个 query head 共享一组 K/V head | 共享 K/V 的头仍因 Q 不同而有不同的注意力分布；主要缩小 KV cache 和读取带宽，K/V 投影参数也会减少，但总参数不按同一比例缩小 | [KV cache 与推理成本](../deep-dives/kv-cache-and-inference.md) |
+| KV cache | 保存历史 K/V，新一步只算 $q_t,k_t,v_t$ | 相同权重、前缀、位置、可见范围且关闭 dropout，并保留未量化、未驱逐的所需 K/V 时，与重算前缀数学等价；浮点结果可能略有差异 | [KV cache 与推理成本](../deep-dives/kv-cache-and-inference.md) |
+| FlashAttention | Q/K/V 分块，把数据块放入片上存储，交给 GPU 计算单元处理，用 online softmax 维护归一化 | 算的是同一个 attention，不是稀疏近似；FLOP 仍约 $O(L^2)$，省的是显存读写 | [Attention kernel](../deep-dives/attention-kernels.md)、[GPU 内存层级](../../12-infra/gpu-architecture.md)、[CUDA tiling](../../12-infra/cuda.md#tiling) |
 | 长上下文 | RoPE scaling、滑动窗口、稀疏连接或局部 / 全局混合层 | 位置外推和平方成本是两件事，先判断瓶颈（见表下） | [RoPE 与长上下文](../deep-dives/position-and-context.md)、[MLA 与稀疏注意力](../deep-dives/latent-and-sparse-attention.md) |
 | MoE | 用多个专家替换 FFN，router 给每个 token 选少数几个 | 总参数可以远大于每个 token 激活的参数；代价是负载均衡、专家容量和跨设备 all-to-all 通信；专家也不一定学出能叫得出名字的分工 | [MoE](../moe/README.md) |
+
+GQA 的节省可以直接数出来：设 $d=8$、4 个 query head、每头维度 2，忽略 bias。从 MHA 的 4 个 KV head 改成 MQA 的 1 个，K/V 投影参数由 $2\times8\times4\times2=128$ 降到 32；Q 和输出投影合计仍为 128，所以 attention 投影总参数是 256 → 160，**不是整个模型缩到四分之一**。每层每个 token 缓存的 K/V 标量则是 $2\times4\times2=16$ → 4；不驱逐历史时，总缓存仍随序列长度线性增长。GQA 用介于 1 和 query head 数之间的 KV head 数折中，见 [GQA §2](https://arxiv.org/html/2305.13245v3#S2)。
 
 长上下文要先问瓶颈是哪一种：
 
@@ -258,14 +260,16 @@ The changes listed in the previous card sit in different parts of the block. Eac
 
 | Part | What it changes | The point most often stated wrong | Where it is explained |
 | --- | --- | --- | --- |
-| RoPE | Rotates Q/K by position in every layer; V is not rotated | Position enters the dot product only as $n-m$, while the score still depends on content; far beyond the training length you still need RoPE scaling | [The Transformer architecture](../transformer.md#rope), [RoPE and long context](../deep-dives/position-and-context.md) |
-| Pre-norm + RMSNorm | Moves the norm into the branch; divides by the root mean square without centering or bias | The trunk keeps an identity path and the stack still ends with a final norm; using RMSNorm does not by itself make a model better | [Normalization](normalization.md#_3) |
-| SwiGLU | Adds a gating projection to the FFN | The gate is SiLU, not a probability, and can be negative; with three matrices the hidden width is often about $\tfrac83d$ to keep the parameter budget | [FFN and gates](ffn-and-gates.md) |
-| GQA / MQA | Several query heads share one K/V head | Heads that share K/V still attend differently because their Q differs; the saving is in the KV cache, not total parameters | [KV cache and inference cost](../deep-dives/kv-cache-and-inference.md) |
-| KV cache | Stores past K/V; a new step computes only $q_t,k_t,v_t$ | It equals recomputing the prefix only with the same weights, prefix, positions, and visibility, and dropout off; it grows linearly with layers, length, and KV heads | [KV cache and inference cost](../deep-dives/kv-cache-and-inference.md) |
-| FlashAttention | Tiles Q/K/V, computes block by block in on-chip GPU memory, and keeps the normalization right with online softmax | It computes the same attention, not a sparse approximation; FLOPs stay about $O(L^2)$, and the saving is memory traffic | [Attention kernels](../deep-dives/attention-kernels.md), [GPU memory hierarchy](../../12-infra/gpu-architecture.md), [CUDA tiling](../../12-infra/cuda.md#tiling) |
-| Long context | RoPE scaling, sliding windows, sparse connectivity, or mixed local / global layers | Position extrapolation and quadratic cost are separate problems; identify the bottleneck first (below the table) | [RoPE and long context](../deep-dives/position-and-context.md), [MLA and sparse attention](../deep-dives/latent-and-sparse-attention.md) |
-| MoE | Replaces the FFN with several experts; a router picks a few per token | Total parameters can far exceed those active per token; the cost is load balancing, expert capacity, and cross-device all-to-all communication; experts need not learn a nameable division of labor | [MoE](../moe/README.md) |
+| RoPE | Rotates Q/K by position in every layer; V is not rotated | Position enters the dot product only as $n-m$, while the score still depends on content; far beyond the training length you still need RoPE scaling | [The Transformer architecture](../transformer.en.md#positional-encoding-from-sinusoids-to-rope), [RoPE and long context](../deep-dives/position-and-context.en.md) |
+| Pre-norm + RMSNorm | Moves the norm into the branch; divides by the root mean square without centering or bias | The trunk keeps an identity path and the stack still ends with a final norm; using RMSNorm does not by itself make a model better | [Normalization](normalization.en.md#four-concepts-answer-first-then-go-deeper) |
+| SwiGLU | Adds a gating projection to the FFN | The gate is SiLU, not a probability, and can be negative; with three matrices the hidden width is often about $\tfrac83d$ to keep the parameter budget | [FFN and gates](ffn-and-gates.en.md) |
+| GQA / MQA | Several query heads share one K/V head | Different queries still give different attention distributions; the main savings are KV-cache size and read bandwidth, but K/V projection parameters also shrink—not the entire model by the same ratio | [KV cache and inference cost](../deep-dives/kv-cache-and-inference.en.md) |
+| KV cache | Stores past K/V; a new step computes only $q_t,k_t,v_t$ | Mathematical equivalence to recomputation requires the same weights, prefix, positions, visibility, dropout off, and all required K/V retained without quantization or eviction; floating-point results may differ slightly | [KV cache and inference cost](../deep-dives/kv-cache-and-inference.en.md) |
+| FlashAttention | Tiles Q/K/V, uses on-chip storage for blocks processed by GPU compute units, and keeps the normalization right with online softmax | It computes the same attention, not a sparse approximation; FLOPs stay about $O(L^2)$, and the saving is memory traffic | [Attention kernels](../deep-dives/attention-kernels.en.md), [GPU memory hierarchy](../../12-infra/gpu-architecture.en.md), [CUDA tiling](../../12-infra/cuda.en.md#tiling) |
+| Long context | RoPE scaling, sliding windows, sparse connectivity, or mixed local / global layers | Position extrapolation and quadratic cost are separate problems; identify the bottleneck first (below the table) | [RoPE and long context](../deep-dives/position-and-context.en.md), [MLA and sparse attention](../deep-dives/latent-and-sparse-attention.en.md) |
+| MoE | Replaces the FFN with several experts; a router picks a few per token | Total parameters can far exceed those active per token; the cost is load balancing, expert capacity, and cross-device all-to-all communication; experts need not learn a nameable division of labor | [MoE](../moe/README.en.md) |
+
+Count the GQA savings directly: let $d=8$, with 4 query heads of dimension 2 and no biases. Moving from MHA's 4 KV heads to MQA's 1 reduces K/V projection parameters from $2\times8\times4\times2=128$ to 32. Q and output projections still total 128, so attention projections go from 256 to 160—**not a fourfold reduction of the whole model**. Cached K/V scalars per token per layer go from $2\times4\times2=16$ to 4; without eviction, total cache still grows linearly with sequence length. GQA uses an intermediate KV-head count for a compromise; see [GQA §2](https://arxiv.org/html/2305.13245v3#S2).
 
 For long context, first ask which bottleneck you face:
 

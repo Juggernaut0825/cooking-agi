@@ -1,5 +1,30 @@
 # Chronicle evidence ledger
 
+## 2026-10-16: checking what the short descriptions imply
+
+All 145 node titles and hooks were screened. Full bilingual entries were read for ten selected nodes: HDFS, scaling laws, C, perceptron, GPL v1, differential privacy, EUV, LAION-5B, System/360, and PUE. Eight were corrected; this is not a claim that every node has been freshly verified.
+
+- **Differential privacy:** the hook now describes a bound on output distributions, not a guarantee that individual answers stay numerically close. Repeated queries require privacy accounting; they do not invariably require increasing the noise of each answer. Checked the original [Dwork et al. paper, introduction and sensitivity mechanism](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf).
+- **Scaling laws:** Kaplan's fitted exponents are tied to the original training setup, rather than presented as instructions that can be applied unchanged. Compared the scope of [Kaplan et al.](https://arxiv.org/abs/2001.08361) with [Hoffmann et al.](https://arxiv.org/abs/2203.15556); this pass checked the abstracts and existing cited results, not a fresh reproduction of either fit.
+- **HDFS:** block replication is no longer described as making any one-machine failure harmless. The historical [Apache HDFS 1.2.1 design guide](https://hadoop.apache.org/docs/r1.2.1/hdfs_design.html) explicitly identifies the NameNode as a single point of failure. This qualifier concerns early HDFS, not all current deployments.
+- **EUV:** the hook now says it can reduce patterning steps for suitable features, matching the existing body. [ASML's account of multiple patterning](https://www.asml.com/en/company/stories/2021/twinscan-20-years-innovation) and its [High-NA product description](https://www.asml.com/products/euv-lithography-systems/twinscan-exe-5000) make clear that resolution and process determine which patterns fit in one exposure. Current High-NA specifications are not attributed to the 2019 milestone.
+- **LAION-5B:** the title and hook now name the released index, URLs, and metadata rather than suggesting a bundle of image files. Checked the [release announcement's data pipeline](https://laion.ai/blog/laion-5b/). This is a historical description, not a recommendation to download or use the dataset.
+- **PUE:** the Chinese hook and both bodies now distinguish a ratio of facility overhead from absolute electricity savings. Checked the definition and measurement boundaries in [Google's efficiency report](https://datacenters.google/efficiency/); its fleet figures are operator-reported, not independent measurements.
+- **C:** removed the implication that the Unix rewrite eliminated assembly entirely; the hook says most kernel code could be written in C. Checked [Ritchie's historical account](https://csapp.cs.cmu.edu/2e/docs/chistory.html).
+
+- **GPL v1:** corrected the hook and body to allow the source-access alternatives in §3, rather than saying a source bundle is mandatory in every case. GNU's hosted copy was unavailable, so the actual [v1 license text in SPDX's mirror](https://raw.githubusercontent.com/spdx/license-list-data/main/text/GPL-1.0-only.txt) was read; this is the same license, not independent legal analysis. The detail also now acknowledges §3(c)'s limited noncommercial redistribution option.
+
+**Not closed:** System/360 and perceptron entries were read but not independently source-verified here. The remaining node bodies did not receive a fresh source-by-source audit. No review-status upgrade was made for them.
+
+## 2026-10-15 addition: learning in imagination and predicting representations
+
+This batch adds two milestones, not a new review of all 145 nodes. The original dates and IDs of the other nodes remain unchanged. Twelve milestones gain links to existing bilingual notes; those links do not upgrade a draft's review status.
+
+- **Dreamer, 2019** — read the [original paper, §§1–4](https://arxiv.org/html/1912.01603v3), including the environment/model learning cycle and imagined actor/value updates. The [submission record](https://arxiv.org/abs/1912.01603) dates the first preprint to December 2019; the conference was ICLR 2020. The gradient-through-imagination description belongs to this version, not every later Dreamer variant. [DreamerV3](https://arxiv.org/abs/2301.04104) establishes a later continuation; its abstract was checked, not its full empirical results in this pass. No benchmark-wide superiority claim is made.
+- **I-JEPA, 2023** — read [§§2–3 of the paper](https://arxiv.org/html/2301.08243v3) and its [publication record](https://arxiv.org/abs/2301.08243). Context and target encoders, a predictor and EMA updates support the node description. The paper directly supports the new `uses` connection to ViT. Learning image representations does not establish action-conditioned environment simulation or robot-control ability.
+
+Both nodes use original wording. Source records and paper versions are evidence from the same research teams, not independent replications. The Infra overview was also checked for the distinction between FLOP estimates, roofline bounds and measured runtime; [Pope et al., §2](https://arxiv.org/html/2211.05102v1) supplies the serving cost context. A local executable example checks the additional causal-attention FLOPs. No GPU performance experiment was run.
+
 Checked: **2026-10-12**. Scope: six infrastructure additions, Sojourner, and four earlier speech / vision / search / representation milestones. This is not a fresh audit of every existing node or external link. The data-level `reviewed` date records this bounded update, not complete coverage through that date.
 
 ## Selection and evidence rules

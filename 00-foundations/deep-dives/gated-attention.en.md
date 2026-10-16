@@ -6,7 +6,7 @@ Attention produces information for later layers. **Output gating adds a separate
 
 ## Where does the gate go?
 
-For input $X$, a head projects queries, keys, and values and computes:
+For input $X$, a head projects queries, keys, and values. The paper uses the hidden states after pre-normalization as $X$, including for the gate projection:
 
 $$
 O_h=\operatorname{softmax}\left(\frac{Q_hK_h^\top}{\sqrt{d_h}}+M\right)V_h.
@@ -22,11 +22,11 @@ $$
 A headwise gate supplies one number per token and head. An elementwise gate supplies one per head dimension. Headwise does **not** mean a fixed switch for a head across the entire training run: its value still depends on the current token representation.
 
 ```text
-Input ─→ Q/K/V ─→ SDPA ─→ × gate ─→ concatenate heads ─→ output projection
-  └────────────→ sigmoid ──┘
+Input ─→ Q/K/V ─→ SDPA ─────────────→ × gate ─→ concatenate heads ─→ output projection
+  └────→ gate projection ─→ sigmoid ──┘
 ```
 
-The sigmoid gates are independent and need not sum to one. Unlike softmax competition, every head can pass less information, or several can pass more simultaneously.
+Each gate applies sigmoid without a shared softmax normalization, so the gates need not sum to one; this does not imply statistical independence. Unlike softmax competition, every head can pass less information, or several can pass more simultaneously.
 
 ## Work through two heads
 
@@ -72,7 +72,7 @@ $G(X)\odot O(X)$ adds input-dependent multiplicative nonlinearity. Reading infor
 
 The gate also changes optimization. Sigmoid's derivative is $g(1-g)$, largest near 0.5 and small near either endpoint. Very large initial logits approximate an identity gate but can make the gate harder to train.
 
-The [paper](https://arxiv.org/abs/2505.06708) compares placements and gate forms and studies attention sinks and training stability. Those results are evidence for its training settings, not a guarantee that attaching a gate to any checkpoint removes attention sinks. Nor can a single attention heatmap show whether a sink is present.
+The [paper](https://arxiv.org/abs/2505.06708) compares placements and gate forms and studies attention sinks and training stability. Those results are evidence for its training settings, not a guarantee that attaching a gate to any checkpoint removes attention sinks. A single heatmap can show attention concentration on that input; establishing a persistent sink requires statistics across examples, layers and heads.
 
 ## What makes a useful comparison?
 

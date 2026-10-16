@@ -10,7 +10,7 @@
 
 ## 没有固定公式
 
-我的体会是，系统设计没有一套背下来就能用的模板。真正被考察的是两件事：**你知不知道每个选择的 trade-off**，以及**你能不能把整个系统串起来**。
+我的体会是，系统设计没有一套背下来就能用的模板。练习时我会先检查两件事：**能不能解释每个选择的取舍**，以及**能不能把整个系统串起来**。这是我的准备重点，不是所有招聘方共用的评分规则。
 
 所以从最基本的出发就行：
 
@@ -24,7 +24,8 @@
 比如要做推荐。先看手上有什么：
 
 - **如果有关注、好友或互动关系**，可以先用这些关系找候选。图也不只指社交图：[PinSage](https://arxiv.org/abs/1806.01973) 用的是 Pinterest 的物品与收藏板关系，别把几种不同的数据结构混为一谈。
-- **如果没有关系数据呢？** 那就退回到行为本身：item–item 的共现、双塔召回、内容特征（标题、类目、多模态 embedding）。冷启动阶段，内容特征和热门兜底往往比复杂模型更管用。
+- **没有社交关系，但有行为记录呢？** 可以从 item–item 共现或用交互样本训练的双塔召回开始；点击、收藏本身也能形成关系，不能把“没有社交图”误读成“没有任何交互数据”。
+- **连交互也很少呢？** 新物品可以先用标题、类目、多模态 embedding 等内容特征；新用户可以用其主动选择的兴趣或非个性化候选作基线。热门兜底也需要其他用户的历史，完全新建的服务不能凭空算出热门。内容、人工规则和热门都是待比较的方案，不是一定胜过复杂模型的结论。可对照 [YouTube 推荐论文（2016）§3.2–3.3](https://research.google/pubs/deep-neural-networks-for-youtube-recommendations/) 如何区分观看历史、侧信息与训练信号。
 
 再往下每一层都是取舍：召回要多快、排序能用多大的模型、特征要多新鲜、离线指标涨了线上会不会涨、复杂度值不值得维护。把这些说清楚，比背一套架构图有用得多。
 
@@ -34,7 +35,7 @@
 
 - [System Design Primer](https://github.com/donnemartin/system-design-primer)：免费，覆盖面广，适合搭骨架
 - [ByteByteGo](https://bytebytego.com)：Alex Xu 的《System Design Interview》系列，图多、好读
-- [Designing Data-Intensive Applications](https://www.dataintensive.net)：想真正理解底层取舍，这本最值得花时间。截至 2026-10，最新的是 [2026 年 3 月出版的第 2 版](https://martin.kleppmann.com/2026/03/24/designing-data-intensive-applications-2e.html)（Martin Kleppmann、Chris Riccomini 合著，O'Reilly）；书的网站目前仍是第 1 版的介绍
+- [Designing Data-Intensive Applications，第 2 版](https://www.oreilly.com/library/view/designing-data-intensive-applications/9781098119058/)：适合深入理解数据系统的底层取舍。Martin Kleppmann、Chris Riccomini 合著，O'Reilly，2026 年出版；可与[作者的书目](https://martin.kleppmann.com/#publications)交叉核对版本。出版社页面标注 2026 年 2 月，作者书目标注 3 月，这里不把两个日期口径混成同一个精确发布日期
 
 ML / 推荐方向：
 

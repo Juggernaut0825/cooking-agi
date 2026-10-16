@@ -935,14 +935,14 @@
         en: 'A teaching example: of 100 solutions the model writes for a batch of problems, 40 are actually right and 60 are wrong.'},
       {...base, stage: 1, zh: `测试接受全部 40 份正确解，也放过了 ${Math.round(f * 100)}% 的错解：60 × ${f} = ${leaked} 份。通过测试的一共 ${kept} 份。`,
         en: `The tests accept all 40 right solutions and also let ${Math.round(f * 100)}% of the wrong ones through: 60 × ${f} = ${leaked}. In all, ${kept} pass.`},
-      {...base, stage: 2, zh: `通过的 ${kept} 份里真正正确的是 40 / ${kept} ≈ ${pct(precision)}。按这套测试筛一轮，真实正确率最多从 40% 涨到这里，gap 约 ${Math.round(precision * 100 - 40)} 个百分点。`,
-        en: `Of the ${kept} that pass, 40 / ${kept} ≈ ${pct(precision)} are right. One round of filtering with these tests can lift true accuracy from 40% to at most this, a gap of about ${Math.round(precision * 100 - 40)} points.`},
-      {...base, stage: 3, zh: `在这 ${kept} 份上微调，并假设新模型原样学下它们的分布：100 份新解里 ${right} 份正确，${100 - right} 份错但能过测试。测试显示的通过率是 100%。`,
-        en: `Fine-tune on these ${kept} and assume the new model copies their distribution exactly: of 100 new solutions, ${right} are right and ${100 - right} are wrong but pass. The tests report 100%.`},
-      {...base, stage: 4, zh: `再转一轮：测试对两类一视同仁，全部接受，分布不变，gap = 0。真实正确率停在 ${right}%，测试一直显示 100%。`,
-        en: `Go round again: the tests treat both kinds alike and accept everything, so the distribution does not move and the gap is 0. True accuracy stays at ${right}% while the tests keep showing 100%.`},
-      {...base, stage: 5, done: true, zh: `能抬高上限的是验证器：错解放过率 0、2%、10%、30% 时，上限分别是 ${ceilings.map(c => pct(c.value)).join('、')}。`,
-        en: `What raises the ceiling is the verifier: with 0, 2%, 10% and 30% of wrong solutions let through, the ceiling is ${ceilings.map(c => pct(c.value)).join(', ')}.`}
+      {...base, stage: 2, zh: `通过的 ${kept} 份里真正正确的是 40 / ${kept} ≈ ${pct(precision)}。这是筛选后解答集的 precision，不是微调后模型准确率的保证；相对原集合高约 ${Math.round(precision * 100 - 40)} 个百分点。`,
+        en: `Of the ${kept} that pass, 40 / ${kept} ≈ ${pct(precision)} are right. This is the accepted set's precision, not guaranteed post-training accuracy: about ${Math.round(precision * 100 - 40)} points above the original set.`},
+      {...base, stage: 3, zh: `在这 ${kept} 份上微调，并假设新模型原样学下它们的分布：固定题集和测试时，100 份新解里约 ${right} 份正确，${100 - right} 份错但能过测试。测试显示的通过率是 100%。`,
+        en: `Fine-tune on these ${kept} and assume the new model copies their distribution exactly: on the same problems and tests, approximately ${right} of 100 new solutions are right and ${100 - right} are wrong but pass. The tests report 100%.`},
+      {...base, stage: 4, zh: `仍保持这个完美模仿假设，再转一轮：测试对两类一视同仁，全部接受，分布不变，gap = 0。真实正确率停在 ${right}%，测试一直显示 100%。`,
+        en: `Keep the exact-copy assumption for another round: the tests treat both kinds alike and accept everything, so the distribution does not move and the gap is 0. True accuracy stays at ${right}% while the tests keep showing 100%.`},
+      {...base, stage: 5, done: true, zh: `仍假设正确解全部保留。错解放过率 0、2%、10%、30% 时，接受集 precision 分别是 ${ceilings.map(c => pct(c.value)).join('、')}。`,
+        en: `Still accepting every correct solution, false-positive rates of 0, 2%, 10% and 30% give accepted-set precision of ${ceilings.map(c => pct(c.value)).join(', ')}.`}
     ]);
   };
 
@@ -1322,14 +1322,14 @@
     return frames([
       {...base, stage: 0, zh: `教学数字：查 A、B、C 三家图书馆的节假日规则，每家要 ${calls} 次工具调用，每次 ${step} 秒、返回 ${k(ret)} token。单 agent 依次做完 ${subs * calls} 次，再用 ${step} 秒写答案：${subs * calls}×${step} + ${step} = ${time.single} 秒。Token 是 ${prompt} + ${subs * calls}×${ret} + ${answer} = ${k(tokens.single)}，全在一个上下文里。`,
         en: `Teaching numbers: find the holiday rules of libraries A, B and C, ${calls} tool calls each, every call ${step} s and ${k(ret)} tokens back. The single agent runs all ${subs * calls} in a row, then spends ${step} s on the answer: ${subs * calls}×${step} + ${step} = ${time.single} s. Tokens: ${prompt} + ${subs * calls}×${ret} + ${answer} = ${k(tokens.single)}, all in one context.`},
-      {...base, stage: 1, zh: `拆开：协调者规划 ${step} 秒，三个子 agent 各做 ${calls} 次调用、同时进行，协调者再汇总 ${step} 秒：${step} + ${calls}×${step} + ${step} = ${time.parallel} 秒。不是 ${time.single} 秒的三分之一，因为规划和汇总没法并行。`,
-        en: `Split it: the lead plans for ${step} s, three subagents run ${calls} calls each at the same time, and the lead synthesises for ${step} s: ${step} + ${calls}×${step} + ${step} = ${time.parallel} s. Not a third of ${time.single} s, because planning and synthesis cannot run in parallel.`},
-      {...base, stage: 2, zh: `Token 账：协调者 ${prompt} + ${subs * brief} + ${subs * summary} + ${answer} = ${k(tokens.lead)}，每个子 agent ${prompt} + ${brief} + ${calls * ret} + ${summary} = ${k(tokens.sub)}，三个共 ${k(subs * tokens.sub)}。合计 ${k(tokens.multi)}，比单 agent 多约 ${pc(rise)}；最长的单个上下文却从 ${k(tokens.single)} 降到 ${k(tokens.sub)}。`,
-        en: `The token bill: the lead uses ${prompt} + ${subs * brief} + ${subs * summary} + ${answer} = ${k(tokens.lead)}, each subagent ${prompt} + ${brief} + ${calls * ret} + ${summary} = ${k(tokens.sub)}, ${k(subs * tokens.sub)} for all three. That is ${k(tokens.multi)} in all, about ${pc(rise)} more than the single agent, yet the longest single context falls from ${k(tokens.single)} to ${k(tokens.sub)}.`},
-      {...base, stage: 3, zh: `答对要三个关键事实都保住。单 agent 在长上下文里每个保住 ${s1.toFixed(2)}：${s1}³ = ${pSingle.toFixed(3)}。子 agent 是 ${s2}，但摘要以概率 d 漏掉它：d = ${pc(drops[0])} 时 ${pMulti[0].toFixed(3)}，d = ${pc(drops[1])} 时 ${pMulti[1].toFixed(3)}。持平点 d* = 1 − ${s1.toFixed(2)}/${s2} ≈ ${(dStar * 100).toFixed(1)}%。`,
-        en: `A right answer needs all three key facts. The single agent keeps each with ${s1.toFixed(2)} in its long context: ${s1}³ = ${pSingle.toFixed(3)}. A subagent keeps it with ${s2}, but its summary drops it with probability d: ${pMulti[0].toFixed(3)} at d = ${pc(drops[0])}, ${pMulti[1].toFixed(3)} at d = ${pc(drops[1])}. They break even at d* = 1 − ${s1.toFixed(2)}/${s2} ≈ ${(dStar * 100).toFixed(1)}%.`},
-      {...base, stage: 4, done: true, zh: `让子问题先后依赖：A → B → C。并行宽度变成 1：${phases.join(' + ')} = ${time.chained} 秒，比单 agent 慢 ${time.chained - time.single} 秒。并行只在子问题互相独立时省时间；规划和汇总始终串行。`,
-        en: `Make the subquestions sequential, A → B → C. The parallel width drops to 1: ${phases.join(' + ')} = ${time.chained} s, ${time.chained - time.single} s slower than the single agent. Parallelism saves time only when the subquestions are independent; planning and synthesis stay serial.`}
+      {...base, stage: 1, zh: `拆开：协调者规划 ${step} 秒，三个子 agent 各做 ${calls} 次调用、同时进行，协调者再汇总 ${step} 秒：${step} + ${calls}×${step} + ${step} = ${time.parallel} 秒。这里暂不计子 agent 写摘要的时间；规划和最终汇总仍然串行。`,
+        en: `Split it: the lead plans for ${step} s, three subagents run ${calls} calls each at the same time, and the lead synthesises for ${step} s: ${step} + ${calls}×${step} + ${step} = ${time.parallel} s. Summary-generation time is omitted here; planning and final synthesis remain serial.`},
+      {...base, stage: 2, zh: `各上下文的内容量（不是累计 API 计费）：协调者 ${prompt} + ${subs * brief} + ${subs * summary} + ${answer} = ${k(tokens.lead)}，每个子 agent ${prompt} + ${brief} + ${calls * ret} + ${summary} = ${k(tokens.sub)}，三个共 ${k(subs * tokens.sub)}。合计 ${k(tokens.multi)}，比单 agent 多约 ${pc(rise)}；最长的单个上下文却从 ${k(tokens.single)} 降到 ${k(tokens.sub)}。`,
+        en: `Content across contexts, not cumulative API billing: the lead uses ${prompt} + ${subs * brief} + ${subs * summary} + ${answer} = ${k(tokens.lead)}, each subagent ${prompt} + ${brief} + ${calls * ret} + ${summary} = ${k(tokens.sub)}, ${k(subs * tokens.sub)} for all three. That is ${k(tokens.multi)} in all, about ${pc(rise)} more than the single agent, yet the longest single context falls from ${k(tokens.single)} to ${k(tokens.sub)}.`},
+      {...base, stage: 3, zh: `假设三个事实的保留事件独立、概率相同，协调者也不新增错误。答对要三个都保住。单 agent 在长上下文里每个保住 ${s1.toFixed(2)}：${s1}³ = ${pSingle.toFixed(3)}。子 agent 是 ${s2}，已找到它后，摘要仍以条件概率 d 漏掉它：d = ${pc(drops[0])} 时 ${pMulti[0].toFixed(3)}，d = ${pc(drops[1])} 时 ${pMulti[1].toFixed(3)}。持平点 d* = 1 − ${s1.toFixed(2)}/${s2} ≈ ${(dStar * 100).toFixed(1)}%。`,
+        en: `Assume independent, identically distributed fact-retention events and no new coordinator errors. A right answer needs all three facts. The single agent keeps each with ${s1.toFixed(2)} in its long context: ${s1}³ = ${pSingle.toFixed(3)}. A subagent keeps it with ${s2}, but its summary then drops it with conditional probability d: ${pMulti[0].toFixed(3)} at d = ${pc(drops[0])}, ${pMulti[1].toFixed(3)} at d = ${pc(drops[1])}. They break even at d* = 1 − ${s1.toFixed(2)}/${s2} ≈ ${(dStar * 100).toFixed(1)}%.`},
+      {...base, stage: 4, done: true, zh: `让子问题先后依赖：A → B → C。并行宽度变成 1：${phases.join(' + ')} = ${time.chained} 秒，比单 agent 慢 ${time.chained - time.single} 秒。仍未计摘要生成时间。在这个例子里，先后依赖消除了并行的时间收益。`,
+        en: `Make the subquestions sequential, A → B → C. The parallel width drops to 1: ${phases.join(' + ')} = ${time.chained} s, ${time.chained - time.single} s slower than the single agent. Summary-generation time is still omitted. In this example, dependencies remove the time saved by parallel execution.`}
     ]);
   };
 
@@ -1411,8 +1411,8 @@
       {...weighed(5, w2), zh: `安全权重加倍 (1, 1, 2)：J_A = ${j2[0]}，J_B = ${j2[1]}，J_C = ${j2[2]}，改选 ${pick(w2)}。`,
         en: `Double the safety weight, (1, 1, 2): J_A = ${j2[0]}, J_B = ${j2[1]}, J_C = ${j2[2]}; now ${pick(w2)} is chosen.`},
       {...base, stage: 6, done: true, below: pick([1, 1, tie - 0.5]), above: pick([1, 1, tie + 0.5]),
-        zh: `让 w_s 从 0 变到 3（w_p = w_c = 1）：A 和 B 在 w_s = ${num(tie)} 处打平，之前选 A，之后选 B。C 进度和 A 一样、舒适和安全都更差，被 A 支配，怎么调权重都选不到它。`,
-        en: `Sweep w_s from 0 to 3 with w_p = w_c = 1: A and B tie at w_s = ${num(tie)}, with A chosen below and B above. C matches A on progress and is worse on comfort and safety, so A dominates it and no weights pick it.`}
+        zh: `让 w_s 从 0 变到 3（w_p = w_c = 1）：A 和 B 在 w_s = ${num(tie)} 处打平，之前选 A，之后选 B。C 进度和 A 一样、舒适和安全都更差，在这组权重范围内严格输给 A。若舒适和安全权重都为 0，则会和 A 打平，需另定平局规则。`,
+        en: `Sweep w_s from 0 to 3 with w_p = w_c = 1: A and B tie at w_s = ${num(tie)}, with A chosen below and B above. C matches A on progress and is worse on comfort and safety, so it loses to A over this sweep. With comfort and safety weights both zero, they tie and need a tie-breaking rule.`}
     ]);
   };
 
@@ -3101,7 +3101,7 @@
       legend.forEach((g, i) => show(g, stage < 5 && (i < 2 || stage <= 2)));
       bars.forEach((b, i) => {
         const c = frame.ceilings[i], on = stage >= 5;
-        b.label.textContent = on ? `${t('放过错解', 'wrong let through')} ${Math.round(c.f * 100)}% → ${t('上限', 'ceiling')} ${(c.value * 100).toFixed(1)}%` : '';
+        b.label.textContent = on ? `${t('放过错解', 'wrong let through')} ${Math.round(c.f * 100)}% → precision ${(c.value * 100).toFixed(1)}%` : '';
         b.bar.setAttribute('width', on ? c.value * bw : 0);
         b.bar.setAttribute('class', 'algo-bar' + (on && c.f === frame.f ? ' is-now' : ''));
         show(b.back, on);
@@ -3823,7 +3823,7 @@
     [t('权重 (w_p, w_c, w_s)', 'weights (w_p, w_c, w_s)'), f.w ? `(${f.w.join(', ')})` : f.done ? '(1, 1, 0–3)' : '—'],
     f.done ? ['J_A = J_B', `w_s = ${f.num(f.tie)}`, 'key'] : ['J_A · J_B · J_C', f.J ? f.J.map(f.num).join(' · ') : '—'],
     [t('选中', 'chosen'), f.pick || (f.done ? t(`${f.below} → ${f.above}`, `${f.below} → ${f.above}`) : '—'), f.pick || f.done ? 'good' : ''],
-    f.done ? ['C', t('从不选中：被 A 支配', 'never: A dominates it'), 'bad'] : ['D', f.stage >= 1 ? t('淘汰：驶出路面', 'removed: off the road') : '—', f.stage >= 1 ? 'bad' : '']], setup(svg) {
+    f.done ? ['C', t('此范围内输给 A', 'loses to A in this sweep'), 'bad'] : ['D', f.stage >= 1 ? t('淘汰：驶出路面', 'removed: off the road') : '—', f.stage >= 1 ? 'bad' : '']], setup(svg) {
     const X = m => 170 + 6.5 * m;
     const top = 36, mid = 80, curb = 124, lane = [58, 102];
     const base = F.trajectoryCost()[0], [A, B, C] = base.cands;

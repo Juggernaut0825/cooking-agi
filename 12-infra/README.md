@@ -4,13 +4,13 @@
 
 > 阅读时间：约 7 分钟 · 草稿，待审核
 
-用户在聊天框里问了一句话，等了一会儿，答案一个字一个字地冒出来。这两三秒花在了哪里，又是谁决定的？**在下面这个手算例子里，九成以上的时间花在逐个生成 token 的 decode 上；而 decode 有多快，主要看 GPU 每秒能从显存（HBM）读多少字节，不是它每秒能做多少次乘法。** 这个系列就从这个数字出发，一层层往下追到芯片和工厂，再走回产品。
+同一个模型，为什么有时迟迟不出第一个字，有时开头很快、后面却很慢？可能是请求还在排队，也可能是 GPU 正在读权重，或者几张卡在等彼此传数据。这一组笔记沿着一次请求往下看：推理引擎怎样安排工作，框架怎样调用 kernel，芯片和内存又限制了什么。后面的手算例子会把这些时间拆开。
 
 > **待审核草稿。** 这一篇还没有经过站主审阅，事实、取舍和措辞都可能修改；引用前请回到文中链接的一手资料核对。
 
 ## 九层地图：从晶圆到产品
 
-从下往上读。“先看哪个数”是排查时的第一个问题，不是说这一层只受这一个数限制。
+表格从制造端排到产品端。想了解全貌可以依次读；已经在排查推理性能，就从第 7 层开始，再沿着瓶颈往下查。“先看哪个数”只是一个排查入口。
 
 | 层 | 做什么 | 通常先看哪个数 | 读哪篇 |
 | --- | --- | --- | --- |
@@ -54,7 +54,7 @@
 
 GPU 一行取了整数，和 H100 SXM5 同一量级：按白皮书 V1.04（封面注明已含最终频率和 TFLOPS），它的 dense BF16（FP32 累加）是 989.4 TFLOPS，显存 3,352 GB/s。产品页上的 BF16 1,979 TFLOPS 注明“with sparsity”，是 2:4 稀疏数字；2022 年架构博客里的 1,000 TFLOPS、3,000 GB/s 是当时标明的初步规格。口径怎样对齐，见 [NVIDIA 各代 GPU](nvidia-generations.md)。
 
-一个 $N$ 参数的 decoder 每处理 1 个 token，前向大约做 $2N$ 次浮点运算（[Kaplan 等，2020，§2.1](https://arxiv.org/abs/2001.08361)）。这里还有一项随上下文增长的 attention 运算 $2n_{\rm layer}n_{\rm ctx}d_{\rm model}$；按平均上下文 1,000 算，约为 $2N$ 的 1.6%，先忽略。于是：
+一个 $N$ 参数的 decoder 每处理 1 个 token，前向大约做 $2N$ 次浮点运算（[Kaplan 等，2020，§2.1](https://arxiv.org/abs/2001.08361)）。另外还要算 attention 的 $QK^\top$ 和 $AV$：每个 query 大约是 $4n_{\rm layer}n_{\rm ctx}d_{\rm model}$ FLOPs，乘法和加法各算一次。对 2,000-token 的 causal prefill，平均可见上下文约为 1,000，增加约 3.3%。这里先忽略它、激活值读写和 kernel 调度，只估主要项：
 
 $$
 t_{\rm prefill}\approx\frac{2NP}{\eta_F F},\qquad
@@ -63,10 +63,10 @@ $$
 
 $P$ 是 prompt 长度，$B_{\rm KV}$ 是这一步要读的 KV 字节数。代进去：
 
-- **Prefill**：$2\times8\times10^9\times2000=3.2\times10^{13}$ 次运算，除以 $0.5\times10^{15}$ FLOP/s，得 64 ms。同一时间里只需把 16 GB 权重读一遍，约 7.6 ms，所以算力是瓶颈。
+- **Prefill**：$2\times8\times10^9\times2000=3.2\times10^{13}$ 次运算，除以 $0.5\times10^{15}$ FLOP/s，得 64 ms。若权重在这个 batch 内充分复用，16 GB 权重按读一遍估算约 7.6 ms；在这套简化条件下，计算时间更长。实际 kernel 的分块可能带来重复读取。
 - **Decode 每一步**：只做 $1.6\times10^{10}$ 次运算，按 50% 峰值只要 0.032 ms；但要把 16 GB 权重和最多 0.3 GB KV 都读一遍，按 2.1 TB/s 约 7.8 ms，所以带宽是瓶颈。
 
-换一个角度看：prefill 每读 1 字节做约 2,000 次运算，decode 只做约 1 次；这块教学 GPU 的“屋脊点”是 $10^{15}/(3\times10^{12})\approx333$ FLOP/字节（H100 SXM5 按上面的规格是 $989.4/3.352\approx295$）。高于它受算力限制，低于它受带宽限制。[Pope 等（2022）](https://arxiv.org/abs/2211.05102)也指出（[§2 讲显存开销的一段](https://arxiv.org/html/2211.05102v1#S2.SS0.SSS0.Px1)）：“At small batch sizes and sequence lengths, the time to load weights dominates”，即 batch 和序列都小时，读权重的时间占主导。
+换一个角度看：只按权重流量计算，prefill 每读 1 字节做约 2,000 次运算，decode 只做约 1 次；这块教学 GPU 的“屋脊点”是 $10^{15}/(3\times10^{12})\approx333$ FLOP/字节（H100 SXM5 按上面的规格是 $989.4/3.352\approx295$）。Roofline 在这里给出两种上限：低算术强度先遇到带宽上限，高算术强度先遇到计算上限。实际运行还可能受调度、通信或算子形状限制。[Pope 等（2022）](https://arxiv.org/abs/2211.05102)也指出（[§2 讲显存开销的一段](https://arxiv.org/html/2211.05102v1#S2.SS0.SSS0.Px1)）：“At small batch sizes and sequence lengths, the time to load weights dominates”，即 batch 和序列都小时，读权重的时间占主导。
 
 | 阶段 | 在哪一层 | 教学估计 | 主要受什么限制 |
 | --- | --- | ---: | --- |
@@ -87,7 +87,27 @@ $P$ 是 prompt 长度，$B_{\rm KV}$ 是这一步要读的 KV 字节数。代进
 | 输出从 300 改成 30 tokens | 总时间约 0.38 s，prefill 和排队的占比明显上升 | 短回答的产品一定受算力限制 |
 | 权重换成 1 字节一个参数（如 FP8） | decode 每步读约 8.3 GB，约 4 ms | 质量不变，或 kernel 一定能跑到同样的带宽利用率 |
 | batch 从 1 加到 32 | 吞吐约 20 倍，单个用户反而变慢 | batch 越大越好；KV 显存和带宽会先用完 |
-| prompt 从 2,000 加到 20,000 | 按 $2N$ 算 prefill 约 640 ms，KV 约 2.6 GB | $2N$ 公式还够用；此时 attention 项约多出 16%，不能再忽略 |
+| prompt 从 2,000 加到 20,000 | 按 $2N$ 算 prefill 约 640 ms，KV 约 2.6 GB | $2N$ 公式还够用；此时 attention 项约多出 33%，不能再忽略 |
+
+<details markdown="1">
+<summary>自己算一下：prompt 变长后，attention 多花了多少计算？</summary>
+
+每层 attention 都要算一次 $QK^\top$ 和一次 $AV$。如果 kernel 能跳过 causal mask 上方的区域，长度为 $P$ 的 prompt 一共需要处理 $P(P+1)/2$ 对位置。下面只算这两个矩阵乘，不含 softmax、投影层和实际运行开销：
+
+```python
+parameters = 8_000_000_000
+layers = 32
+hidden_size = 4096
+for prompt_tokens in (2000, 20000):
+    causal_pairs = prompt_tokens * (prompt_tokens + 1) // 2
+    attention_flops = 4 * layers * hidden_size * causal_pairs
+    linear_flops = 2 * parameters * prompt_tokens
+    print(f"{prompt_tokens}: {attention_flops / linear_flops:.1%}")
+```
+
+结果是 `2000: 3.3%` 和 `20000: 32.8%`。这里的百分比，是 attention 两个矩阵乘相对于 $2NP$ 的额外计算量，不是总延迟增加的比例。若先算完整方阵再做 mask，计算量还会更高；真实耗时仍要测。
+
+</details>
 
 ## 沿着一步 decode 往下走，再走回来
 
@@ -107,7 +127,7 @@ GPU         SM 从 HBM 读出 16 GB 权重和 KV
 工厂        die 面积受单次曝光视场限制；HBM 和先进封装的产能有限
 ```
 
-再往回走：H100 SXM5 的 3,352 GB/s，来自 5 个 HBM3 堆栈和 5,120 位宽的显存接口（白皮书 V1.04、[Hopper 架构博客](https://developer.nvidia.com/blog/nvidia-hopper-architecture-in-depth/)）。在一张这样的卡上，单请求、BF16 的 8B 模型，每步至少要 $16\ {\rm GB}/3.352\ {\rm TB/s}\approx4.8$ ms，即使带宽 100% 用满，单个用户也快不过每秒约 210 个 token。想再快，要么少读（量化、更小的模型），要么多卡分摊权重，要么换更多、更快的 HBM 堆栈；最后一条又回到封装和产能。每秒 token 数是产品体验，也是成本：同一步里能塞进多少用户，决定了每个 token 摊到多少 GPU 时间。
+再往回走：H100 SXM5 的 3,352 GB/s，来自 5 个 HBM3 堆栈和 5,120 位宽的显存接口（白皮书 V1.04、[Hopper 架构博客](https://developer.nvidia.com/blog/nvidia-hopper-architecture-in-depth/)）。在一张这样的卡上，单请求、BF16 的 8B 模型，若每次前向只生成一个 token、每步都从 HBM 完整读取权重，权重读取至少要 $16\ {\rm GB}/3.352\ {\rm TB/s}\approx4.8$ ms，带宽 100% 用满时，对应约 210 tokens/s 的权重读取上限。这是普通逐 token 解码的估算；一次验证多个候选 token 的推测解码，不适用这个逐 token 上限。想再快，要么少读（量化、更小的模型），要么多卡分摊权重，要么换更多、更快的 HBM 堆栈；最后一条又回到封装和产能。每秒 token 数是产品体验，也是成本：同一步里能塞进多少用户，决定了每个 token 摊到多少 GPU 时间。
 
 ## 这一组怎么读
 

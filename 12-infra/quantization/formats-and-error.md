@@ -21,7 +21,7 @@ $$
 $s$ 是 scale，也就是相邻两个格子之间的步长；$z$ 是 zero-point，即实数 0 对应的那个整数；$\hat x$ 是读回来的近似值。[Jacob 等（Google，2017-12）](https://arxiv.org/abs/1712.05877)这样定义 $z$，理由是让 0 能被精确表示，因为很多算子要在边界补零。两种常见取法：
 
 - **对称**：$z=0$，INT4 取 $-7$ 到 $7$（为了正负对称，不用 $-8$），$s=\max|x|/7$。
-- **非对称**：INT4 取 $0$ 到 $15$，$s=(\max x-\min x)/15$，$z=\operatorname{round}(-\min x/s)$。
+- **非对称**：4 位无符号码值取 $0$ 到 $15$。要让 0 可精确表示，先令 $a=\min(0,\min x)$、$b=\max(0,\max x)$，再取 $s=(b-a)/15$、$z=\operatorname{clamp}(\operatorname{round}(-a/s),0,15)$。全零组须单独处理，例如令 $s=1,z=0$。若只按一组全正数的最小值、最大值计算，$z$ 可能落在码值范围外，就不再满足“0 可精确表示”的前提。
 
 只要 $x$ 在范围内，舍入误差不超过 $s/2$；如果误差在 $[-s/2,s/2]$ 上均匀分布，均方误差约为 $s^2/12$。**步长减半，误差平方降到四分之一。**
 
@@ -49,7 +49,7 @@ per-tensor 的 MSE 是 0.0042，和 $s^2/12=0.0033$ 同一量级；分组以后�
 
 ### 换进一个离群值
 
-把 1.40 换成 14.0。per-tensor 的 scale 变成 $14/7=2$，其余 7 个数除以 2 以后都小于 0.5，全部舍成 0，它们的 MSE 从 0.0042 涨到约 0.296，七十倍。分组时，前一组不受影响，后一组的另外 3 个数被压成 0，7 个数的 MSE 约 0.143。**分组不能消除离群值，只能把它的伤害关在自己那一组里。**
+把 1.40 换成 14.0。per-tensor 的 scale 变成 $14/7=2$，其余 7 个数除以 2 后绝对值都小于 0.5，全部舍成 0。统一按全部 8 个权重计算，MSE 从 0.0042 涨到 0.2592，约 61.7 倍；只看未替换的 7 个数，则是从 0.0048 涨到约 0.296。分组时，前一组不受影响，后一组的另外 3 个数被压成 0，全部 8 个数的 MSE 约 0.125（只看那 7 个是约 0.143）。**分组不能消除离群值，只能把它的伤害关在自己那一组里。**
 
 [SmoothQuant（2022-11）](https://arxiv.org/abs/2211.10438)把这件事写成一个数：8 位 per-tensor 量化时，最大值为 $m_i$ 的通道只能用到约 $2^8\cdot m_i/m$ 个格子，$m$ 是整个矩阵的最大值。他们在 OPT 等模型的激活里看到离群值比多数值大约 100 倍，非离群通道只剩两三个格子可用。离群值也不是随机出现的：
 
@@ -84,11 +84,11 @@ INT 的格子等距，FP 的格子在每个 2 的幂区间里等分，越靠近 
 
 | 格式 | 符号 / 指数 / 尾数位 | 指数偏置 | 最大值 | 最小正规数 | 相邻两数的相对间隔 |
 | --- | --- | ---: | ---: | ---: | ---: |
-| E4M3 | 1 / 4 / 3 | 7 | 448 | $2^{-6}$ | $2^{-3}$，即 12.5% |
-| E5M2 | 1 / 5 / 2 | 15 | 57,344 | $2^{-14}$ | $2^{-2}$，即 25% |
+| E4M3 | 1 / 4 / 3 | 7 | 448 | $2^{-6}$ | 正规数在 2 的幂处为 $2^{-3}$，即 12.5%，同一区间内随有效数增大而下降 |
+| E5M2 | 1 / 5 / 2 | 15 | 57,344 | $2^{-14}$ | 正规数在 2 的幂处为 $2^{-2}$，即 25%，同一区间内随有效数增大而下降 |
 | INT8（对称，对照） | — | — | $127s$ | — | 处处都是 $s$ |
 
-E4M3 不表示无穷大，NaN 只占一个尾数编码，省下的编码用来把最大值推到 448；E5M2 沿用 IEEE 754 的特殊值。E4M3 在 8 到 16 之间的间隔是 1，在 32 到 64 之间是 4：**绝对误差随数值变大，相对误差大致不变**，最坏约为间隔的一半，E4M3 约 6.25%。
+E4M3 不表示无穷大，NaN 只占一个尾数编码，省下的编码用来把最大值推到 448；E5M2 沿用 IEEE 754 的特殊值。E4M3 在 8 到 16 之间的间隔是 1，在 32 到 64 之间是 4：**正规数范围内，绝对误差随数值变大，相对误差大致稳定**。不发生溢出时，就近舍入的相对误差上界可用约 6.25% 估计；次正规数接近 0 时不适用，舍成 0 的相对误差可以是 100%。
 
 手算对比。4 个数 $[0.02,\ -0.3,\ 1.7,\ 12.0]$，都用 per-tensor scale 把最大值对到格式的顶端：E4M3 取 $s=12/448\approx0.0268$，INT8 取 $s=12/127\approx0.0945$。
 
@@ -101,7 +101,7 @@ E4M3 不表示无穷大，NaN 只占一个尾数编码，省下的编码用来�
 
 靠近最大值的地方 INT8 更准，远小于最大值的地方 FP8 更准。Qualcomm AI Research 的 [van Baalen 等（2023-03）](https://arxiv.org/abs/2303.17951)总结为“all about the outliers”：分布里有明显离群值时 FP8 误差更小，分布规整时 INT8 更准；他们还估算专用硬件里 FP8 乘加单元比 INT8 低效 50%–180%，因此认为端侧推理不值得为 FP8 专门做一套实现。数据中心 GPU 上怎么选，还要看 Tensor Core 支持什么，见下文的硬件一节。
 
-同叫 FP8，位模式也不一定一样。AMD 的 [HIP 7.16 文档](https://rocm.docs.amd.com/projects/HIP/en/latest/reference/fp8_numbers.html)写明，CDNA 3（MI300 系列）硬件支持 FNUZ 变体，CDNA 4（MI350 系列）支持 OCP 变体。按 [ONNX float8 说明](https://onnx.ai/onnx/technical/float8.html)的定义，E4M3FNUZ 的指数偏置是 8（OCP 是 7），没有无穷大和负零，NaN 占用负零的位模式，所以全 1 的 `S.1111.111` 也是普通数。由这个定义推出最大值是 $1.875\times2^{15-8}=240$（ONNX 表里只给位模式），OCP 的 E4M3 是 448。同一个位模式按 FNUZ 读，数值正好减半，所以 OCP 格式的 checkpoint 要把 scale 乘 2、另行处理负零，才能当 FNUZ 用（这是按位定义的推算）。
+同叫 FP8，位模式也不一定一样。AMD 的 [HIP 7.16 文档](https://rocm.docs.amd.com/projects/HIP/en/latest/reference/fp8_numbers.html)写明，CDNA 3（MI300 系列）硬件支持 FNUZ 变体，CDNA 4（MI350 系列）支持 OCP 变体。按 [ONNX float8 说明](https://onnx.ai/onnx/technical/float8.html)的定义，E4M3FNUZ 的指数偏置是 8（OCP 是 7），没有无穷大和负零，NaN 占用负零的位模式，所以全 1 的 `S.1111.111` 也是普通数。由这个定义推出最大值是 $1.875\times2^{15-8}=240$（ONNX 表里只给位模式），OCP 的 E4M3 是 448。对两种格式共有的有限非零编码，同一位模式按 FNUZ 读，数值是 OCP 的一半。若保持这些 payload 位不变、以 $x=sq$ 反量化，scale 乘 2 可以补偿；这不是通用类型转换：OCP 的负零 0x80 在 FNUZ 中是 NaN，OCP 的 NaN 0x7f/0xff 在 FNUZ 中却是有限数，必须分别转换。若元数据存的是逆 scale，调整方向也相反。这里推导的是特定存储约定下的重解释，不是把任意 FP8 checkpoint 改个 dtype 就能运行。
 
 ## 只剩 4 位时为什么要块缩放：MXFP4 与 NVFP4
 
@@ -136,31 +136,49 @@ MX 两行出自 OCP MX 规范 v1.0 的表 1（同一张表还有 MXFP6 和 MXINT
 
 9.0 一行和 [H100 白皮书 V1.04](https://dam-cdn.nvd.orangelogic.com/AssetLink/705n6ur546g0uk43w0117r17n8042d73.pdf)一致：它列出的 MMA 数据类型是 FP8、FP16、BF16、TF32、FP64 和 INT8，没有 INT4。
 
-表里有，也不代表够快。截至 2026 年 10 月，NVIDIA 的 [HGX 页面](https://www.nvidia.com/en-us/data-center/hgx/)（8 卡整机，标的是稀疏口径，dense 减半）上，HGX B300 的 INT8 是 3 POPS，FP8 是 72 PFLOPS；HGX B200 的 INT8 和 FP8 都是 72。同一台 B300 上 INT8 只有 FP8 的 1/24，所以在 B300 上 INT8 W8A8 已经不是加速路线，8 位计算应该走 FP8。各代吞吐的对比见 [NVIDIA 各代 GPU](../nvidia-generations.md)。AMD 这边，ROCm 10.1 文档的[精度支持页](https://rocm.docs.amd.com/en/latest/reference/precision-support.html)（截至 2026 年 10 月）列出：CDNA 3（MI300 系列）的矩阵核心支持 INT8 和 FP8，FP8 只有 FNUZ 变体；CDNA 4（MI350 系列）支持 INT8 和 OCP 的 FP8、FP6、FP4。[MI350 架构页](https://rocm.docs.amd.com/en/latest/reference/gpu-arch/mi350.html)还列出 MXFP8、MXFP6、MXFP4，峰值表里 INT8 和 FP8 同速。硬件不支持某种格式时，引擎往往退回只压权重，第 3 篇有 vLLM 的例子。
+表里有，也不代表够快。截至 2026 年 10 月，NVIDIA 的 [HGX 页面](https://www.nvidia.com/en-us/data-center/hgx/)（8 卡整机，标的是稀疏口径，dense 减半）上，HGX B300 的 INT8 是 3 POPS，FP8 是 72 PFLOPS；HGX B200 的 INT8 和 FP8 都是 72。同一台 B300 上 INT8 只有 FP8 的 1/24，不能再按“INT8 与 FP8 峰值相同”估算 B300。算力受限的 8 位矩阵乘应优先评估 FP8；小 batch 的 INT8 仍可能因少读权重而受益，端到端速度还取决于 kernel、转换开销与质量要求。各代吞吐的对比见 [NVIDIA 各代 GPU](../nvidia-generations.md)。AMD 这边，ROCm 10.1 文档的[精度支持页](https://rocm.docs.amd.com/en/latest/reference/precision-support.html)（截至 2026 年 10 月）列出：CDNA 3（MI300 系列）的矩阵核心支持 INT8 和 FP8，FP8 只有 FNUZ 变体；CDNA 4（MI350 系列）支持 INT8 和 OCP 的 FP8、FP6、FP4。[MI350 架构页](https://rocm.docs.amd.com/en/latest/reference/gpu-arch/mi350.html)还列出 MXFP8、MXFP6、MXFP4，峰值表里 INT8 和 FP8 同速。硬件不支持某种格式时，引擎往往退回只压权重，第 3 篇有 vLLM 的例子。
 
 ## 自己算一遍
 
 ```python
 def quantize_sym(values, bits=4):
-    qmax = 2 ** (bits - 1) - 1
-    scale = max(abs(v) for v in values) / qmax
-    codes = [max(-qmax, min(qmax, round(v / scale))) for v in values]
-    return scale, codes, [c * scale for c in codes]
+    if not values or bits < 2:
+        raise ValueError("Need values and at least two bits")
+    maximum_code = 2 ** (bits - 1) - 1
+    scale = max(abs(value) for value in values) / maximum_code or 1.0
+    codes = [max(-maximum_code, min(maximum_code, round(value / scale))) for value in values]
+    return scale, codes, [code * scale for code in codes]
 
-def mse(a, b):
-    return sum((x - y) ** 2 for x, y in zip(a, b)) / len(a)
+def quantize_affine(values, bits=4):
+    if not values or bits < 1:
+        raise ValueError("Need values and at least one bit")
+    maximum_code = 2 ** bits - 1
+    lower = min(0, min(values))
+    upper = max(0, max(values))
+    scale = (upper - lower) / maximum_code or 1.0
+    zero_point = max(0, min(maximum_code, round(-lower / scale)))
+    codes = [max(0, min(maximum_code, round(value / scale) + zero_point)) for value in values]
+    return scale, zero_point, codes, [scale * (code - zero_point) for code in codes]
 
-w = [0.12, -0.53, 0.88, -0.07, 0.31, 1.40, -0.95, 0.02]
-scale, codes, restored = quantize_sym(w)
+def mse(original, restored):
+    if not original or len(original) != len(restored):
+        raise ValueError("Need non-empty, equally sized vectors")
+    return sum((before - after) ** 2 for before, after in zip(original, restored)) / len(original)
+
+weights = [0.12, -0.53, 0.88, -0.07, 0.31, 1.40, -0.95, 0.02]
+scale, codes, restored = quantize_sym(weights)
 assert codes == [1, -3, 4, 0, 2, 7, -5, 0]
-assert abs(mse(w, restored) - 0.0042) < 1e-9
+assert abs(mse(weights, restored) - 0.0042) < 1e-9
 
-grouped = quantize_sym(w[:4])[2] + quantize_sym(w[4:])[2]
-assert abs(mse(w, grouped) - 0.0018592) < 1e-6
+grouped = quantize_sym(weights[:4])[2] + quantize_sym(weights[4:])[2]
+assert abs(mse(weights, grouped) - 0.0018592) < 1e-6
 
-w_out = w[:5] + [14.0] + w[6:]
-_, codes_out, restored_out = quantize_sym(w_out)
-assert codes_out == [0, 0, 0, 0, 0, 7, 0, 0]
+outlier_weights = weights[:5] + [14.0] + weights[6:]
+_, outlier_codes, outlier_restored = quantize_sym(outlier_weights)
+assert outlier_codes == [0, 0, 0, 0, 0, 7, 0, 0]
+assert abs(mse(outlier_weights, outlier_restored) - 0.2592) < 1e-9
+assert quantize_sym([0.0, 0.0])[2] == [0.0, 0.0]
+assert quantize_affine([1.0, 2.0])[1] == 0
 ```
 
 把 `bits` 改成 8，或者把组长改成 2，看 MSE 怎样变。Python 的 `round` 是就近取偶，和多数硬件的默认舍入一致。

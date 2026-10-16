@@ -4,7 +4,7 @@
 
 > Reading time: ~12 min · Draft, pending review
 
-A competition problem has an integer answer. The model is sampled 64 times: 26 times it says A, 30 times B, and the other 8 answers are all different. Voting returns B; if the right answer is A, more samples only make B win more firmly. **Voting converges to the answer the model gives most often, so it helps only when the right answer is already the most common one; a verifier can get around this, but the rate at which it accepts wrong answers sets the ceiling you can reach.**
+A competition problem has an integer answer. In 64 samples, the model returns A 26 times, B 30 times, and eight distinct other answers. This batch's vote returns B and is wrong if A is correct, but 64 observations do not establish the true distribution's mode. **With independent samples from a fixed distribution, enough votes converge to its unique mode; this does not guarantee that every extra vote helps at a finite budget. A verifier provides different selection information, whose value depends on false accepts, false rejects, and the selection rule.**
 
 > **Draft, pending review.** The site owner has not reviewed this note yet; facts, emphasis and wording may change. Check the primary sources linked in the text before relying on it.
 
@@ -40,21 +40,23 @@ When $a=1$, each of the three answers has one vote, a three-way tie, and a rando
 | Right 0.4, wrong answers all B (0.6) | 0.400 | 0.352 | 0.317 | 0 |
 | Right 0.6, wrong answers all B (0.4) | 0.600 | 0.648 | 0.683 | 1 |
 
-As N grows, voting gets closer to "return the model's most common answer on this problem". There is only one rule: **if the right answer is the mode for this problem, voting helps; if not, voting makes the wrong answer win more firmly.** Cases 1 and 2 have the same $p$ and opposite outcomes; the only difference is whether the errors are spread out or concentrated. Accuracy averaged over a dataset mixes both kinds of problem, so the average $p$ cannot predict the average score after voting. You have to look problem by problem.
+For i.i.d. samples from a finite answer set with a unique mode, voting selects that mode as N tends to infinity. Tied population modes require separate analysis of ties and sampling fluctuations. Case 1 is an idealized no-collision model for wrong answers: useful when collisions are negligible at a finite budget, not an exact distribution over a finite set of integers. Cases 1 and 2 have the same $p$ but opposite limits, so average $p$ cannot determine voting accuracy.
+
+**An asymptotic limit is not a finite-N monotonicity guarantee.** Give three answers probabilities `[0.40, 0.41, 0.19]`, with only the first correct. With three votes, at least two correct votes contribute 0.352; three distinct answers with uniform tie-breaking contribute $6\times0.40\times0.41\times0.19/3=0.06232$. Total accuracy is **0.41432**, above the single-sample 0.40, even though the correct answer is not the mode and accuracy eventually tends to zero. This constructed counterexample shows why both budget and error structure matter.
 
 Public results show both. OpenAI self-reported on 2024-09-12 that o1 scored 74.4% pass@1 and 83.3% with a 64-sample vote on AIME 2024; in the same table, on the biology subset of GPQA Diamond, the 64-sample vote gave 68.4% against 69.2% pass@1, so voting did not help (the gap is small and does not show that voting hurts). In [Let's Verify Step by Step](https://arxiv.org/abs/2305.20050), majority voting stalled at 69.6% with 1860 samples per problem, below both reward models. Voting also needs answers that can be compared: numbers and options can be checked directly, but open-ended writing needs a judge to decide whether two answers mean the same thing; the judge's own problems are covered in [LLM-as-a-Judge](../../07-evaluation/llm-as-a-judge/README.en.md).
 
 ## Best-of-N with a verifier: the error rate sets the ceiling
 
-Now pick differently. Each sample goes to a verifier that only says accept or reject. Let the verifier accept a correct answer with probability $r$ and wrongly accept a wrong answer with probability $f$ (the false positive rate), judging each sample independently. The strategy: draw N samples and return any accepted one; if none is accepted, return the first sample.
+Now pick differently. A verifier only accepts or rejects. Hold the problem distribution and generator fixed, with i.i.d. answer/verdict pairs. Let $r$ be the probability of accepting a correct answer and $f$ the probability of accepting a wrong one. Draw N samples and return **the first accepted sample in generation order**; if all are rejected, return the first sample. Do not additionally select by content, length, or another score: the formula would no longer describe that rule.
 
 A single sample is rejected with probability $q=1-pr-(1-p)f$; among accepted samples, the fraction that is correct (the precision) is $pr/\big(pr+(1-p)f\big)$. So
 
 $$
-\text{acc}(N)=\big(1-q^N\big)\cdot\frac{pr}{pr+(1-p)f}+q^N\cdot\frac{p(1-r)}{q}
+\text{acc}(N)=pr\sum_{j=0}^{N-1}q^j+p(1-r)q^{N-1},\qquad N\ge1.
 $$
 
-The first term is the chance of returning a correct answer when at least one sample is accepted; the second is the chance that, with every sample rejected, the first sample happens to be correct. Take $p=0.4$ and $r=1$ (correct answers are always accepted); the second term is then 0:
+The first term sums over the position of the first accepted sample; the second covers a correct first sample when all are rejected. This polynomial also handles $q=0$ and $q=1$, taking zeroth powers as 1: at $N=1$ accuracy is always $p$. If acceptance probability is zero, the fallback always returns the first sample, accuracy stays $p$, and accepted-sample precision is undefined. Take $p=0.4,r=1$; the second term is then zero:
 
 | Fraction of wrong answers accepted, $f$ | N=1 | N=4 | N=16 | Ceiling (N→∞) |
 | --- | --- | --- | --- | --- |
@@ -62,7 +64,7 @@ The first term is the chance of returning a correct answer when at least one sam
 | 0.1 | 0.400 | 0.796 | 0.870 | 0.870 |
 | 0.3 | 0.400 | 0.668 | 0.690 | 0.690 |
 
-With a perfect verifier, best-of-N equals coverage, $1-0.6^N$. As soon as $f>0$, more samples can only approach the precision $0.4/(0.4+0.6f)$: 87.0% at $f=0.1$ and 69.0% at $f=0.3$. An $r<1$ also lowers the ceiling; with $r=0.8$ and $f=0.1$ the precision is $0.32/0.38\approx84.2\%$. These two numbers match the "tests that accept wrong solutions" example in [generate, verify, retrain](../self-improvement/generate-verify-train.en.md) exactly: picking answers with a verifier at inference time and filtering training data with it at training time hit the same ceiling.
+With a perfect verifier, this rule attains coverage, $1-0.6^N$. For the table's $r=1,f>0$, the limit is precision $0.4/(0.4+0.6f)$: 87.0% at $f=0.1$ and 69.0% at $f=0.3$. Lowering $r$ at a fixed positive $f$ lowers the limit: $r=0.8,f=0.1$ gives $0.32/0.38\approx84.2\%$. But with $p>0,f=0,r>0$, false rejections merely slow discovery; the limit remains 1. This is the limit of a fixed generator, verifier, and first-accepted rule, not a universal bound on best-of-N or search. Accepted-sample precision in [generate, verify, retrain](../self-improvement/generate-verify-train.en.md) uses the same conditional probability.
 
 Compare with voting. In case 2 (all wrong answers are B), voting tends to 0, while a verifier with $f=0.1$ still reaches 87%, because the verifier brings in information from outside the model's own distribution. But the calculation assumed the verifier's mistakes are independent across samples. If it falls for the same trap and accepts B every time ($f=1$ for B), the correct fraction among accepted samples drops back to 0.4, no better than one sample. **Whether a verifier helps depends on whether its errors are correlated with the generator's errors.**
 
@@ -74,7 +76,7 @@ A verifier can be a program (unit tests, answer matching, Lean) or a trained mod
 
 <!-- paper-figure:lightman-prm-grading -->
 
-[Lightman et al. (2023-05)](https://arxiv.org/abs/2305.20050) used a generator fine-tuned from GPT-4 on 500 MATH test problems, picking one of 1860 samples per problem: the PRM picked correctly 78.2% of the time, the ORM 72.4% and majority voting 69.6%, and the PRM's lead grew with N. The PRM's training data, PRM800K, holds 800,000 step-level human labels on 75,000 solutions to 12,000 problems; during labelling, they deliberately showed people "convincing wrong-answer solutions" that the current PRM rated highly. An answer's score is the product of the per-step probabilities of being correct. The study fixes the generator and compares how well each method picks answers; it does not train the generator with RL, a distinction that [verifiable rewards](../../05-post-training/verifiable-rewards.en.md#outcome-rewards-or-process-rewards) discusses directly.
+[Lightman et al. (2023-05)](https://arxiv.org/abs/2305.20050) evaluated a GPT-4-based fine-tuned generator on **500 held-out MATH problems**, picking one of 1860 samples per problem: the PRM picked correctly 78.2% of the time, the ORM 72.4% and majority voting 69.6%, and the PRM's lead grew with N. Those 500 problems were evaluation data, not the generator's fine-tuning set (Appendix C). The PRM's training data, PRM800K, holds 800,000 step-level human labels on 75,000 solutions to 12,000 problems; during labelling, they deliberately showed people "convincing wrong-answer solutions" that the current PRM rated highly. An answer's score is the product of the per-step probabilities of being correct. The study fixes the generator and compares how well each method picks answers; it does not train the generator with RL, a distinction that [verifiable rewards](../../05-post-training/verifiable-rewards.en.md#outcome-rewards-or-process-rewards) discusses directly.
 
 PRMs are hard to label and hard to define "one step" for. Snell et al. instead trained the PRM on Monte Carlo rollouts estimating "the chance of still getting it right after this step", with no human labels; they scored an answer by its last step; and they summed the scores of all samples that share a final answer before comparing (they call this best-of-N weighted), which combines voting and verification. The DeepSeek-R1 v1 report (§4.2) lists PRMs among its unsuccessful attempts: fine-grained steps are hard to define in general reasoning, automatic labelling by models does not work well while human labelling does not scale, and a neural PRM inside large-scale RL gets reward-hacked. Their conclusion is that PRMs suit reranking the top N or guiding search, but in large-scale RL the benefit did not justify the overhead.
 

@@ -32,7 +32,7 @@ $$
 8 \times 7168 \times 2 = 114{,}688\ \text{B} = 112\ \text{KiB}.
 $$
 
-这是不合并同节点发送时的数，combine 回来还要再走一遍。一个 micro-batch 有 4,096 个 token 时，单层单向就是 448 MiB。实际系统会压这笔账：DeepSeek-V3 把 dispatch 前的激活量化成 FP8（$s=1$，减半），combine 仍用 BF16；同一节点上的几个专家只收一份，所以跨节点那段最多 4 份，FP8 下是 $4 \times 7168 \times 1$ B = 28 KiB。[V3 §3.2.2、§3.3.3](https://arxiv.org/html/2412.19437v2#S3.SS2)
+这是不合并同节点发送时的数，combine 回来还要再走一遍。一个 micro-batch 有 4,096 个 token 时，单层单向就是 448 MiB。实际系统会压这笔账：DeepSeek-V3 把 dispatch 前的激活量化成 FP8（$s=1$，减半），combine 仍用 BF16；发往同一节点的激活在跨节点链路上只传一份，再经节点内 NVLink 转发给各专家，所以跨节点那段最多 4 份，FP8 下是 $4 \times 7168 \times 1$ B = 28 KiB（仅激活载荷，未计量化 scale、路由元数据和协议开销）。[V3 §3.2.2、§3.3.3](https://arxiv.org/html/2412.19437v2#S3.SS2)
 
 ## 限制一个 token 跨几台机器
 

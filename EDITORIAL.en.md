@@ -113,6 +113,15 @@ Name the version and verification date; changing the year on an old report is no
 
 Reference notes identify gaps; each topic still needs primary-source, example, and scope checks. Track reading, drafting, integration, tests, and release acceptance separately. Site-wide revisions follow `CONTENT_RELEASE_CHECKLIST.md`. With explicit agreement, an interim PR can collect finished work for review without claiming the whole site is complete. Opening a PR, passing review, and publishing are separate steps.
 
+## A language-editing pass
+
+- Keep a paragraph focused on one question. Explain what happens in the example, then give the conditions under which it holds. Avoid a succession of paragraphs that all begin with a warning or disclaimer.
+- Keep necessary qualifications close to the relevant claim. CPU examples versus GPU performance, and training loss versus generalization, need clear distinctions; the same caveat rarely needs repeating.
+- Describe concrete steps. “Add an axis to the labels, then use gather to select one entry per row” is easier to follow than “Understand the interface contract and ensure semantic correctness.”
+- Keep maintenance notes in the review log. Statements about preserving existing checks, fixing this batch of changes, or whether a GUI was inspected belong in verification records, not in the lesson.
+- Read both versions independently and allow different sentence order. Keep useful English terms and code names in Chinese, but write ordinary explanations in natural Chinese. Write English as English, while matching examples, assumptions, and conclusions.
+- Longer technical details can be expandable without being removed. For wording-only edits, preserve code, equations, heading anchors, and note IDs; do not trigger substantive-content update notifications.
+
 ## Using reference notes
 
 First identify the question an article answers and the assumptions it makes. Its emphasis on one method does not make alternatives irrelevant, and mentioning a concept does not explain it. Use the contents list to spot gaps, not as a syllabus we must reproduce.

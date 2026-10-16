@@ -11,6 +11,7 @@
 - 不允许 on* 事件属性、javascript:/vbscript: 链接、非图片的 data: 地址、
   iframe / object / embed / base / srcdoc。
 - 每个正式页面都要有 CSP。
+- 同一页面的 id 不能重复，否则目录与深链接可能定位到错误的元素。
 """
 
 import base64
@@ -35,9 +36,15 @@ class Page(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.problems, self.inline, self.csp, self.refresh = [], [], None, False
         self.in_script, self.buffer = False, []
+        self.identifiers = set()
 
     def handle_starttag(self, tag, attrs):
         values = dict(attrs)
+        identifier = values.get("id")
+        if identifier is not None:
+            if identifier in self.identifiers:
+                self.problems.append(f"duplicate id {identifier!r}")
+            self.identifiers.add(identifier)
         if tag in BANNED_TAGS:
             self.problems.append(f"<{tag}> is not allowed")
         for name, value in attrs:
@@ -105,7 +112,7 @@ def main():
             failures += 1
             print(f"✗ {path.relative_to(OUT)}: {problem}")
     if failures:
-        sys.exit(f"\n{failures} 处可能的脚本注入。笔记里不要写原始 <script>、事件属性或 javascript: 链接；"
+        sys.exit(f"\n{failures} 处页面结构或脚本问题。修正重复 id；笔记里不要写原始 <script>、事件属性或 javascript: 链接；"
                  "交互图请走 <!-- widget:NAME --> 和 site/static/。")
     print("✓ 页面脚本检查通过")
 

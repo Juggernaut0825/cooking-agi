@@ -4,7 +4,7 @@
 
 > Reading time: ~2 min · Draft, pending review
 
-A camera captures a frame; a car has to decide where to drive, a robot arm where to reach. In between are several steps: recover the things in 3D from the pixels, keep track of them, predict what they will do next, and choose an action. **This block follows that chain in three short series: perception and geometry, autonomous driving, and robot learning.**
+Seeing a cup and picking it up are different problems. Where is it? How should the arm move? What else on the table might get in the way? Driving raises similar questions about roads, vehicles and pedestrians. The three series cover perception and geometry, autonomous driving, and robot learning. A system may use separate modules or learn several tasks jointly; the organization here is a way to learn the material, not a prescribed architecture.
 
 > **Draft, pending review.** The site owner has not reviewed this note yet; facts, emphasis and wording may change. Check the primary sources linked in the text before relying on it.
 
@@ -16,7 +16,7 @@ A camera captures a frame; a car has to decide where to drive, a robot arm where
 | [Autonomous driving](driving/README.en.md) | 3 | How surround cameras become a bird's-eye view, how to forecast others and plan for yourself, why end-to-end models need closed-loop evaluation | Note 1, [From surround cameras to BEV and occupancy](driving/bev-occupancy.en.md) |
 | [Robot learning](robot-learning/README.en.md) | 2 | How to learn actions from demonstrations, how VLA models output actions, whether what is learned in simulation carries over to real robots | Note 1, [Learning actions from demonstrations](robot-learning/imitation.en.md) |
 
-Each series numbers its own notes from 1, matching the numbers in its guide: perception and geometry has notes 1–5, autonomous driving notes 1–3, robot learning notes 1–2. When a note says "note 2", it means note 2 of the same series; references across series always use the title. For driving, the suggested order is notes 1 and 2 of the perception series, then the driving series; see the [driving guide](driving/README.en.md).
+If camera geometry is new to you, start with how a 3D point becomes a pixel. For driving, follow that with object detection, then BEV, prediction and planning. If you already work with vision models and want to understand action learning, start with imitation learning and VLAs. Each route links to the background it needs. Notes are numbered separately within each series; cross-series references use titles.
 
 ## How this connects to the rest of the site
 
@@ -24,4 +24,4 @@ Each series numbers its own notes from 1, matching the numbers in its guide: per
 - Control and learning: [Planning & LQR](../05-post-training/deep-rl/planning-and-control.en.md), [Model-based RL](../05-post-training/deep-rl/model-based.en.md), [Imitation & rewards](../05-post-training/deep-rl/imitation-and-rewards.en.md).
 - How world models serve robots and cars as simulators and evaluators: [this note in the Frontier block](../11-frontier/world-models/robotics-driving.en.md).
 
-This block covers the knowledge these roles need; it does not collect any company's interview questions or hiring process. Fast-moving facts (deployment scale, which model weights are open) carry a date and a source, and numbers that vendors report about themselves are marked as self-reported.
+For the history behind these approaches, follow the [robots and autonomy branch of the technology chronicle](../learn/technology-timeline.en.md?field=applications&track=robotics).

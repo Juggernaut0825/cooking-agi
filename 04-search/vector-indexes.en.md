@@ -101,7 +101,9 @@ Retrieve a larger approximate shortlist and rescore its original vectors to repa
 
 [HNSW](https://arxiv.org/abs/1603.09320) searches a layered neighbor graph, navigating sparse upper layers before exploring more densely below. It does not require PQ compression, and its graph has its own memory cost.
 
-It has three parameters to tune. `M` is the maximum number of edges per node per layer: larger means a denser graph and more memory. `efConstruction` is how many candidates are kept while building: larger builds more slowly and gives a better graph. The query-time `ef` (called `efSearch` in many libraries) is how many candidates are kept during search: larger raises recall and latency. In pgvector these are `m`, `ef_construction` and `hnsw.ef_search`, with defaults 16, 64 and 40 ([pgvector documentation](https://github.com/pgvector/pgvector#hnsw), v0.8.7, checked 2026-10-16).
+Three common tuning parameters deserve separate treatment. `M` controls adjacency capacity, not the actual degree in every layer. In pgvector v0.8.7, upper layers allow `m` neighbors and the ground layer allows `2m`: with `m=16`, the ground layer has up to 32 neighbor slots, not a universal 16-edge limit. [Versioned implementation: HnswGetLayerM](https://github.com/pgvector/pgvector/blob/v0.8.7/src/hnsw.h)
+
+`efConstruction` controls the construction candidate-list width; query-time `ef` (often `efSearch`) controls the search candidate-list width, not the number of returned results or total visited nodes. Larger settings generally trade memory or computation for recall, without guaranteeing an improvement at every increment. In pgvector v0.8.7, `m`, `ef_construction`, and `hnsw.ef_search` default to 16, 64, and 40. Measure recall–latency curves on the same queries. [pgvector documentation](https://github.com/pgvector/pgvector/tree/v0.8.7#hnsw) (checked 2026-10-16)
 
 | Option | Why try it first? | What still needs checking? |
 | --- | --- | --- |

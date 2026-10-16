@@ -2,7 +2,7 @@
 
 [中文](image-generation.md) · **English**
 
-> Last reviewed: 2026-10-08 · Prerequisite: [Vision to language](vision-to-language.en.md)
+> Last reviewed: 2026-10-16 · Prerequisite: [Vision to language](vision-to-language.en.md)
 
 “Change Friday to Saturday on this poster. Leave everything else alone.” The model needs to locate the text, understand the edit, render the new letters, and preserve the background. **Being able to describe an image does not automatically provide those abilities.**
 
@@ -74,7 +74,7 @@ Background: [Flow Matching](https://arxiv.org/abs/2210.02747). This code checks 
 | Qwen-Image-2.0, May 2026 report | Generation and editing unified in one framework; Qwen3-VL conditioning; VAE spatial compression increases from 8 to 16 | Original visual and latent token budgets no longer transfer unchanged |
 | Qwen-Image-2.0-RL, June 2026 | Task-specific rewards, GRPO, and on-policy distillation | One aesthetic score does not describe every task |
 | Qwen-Image-2.1, September 2026 open weights | A new generation backbone: the visual generation component is a 7B-parameter, 32-layer single-stream DiT (the original was a 20B MMDiT); it can output RGBA images with a transparency channel when the prompt asks | A release post and model card do not establish a verified local deployment or training recipe |
-| Qwen-Image-3.0, hosted API only as of October 2026 | Alibaba Cloud Model Studio lists `qwen-image-3.0-pro` and a faster `qwen-image-3.0`; generation and editing share one model ID, and editing takes one to three input images. We found no 3.0 weights or technical report on Qwen's Hugging Face page or on arXiv | The architecture is unpublished, so its backbone and VAE cannot be inferred from 2.x |
+| Qwen-Image-3.0, hosted API documentation checked 2026-10-16 | Alibaba Cloud Model Studio lists `qwen-image-3.0-pro` and a faster `qwen-image-3.0`; generation and editing share one model ID, and editing takes one to three input images | The cited API documentation does not specify the backbone or VAE, so they cannot be inferred from 2.x. This review did not establish a 3.0 open-weight release; failure to find one is not proof that none exists |
 
 Sources: [2.0 report](https://arxiv.org/abs/2605.10730), [2.0-RL report](https://arxiv.org/abs/2606.27608), [2.1 announcement](https://qwen.ai/blog?id=qwen-image-2.1), [2.1 model card](https://huggingface.co/Qwen/Qwen-Image-2.1), [Model Studio image model list](https://www.alibabacloud.com/help/en/model-studio/image-model) (3.0, checked 2026-10-16). Reports and release announcements provide different levels of evidence; their performance results are not reproduced here.
 

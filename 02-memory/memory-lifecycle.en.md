@@ -147,6 +147,10 @@ After deleting M1: invalidate, delete, or rebuild derived content without using 
 
 During asynchronous cleanup, first make affected versions unavailable to readers, then remove copies. Otherwise old content may be served while index deletion runs. Prevent delayed writes from restoring deleted information, too. That requires version checks and provenance, not merely a prompt saying “please forget.”
 
+**A cache hit must not bypass current authorization.** If an answer cache is keyed only by normalized question text, one user's “What are my meeting preferences?” can return another user's answer. A teaching design can isolate entries by tenant, authorized identity or equivalent permission scope, source versions, and permission versions, while rechecking current access and deletion markers on reads. TTL controls freshness checks; it does not guarantee immediate revocation. This concerns application answer/retrieval caches, not inference-engine KV prefix caches. [RFC 9111 §7](https://www.rfc-editor.org/rfc/rfc9111.html#section-7) also warns that expired cached content can expose sensitive data. The isolation scheme here is our design, not an HTTP-specified memory implementation.
+
+Add a concurrency test: at time 1, a job starts summarizing M1 version 7; at time 2, deletion makes version 7 unreadable; at time 3, the old job finishes and its write must be rejected; at time 4, restoring an old backup must replay deletion records before reads resume. Completion notices should distinguish read revocation from physical cleanup and disclose backup/log retention boundaries. Do not reintroduce deleted text into model context just to test deletion.
+
 This differs from unlearning training data from model parameters. We are discussing external memory storage and reads, not claiming that deleting a database record removes information from model weights.
 
 ## Test a timeline, not a single question {#timeline-test}

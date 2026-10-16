@@ -1,7 +1,7 @@
 # 阅读与收藏计数 / Note counts
 
-状态：前端、统计协议与本地预览已实现；默认没有连接线上服务。
-Status: UI, API contract, and local preview are available; no production service is configured by default.
+仓库已在 `site/static/note-metrics-config.json` 配置公开统计接口。读者可以查看计数；阅读、收藏事件仍须主动开启统计才会上报。配置了地址不等于服务一直可用，连接失败时显示 `—`，本地记录照常保留。
+The repository configures a public endpoint in `site/static/note-metrics-config.json`. Counts can be viewed without opting in; read and save events are sent only after opt-in. An endpoint setting is not an uptime guarantee: failed reads show `—`, and local records remain available.
 
 ## 本地验证 / Local preview
 
@@ -12,7 +12,11 @@ python site/tools/metrics_preview.py --db /tmp/cooking-note-metrics.sqlite --por
 
 打开 `http://127.0.0.1:18992/` 的任意正文页。页面底部会注明「本地预览 · 非线上数据」。展开统计说明，勾选参与统计，再阅读 15 秒或手动收藏。数据保存在 SQLite，停止、重启预览不会重置。不要把这个数据库放进 `_site` 或提交到 Git。
 
+用普通静态服务器预览时，页面仍会尝试读取配置中的公开接口；当前生产 CORS 白名单不包含 localhost，因而可能显示连接失败。需要测试计数时，用上面的本地预览服务，不要为此放宽生产白名单。
+
 Open a note, expand “About these counts,” and opt in. A read takes 15 visible seconds; a manual save updates the save count. The SQLite file persists across restarts. Keep it outside `_site` and Git. The preview binds only to loopback; do not expose this development server publicly.
+
+A plain static server still uses the configured public endpoint. The production CORS allowlist excludes localhost, so that preview may show a connection error. Use the local metrics preview above rather than broadening production CORS for a test.
 
 ## 计数含义 / Semantics
 

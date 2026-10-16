@@ -286,7 +286,7 @@ Pre-LN 管住了送进子层的 $x$，但 attention 里还有一个会自己涨�
 
 看一个小例子。这里只比较分数差，先省略 $\sqrt{d_k}$ 这个固定常数。$q=[2,1]$，两个 key 是 $[1,0]$ 和 $[0,1]$，分数是 2 和 1，softmax 约为 `[0.731, 0.269]`。训练中如果 $W_Q$、$W_K$ 各自整体变大 3 倍，$q=[6,3]$，key 变成 $[3,0]$ 和 $[0,3]$，分数是 18 和 9。分数差从 1 变成 9，softmax 约为 `[0.99988, 0.00012]`，几乎是 one-hot，经 softmax 传回分数的梯度也变得很小（推导见[多头注意力](multi-head-attention.md#sqrtd_k)）。[ViT-22B](https://arxiv.org/abs/2302.05442) 报告过这种情况：attention logit 变得极大，注意力熵接近 0，训练几千步后 loss 发散。
 
-**QK-norm** 在点积之前，对每个 head 的 $q$ 和 $k$ 各做一次 RMSNorm（各带一组可学习的 gain）：
+**QK-norm** 是在点积前归一化 Q/K 的一类设计，不限定必须使用 RMSNorm。例如 [Henry 等（2020）](https://arxiv.org/abs/2010.04245)用 L2 归一化和可学习的分数缩放。ViT-22B §2 称它为 LayerNorm，但同节又说明去掉了 centering 和 bias，不能把名称当成标准 LayerNorm 公式。下面写的是 Qwen3、Gemma 3 这类逐 head 的 RMSNorm 形式（Q、K 各带一组可学习的 gain）：
 
 $$
 \hat q=\operatorname{RMSNorm}(q),\qquad
@@ -294,7 +294,7 @@ $$
 s=\frac{\hat q\cdot\hat k}{\sqrt{d_k}}.
 $$
 
-前面讲过，忽略 epsilon 时 RMSNorm 对整体缩放不变：$[6,3]$ 和 $[2,1]$ 归一化后相同，所以权重整体放大 3 倍不再改变分数。gain 为 1 时 $\|\hat q\|=\|\hat k\|=\sqrt{d_k}$，于是 $|s|\le\sqrt{d_k}$；$d_k=128$ 时上界约 11.3。logit 要变大，只能靠 gain 一点点学，不会跟着投影权重的范数自动膨胀。RoPE 是旋转，不改变向量长度，所以这个上界和 norm 放在 RoPE 前后无关；[Gemma 3 的 Transformers 实现](https://github.com/huggingface/transformers/blob/main/src/transformers/models/gemma3/modeling_gemma3.py)放在 RoPE 之前。
+忽略 epsilon、输入非零时，RMSNorm 对整体正向缩放不变：$[6,3]$ 和 $[2,1]$ 归一化后相同，所以权重整体放大 3 倍不再改变分数。gain 为 1 时 $\|\hat q\|=\|\hat k\|=\sqrt{d_k}$，于是 $|s|\le\sqrt{d_k}$；$d_k=128$ 时上界约 11.3。**这不是说固定 gain 后 logit 就不能变大**：例如 $d_k=2$、$q=[1,0]$，把 key 从 $[0,1]$ 转向 $[1,0]$，归一化后的分数就从 0 升到 $\sqrt2$。QK-norm 去掉的是整体范数膨胀这条途径，方向仍可学习；可学习 gain 也会改变上界，并不保证缓慢变化。RoPE 保持长度，所以单位 gain 的上界不受其前后顺序影响，但逐维 gain 不一定与旋转可交换，不能因此说两种顺序输出相同。[Gemma 3 的 Transformers 实现](https://github.com/huggingface/transformers/blob/main/src/transformers/models/gemma3/modeling_gemma3.py)放在 RoPE 之前。
 
 [Qwen3 技术报告](https://arxiv.org/abs/2505.09388)写明去掉 Qwen2 的 QKV bias、引入 QK-Norm，是为了训练稳定；[Gemma 3 技术报告](https://arxiv.org/abs/2503.19786) §2 用 QK-norm 替换了 Gemma 2 的 soft-capping。soft-capping 用 $c\tanh(s/c)$ 把分数压在 $(-c,c)$ 里，是事后截住；QK-norm 从源头限制 $q$、$k$ 的长度。
 

@@ -12,7 +12,7 @@
 
 ## Batch size：多大以后就不划算
 
-一次更新用多少 token，决定两件事：要走多少步（墙钟时间），以及总共要看多少数据（算力）。[McCandlish 等（2018-12）](https://arxiv.org/abs/1812.06162)给了一个简单模型：训练到某个固定 loss，步数 $S$ 和处理的样本数 $E=BS$ 满足
+一次更新用多少 token，会影响达到同一 loss 所需的步数和数据量。步数不是墙钟时间：batch 变大后，每步耗时、通信和硬件利用率也可能变化。[McCandlish 等（2018-12）](https://arxiv.org/abs/1812.06162)给了一个简单模型：训练到某个固定 loss，步数 $S$ 和处理的样本数 $E=BS$ 满足
 
 $$
 \left(\frac{S}{S_{\min}}-1\right)\left(\frac{E}{E_{\min}}-1\right)=1,\qquad B_{\rm crit}=\frac{E_{\min}}{S_{\min}}.
@@ -32,7 +32,7 @@ $S_{\min}$ 是 batch 无限大时最少要走的步数，$E_{\min}$ 是 batch �
 
 在 $B_{\rm crit}$ 以下，batch 翻倍，步数接近减半，数据量增加不多，相当于用更多卡换时间；在它以上，batch 从 4M 加到 16M 只省 25% 的步数，却要多看 3 倍的数据。正好在 $B_{\rm crit}$ 时，步数和数据量都是各自最小值的 2 倍。
 
-$B_{\rm crit}$ 不是常数。Kaplan 等拟合出 $B_{\rm crit}(L)\approx2\times10^{8}/L^{1/0.21}$ token（$L$ 是 WebText2 上的 loss），loss 每降约 13%，临界 batch 翻一倍；loss 从 3 降到 2，它从约 110 万涨到约 740 万 token。所以很多大训练前期用较小的 batch，后面逐步加大：Llama 3 405B 从 4M token 起，训到 252M token 时翻到 8M，2.87T token 时再翻到 16M；DeepSeek-V3 在前 469B token 里把 batch size 从 3072 逐步加到 15360（报告没写单位；按它 4K 的预训练序列长度看应是序列数，约 1260 万到 6290 万 token）。
+$B_{\rm crit}$ 不是常数。Kaplan 等拟合出 $B_{\rm crit}(L)\approx2\times10^{8}/L^{1/0.21}$ token（$L$ 是 WebText2 上的 loss），loss 每降约 13%，临界 batch 翻一倍；loss 从 3 降到 2，它从约 110 万涨到约 740 万 token。所以很多大训练前期用较小的 batch，后面逐步加大：Llama 3 405B 从 4M token 的 batch 起步，随后增加 batch（报告中的具体时间点有单位疑点，见下文）；DeepSeek-V3 在前 469B token 里把 batch size 从 3072 逐步加到 15360（报告没写单位；按它 4K 的预训练序列长度看应是序列数，约 1260 万到 6290 万 token）。
 
 它主要跟着什么变？[Zhang 等（2024-10，ICLR 2025）](https://arxiv.org/abs/2410.21676)在 C4 上训 8500 万到 12 亿参数的模型，把临界 batch 定义为比线性加速多花 20% 步数时的 batch，再把模型大小和数据量拆开看：两者按 Chinchilla 比例一起放大时，临界 batch 约按 $D^{0.47}$ 增长；固定数据量只放大模型，指数只剩 0.087；固定 302M 的模型只加数据，临界 batch 照样变大。所以增长主要来自训练数据量 $D$，而不是模型大小。[Bergsma 等（2025-05，NeurIPS 2025）](https://arxiv.org/abs/2505.13738)得到相近的结论：最优 batch 约 $\propto D^{0.4}$，临界 batch 约 $\propto D^{0.5}$，都与模型大小无关。一个 batch 怎样分到多张卡上，见[多卡训练](../../06-systems/distributed-training.md)。
 
@@ -45,7 +45,7 @@ batch 变了，学习率通常也要跟着变。两条常见的换算规则：
 | 线性 | [Goyal 等（2017-06）](https://arxiv.org/abs/1706.02677) | 学习率乘 $\kappa$，前期配 warmup | SGD；他们在 ImageNet 上把 batch 用到 8192 张图 |
 | 平方根 | [Malladi 等（2022-05）](https://arxiv.org/abs/2205.10287) | 学习率乘 $\sqrt\kappa$；$1-\beta_1$、$1-\beta_2$ 乘 $\kappa$；$\epsilon$ 除以 $\sqrt\kappa$ | Adam / RMSprop；推导假设梯度噪声远大于梯度本身，$\kappa$ 越大误差界越松 |
 
-例：AdamW 原来 batch 1M token、学习率 $3\times10^{-4}$、$\beta_2=0.95$，batch 加到 4M（$\kappa=4$）。平方根规则给出学习率 $6\times10^{-4}$、$\beta_2=1-4\times0.05=0.80$；线性规则给出 $1.2\times10^{-3}$。$\beta_2=0.80$ 在大模型预训练里很少见，这正说明规则推导的是“噪声主导”的小 batch 区间，batch 已经接近临界值时不能照搬。
+例：Adam 原来 batch 1M token、学习率 $3\times10^{-4}$、$(\beta_1,\beta_2)=(0.9,0.95)$、$\epsilon=10^{-8}$，batch 加到 4M（$\kappa=4$）。完整的平方根规则给出学习率 $6\times10^{-4}$、$(\beta_1,\beta_2)=(0.6,0.8)$、$\epsilon=5\times10^{-9}$；若只按线性规则改学习率，则是 $1.2\times10^{-3}$，这不是同一条 Adam 规则。还必须检查 $0\leq1-\kappa(1-\beta_i)<1$：本例若把 batch 放大 20 倍，$\beta_1$ 就会变成 −1，已经不是合法的 Adam 配置。噪声主导、局部近似等条件来自推导，不能用某个超参数“少见”来证明。换成 AdamW 时，还需单独处理解耦 weight decay。
 
 另一条路是直接拟合。[DeepSeek LLM（2024-01）](https://arxiv.org/abs/2401.02954)在 $10^{17}$ 到 $2\times10^{19}$ FLOPs 上做网格搜索，把 loss 比最好值高不超过 0.25% 的配置都算“接近最优”，拟合出
 
@@ -53,7 +53,9 @@ $$
 \eta_{\rm opt}=0.3118\,C^{-0.1250},\qquad B_{\rm opt}=0.2920\,C^{0.3271}.
 $$
 
-这里的 $C=M\cdot D$，$M$ 是每个 token 不含 embedding 的 FLOPs（含 attention 的计算），$B$ 以 token 计。代入 $C=10^{22}$：$\eta_{\rm opt}=0.3118\times10^{-2.75}\approx5.5\times10^{-4}$，$B_{\rm opt}=0.2920\times10^{7.196}\approx4.6\text{M}$ token。论文自己强调：接近最优的区域很宽，所以这只是起点；同样的算力下，模型和数据分配不同，最优区域也会挪。Bergsma 等则认为按 $C$ 拟合 batch 有误导性，因为它实际主要取决于 $D$。他们还用 AdamW 的时间尺度 $\tau=B/(\eta\lambda D)$（$\lambda$ 是 weight decay）来定 weight decay：$N$、$D$ 固定时最优 $\lambda$ 和 $B$ 成正比，batch 加倍，weight decay 也该加倍；最优 $\tau$ 本身随每参数 token 数按幂律下降，约为 $(D/N)^{-0.5}$。Qwen3 报告（2025-05）也说为每个预训练阶段拟合了预测学习率 schedule 和 batch size 的 scaling law，但没有公开系数。
+这里的 $C=M\cdot D$，$M$ 是每个 token 不含 embedding 的 FLOPs（含 attention 的计算），$B$ 以 token 计。代入 $C=10^{22}$：$\eta_{\rm opt}=0.3118\times10^{-2.75}\approx5.5\times10^{-4}$，$B_{\rm opt}=0.2920\times10^{7.196}\approx4.6\text{M}$ token。这个预算已经超出拟合区间，不能当作验证过的配置。论文自己强调：接近最优的区域很宽；同样的算力下，模型和数据分配不同，最优区域也会挪。Bergsma 等则认为按 $C$ 拟合 batch 有误导性，因为它实际主要取决于 $D$。
+
+他们还用 AdamW 的时间尺度 $\tau=B/(\eta\lambda D)$ 来定 weight decay，其中 $\eta$ 是峰值学习率，$\lambda$ 是解耦 weight decay。**固定 $N$、$D$、学习率和 schedule 形状**时，保持 $\tau$ 才给出 $\lambda\propto B$。如果学习率也改了，固定 $D$ 时应先按 $\lambda_{\rm new}/\lambda_{\rm old}=(B_{\rm new}/B_{\rm old})(\eta_{\rm old}/\eta_{\rm new})$ 复算：batch 变 4 倍、学习率变 2 倍，weight decay 只变 2 倍。保持这个时间尺度不等于保证 loss 相同，仍需检查实验范围和临界 batch。论文在其设置下拟合的最优 $\tau$ 约按 $(D/N)^{-0.5}$ 下降，见 [§2.2–2.4](https://arxiv.org/html/2505.13738v1#S2.SS2)。Qwen3 报告（2025-05）也说为每个预训练阶段拟合了预测学习率 schedule 和 batch size 的 scaling law，但没有公开系数。
 
 ## Schedule：cosine 要先定长度，WSD 可以最后再定
 
@@ -81,19 +83,21 @@ WSD 的好处是“训多久”可以最后再定。教学例子：要比较 250
 | 模型 | 学习率形状 | 出处 |
 | --- | --- | --- |
 | DeepSeek LLM 7B / 67B | 2000 步 warmup；训完 80% token 后降到峰值的 31.6%，90% 后降到 10% | 2024-01 报告 §2.3 |
-| Llama 3 405B | 8000 步 warmup 到 $8\times10^{-5}$，cosine 在 120 万步内降到 $8\times10^{-7}$；最后 4000 万 token 线性降到 0 | 2024-07 报告 §3.4 |
+| Llama 3 405B | 8000 步 warmup 到 $8\times10^{-5}$，cosine 在 120 万步内降到 $8\times10^{-7}$；最后线性降到 0（原文写 40M token，单位疑点见下文） | 2024-07 报告 §3.4 |
 | DeepSeek-V3 | 2000 步 warmup 到 $2.2\times10^{-4}$，保持到 10T token，再用 4.3T token 的 cosine 降到 $2.2\times10^{-5}$；最后 500B token 先在这个值保持 333B，再降到 $7.3\times10^{-6}$ 训 167B | 2024-12 报告 §4.2 |
 | Kimi K2 | 报告称之为 WSD：500 步 warmup，前 10T token 保持 $2\times10^{-4}$，之后 5.5T token 的 cosine 降到 $2\times10^{-5}$ | 2025-07 报告 |
 | OLMo 2 | warmup 后 cosine 降到峰值的 10%（7B 在 4T token 处截断），mid-training 再线性降到 0 | 2024-12 报告 |
+
+[Llama 3 报告 v3 §3.4](https://arxiv.org/html/2407.21783v3#S3.SS4) 把首次增大 batch 的时间点写作 252M token，同时把新 batch 写作 8M 条、每条 8192 token 的序列；最终退火则写 40M token。这些单位不能直接拼成可复现配方：252M/4M 约 63 步；如果最终 batch 仍为 16M token，40M 也只有 2.5 步。这里保留原文数值并标明疑点，不擅自把 M 改成 B；具体阶段长度需要作者澄清。
 
 ## µP：让学习率在宽度之间可迁移
 
 标准参数化（SP）指框架默认的初始化、所有层共用一个学习率。在它之下，最优学习率会随宽度移动。[Tensor Programs V（Yang 等，2022-03，下称 TP5）](https://arxiv.org/abs/2203.03466)用 SGD 在 CIFAR-10 上训 MLP，看到宽度从 256 增到 8192，最优学习率移动了大约一个数量级，用最窄模型的最优学习率去训最宽的模型，效果很差甚至发散；Transformer 上也是如此。
 
-为什么会移？看一个隐藏层 $h=Wx$，$W$ 是 $n\times n$ 矩阵，输入 $x$ 的每个分量是 $O(1)$。Adam 第一步经过偏差修正后，更新近似是 $\Delta W_{ij}=-\eta\,{\rm sign}(g_{ij})$。batch 为 1 时 $g_{ij}=\delta_ix_j$（$\delta_i$ 是 loss 对 $h_i$ 的梯度），于是
+为什么会移？看一个隐藏层 $h=Wx$，$W$ 是 $n\times n$ 矩阵，输入 $x$ 的每个分量是 $O(1)$。从零一阶、二阶矩状态出发，忽略 weight decay，且非零梯度的 $|g_{ij}|\gg\epsilon$ 时，Adam 第一步经过偏差修正后才近似为 $\Delta W_{ij}=-\eta\,{\rm sign}(g_{ij})$。batch 为 1 时 $g_{ij}=\delta_ix_j$（$\delta_i$ 是 loss 对 $h_i$ 的梯度），于是
 
 $$
-(\Delta W x)_i=-\eta\,{\rm sign}(\delta_i)\sum_{j=1}^{n}|x_j|\approx-\eta\,n\,\mathbb E|x|.
+(\Delta W x)_i=-\eta\,{\rm sign}(\delta_i)\sum_{j=1}^{n}|x_j|,\qquad |(\Delta W x)_i|\approx\eta\,n\,\mathbb E|x|\quad(\delta_i\ne0).
 $$
 
 关键在于更新和 $x$ 是对齐的：$n$ 项同号相加，大小随 $n$ 线性增长。如果更新方向和 $x$ 无关，正负会互相抵消，大小只按 $\sqrt n$ 增长。$x_j$ 都取 ±1 时手算：$\eta=0.01$、$n=512$ 时 $|\Delta h_i|=5.12$；同样的学习率放到 $n=4096$，变成 40.96，激活一步之内的变化大了 8 倍。要让它保持 5.12，隐藏层学习率得乘 $512/4096$，即 $0.00125$。这就是 µP 对 Adam 规定隐藏层学习率 $\propto1/\text{fan\_in}$ 的直觉。用高斯输入复算一次：
@@ -125,6 +129,8 @@ TP5 表 3 给出 Adam 下 µP 和 SP 的区别（只写随宽度的缩放，常�
 | 输出层权重（logits） | $1/\text{fan\_in}^2$ | $\propto1/\text{fan\_in}$ | 初始化更小，学习率随宽度缩小 |
 | attention logit | 用 $q^\top k/d$ | 不适用 | SP 用 $q^\top k/\sqrt d$ |
 
+这里沿用 [TP5 表 3 与附录 B.1](https://arxiv.org/html/2203.03466v2) 的约定：**向量 bias 的 fan_in 定义为 1**，不是前一个矩阵的输入宽度；也可用全零 bias 初始化。输入层的外部维度（如 embedding 的词表大小）固定，不随隐藏宽度一起增长。表里的 SP 是论文的宽度缩放基线，并不表示每个框架、模块的默认常数都相同。
+
 ### 手算一次迁移
 
 代理模型宽 512，在上面扫出全局 Adam 学习率 $\eta=0.01$（以及输出乘子等）。目标模型宽 4096，宽度比 $m=8$。按上表，并像原文式 4 那样把宽度因子写成相对代理模型的 $m=n/n_0$：embedding、bias 和 norm 的增益仍用学习率 0.01；隐藏层矩阵用 $0.01/8=0.00125$，初始化标准差仍按 $1/\sqrt{\text{fan\_in}}$；输出层的初始化方差取 $1/(\text{fan\_in}\cdot m)$，比 SP 再小 8 倍，学习率 $0.00125$；attention logit 用 $\sqrt{d_0}\,q^\top k/d$（$d$ 是 head 维度，$d_0$ 是代理模型的 head 维度；如果放宽时只加 head 数、head 维度不变，这一项不变）。$m=1$ 时这些因子都是 1，代理模型就是普通的 SP 模型，照常训练。原文还给了两种等价写法：表 8 让输出层初始化方差不随宽度变，改在前向乘一个 $1/\text{fan\_in}$ 的乘子，所有向量类参数共用一套规则，更容易实现，输入、输出 embedding 也能共享权重；表 9 是早先 TP4 论文的写法。
@@ -135,7 +141,7 @@ TP5 表 3 给出 Adam 下 µP 和 SP 的区别（只写随宽度的缩放，常�
 
 - **不能迁移的。** TP5 表 1 把 dropout、weight decay 这类正则化列为不可迁移；batch size、训练长度、序列长度和深度上的迁移只有经验验证。
 - **深度。** [Tensor Programs VI（2023-10，TP6）](https://arxiv.org/abs/2310.02244)给出每个残差块只有一层时的 Depth-µP，并指出 Transformer 这种多层块在深度趋于无穷时有根本性的限制。
-- **不只 µP。** [Everett 等（2024-07，ICML 2024）](https://arxiv.org/abs/2407.05872)训练了数万个模型（最大 26.8B），发现他们比较的四种参数化都能做到超参数迁移，不只 µP；他们为 SP 设计的逐层学习率规则还胜过 µP；Adam 的 $\epsilon$ 也要随宽度正确缩放，否则梯度会下溢。
+- **不只 µP。** [Everett 等（2024-07，ICML 2024）](https://arxiv.org/abs/2407.05872)训练了数万个模型（最大 26.8B），在其设置中，四种参数化配上相应逐层学习率规则都能迁移，SP 的规则还胜过 µP。§4.3 的“gradient underflow”主要指 $\epsilon$ 压过二阶矩平方根，让更新接近零，不一定是浮点数把梯度舍入成 0：如 $g=10^{-12}$、$\epsilon=10^{-8}$，第一步的 $g/(|g|+\epsilon)\approx10^{-4}$，而非 sign 更新的 1。应检查、调节 $\epsilon$；过小也会不稳定，不能直接设为 0。
 - **换了优化器要重新推。** Muon 按矩阵形状缩放更新，让逐元素的更新 RMS 不随矩阵大小变化，是另一条思路，见 [Muon](../deep-dives/muon.md)。
 
 ## 开训前的检查表

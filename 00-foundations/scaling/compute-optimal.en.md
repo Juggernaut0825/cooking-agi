@@ -124,9 +124,9 @@ Below, Besiroglu et al.'s refit $L=1.82+482/N^{0.348}+2085/D^{0.366}$ serves as 
 
 | Model size / optimum | Parameters | $D/N$ | Loss above optimum | Compute needed to reach the optimal loss |
 | --- | --- | --- | --- | --- |
-| 0.25 | 2.3B | 326 | 0.040 | 4.5x |
-| 0.5 | 4.5B | 82 | 0.010 | 1.26x |
-| 1 | 9.0B | 20 | 0 | 1x |
+| 0.25 | 2.3B | 325 | 0.040 | 4.5x |
+| 0.5 | 4.5B | 81 | 0.010 | 1.26x |
+| 1 | 9.1B | 20 | 0 | 1x |
 | 2 | 18.1B | 5 | 0.010 | 1.15x |
 | 4 | 36.2B | 1.3 | 0.041 | 1.59x |
 
@@ -134,7 +134,7 @@ Between half and twice the optimal size, the loss is only about 0.01 higher, and
 
 ## How far to trust a small-model fit
 
-A fit is reliable for interpolating near the range it was fitted on; the further you extrapolate, the more the following matter:
+Interpolation is usually better supported than distant extrapolation, but still requires checks on held-out points, residuals and seed noise; being inside the fitted range does not guarantee reliability. The further you extrapolate, the more the following matter:
 
 - **The curve bends.** Chinchilla's Appendix E finds slight curvature in the compute–loss frontier: fits to the first, middle and last thirds of the points extrapolate differently, and the authors suggest the optimal model at large budgets may be even smaller than a straight line predicts.
 - **The law eventually breaks.** Kaplan et al. §6.3 compute a contradiction point themselves: extrapolating $L(C_{\min})$, around $10^{4}$ PF-days and $10^{12}$ parameters, falls below the loss that the slow growth of data allows; they note the location is very sensitive to the exponents and may be off by an order of magnitude.

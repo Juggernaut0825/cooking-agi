@@ -33,7 +33,7 @@ I. J. Good 在 1965 年的文章里（所在卷册常记为 1966 年）设想：
 
 - **实验室自报的加速。** OpenAI 2026-09-06 [宣布](https://openai.com/index/research-acceleration-view-inside-openai/)达成自己定下的“自动化研究实习生”目标，自报 2026 年 8 月中研究部门每个人类工作日对应 3.1 个 agent 工作日；同一篇文章也写明，成功完成的 4–8 小时任务里超过一半有过至少一次人工介入，同期可用算力也大幅增长。Anthropic 2026 年 8 月的[风险报告](https://www.anthropic.com/aug-2026-risk-report)自报：Claude 写了合并进生产代码库的大部分代码，内部研发明显更快，但还没到 2 倍。Google DeepMind 2026-10-13 的 [Gemini 4 Argon 安全报告](https://storage.googleapis.com/deepmind-media/gemini/gemini_4_safety_report.pdf)则说，按它自己的测量，没有发现显著的端到端 AI 研发加速。
 - **对照正式阈值的判定。** 截至 2026-10-15，没有一家实验室宣布自己的模型越过正式的 AI 研发或自我改进阈值。措辞却越来越谨慎：Anthropic 对 Claude Opus 4.5（2025-11）说排除这一阈值“越来越难”，到 Claude Mythos Preview（2026-04-07）说这一判断的信心低于以往任何模型。细节见[第 3 篇](measuring.md)。
-- **公开研究里能复查的结果。** 改自己 scaffold 的 agent 在权重冻结时也能大幅提分（DGM，2025-05：SWE-bench 20.0% → 50.0%）；进化式代码搜索改进了训练下一代模型的基础设施（AlphaEvolve，2025-05：Gemini 训练时间减少 1%）；用自产数据训练能改进权重，但没有外部验证器时几轮内就饱和。
+- **公开研究里能复查的结果。** 改自己 scaffold 的 agent 在权重冻结时也能大幅提分（DGM，2025-05：SWE-bench 20.0% → 50.0%）；进化式代码搜索改进了训练下一代模型的基础设施（AlphaEvolve，2025-05：Gemini 训练时间减少 1%）；用自产数据训练也能改进权重，但收益取决于验证信号、题集覆盖和更新方式，一些实验几轮后就收益递减。
 - **还没有的东西。** 没有公开来源记录过一个系统自主设计并训练自己的继任者。Anthropic Institute 的文章说还没到那一步；OpenAI 2026-09-06 的文章说，还不知道怎样安全地走到对齐的、完整的 RSI。
 
 下面是表态和预测，不是测量：Dario Amodei 2026 年 1 月写道，可能只差 1–2 年就会出现当前一代 AI 自主造出下一代的情况（[原文](https://darioamodei.com/essay/the-adolescence-of-technology)）；Jack Clark 2026-05-04 估计到 2028 年底出现完全无人参与的 AI 研发的可能性在 60% 以上（[Import AI 455](https://importai.substack.com/p/import-ai-455-automating-ai-research)）；OpenAI 的 Chris Lehane 2026-09-09 说完全自主的递归自我改进今天并没有发生，并且在能安全做到之前不应追求（[原文](https://openai.com/index/ai-policy-window/)）。
@@ -46,7 +46,7 @@ I. J. Good 在 1965 年的文章里（所在卷册常记为 1966 年）设想：
 | 2003-09 | [Gödel Machine](https://arxiv.org/abs/cs/0309048) | Schmidhuber | 只有证明有益才改写自己 |
 | 2022-03 | [STaR](https://arxiv.org/abs/2203.14465) | Stanford／Google Research | 用自己答对的推理过程再微调 |
 | 2024-07 | [Model collapse](https://www.nature.com/articles/s41586-024-07566-y)（*Nature*） | Shumailov 等 | 反复用生成数据训练，分布尾部消失 |
-| 2024-12 | [Mind the Gap](https://arxiv.org/abs/2412.02674) | Song 等 | 生成–验证差距决定自我改进；两三轮饱和 |
+| 2024-12 | [Mind the Gap](https://arxiv.org/abs/2412.02674) | Song 等 | 在更新误差较小时，提升接近生成–验证差距；所测迭代设置两三轮后 gap 接近 0 |
 | 2025-03 | [Time horizon 论文](https://arxiv.org/abs/2503.14499) | METR | 50% time horizon 自 2019 年约 7 个月翻一倍 |
 | 2025-05-14 | [AlphaEvolve](https://deepmind.google/discover/blog/alphaevolve-a-gemini-powered-coding-agent-for-designing-advanced-algorithms/) | Google DeepMind | 进化代码；Gemini 训练时间减少 1% |
 | 2025-05-29 | [Darwin Gödel Machine](https://arxiv.org/abs/2505.22954) | UBC／Vector／Sakana AI | agent 改自己的代码；SWE-bench 20.0% → 50.0% |
@@ -63,7 +63,7 @@ I. J. Good 在 1965 年的文章里（所在卷册常记为 1966 年）设想：
 
 | 比较确定 | 还在变 | 接下来看什么信号 |
 | --- | --- | --- |
-| 没有外部验证器时，用自己的数据训练几轮内就饱和：Song 等 2024-12 测到 gap 两三轮内降到接近 0，ReST-EM（2023-12）两轮以后收益递减 | 用代码执行器自己出题、自己验证能走多远：Absolute Zero（2025-05）和 R-Zero（2025-08）只报告了相对 base model 的提升 | 远多于三轮、仍在独立 benchmark 上持续提升的自训练结果 |
+| 部分自训练实验很快收益递减：[Song 等 v2 §5](https://arxiv.org/html/2412.02674v2)所测设置两三轮后 gap 接近 0；[ReST-EM v2](https://arxiv.org/html/2312.06585v2)即使用标准答案或测试作外部奖励，也观察到收益递减并归因于题集过拟合。这不是“无外部验证器必然几轮饱和”的定理 | 用代码执行器自己出题、自己验证能走多远：Absolute Zero（2025-05）和 R-Zero（2025-08）报告了相对 base model 的提升 | 远多于三轮、仍在独立 benchmark 上持续提升的自训练结果 |
 | 冻结权重、只改 scaffold，benchmark 分数能大幅提高：DGM（2025-05）SWE-bench 20.0% → 50.0% | 这种改进会不会复利：HGM（2025-10）发现 benchmark 分数不能很好预测后代表现；AIDE²（2026-09-22）中被改出来的 agent 当外层优化器时，效果无法与基线明确区分 | 被改出来的 agent 在多个随机种子下明显比创造它的 agent 更会改进 agent |
 | METR 测到的任务级 time horizon 多年持续上升：2025-03 论文约 7 个月翻倍，TH1.1（2026-01-29）2023 年后 131 天翻倍 | 测量工具本身：METR 2026-05-19 说 TH1.1 已基本饱和，16 小时以上读数不可靠，时间线页面 2026-09-08 起不再更新；OpenAI 2026-07-09 因旧评估饱和换了一套自我改进评估 | METR 或其他机构发布更长任务、带作弊审查的新套件 |
 | 截至 2026-10-15 没有实验室宣布越过正式的 AI 研发阈值：Anthropic Claude Opus 5.5（2026-09-22）、OpenAI GPT-6 十月更新（2026-10-07）、Google DeepMind Gemini 4 Argon（2026-10-13） | 实验室怎么量自己的研发加速：OpenAI 3.1 agent 工作日（2026-09-06，自报）、Anthropic“还不到 2 倍”（2026-08，自报）、METR 转述的非公开 ~1.5 倍估计（2026-09-22） | 某家实验室宣布越过正式阈值；按 OpenAI 2026-06 政策蓝图向 CAISI 报告的 RSI 指标出现公开数据 |

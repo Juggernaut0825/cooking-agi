@@ -215,6 +215,14 @@ EP 则是另一个问题：一条 token 选中两个专家，若专家在远端�
 
 训练里的并行方式，到了推理部署要换个问法：同样是八张 GPU，是八张合作跑一份模型（TP8），还是八份模型各接各的请求（DP8）？MoE 的专家怎样跨副本分布？PP 的 KV 存在哪张卡、相邻 stage 每步传多少字节？这几笔账放在 [vLLM 与 SGLang：多张 GPU 的拼法](inference-frameworks.md#deployment-map)，和推理引擎的调度一起讲。
 
+## 部署时的 DP，不一定是互不相干的副本
+
+原有部署算例移至 [MoE 的 DP / EP 组合](inference-frameworks.md#moe-deployment)：专家可能跨请求副本共享，不能把 DP 一律当成独立服务。这里保留原入口。
+
+## PP 的 KV 在哪里，边界传多少东西？
+
+原有 KV 归属与通信量算例移至 [PP 的缓存和边界传输](inference-frameworks.md#pp-kv)：按层切分时各 stage 保留自己的 KV，但边界激活大小仍取决于 batch 和 prefill 长度。这里保留原入口。
+
 ## Offload：把状态移出去，也要算回来要多久
 
 CPU 内存能缓解显存压力，但不是免费扩容。optimizer 更新若移到 CPU，就要考虑梯度传出、更新后的参数传回，以及 CPU 自身的计算时间。小 batch 下，GPU 很快算完，反而可能一直等 CPU。[ZeRO-Offload](https://arxiv.org/abs/2101.06840)讨论的正是这些放置与调度取舍。

@@ -60,7 +60,7 @@ v^\top J&=\frac{\partial (y_1+2y_2)}{\partial w}\\
 \end{aligned}
 $$
 
-At $w=2$, the result is 10—not 7, and not the entire Jacobian.
+At $w=2$, the result is 10. For `y.sum()`, the seed would instead be `(1,1)`, giving 7. These are different scalar objectives; the result here is a weighted derivative, not the entire Jacobian.
 
 ```python
 parameter = torch.tensor(2.0, requires_grad=True)
@@ -133,7 +133,7 @@ assert not prediction.requires_grad
 
 For a snapshot that neither participates in training nor follows later mutations of the original data, use `detach().clone()`. Logging often uses `loss.item()`, but that returns a Python number and cannot be used for backward. On a GPU it may also introduce synchronization.
 
-One exception to remember: some factory functions explicitly accept `requires_grad` and are not affected by `no_grad` in the same way. It does not mean “no tensor requiring gradients can possibly be created in this block.”
+`no_grad` primarily controls whether operations are recorded. Factory functions have an exception: calling `torch.tensor(2.0, requires_grad=True)` inside this context still creates a tensor with the explicitly requested `requires_grad=True`.
 
 ## 5. Graph lifetime and in-place changes
 

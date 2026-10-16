@@ -4,11 +4,11 @@
 
 > Reading time: ~12 min · Last reviewed: 2026-10
 
-Every time the robot arm pushes the cup, someone has to put the cup back; if it falls, it may break. Could we learn a model from logged interaction, let the policy practise thousands of times on trajectories the model "imagines", and only then go to the real robot? That is what the Dreamer line does. **It learns a compact latent dynamics model and trains an actor-critic only on imagined latent trajectories; it saves real interaction, at the price that the policy inherits, and can even exploit, the model's errors.**
+Every time a robot arm pushes a cup, someone may need to reset it; a falling cup may break. Could a policy practise in a learned model before returning to the environment for feedback? This is a teaching scenario, not a robot experiment reproduced here. **Dreamer generates policy-training trajectories with learned dynamics, reducing environment interaction but exposing the policy to model errors it may exploit.** V1–V3 normally alternate collection and training rather than relying forever on one offline dataset. Dreamer 4's fully offline setting is discussed separately below.
 
 ## Dreamer spends its computation at training time
 
-MPC in the [model-based RL note](../../05-post-training/deep-rl/model-based.en.md) searches an action sequence with the model at every decision. Dreamer takes the other route: the model "dreams" only during training, and at deployment actions are sampled straight from the actor. The DreamerV3 paper states that it acts without lookahead planning ([Hafner et al., DreamerV3](https://arxiv.org/abs/2301.04104), section "Critic learning"). It is the "Latent imagination" row in the table of the [planning note](../../05-post-training/deep-rl/planning-and-control.en.md).
+MPC in the [model-based RL note](../../05-post-training/deep-rl/model-based.en.md) searches future action sequences. Dreamer does not search at deployment, but still encodes each observation and updates the RSSM state $(h_t,z_t)$ before calling the actor. It removes lookahead planning, not all world-model computation; the [official `policy` implementation](https://github.com/danijar/dreamerv3/blob/main/dreamerv3/agent.py) calls the encoder and `dyn.observe` first. The V3 equations and hyperparameters below follow [arXiv v2 (2023)](https://arxiv.org/html/2301.04104v2), not a universal configuration for the Nature 2025 version or current code.
 
 Origins: [PlaNet (2018)](https://arxiv.org/abs/1811.04551) introduced latent dynamics with both deterministic and stochastic parts and planned online in latent space; [Dreamer (2019)](https://arxiv.org/abs/1912.01603) dropped online planning and trained an actor-critic by backpropagating learned value estimates through imagined trajectories.
 
@@ -77,7 +77,7 @@ $$
 
 Eq. (5) of the paper writes the subscripts of $r,c,v$ as $t$; here they are written $t+1$ to stress that they all belong to "the next step". Check with $\lambda=0$: the target becomes $r_{t+1}+\gamma c_{t+1}v_{t+1}$, the familiar one-step TD target.
 
-The critic fits this target by maximum likelihood, $\mathcal L(\psi)=-\sum_t\ln p_\psi(R^\lambda_t\mid s_t)$, with a categorical output over exponentially spaced bins. The actor loss (Eq. 6–7):
+The critic fits this target by maximum likelihood, $\mathcal L(\psi)=-\sum_t\ln p_\psi(R^\lambda_t\mid s_t)$, with a categorical output over exponentially spaced bins. V3 v2's “Critic learning” also includes a replay-trajectory value loss (weight 0.3 versus 1 for imagination), so actor and critic do not both train exclusively on imagined trajectories. We expand the imagination component here. The actor loss (Eq. 6–7):
 
 $$
 \mathcal L(\theta)=-\sum_t\Big[\operatorname{sg}\Big(\frac{R^\lambda_t-v_\psi(s_t)}{\max(1,S)}\Big)\log\pi_\theta(a_t\mid s_t)+\eta\,\mathrm H[\pi_\theta(\cdot\mid s_t)]\Big],\qquad
@@ -110,13 +110,13 @@ The advantage at the start is $0.695-0.6=0.095$, which is positive, so the actor
 
 Change one condition to see $\lambda$: with $\lambda=0$, $R^\lambda_0=r_1+\gamma v_1=0.45$, trusting the critic entirely; with $\lambda=1$ it becomes $0.9^2\times1+0.9^3\times0.8\approx1.393$, trusting the imagined rewards entirely and using $v_3$ only once at the end. $\lambda=0.5$ lies in between.
 
-Change another to see a model error. Suppose the model wrongly predicts that the cup falls at step 2, giving $r_2=-1$ and $c_2=0$. Then $R^\lambda_1=-1$ and $R^\lambda_0=0.9\times(0.5\times0.5+0.5\times(-1))=-0.225$, so the advantage becomes $-0.825$: the actor learns to avoid an action that is actually safe. Conversely, if the model misses a real fall, the actor learns to push. **The actor sees only the numbers the model gives it, never the real world.**
+Change another to see a model error. Suppose the model wrongly predicts that the cup falls at step 2, giving $r_2=-1$ and $c_2=0$. Then $R^\lambda_1=-1$ and $R^\lambda_0=0.9\times(0.5\times0.5+0.5\times(-1))=-0.225$, so the advantage becomes $-0.825$: the actor learns to avoid an action that is actually safe. Conversely, if the model misses a real fall, the actor learns to push. **This imagined update uses model predictions without testing those candidate actions in the environment; later real interactions still supply data for model training.**
 
 ## What DreamerV2 and V3 changed
 
 | Version | Main changes | Results reported by the authors |
 | --- | --- | --- |
-| [DreamerV2](https://arxiv.org/abs/2010.02193) (2020) | Stochastic latents switch from Gaussians to 32 categorical variables with 32 classes each; KL balancing | The first agent to reach human-level performance on 55 Atari tasks by learning behaviours entirely inside a separately trained world model; 200M environment steps in under 10 days on a single V100 |
+| [DreamerV2](https://arxiv.org/html/2010.02193v4) (2020) | Stochastic latents switch from Gaussians to 32 categorical variables with 32 classes each; KL balancing | Median gamer-normalized score 2.15 across 55 Atari games, not above-human performance in every game; a separate agent per game processes 200M environment frames in under 10 days on one V100, with action repeat 4 giving 50M observations |
 | [DreamerV3](https://arxiv.org/abs/2301.04104) (2023; [Nature 2025](https://www.nature.com/articles/s41586-025-08744-2)) | One fixed set of hyperparameters; symlog transform, KL balance plus free bits, 1% uniform mixed into every categorical, percentile return normalisation, symexp twohot output heads | One configuration across 150+ tasks; in the abstract's words, "the first algorithm to collect diamonds in Minecraft from scratch without human data or curricula", with every Minecraft run finding diamonds within 100M environment steps |
 
 Most of these changes serve one goal, running without tuning: reward scales can differ by orders of magnitude, so targets are compressed with $\operatorname{symlog}(x)=\operatorname{sign}(x)\ln(|x|+1)$; the 1% uniform mixture keeps categoricals from ever becoming deterministic, so the KL does not spike. The paper's compute comparison is VPT using 720 V100 GPUs for 9 days to get diamonds versus DreamerV3 using a single GPU for 9 days; but DreamerV3 uses the MineRL competition action space, which includes abstract crafting actions.

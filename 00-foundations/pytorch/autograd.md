@@ -60,7 +60,7 @@ v^\top J&=\frac{\partial (y_1+2y_2)}{\partial w}\\
 \end{aligned}
 $$
 
-在 $w=2$ 时，结果是 10，不是 7，也不是整个 Jacobian。
+在 $w=2$ 时，结果是 10。如果求的是 `y.sum()`，权重就是 `(1,1)`，结果会是 7。两者对应不同的标量目标；这里返回的是加权后的导数，而非整个 Jacobian。
 
 ```python
 parameter = torch.tensor(2.0, requires_grad=True)
@@ -133,7 +133,7 @@ assert not prediction.requires_grad
 
 要保存一份不再参与训练、也不会跟着原数据变化的结果，可以用 `detach().clone()`。只做日志时常用 `loss.item()`，但它返回 Python 数值，不能再用它反向；若 loss 在 GPU 上，还可能引入同步。
 
-`no_grad` 有一个容易忽略的例外：某些创建新张量的工厂函数显式接受 `requires_grad`，不受这个上下文按同样方式限制。不要把它理解成“块里不可能出现任何需要梯度的张量”。
+`no_grad` 主要控制运算是否被记录。创建张量的工厂函数有一个例外：例如在这个上下文中调用 `torch.tensor(2.0, requires_grad=True)`，新张量仍会保留显式指定的 `requires_grad=True`。
 
 ## 5. 图的寿命，和原地修改的风险
 

@@ -61,7 +61,7 @@ $$P_{\mathrm{success}}=0.95^{20}\approx0.358.$$
 
 一个容易读错的细节：该论文第 2 阶段去掉的是 batch-level 平衡，保留了按模式与正确性区分的基础奖励，不是简单的“答对 1 分、答错 0 分”。主要实验是数学题；我们没有复现它，也不能据此推断任意 agent 都会受益。
 
-**前两层合到一起。** 截至 2026-10，有的托管 API 已经把“调用前指定”和“生成中选择”合成一套接口。以 Anthropic 的 Claude API 为例：调用方用 `effort`（从 `low` 到 `max`）设一个倾向，模型对每个请求自己决定要不要想、想多少；文档明确说调用方不再设 thinking token 预算，硬上限只有 `max_tokens`，`effort` 是软引导，不保证 token 数。[Claude 文档：Steering thinking](https://platform.claude.com/docs/en/build-with-claude/thinking-steering-and-cost) 这样一来，“日期提取用较短预算”就变成“给这类请求设较低的 effort”，个别难题模型仍可能多想。要按请求类型核对响应里实际的 thinking token 数，不能只看配置。
+**前两层合到一起。** 截至 2026-10，Claude API 支持 adaptive thinking 的型号可以由调用方设置 `output_config.effort`，再让模型逐请求决定是否思考、思考多少；可用档位要按具体型号核对，不能推广到所有 Claude 版本。这种模式不使用手动 `budget_tokens`：`effort` 是软引导，`max_tokens` 限制的是**单次请求的思考与回答总输出**，不是整个工具循环的累计开销。[Claude 文档：Steering thinking](https://platform.claude.com/docs/en/build-with-claude/thinking-steering-and-cost) 低 effort 也可能在难题上多想。应记录实际 usage 和整项任务成本；若接口只展示思考摘要，摘要长度不能当作实际思考 token 数。
 
 **外部路由。** 应用估计哪种模型更适合当前请求；即使候选模型没有 thinking 开关，也能做 routing。[自适应深度](../00-foundations/looped/adaptive-depth.md)则讨论网络内部多算几层或几轮，别把隐藏状态迭代和多生成一些文字混在一起。
 

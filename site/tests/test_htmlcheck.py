@@ -79,6 +79,31 @@ class HtmlCheckTests(unittest.TestCase):
     def test_page_without_csp_fails(self):
         self.assertIn("missing Content-Security-Policy", htmlcheck.check("<!doctype html><p>x</p>"))
 
+    def test_duplicate_ids_fail(self):
+        content = '<h2 id="self-check">Self-check</h2><div id="self-check">Questions</div>'
+        self.assertIn("duplicate id 'self-check'", htmlcheck.check(page(content)))
+
+    def test_escaped_code_is_not_an_anchor(self):
+        content = '<code>&lt;div id="example"&gt;</code><h2 id="example">Example</h2>'
+        self.assertEqual(htmlcheck.check(page(content)), [])
+
+    def test_question_anchor_preserves_existing_heading(self):
+        content = '<h2 id="self-check">Self-check</h2><div class="taste-check">Questions</div>'
+        self.assertEqual(build.add_question_anchors(content), content)
+
+    def test_question_anchor_preserves_existing_interview_target(self):
+        for content in ('<h2 id="interview">Interview questions</h2>',
+                        "<span id='interview'></span><h2 id='questions'>Interview questions</h2>"):
+            self.assertEqual(build.add_question_anchors(content), content)
+
+    def test_question_anchors_are_added_once_and_ignore_code_examples(self):
+        content = ('<code>&lt;div id="self-check"&gt;</code>'
+                   '<h2 id="questions">Interview questions</h2><div class="taste-check">Questions</div>')
+        result = build.add_question_anchors(content)
+        self.assertIn('<a id="interview"></a><h2', result)
+        self.assertIn('<div id="self-check" class="taste-check">', result)
+        self.assertEqual(build.add_question_anchors(result), result)
+
 
 if __name__ == "__main__":
     unittest.main()

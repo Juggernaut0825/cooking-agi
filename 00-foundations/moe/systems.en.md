@@ -32,7 +32,7 @@ $$
 8 \times 7168 \times 2 = 114{,}688\ \text{B} = 112\ \text{KiB}.
 $$
 
-That is before merging sends to the same node, and combine sends the results back again. A micro-batch of 4,096 tokens moves 448 MiB per layer in each direction. Real systems shrink this: DeepSeek-V3 quantizes activations to FP8 before dispatch ($s=1$, half the bytes) while keeping combine in BF16, and several experts on one node receive a single copy, so the cross-node part carries at most 4 copies, or $4 \times 7168 \times 1$ B = 28 KiB in FP8. [V3 §3.2.2, §3.3.3](https://arxiv.org/html/2412.19437v2#S3.SS2)
+That is before merging sends to the same node, and combine sends the results back again. A micro-batch of 4,096 tokens moves 448 MiB per layer in each direction. Real systems shrink this: DeepSeek-V3 quantizes activations to FP8 before dispatch ($s=1$, half the bytes) while keeping combine in BF16, and activations for several experts on one node cross the inter-node link once before NVLink forwards them within the node, so the cross-node part carries at most 4 copies, or $4 \times 7168 \times 1$ B = 28 KiB in FP8 (activation payload only, excluding quantization scales, routing metadata and protocol overhead). [V3 §3.2.2, §3.3.3](https://arxiv.org/html/2412.19437v2#S3.SS2)
 
 ## Limit how many machines a token touches
 

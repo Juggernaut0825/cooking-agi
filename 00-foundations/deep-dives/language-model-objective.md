@@ -14,7 +14,7 @@
 
 $$p_\theta(x_{1:T})=\prod_{t=1}^{T}p_\theta(x_t\mid x_{<t})$$
 
-区别只在“未来知不知道”。训练时整条真实序列已经摊在桌上；生成时下一个 token 还没出现，模型只能写一个、看一个，再继续写。下表“主要瓶颈”一行为什么这样分，可以用 [roofline](../../12-infra/performance.md#roofline) 算出来。
+这里先比较 teacher-forced 前向与自回归生成：训练数据虽然包含整条序列，causal mask 仍不让每个位置读取未来 token，只是允许各位置并行计算；生成时新 token 尚未确定，通常要逐步继续。训练另外还需要反向传播和参数更新。下表“主要瓶颈”一行为什么这样分，可以用 [roofline](../../12-infra/performance.md#roofline) 算出来。
 
 | | 训练 / prefill | autoregressive decode |
 | --- | --- | --- |
@@ -48,20 +48,20 @@ $$\text{PPL}=\exp\!\left(\frac{1}{N}\sum_t \ell_t\right)$$
 
 ## 训练用真实前缀，生成靠自己的输出 {#_3}
 
-训练时模型总在真实前缀上预测（teacher forcing）；生成时它必须在自己的输出上继续。这种错位常被称为 exposure bias，例子见 [Seq2Seq](../core/seq2seq.md)。某一步的小概率错误可能把后续上下文带到训练数据很少覆盖的区域。
+标准 teacher-forced 最大似然训练在数据提供的前缀上预测；生成时它必须在自己的输出上继续。这种错位常被称为 exposure bias，例子见 [Seq2Seq](../core/seq2seq.md)。某一步的小概率错误可能把后续上下文带到训练数据很少覆盖的区域。
 
 这里很容易条件反射地说“那就上 RL”。先别急，检查问题到底来自：
 
 1. 训练数据没覆盖目标行为；
 2. loss mask 或模板错误；
-3. sampling 策略不合适（区分 1 和 3：让模型给参考答案打分；参考答案的 log-likelihood 很低，多半是训练没覆盖；概率不低、采样结果却差，再查 temperature、top-p 等设置）；
+3. sampling 策略不合适（可以用相同 prompt / 模板给多条可接受答案打分，并按有效 token 数报告 NLL；单条答案的原始序列概率会随长度下降，低概率也可能来自表达差异、容量或优化不足，不能据此认定训练数据没覆盖。若答案获得合理分数而采样仍差，再对照 temperature、top-p 等设置）；
 4. 长程目标无法由逐 token likelihood 表达。
 
 第 4 类最直接指向 sequence-level preference 或 RL objective；如果问题正是模型自己的输出把上下文带离训练分布，在模型自己生成的前缀上训练（on-policy 数据、RL 等）也值得考虑。
 
 ## 缓存必须和完整前向等价 {#cache}
 
-增量解码必须与一次性前向在数值容差内一致。位置、mask 或 K/V 顺序稍有错误，模型仍可能写出通顺的句子，logits 却已经变了；所以要逐步比较 logits，不能只看文本像不像。逐项排查清单见 [KV cache 一篇](kv-cache-and-inference.md#cache-checks)，[`../code/test_model.py`](../code/test_model.py) 有对应的等价性测试。
+对保留所需 K/V、没有量化或驱逐等近似的 cache，固定权重、输入前缀、位置和可见范围，并关闭 dropout 后，增量解码应与一次性前向在数值容差内一致。近似 cache 另需评估它主动引入的误差。位置、mask 或 K/V 顺序稍有错误，模型仍可能写出通顺的句子，logits 却已经变了；所以要逐步比较 logits，不能只看文本像不像。逐项排查清单见 [KV cache 一篇](kv-cache-and-inference.md#cache-checks)，[`../code/test_model.py`](../code/test_model.py) 有对应的等价性测试。
 
 <span id="_4"></span><span id="factorization"></span>
 

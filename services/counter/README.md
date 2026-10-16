@@ -2,7 +2,7 @@
 
 **中文** · [English](#english)
 
-给站点提供两样数字，都跑在 Cloudflare 免费额度上：
+给站点提供两样数字，可从 Cloudflare 免费计划开始部署：
 
 - **此刻在学 / 今天在学**：学习小伙伴显示的人数。
 - **笔记的阅读与收藏**：每篇笔记底部的计数，协议和含义见 [`site/tools/note-metrics.md`](../../site/tools/note-metrics.md)（读者主动开启后才会上报）。
@@ -26,7 +26,7 @@
 
 ## 额度与费用
 
-全部在 Workers 免费计划内，**0 元**：每天 10 万次请求，Durable Object 每天写 10 万行。每位读者开着页面时每 2 分钟一次心跳，大约够每天三千个「读者·小时」。超出后当天的请求会失败，页面会自动隐藏人数，第二天 UTC 零点恢复。真到那个量，再考虑每月 5 美元的付费计划。
+免费额度内可以不产生使用费用，但不能只凭心跳间隔估算容量：请求、执行时长、SQL 读写和存储都有各自的限制，一次请求也可能读写多行。部署后应查看实际用量；免费计划某项额度耗尽时，相应操作会失败，日额度在 UTC 零点重置。具体额度和收费以 [Cloudflare 官方说明](https://developers.cloudflare.com/durable-objects/platform/pricing/)为准。
 
 ## 部署（需要你本人操作）
 
@@ -63,7 +63,7 @@
 
 # Anonymous counters
 
-Two kinds of numbers for the site, on Cloudflare's free tier:
+Two kinds of numbers for the site, with deployment available on Cloudflare's free plan:
 
 - **Studying now / today**, shown by the study buddy.
 - **Reads and saves per note**, as specified in [`site/tools/note-metrics.md`](../../site/tools/note-metrics.md) (sent only after a reader opts in).
@@ -87,7 +87,7 @@ The site stays on GitHub Pages; this is a side endpoint. If it is down, the site
 
 ## Limits and cost
 
-Everything fits the Workers Free plan, **$0**: 100,000 requests a day and 100,000 Durable Object rows written a day. One heartbeat every two minutes per open page is roughly 3,000 reader-hours a day. Beyond that, requests fail for the rest of the UTC day and pages simply hide the counts. At that point, consider the $5/month paid plan.
+Usage can stay within the free allowance, but heartbeat frequency alone does not establish capacity. Requests, execution duration, SQL reads and writes, and storage have separate limits; one request can touch multiple rows. Monitor actual usage after deployment. On the free plan, exhausting a limit makes the corresponding operations fail; daily allowances reset at midnight UTC. See [Cloudflare's pricing documentation](https://developers.cloudflare.com/durable-objects/platform/pricing/) for current limits and rates.
 
 ## Deploy (the owner does this)
 

@@ -71,7 +71,7 @@ On structured roads, sample-and-score is common, so let us work one.
 
 ## Work it once: choosing among 4 candidate trajectories
 
-This continues the scene from the guide; the numbers are a teaching setup. Ego at 12 m/s; the lead car in this lane is 30 m ahead at a steady 8 m/s; a car in the left lane is 16 m behind at 13 m/s; the curb is on the right. The planning horizon is 4 s.
+This continues the guide's teaching scene. Ego travels at 12 m/s; a lead car is 30 m ahead at 8 m/s; a left-lane car is 16 m behind at 13 m/s; the curb is on the right. The horizon is 4 s. Vehicles are treated as points, with longitudinal gaps to the specified cars only. C's lateral trajectory and peak acceleration are additional assumptions, not consequences of those longitudinal numbers. A constraint “pass” covers only this toy: vehicle dimensions, the full lane-change swept region and emergency braking capability are not checked. It is not a real-world safety certificate.
 
 | Candidate | Distance in 4 s | Minimum gap | Peak acceleration | Progress $c_p$ | Comfort $c_c$ | Safety $c_s$ | Hard constraint |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -86,7 +86,7 @@ $$
 J=w_p\,c_p+w_c\,c_c+w_s\,c_s ,
 $$
 
-and among candidates that pass the hard constraints, take the one with the lowest $J$.
+and among candidates that pass the hard constraints, take the one with the lowest $J$. These costs use numerical values in the table's units; an implementation must specify normalisation scales or dimensional weights rather than treating the sum as a physical quantity.
 
 - **Weights $(1,1,1)$:** $J_A=2$, $J_B=2+1=3$, $J_C=1.5+2.67=4.17$; choose A.
 - **Safety weight doubled, $(1,1,2)$:** $J_A=4$, $J_B=3$, $J_C=1.5+5.33=6.83$; choose B.
@@ -95,7 +95,7 @@ With $w_p=w_c=1$, A and B tie at $2w_s=3$, that is $w_s=1.5$. "What counts as go
 
 The table says three more things:
 
-1. **C is dominated by A.** Same progress, worse comfort and safety, so with any (non-negative) weights C is never chosen.
+1. **C is dominated by A.** Progress is equal, while comfort and safety costs are worse. Using unrounded costs, $J_C-J_A=1.5w_c+(2/3)w_s\ge0$. With non-negative weights C cannot strictly beat A; it is strictly worse if either $w_c$ or $w_s$ is positive. If both are zero, as with $(w_p,w_c,w_s)=(1,0,0)$, they tie and C may be selected by the tie-breaking rule.
 2. **D is rejected, not penalised.** Leaving the road is not "minus 10 points" but not allowed; a finite penalty can always be outweighed by a large enough gain, see the section on constraints in [planning and LQR](../../05-post-training/deep-rl/planning-and-control.en.md).
 3. **A truncated horizon misleads.** At $t=4$ s, A is 14 m behind the lead car and still closing at 4 m/s; a 4 s cost cannot see how close A gets in seconds 5 and 6. Lengthen the horizon, or add a time-to-collision term, and A's cost rises. NAVSIM's score in note 3 includes exactly such a time-to-collision term.
 
@@ -116,7 +116,7 @@ The paper's Val14 results (Table 2). CLS is the closed-loop score, with R meanin
 | PDM-Closed | 92 | 93 | 42 |
 | Log Replay (replaying the human trajectory) | 80 | 94 | 100 |
 
-The learned PDM-Open has the best open-loop score and the worst closed-loop score; the rule-based PDM-Closed is the reverse. Even replaying the human trajectory does not get a perfect closed-loop score; one of the paper's explanations is that nuPlan's LQR controller sometimes drifts from the given trajectory, which is why PDM-Closed scores candidates by what the controller will actually drive. The authors list this as the first finding in their introduction: "Open- and closed-loop evaluation are misaligned" ([§1](https://arxiv.org/html/2306.07962v2#S1.p2)). The stronger claim in the abstract is about something else: that precise short-term planning and long-horizon ego-forecasting are fundamentally at odds and should be handled separately. A preliminary version of PDM-Hybrid ranked first in the 2023 nuPlan challenge (out of 25 teams).
+Excluding ground-truth Log Replay, PDM-Open has the highest open-loop and lowest closed-loop scores among these three planners. PDM-Closed scores 42 rather than 86 on OLS, yet 92 rather than 54 on reactive CLS-R. The rankings are not reversed in every column: IDM has lower OLS, and Log Replay has higher CLS-NR. Even replaying human trajectories does not yield perfect closed-loop scores; the paper notes that nuPlan's LQR controller can drift from a given trajectory, motivating PDM-Closed's simulation of what the controller will actually drive. The result shows why open-loop and closed-loop evaluation are not interchangeable ([v2 §1 and Table 2](https://arxiv.org/html/2306.07962v2)). It is evidence from nuPlan simulation, not a direct real-road safety result. A preliminary version of PDM-Hybrid ranked first in the 2023 nuPlan challenge, out of 25 teams.
 
 ## Where learning comes in
 
@@ -134,7 +134,7 @@ The planner replans every few tens to a hundred milliseconds, and the controller
 | What to try first | What to observe | What you can NOT conclude |
 | --- | --- | --- |
 | Compare minADE at a fixed $K$, and also report $K=1$ | How much multimodality buys | A low minADE at large $K$ means good forecasts |
-| Shuffle the probabilities across forecasts | minADE / minFDE unchanged; mAP or likelihood worse | Probability calibration does not matter |
+| Keep the evaluated set of $K$ trajectories fixed and shuffle only their probabilities | minADE / minFDE stay unchanged; mAP or likelihood may improve, worsen or stay equal. Average degradation is expected only if the original probabilities were informative | A shuffle must lower the score; unchanged minADE makes calibration irrelevant |
 | Break results down into straight, turning and interactive | Whether turning and interactive segments have clearly larger errors | The average error represents hard scenes |
 | Double each cost weight in turn | In which scenes the choice flips | One set of weights is right for every scene |
 | Stretch the planning horizon from 4 s to 8 s | Whether candidates like A, which fail only beyond the horizon, are caught | Longer horizons are always better (forecast error also grows with horizon) |

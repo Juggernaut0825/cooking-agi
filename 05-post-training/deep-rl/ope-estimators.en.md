@@ -4,7 +4,7 @@
 
 > Reading time: ~12 min · Last reviewed: 2026-10
 
-[Offline RL and OPE](offline-and-ope.en.md) estimates a new policy's performance with whole-trajectory importance weights: with enough data and accurate behavior probabilities it is unbiased, but over a long horizon the weight is a long product of ratios and the variance becomes unusable. Without collecting new data, how else can the variance come down? **Do not multiply ratios you do not need; if you have a value model, use it to cancel noise rather than to replace the data.** At the end we take a different route: solving for the value function directly with linear features.
+[Offline RL and OPE](offline-and-ope.en.md) estimates a new policy's performance with whole-trajectory importance weights. With a fixed target policy, accurate behavior probabilities, support coverage, and integrable returns, it is unbiased even at finite sample sizes; more data improves precision rather than creating unbiasedness. Long products of ratios can nevertheless produce very large variance. Without collecting new data, how else can the variance come down? **Do not multiply ratios you do not need; if you have a value model, use it to cancel noise rather than to replace the data.** At the end we take a different route: solving for the value function directly with linear features.
 
 ## Where trajectory weights waste effort
 
@@ -19,7 +19,7 @@ $$
 \rho^i_{0:t}=\prod_{k=0}^{t}\frac{\pi(a^i_k\mid s^i_k)}{\mu(a^i_k\mid s^i_k)}.
 $$
 
-Why does dropping the later ratios add no bias? Given the history up to step $k$, when actions are drawn from the behavior policy $\mu$, the ratio's conditional expectation is $\sum_a\mu(a\mid s)\,\pi(a\mid s)/\mu(a\mid s)=1$ (provided every action $\pi$ takes is also taken by $\mu$). Multiplying by something with conditional mean 1 leaves the expectation unchanged and only adds noise. Theorem 1 of [Precup, Sutton, and Singh (2000)](http://incompleteideas.net/papers/PSS-00.pdf) proves the per-decision estimator unbiased and consistent.
+Why does dropping the later ratios add no bias? Given the history up to step $k$, when actions are drawn from the behavior policy $\mu$, the ratio's conditional expectation is $\sum_a\mu(a\mid s)\,\pi(a\mid s)/\mu(a\mid s)=1$ (provided every action $\pi$ takes is also taken by $\mu$). For an already-observed reward term, integrating out subsequent ratios preserves its expectation and removes that conditional variance. The variance of the sum still depends on covariances between reward terms, so this is not a universal total-variance reduction. Theorem 1 of [Precup, Sutton, and Singh (2000)](http://incompleteideas.net/papers/PSS-00.pdf) proves the per-decision estimator unbiased and consistent.
 
 Compute variances on a two-step example. Each step has the same state and two actions, A and B; choosing A earns 1 point on that step and B earns 0; no discounting. The behavior policy picks each action 50% of the time; the target policy picks A with probability 0.8. So A's ratio is $0.8/0.5=1.6$, B's is $0.2/0.5=0.4$, and the true value is $J(\pi)=0.8+0.8=1.6$. Under the behavior policy, the 4 trajectories each occur with probability 1/4:
 
@@ -42,7 +42,9 @@ $$
 \hat J_{\rm WPDIS}=\sum_{t=0}^{T-1}\gamma^t\,\frac{\sum_i\rho^i_{0:t}\,r^i_t}{\sum_i\rho^i_{0:t}}.
 $$
 
-Each step's estimate is a weighted average of observed rewards, so it never leaves the reward range. Suppose an unlucky log of 3 trajectories: AA, AA, BB. Per-decision IS gives $(4.16+4.16+0)/3\approx2.77$; the weighted version gives $3.2/3.6\approx0.89$ at step 0 and $5.12/5.28\approx0.97$ at step 1, about 1.86 in total, closer to the true 1.6. The price is bias with finite samples. Precup et al. also give a weighted per-decision version and note that it is consistent but biased.
+Provided each step has a positive total weight, its estimate is a weighted average of observed rewards and stays within their range. All-zero weights make that ratio undefined, not a zero return. Suppose an unlucky log of 3 trajectories: AA, AA, BB. Per-decision IS gives $(4.16+4.16+0)/3\approx2.77$; the weighted version gives $3.2/3.6\approx0.89$ at step 0 and $5.12/5.28\approx0.97$ at step 1, about 1.86 in total, closer to the true 1.6. The price is bias with finite samples. Precup et al. also give a weighted per-decision version and note that it is consistent but biased.
+
+Normalization does not always reduce variance either. Consider a one-step, two-action example with behavior probabilities `[0.5, 0.5]`, target probabilities `[0.8, 0.2]`, and deterministic rewards `[0.625, 2.5]`. Ordinary IS is always $1.6\times0.625=0.4\times2.5=1$, with zero variance. With only one sample, self-normalized IS instead equals the observed reward: its expectation is 1.5625 and variance about 0.879, although the true value remains 1. Normalization bounds the estimate but can destroy an exact cancellation between weights and rewards.
 
 ## Doubly robust: work it out on a one-step bandit first
 
@@ -52,7 +54,11 @@ $$
 \hat V_{\rm DR}=\sum_a\pi(a\mid s)\hat Q(s,a)+\frac{\pi(a_i\mid s)}{\mu(a_i\mid s)}\Big(r_i-\hat Q(s,a_i)\Big).
 $$
 
-The first term is the model's own guess (the direct method); the second uses the importance weight to correct the model's residual on this sample. If $\hat Q$ is correct, the residual has mean 0, so the correction averages to 0 whether or not the weights are right; if the weights are correct, the correction cancels the model's bias in expectation. If either one is right, the estimate is unbiased; that is what "doubly robust" means.
+The first term is the model's own guess (the direct method); the second uses the importance weight to correct the model's residual on this sample. Hold the target policy and value model fixed, with weights depending on state and action rather than this sample's reward. If $\hat Q$ equals the conditional expected reward, the residual has conditional mean zero; if the weights are exact, the correction cancels the model's bias in expectation. Either exact component gives an unbiased estimator. When both components are estimated, a correctly specified model class does not itself imply finite-sample unbiasedness; the relevant guarantee is often consistency.
+
+Keep fitting separate from evaluation: fit $\hat Q$ and select the policy on independent logs, then compute DR on held-out logs. With cross-fitting, each evaluation sample must be scored by a model fitted without it. Otherwise, even known behavior probabilities do not justify the unbiasedness claim. [Jiang and Li, §3, independence requirements](https://arxiv.org/pdf/1511.03722)
+
+An overfitting counterexample: behavior probabilities are `[0.9, 0.1]`, the target chooses equally, and deterministic rewards are `[1, 3]`, so the true value is 2. Collect one sample; let $\hat Q$ memorize its selected action's reward and assign zero to the unseen action, then evaluate on that same sample. The residual is always zero. DR is 0.5 after a left sample and 1.5 after a right sample, giving expectation $0.9\times0.5+0.1\times1.5=0.6$. Exactly known behavior probabilities do not repair this data reuse.
 
 Reuse the bandit from the [Offline RL note](offline-and-ope.en.md) with a bit of noise: the left reward is always 1; the right reward is 2 or 4 with equal probability, mean 3. The behavior policy goes left 90% and right 10%; the target policy picks each 50%, so the true value is $0.5\times1+0.5\times3=2$. Variances below are per single sample; $\hat Q$ is assumed to come from a separate dataset and is held fixed.
 
@@ -91,14 +97,16 @@ J(\pi)=\frac1{1-\gamma}\,\mathbb E_{(s,a,r)\sim d^{\mathcal D}}\big[w(s,a)\,r\bi
 w(s,a)=\frac{d^\pi(s,a)}{d^{\mathcal D}(s,a)} .
 $$
 
-When the data come from $\mu$, $w$ splits into one state ratio times one action ratio: $\frac{d^\pi(s)}{d^\mu(s)}\cdot\frac{\pi(a\mid s)}{\mu(a\mid s)}$. The weight is no longer a product over time and does not grow exponentially with the horizon.
+This uses the infinite-horizon discounted convention, requiring $0\le\gamma<1$, matching initial-state distributions, and data support for the target occupancy. When the data come from $\mu$, $w$ splits into one state ratio times one action ratio: $\frac{d^\pi(s)}{d^\mu(s)}\cdot\frac{\pi(a\mid s)}{\mu(a\mid s)}$. This avoids an explicit product over time but **does not guarantee small ratios**.
+
+For a counterexample, reaching an endpoint requires choosing A for $H$ consecutive steps; B leads to failure. The target always chooses A, while behavior chooses A or B with equal probability. At time $H$, the endpoint has target probability 1 and behavior probability $2^{-H}$, so its state ratio is still $2^H$: 1024 when $H=10$. The polynomial horizon bounds in [Xie et al., §§2 and 4](https://arxiv.org/pdf/1906.03393) retain coverage and bounded state/action-ratio conditions; removing an explicit product does not remove those conditions.
 
 Back to the two-step example. There the state does not depend on actions, so every step's state ratio is 1; with a finite horizon the ratio is taken per time step, so each reward is multiplied only by its own step's action ratio. The 4 trajectories give 3.2, 1.6, 1.6, and 0; the mean is still 1.6 and the variance falls to 1.28 (per-decision IS gave 2.51, trajectory IS 4.20). Here the state ratio happens to be known; in general it must be estimated from data, an error in it introduces bias, and the data still have to cover the states the target policy visits.
 
 How to estimate the ratio is the core of these methods:
 
 - [Liu et al. (2018)](https://arxiv.org/abs/1810.12429) apply importance sampling directly to stationary state distributions and estimate the density ratio from behavior trajectories, to escape the variance explosion of long horizons;
-- [Xie, Ma, and Wang (2019)](https://arxiv.org/abs/1906.03393) work in a finite-horizon, nonstationary setting, recursively estimate the target policy's state marginal at each step, and prove an error bound that grows only polynomially with the horizon;
+- [Xie, Ma, and Wang (2019)](https://arxiv.org/abs/1906.03393) work in a finite-horizon, nonstationary setting and recursively estimate the target policy's state marginal at each step; holding their coverage and weight-bound conditions fixed, the error bound has polynomial horizon dependence;
 - [DualDICE (Nachum et al., 2019)](https://arxiv.org/abs/1906.04733) does not even need to know the behavior policy. Its starting point is a small fact: minimizing $\tfrac12d^{\mathcal D}x^2-d^\pi x$ at each $(s,a)$ gives $x=d^\pi/d^{\mathcal D}$. For example, with $d^{\mathcal D}=0.25$ and $d^\pi=0.5$, setting the derivative $0.25x-0.5=0$ gives $x=2$. A change of variables then replaces the unavailable expectation under $d^\pi$ with an expectation over initial states; the paper proves that the Bellman residual of the resulting problem's optimum is exactly the desired ratio.
 
 As of October 2026, applying these estimators to offline evaluation of LLMs or agents is still changing quickly: one "action" may be a whole passage of text, probability ratios are extreme, and behavior probabilities are often unavailable. This note treats none of those practices as settled; the estimators above are themselves established results.
@@ -144,14 +152,14 @@ LSPI settles on an action it has never tried, and its "value 0" is just the ridg
 
 | Estimator | Needs behavior probabilities? | Needs a value function or model? | Bias | Variance | Typical failure |
 | --- | --- | --- | --- | --- | --- |
-| Trajectory IS | Yes | No | Unbiased with accurate probabilities and enough coverage | Grows exponentially with the horizon | A few trajectories' weights dominate the estimate |
-| Self-normalized IS | Yes | No | Biased with finite samples, consistent | Lower than IS | Still controlled by extreme weights |
+| Trajectory IS | Yes | No | Unbiased with accurate probabilities and enough coverage | Can grow exponentially with the horizon | A few trajectories' weights dominate the estimate |
+| Self-normalized IS | Yes | No | Biased with finite samples, consistent | Often lower, not universally | Still controlled by extreme weights |
 | Per-decision IS | Yes | No | Unbiased | Often lower than trajectory IS, still grows with the horizon | Weights on late rewards explode over long horizons |
-| Weighted per-decision IS | Yes | No | Biased, consistent | Lower; each step stays within the reward range | Leans toward the behavior policy with few samples |
-| Direct method (FQE, model) | No | Yes | Depends on model error | Low | Systematic bias in extrapolated regions |
-| DR | Yes; $\hat Q$ covers for inaccurate probabilities | Yes | Unbiased if either one is right | Lower as $\hat Q$ improves | Biased when both are wrong; still affected by heavy-tailed weights |
+| Weighted per-decision IS | Yes | No | Biased, consistent | Often lower; positive-denominator steps stay within the reward range | Finite-sample bias, zero denominators |
+| Direct method (FQE, model) | No | Yes | Depends on model error | Low conditional on a fixed model; fitting adds variance | Systematic bias in extrapolated regions |
+| DR | Yes; $\hat Q$ covers for inaccurate probabilities | Yes | Unbiased with independent evaluation and an exact component | Good models often help; no general monotonicity with prediction error | Both components wrong or fitting/evaluation leakage; heavy-tailed weights |
 | Weighted DR, MAGIC | Yes | Yes | Biased, consistent | Usually lower | Size of the bias is hard to quantify |
-| State-distribution ratios (Liu et al., MIS, DualDICE) | Liu et al. and MIS yes, DualDICE no | Must estimate a ratio function | Biased if the ratio is wrong | No exploding product over time | Ratio is hard to estimate; insufficient coverage |
+| State-distribution ratios (Liu et al., MIS, DualDICE) | Liu et al. and MIS yes, DualDICE no | Must estimate a ratio function | Biased if the ratio is wrong | No explicit product, but still controlled by occupancy ratios | Ratio is hard to estimate; insufficient coverage |
 | LSTD / LSTDQ | LSTD needs data from the evaluated policy, LSTDQ does not | Linear features | Converges to the TD fixed point, not the best fit | No learning rate; can be ill-conditioned with few samples | Features cannot express the truth; unsupported actions are decided by defaults |
 
 ## Where this note stops

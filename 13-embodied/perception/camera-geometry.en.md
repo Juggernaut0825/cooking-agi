@@ -84,7 +84,7 @@ Take $k_1=-0.2$, $k_2=0$ (barrel distortion, a teaching value). Our point has $r
 
 So undistort first, then apply the pinhole equations. Wide-angle and fisheye lenses need their own camera models; [ORB-SLAM3](https://arxiv.org/abs/2007.11898), for example, supports both pinhole and fisheye models. The original 3D Gaussian splatting rasteriser assumes an ideal pinhole; NVIDIA's [3DGUT](https://arxiv.org/abs/2412.12507) adds distorted and rolling-shutter cameras (the paper's claims here are qualitative).
 
-Calibration means estimating $K$, the distortion coefficients and the extrinsics. Zhang's method only needs the camera to see a planar pattern from at least two different orientations; it solves in closed form, then refines by maximum-likelihood nonlinear optimisation. Multiple sensors also need their time offsets calibrated: at 20 m/s, a 10 ms offset is a 0.2 m position error. [Furgale et al. 2013](https://doi.org/10.1109/IROS.2013.6696514) calibrate time and space together.
+Calibration estimates $K$, distortion and extrinsics. [Zhang, §3.1](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/tr98-71.pdf) generally needs at least 3 non-degenerate planar views for closed-form initialization; 2 require an extra constraint such as zero skew. Maximum-likelihood nonlinear refinement follows. More nearly identical orientations need not supply independent constraints. Multiple sensors also need time calibration: at 20 m/s, a 10 ms offset means 0.2 m of motion. [Furgale et al. 2013](https://doi.org/10.1109/IROS.2013.6696514) calibrate time and space together.
 
 ## Two views: the epipolar constraint turns a 2D search into a line
 
@@ -116,7 +116,7 @@ $$
 
 Our point has disparity $d=860-810=50$ px, so $Z=1000\times0.5/50=10$ m, matching where we started.
 
-Now the error. Differentiating $Z=fb/d$ with respect to $d$ gives $|\partial Z/\partial d|=Z^2/(fb)$. At 10 m, a 1 px disparity error is a 0.2 m depth error; at 40 m the disparity is only 12.5 px and a 1 px error becomes 3.2 m. **Triangulated depth error grows with the square of distance**, which is the direct reason stereo and multi-view ranging get worse far away. A longer baseline $b$ or focal length $f$ helps, at a price: the two cameras share less field of view up close, and the two images look more different, so matching gets harder.
+Differentiating $Z=fb/d$ gives $|\partial Z/\partial d|=Z^2/(fb)$. With fixed $f,b$, a small disparity error gives $|\Delta Z|\approx Z^2|\Delta d|/(fb)$: 1 px corresponds to approximately 0.2 m at 10 m, or 3.2 m at 40 m. The latter is not exact: measuring the true 12.5 px disparity as 13.5 or 11.5 px gives 37.04 or 43.48 m, with asymmetric errors. **Quadratic growth describes local sensitivity with fixed camera geometry and approximately fixed pixel error**, not an exact law for every multi-view system. A larger baseline improves ranging but increases occlusion and matching differences; a longer focal length narrows the field of view.
 
 <!-- widget:step-pixel-ray -->
 
@@ -124,12 +124,12 @@ The general case (rotation, more than two views) has no formula this tidy. With 
 
 ## When one homography is enough
 
-HZ eq. 9.7 writes the second image's pixel as two terms: $x'=K'RK^{-1}x+K't/Z$. The first term depends only on rotation and intrinsics; the second changes with depth $Z$. Which term vanishes, or becomes predictable, decides which relation you need:
+[HZ eq. 9.7](https://www.robots.ox.ac.uk/~vgg/hzbook/hzbook2/HZepipolar.pdf) is a homogeneous-coordinate relation. For $x=(u,v,1)^\top$, compute $\tilde x'=K'RK^{-1}x+K't/Z$, then divide by its third component to recover pixels. For example, $K=K'=R=I$, $x=(0.5,0,1)$, $Z=2$, and $t=(0,0,1)$ give $(0.5,0,1.5)$, which normalizes to $(1/3,0,1)$. The table uses $\sim$ for equality up to nonzero scale:
 
 | Case | Relation between the two images | Degrees of freedom | Examples |
 | --- | --- | --- | --- |
-| All points lie on one plane | Point to point: $x'=Hx$, $H$ is 3×3 | 8 | The ground, a calibration board, a document; Zhang's calibration uses $H=K[r_1\;r_2\;t]$ |
-| The camera only rotates, $t=0$ | Point to point: $x'=K'RK^{-1}x$, independent of depth | Set by $K,K',R$ | Panoramas taken by turning in place |
+| All points lie on one plane | Point to point: $x'\sim Hx$, $H$ is 3×3 | 8 | The ground, a calibration board, a document; Zhang's calibration uses $H=K[r_1\;r_2\;t]$ |
+| The camera only rotates, $t=0$ | Point to point: $x'\sim K'RK^{-1}x$, independent of depth | Set by $K,K',R$ | Panoramas taken by turning in place |
 | Translation and a scene with relief | Point to line: $x'^{\top}Fx=0$ | 7 for $F$, 5 for $E$ | Stereo, a monocular camera on a moving car, a camera on a robot arm |
 
 The ground-plane ranging above uses the first row: points on the ground map one-to-one to pixels, and the mapping breaks as soon as a point leaves the ground.

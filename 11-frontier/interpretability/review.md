@@ -40,9 +40,9 @@
 <details class="interview" markdown="1">
 <summary>SAE 的目标函数是什么？L1、TopK、JumpReLU 各怎么处理稀疏？</summary>
 
-$f=\mathrm{ReLU}(W_{\rm enc}x+b)$，$\hat x=W_{\rm dec}f+b'$，损失是重建误差加 $\lambda\sum_i f_i\|W_{\rm dec}^{(i)}\|$；乘解码列范数是为了防止缩小 $f_i$、放大解码向量来躲惩罚。L1 带来收缩：非零激活被系统性低估。TopK（OpenAI）每个 token 只留最大的 $k$ 个，直接定稀疏度，损失只剩重建项；JumpReLU（Google DeepMind）给每个 latent 学阈值，直接罚 L0，用直通估计器训练。
+$f=\mathrm{ReLU}(W_{\rm enc}x+b)$，$\hat x=W_{\rm dec}f+b'$，损失是重建误差加 $\lambda\sum_i f_i\|W_{\rm dec}^{(i)}\|$；乘解码列范数是为了防止缩小 $f_i$、放大解码向量来躲惩罚。L1 带来收缩：非零激活被系统性低估。TopK（OpenAI）每个 token 只保留最大的 $k$ 个编码器激活，直接限制稀疏度，主损失为重建项；JumpReLU（Google DeepMind）给每个 latent 学阈值，直接罚 L0，用直通估计器训练。
 
-手算：$x=(1,1)$，字典里有 $(1,0)$、$(0,1)$、$(0.707,0.707)$。L1 偏爱只用斜方向（代价 $\sqrt2$ 对 2）；$\lambda=1$ 时系数 0.914，只还原 87.5%；$\lambda\ge2\sqrt2$ 时什么都不激活。TopK 取 $k=1$ 则系数 $\sqrt2$，没有收缩。见[稀疏自编码器](sparse-autoencoders.md)。
+手算：$x=(1,1)$，单位字典方向为 $(1,0)$、$(0,1)$、$(1/\sqrt2,1/\sqrt2)$。L1 偏爱斜方向；$\lambda=1$ 时最优系数约 0.914，平方误差 0.25，因此 $1-\|x-\hat x\|^2/\|x\|^2=87.5\%$，重建能量比却只有约 41.8%。$\lambda\ge2\sqrt2$ 时最优解全零。TopK 若选中斜方向并输出 $\sqrt2$ 就能精确还原，但它排序的是编码器激活，并不保证找到最优字典方向或系数；主重建损失之外还可加 AuxK。见[稀疏自编码器](sparse-autoencoders.md)。
 
 </details>
 

@@ -64,7 +64,7 @@ storage:       [0, 1, 2, 3, 4, 5]
 base [2,3]:    [[0,1,2], [3,4,5]]   stride=(3,1)
 transpose:     [[0,3], [1,4], [2,5]] stride=(1,3)
 
-clone:         [0, 1, 2, 3, 4, 5]   independent storage
+clone:         [0, 1, 2, 3, 4, 5]   独立存储
 ```
 
 对普通 strided tensor，某个位置对应的存储偏移是 `storage_offset + Σ index[axis] × stride[axis]`。转置改变读取方式，不必搬动数值。两个对象因此可以 shape 不同，却共享 storage。
@@ -138,7 +138,7 @@ assert len(torch.tensor_split(torch.arange(4), 3)) == 3
 
 `torch.tensor(array)` 会复制输入数据；`from_numpy` 与兼容的 `as_tensor` 可以共享存储。共享更省复制，却意味着另一边的修改也可能影响训练输入。
 
-`.numpy()` 默认要求 CPU、无需梯度且 dtype / layout 等受支持，返回值通常共享存储。`.numpy(force=True)` 会处理 detach、CPU 和共轭等转换，但不能理解为“无条件独立复制”。真要独立快照，明确复制。见 [numpy 接口条件](https://docs.pytorch.org/docs/2.14/generated/torch.Tensor.numpy.html)。
+`.numpy()` 默认要求 CPU、无需梯度且 dtype / layout 等受支持，返回值通常共享存储。`.numpy(force=True)` 会处理 detach、CPU 和共轭等转换，但不能理解为“无条件独立复制”。真要独立快照，可以用 `tensor.detach().cpu().numpy().copy()`（仍需 dtype / layout 受支持）。见 [numpy 接口条件](https://docs.pytorch.org/docs/2.14/generated/torch.Tensor.numpy.html)。
 
 `.tolist()` 生成 Python 嵌套数值，`list(tensor)` 则沿第一个轴拿到子 tensor。`.item()` 要求恰好一个元素，不要求一定是零维；它得到的 Python 数不再带梯度关系。CUDA 上频繁 `item()` 还可能引入 CPU 等待，所以通常用于日志，而不是拼 loss。
 

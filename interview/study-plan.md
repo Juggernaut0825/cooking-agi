@@ -51,10 +51,10 @@
 
 各方向先练什么、往下练什么，见[按岗位选练习](ai-roles-prep.md#routes)的表。下面只给每个方向一个接着做的练习：
 
-- **MLE / Research Engineer**：从 [ML 手写练习](../learn/ml-exercises/README.md) 里选一个实现，例如稳定的 softmax 或 attention；先做小输入，再检查输出、梯度和边界。做 LLM 接着看[后训练实践](../practice/post-training/README.md)，做推荐与检索选[推荐系统拆解](../practice/recommender-systems/README.md)。
-- **Inference / ML Systems**：沿[一条推理请求](../06-systems/inference-frameworks.md)看每个模块的输入和输出，再挑一个约束：显存不够、排队太久，或者长请求拖慢短请求。写下两种方案，说明各自改变哪一段、还需要测什么。做[系统设计练习](../learn/system-design/README.md)时，先定 workload 与延迟目标，再谈组件。
-- **通用 Coding / SWE**：先把 [Python 与 LeetCode](leetcode.md) 和[读代码](code-comprehension.md)放进安排，每次练一个方法，再改一个条件看看还能不能用。本站主要从 ML 与 AI 系统的角度组织内容，具体要补哪些语言、后端或系统知识，看岗位和面试说明。
-- **Research Scientist**：挑一篇自己做过或认真读过的论文，讲清问题、对照实验和结论的范围，再提出一个能区分两种解释的后续实验。[评估基础](../07-evaluation/README.md)可以帮你检查“指标涨了”是否支持自己的解释。相关实现也要练，研究方向的专业积累这条路线替代不了。
+- <span id="mle-research-engineer"></span>**MLE / Research Engineer**：从 [ML 手写练习](../learn/ml-exercises/README.md) 里选一个实现，例如稳定的 softmax 或 attention；先做小输入，再检查输出、梯度和边界。做 LLM 接着看[后训练实践](../practice/post-training/README.md)，做推荐与检索选[推荐系统拆解](../practice/recommender-systems/README.md)。
+- <span id="inference-ml-systems"></span>**Inference / ML Systems**：沿[一条推理请求](../06-systems/inference-frameworks.md)看每个模块的输入和输出，再挑一个约束：显存不够、排队太久，或者长请求拖慢短请求。写下两种方案，说明各自改变哪一段、还需要测什么。做[系统设计练习](../learn/system-design/README.md)时，先定 workload 与延迟目标，再谈组件。
+- <span id="coding-swe"></span>**通用 Coding / SWE**：先把 [Python 与 LeetCode](leetcode.md) 和[读代码](code-comprehension.md)放进安排，每次练一个方法，再改一个条件看看还能不能用。本站主要从 ML 与 AI 系统的角度组织内容，具体要补哪些语言、后端或系统知识，看岗位和面试说明。
+- <span id="research-scientist"></span>**Research Scientist**：挑一篇自己做过或认真读过的论文，讲清问题、对照实验和结论的范围，再提出一个能区分两种解释的后续实验。[评估基础](../07-evaluation/README.md)可以帮你检查“指标涨了”是否支持自己的解释。相关实现也要练，研究方向的专业积累这条路线替代不了。
 
 不管哪个方向，算法和读代码都要留时间，不能只练架构图。
 
@@ -98,7 +98,9 @@
 | 讲清 reference 和 old policy | [Q-learning、PPO、DPO：到底在学什么？](../05-post-training/deep-rl/methods-map.md) | 分别解释它们的用途、什么时候更新，以及混用会改掉什么目标。 | 35 分钟 |
 | 选一次训练并行方案 | [训练框架怎么选：从 DDP 到 FSDP2](../06-systems/training-frameworks.md) | 给定显存和卡数，比较 DDP 与 FSDP，并列出换框架后的正确性检查。 | 40 分钟 |
 
-### 推理与 ML 系统
+<span id="ml"></span>
+
+### 推理与 ML 系统 {#systems-exercises}
 
 **起步 · 一条请求怎么跑起来**：会调用模型 API，想看懂服务背后发生了什么。
 

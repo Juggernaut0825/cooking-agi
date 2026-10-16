@@ -4,7 +4,7 @@
 
 > Reading time: ~11 min · Draft, pending review
 
-An 8B model generating one token at a time at batch 1 on an H100 needs at least 4.77 ms per step just to read its BF16 weights; stored as INT4 in groups of 128 (W4A16), it needs only 1.45 ms. Yet for the same model at batch 256, the two floors are 4.77 against 4.14 ms. **What weight-only compression buys is fewer bytes read during decode: at small batch the speedup is almost proportional to the bytes saved, and it disappears once the batch is large enough to be compute-bound. The methods of post-training quantization (PTQ) all use a small calibration set to keep the error from affecting the layer's output: GPTQ pushes each column's error onto the columns not yet quantized, and AWQ first scales up the channels that matter, judged by activation size. To bring the activations down to 8 bits as well, you first need a transformation such as SmoothQuant that moves the activation outliers onto the weights.**
+An 8B model generating one token at a time at batch 1 on an H100 needs at least 4.77 ms per step just to read its BF16 weights; stored as INT4 in groups of 128 (W4A16), it needs only 1.45 ms. Yet for the same model at batch 256, the two floors are 4.77 against 4.14 ms. **What weight-only compression buys is fewer bytes read during decode: at small batch the speedup is almost proportional to the bytes saved, and it disappears once the batch is large enough to be compute-bound. Post-training quantization (PTQ) methods such as GPTQ and AWQ use a small calibration set to limit layer-output error (RTN needs no calibration): GPTQ pushes each column's error onto the columns not yet quantized, and AWQ first scales up the channels that matter, judged by activation size. To bring the activations down to 8 bits as well, a transformation such as SmoothQuant can move activation outliers onto the weights, but is not required by every model or FP8 scheme.**
 
 > **Draft, pending review.** The site owner has not reviewed this note yet; facts, emphasis and wording may change. Check the primary sources linked in the text before relying on it.
 
@@ -26,7 +26,7 @@ A public measurement: [GPTQ (2022-10)](https://arxiv.org/abs/2210.17323) compres
 
 ### When the batch grows
 
-W4A16 still computes on BF16 Tensor Cores after dequantizing, so its compute ceiling is the same as BF16; W8A8 FP8 doubles the compute ceiling. Each step takes $\max(\text{bytes}/\text{bandwidth},\ \text{operations}/\text{peak})$, still without KV:
+The W4A16 kernel assumed here dequantizes to BF16, leaving the ideal linear-layer compute ceiling unchanged. FP8 roughly doubles the hardware peak for the quantized portion, but the output layer still uses BF16. Per-token linear-layer compute time is therefore at least $2(7.5\times10^9)/(1978.9\times10^{12})+2(0.5\times10^9)/(989.4\times10^{12})\approx8.591\,\mu s$: about 116,405 tok/s at saturation, roughly 1.88 times all-BF16 rather than twice. Each step takes $\max(\text{bytes}/\text{bandwidth},\ \text{operations}/\text{peak})$, still without KV:
 
 | Batch | BF16: per step · tokens/s | W4A16: per step · tokens/s | W8A8 FP8: per step · tokens/s |
 | ---: | ---: | ---: | ---: |
@@ -37,7 +37,7 @@ W4A16 still computes on BF16 Tensor Cores after dequantizing, so its compute cei
 | 256 | 4.77 ms · 53,632 | 4.14 ms · 61,838 | 2.54 ms · 100,954 |
 | 512 | 8.28 ms · 61,838 | 8.28 ms · 61,838 | 4.40 ms · 116,405 |
 
-Reading the W4A16 weights takes 1.45 ms, while the compute at batch $B$ takes $B\times1.6\times10^{10}/989.4\times10^{12}$; the two are equal at $B\approx90$, and beyond that point W4A16 is compute-bound just like BF16. BF16 and FP8 both cross over at $B\approx295$, but the FP8 compute ceiling is twice as high. These are upper bounds at peak; real kernels fall behind earlier: [Marlin (2024-08)](https://arxiv.org/abs/2408.11743) self-reports close to the ideal 4× up to batch 16–32, shrinking gradually after that to about 1.5× at batch 128. [Kurtic et al. (2024-11, ACL 2025)](https://arxiv.org/abs/2411.02355) reach the same direction on vLLM: in synchronous, latency-sensitive deployments W4A16 is the most cost-efficient, in asynchronous continuous batching W8A8 gives the highest throughput, and the crossover depends on model, hardware and task. This table leaves out the KV cache. Once each request's own KV is added, the bytes read per step grow with the batch, so decode becomes compute-bound later, but the weights are only part of what is read and the speedup is diluted: with 4K tokens of BF16 KV per request at batch 64, W4A16 is only about 1.28× faster (11.7 against 15.0 ms), see [Performance](../performance.en.md#decode-batching).
+Reading the W4A16 weights takes 1.45 ms, while the compute at batch $B$ takes $B\times1.6\times10^{10}/989.4\times10^{12}$; the two are equal at $B\approx90$, and beyond that point W4A16 is compute-bound just like BF16. BF16 and FP8 both cross over at $B\approx295$, but this mixed FP8/BF16 model has a saturation-throughput ceiling about 88% higher. These are upper bounds at peak; real kernels fall behind earlier: [Marlin (2024-08)](https://arxiv.org/abs/2408.11743) self-reports close to the ideal 4× up to batch 16–32, shrinking gradually after that to about 1.5× at batch 128. [Kurtic et al. (2024-11, ACL 2025)](https://arxiv.org/abs/2411.02355) reach the same direction on vLLM: in synchronous, latency-sensitive deployments W4A16 is the most cost-efficient, in asynchronous continuous batching W8A8 gives the highest throughput, and the crossover depends on model, hardware and task. This table leaves out the KV cache. Once each request's own KV is added, the bytes read per step grow with the batch, so decode becomes compute-bound later, but the weights are only part of what is read and the speedup is diluted: with 4K tokens of BF16 KV per request at batch 64, W4A16 is only about 1.28× faster (11.7 against 15.0 ms), see [Performance](../performance.en.md#decode-batching).
 
 ## The simplest approach: round to nearest (RTN)
 
@@ -53,7 +53,7 @@ $$
 \hat W=\arg\min_{\hat W}\ \big\|WX-\hat WX\big\|_2^2,
 $$
 
-where $W$ is the layer's weight (one row per output) and $X$ is the layer's input on the calibration data, one column per token. For one row of weights $w$ this is a quadratic function with Hessian $H=2XX^\top$. GPTQ inherits the formula from OBQ (Optimal Brain Quantization): after quantizing the $q$-th weight, the remaining unquantized weights $F$ are updated as follows to minimize the output error:
+where $W$ is the layer's weight (one row per output) and $X$ is the layer's input on the calibration data, one column per token. For one row of weights $w$ this is a quadratic function with Hessian $H=2XX^\top$. GPTQ inherits the formula from OBQ (Optimal Brain Quantization): after quantizing the $q$-th weight, update the current free set $F$, which still includes $q$, using its Hessian $H_F$. The update at $q$ moves it onto the quantization grid; then freeze $q$ and remove it from $F$. The other components compensate for its error:
 
 $$
 \delta_F=-\frac{w_q-\operatorname{quant}(w_q)}{[H_F^{-1}]_{qq}}\,\big(H_F^{-1}\big)_{:,q}.

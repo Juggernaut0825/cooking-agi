@@ -179,7 +179,7 @@ assert registered_model(torch.ones(3, 2)).shape == (3, 2)
 
 ## 6. 保存和日志，也要说清恢复了什么
 
-下面做一次内存中的保存与读取，不创建文件。`deepcopy` 得到独立快照，避免后面的训练继续改变你以为已保存的内存状态。`weights_only=True` 是这里显式使用的加载选项，不是让你随便加载不可信文件。
+下面做一次内存中的保存与读取，不创建文件。`deepcopy` 得到独立快照，避免后面的训练继续改变你以为已保存的内存状态。`weights_only=True` 限制反序列化可用的对象类型，但不保证任意文件安全；仍只加载可信来源的 checkpoint。
 
 ```python
 import copy

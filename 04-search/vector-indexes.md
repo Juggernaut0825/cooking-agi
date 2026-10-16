@@ -101,7 +101,9 @@ IVF 负责少找几个区域，PQ 负责少存一些数。常见的 IVFADC 还�
 
 [HNSW](https://arxiv.org/abs/1603.09320)用分层邻接图寻找近邻：先在稀疏的上层移动，再在下层扩大搜索。它没有要求把所有向量压成 PQ 码；图结构本身也占内存。
 
-它有三个要调的参数：`M` 是每个节点在每层最多连几条边，越大图越密、内存越多；`efConstruction` 是建图时保留的候选数，越大建得越慢、图质量越好；查询时的 `ef`（很多库叫 `efSearch`）是搜索时保留的候选数，越大 recall 越高、延迟也越高。以 pgvector 为例，三者对应 `m`、`ef_construction` 和 `hnsw.ef_search`，默认值分别是 16、64 和 40（[pgvector 文档](https://github.com/pgvector/pgvector#hnsw)，v0.8.7，2026-10-16 核对）。
+它有三个常用调参项：`M` 控制邻接表容量，不能直接当成每层实际边数；例如 pgvector v0.8.7 的上层容量为 `m`，底层为 `2m`，所以 `m=16` 对应底层最多 32 个邻居槽位，而不是每层都最多 16 条边。[该版本实现：HnswGetLayerM](https://github.com/pgvector/pgvector/blob/v0.8.7/src/hnsw.h)
+
+`efConstruction` 控制建图时的候选列表宽度；查询时的 `ef`（很多库叫 `efSearch`）控制搜索候选列表宽度，不是最终返回条数，也不是访问节点总数。加大这些参数通常用更多内存或计算换取更高召回，但不保证每次加大都有收益。pgvector v0.8.7 的 `m`、`ef_construction`、`hnsw.ef_search` 默认分别为 16、64、40；应在同一查询集上测召回与延迟曲线。[pgvector 文档](https://github.com/pgvector/pgvector/tree/v0.8.7#hnsw)（2026-10-16 核对）
 
 | 方案 | 先试它的理由 | 不能省略的检查 |
 | --- | --- | --- |

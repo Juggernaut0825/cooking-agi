@@ -4,11 +4,11 @@
 
 > 阅读时间：约 12 分钟 · 最近审阅：2026-10
 
-机械臂每推一次杯子，都要有人把杯子摆回去；推掉了，杯子还可能摔碎。能不能先从记录下来的交互里学一个模型，让策略在模型“想象”出的轨迹上练成千上万次，再上真机？Dreamer 系列就是这么做的。**它学一个紧凑的 latent 动力学模型，actor-critic 只在想象出的 latent 轨迹上学习；省下的是真实交互，代价是策略会继承、甚至利用模型的错误。**
+机械臂每推一次杯子，都要有人把杯子摆回去；推掉了，杯子还可能摔碎。能不能从交互记录里学一个模型，让策略先在模型“想象”出的轨迹上练习，再回到环境收集反馈？这是理解 Dreamer 的教学情境，不是本页复现过的真机实验。**Dreamer 用学到的动力学产生策略训练轨迹；这能减少所需的环境交互，但策略也可能继承、甚至利用模型的错误。** V1–V3 通常交替收集数据与训练，不是先收一批离线数据便永远不再交互；Dreamer 4 的全离线设置在后面单独介绍。
 
 ## Dreamer 把计算放在训练时
 
-[Model-based RL 那篇](../../05-post-training/deep-rl/model-based.md)里的 MPC，每次决策都要用模型搜索一串动作。Dreamer 走另一条路：模型只在训练时用来“做梦”，部署时直接从 actor 采样动作。DreamerV3 论文写明，和环境交互时不做前瞻规划（[Hafner 等，DreamerV3](https://arxiv.org/abs/2301.04104)，“Critic learning”一节）。它就是[规划那篇](../../05-post-training/deep-rl/planning-and-control.md)表格里的 “Latent imagination” 一行。
+[Model-based RL 那篇](../../05-post-training/deep-rl/model-based.md)里的 MPC，每次决策都要用模型搜索一串动作。Dreamer 部署时不搜索未来动作序列，但仍要把当前观测编码，并通过 RSSM 更新 $(h_t,z_t)$，再交给 actor。省掉的是前瞻规划，不是世界模型的全部计算；[官方 `policy` 实现](https://github.com/danijar/dreamerv3/blob/main/dreamerv3/agent.py)也先调用编码器和 `dyn.observe`。下文 V3 的公式与超参按 [arXiv v2（2023）](https://arxiv.org/html/2301.04104v2)解释，不把它们当作 Nature 2025 版或当前代码的通用配置。
 
 来历：[PlaNet（2018）](https://arxiv.org/abs/1811.04551)提出同时有确定性和随机部分的 latent 动力学，并在 latent 空间里在线规划；[Dreamer（2019）](https://arxiv.org/abs/1912.01603)去掉在线规划，改为把学到的价值估计沿想象轨迹反传，训练 actor-critic。
 
@@ -77,7 +77,7 @@ $$
 
 论文式 (5) 把 $r,c,v$ 的下标都写成 $t$；这里写成 $t+1$，强调它们都属于“下一步”。可以用 $\lambda=0$ 检查：目标变成 $r_{t+1}+\gamma c_{t+1}v_{t+1}$，正是一步 TD 目标。
 
-critic 用最大似然拟合这个目标，$\mathcal L(\psi)=-\sum_t\ln p_\psi(R^\lambda_t\mid s_t)$，输出是指数间隔分箱上的类别分布。actor 的损失（论文式 6–7）：
+critic 用最大似然拟合这个目标，$\mathcal L(\psi)=-\sum_t\ln p_\psi(R^\lambda_t\mid s_t)$，输出是指数间隔分箱上的类别分布。V3 v2 的 “Critic learning” 还包含回放轨迹上的价值损失（权重 0.3，想象轨迹为 1），所以不能把 actor 和 critic 都说成“只在想象轨迹上训练”。这里先展开想象部分；actor 的损失（论文式 6–7）：
 
 $$
 \mathcal L(\theta)=-\sum_t\Big[\operatorname{sg}\Big(\frac{R^\lambda_t-v_\psi(s_t)}{\max(1,S)}\Big)\log\pi_\theta(a_t\mid s_t)+\eta\,\mathrm H[\pi_\theta(\cdot\mid s_t)]\Big],\qquad
@@ -110,13 +110,13 @@ $$
 
 换一个条件看 $\lambda$：$\lambda=0$ 时 $R^\lambda_0=r_1+\gamma v_1=0.45$，完全相信 critic；$\lambda=1$ 时变成 $0.9^2\times1+0.9^3\times0.8\approx1.393$，完全相信想象出的奖励，只在末端用一次 $v_3$。$\lambda=0.5$ 落在两者之间。
 
-再换一个条件看模型错误。假设模型在第 2 步错误地预测杯子掉了，给出 $r_2=-1$、$c_2=0$。那么 $R^\lambda_1=-1$，$R^\lambda_0=0.9\times(0.5\times0.5+0.5\times(-1))=-0.225$，优势变成 $-0.825$：actor 学会躲开一个其实安全的动作。反过来，如果模型漏掉了真实的掉落，actor 就会学着去推。**actor 只看得到模型给的数字，看不到真实世界。**
+再换一个条件看模型错误。假设模型在第 2 步错误地预测杯子掉了，给出 $r_2=-1$、$c_2=0$。那么 $R^\lambda_1=-1$，$R^\lambda_0=0.9\times(0.5\times0.5+0.5\times(-1))=-0.225$，优势变成 $-0.825$：actor 学会躲开一个其实安全的动作。反过来，如果模型漏掉了真实的掉落，actor 就会学着去推。**这次想象更新依赖模型预测，并未拿这些候选动作去真实环境验证；之后的真实交互仍会为模型训练提供数据。**
 
 ## DreamerV2、V3 改了什么
 
 | 版本 | 主要改动 | 作者报告的结果 |
 | --- | --- | --- |
-| [DreamerV2](https://arxiv.org/abs/2010.02193)（2020） | 随机 latent 从高斯换成 32 个各有 32 类的类别变量；KL balancing | 第一个完全在单独训练的世界模型里学行为、在 Atari 55 个任务上达到人类水平的 agent；单张 V100 不到 10 天跑完 2 亿环境步 |
+| [DreamerV2](https://arxiv.org/html/2010.02193v4)（2020） | 随机 latent 从高斯换成 32 个各有 32 类的类别变量；KL balancing | 55 个 Atari 游戏的玩家归一化分数中位数为 2.15，不是每个游戏都超过人类；每个游戏单独训练，单张 V100 不到 10 天处理 2 亿环境帧，动作重复 4 次后对应 5000 万次观测 |
 | [DreamerV3](https://arxiv.org/abs/2301.04104)（2023；[Nature 2025](https://www.nature.com/articles/s41586-025-08744-2)） | 一套固定超参；symlog 变换、KL balance 加 free bits、类别分布混入 1% 均匀分布、按百分位归一化回报、symexp twohot 输出头 | 一套配置跑 150 多个任务；摘要称它是“the first algorithm to collect diamonds in Minecraft from scratch without human data or curricula”（第一个不用人类数据和课程、从零在 Minecraft 里拿到钻石的算法），每次 Minecraft 运行都在 1 亿环境步内找到钻石 |
 
 这些改动大多为了“不调参也能跑”：奖励尺度可能差几个数量级，所以用 $\operatorname{symlog}(x)=\operatorname{sign}(x)\ln(|x|+1)$ 压缩目标；1% 的均匀混合让类别分布永远不会变成确定的，KL 不会突然暴涨。论文的算力对比是 VPT 用 720 张 GPU 训练 9 天拿到钻石，DreamerV3 用 1 张 GPU 训练 9 天；但 DreamerV3 用的是 MineRL 比赛的动作空间，里面有抽象的合成动作。

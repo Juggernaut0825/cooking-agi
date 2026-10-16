@@ -48,6 +48,14 @@ def validate(data):
         require(all(translated(node.get(field)) for field in ("title", "body", "limit")), f"missing translation: {name}")
         require("detail" not in node or translated(node["detail"]), f"missing detail translation: {name}")
         require("hook" not in node or translated(node["hook"]), f"missing hook translation: {name}")
+        notes = node.get("notes", [])
+        require(isinstance(notes, list) and len(notes) <= 3, f"use up to three linked notes: {name}")
+        for note in notes:
+            require(isinstance(note, dict) and translated(note.get("title")), f"invalid note title: {name}")
+            path = note.get("path", "")
+            require(isinstance(path, str) and re.fullmatch(r"[a-z0-9][a-z0-9/-]*/(?:[a-z0-9-]+|README)\.md", path), f"invalid note path: {name}")
+            for suffix in (".md", ".en.md"):
+                require((DATA.parents[2] / (path[:-3] + suffix)).is_file(), f"missing linked note: {name}: {path}")
         require("detail" not in node or len(node["detail"]["zh"].split("\n\n")) == len(node["detail"]["en"].split("\n\n")),
                 f"detail paragraphs differ between languages: {name}")
         require(isinstance(node.get("sources"), list) and node["sources"], f"missing sources: {name}")
@@ -156,7 +164,13 @@ def render(data, language):
                     f'aria-pressed="false" aria-controls="chronicle-content" disabled><i aria-hidden="true"></i>{text(topic["title"])}<small>{count(topic["id"])}</small></button>'
                     for layer in data["layers"] for topic in data["topics"] if topic["layer"] == layer["id"])
     bar = (f'<div class="ch-bar"><div class="ch-fields" role="group" aria-label="{say("按领域看", "Filter by field")}">'
-           f'<button type="button" class="ch-field ch-field-all" data-filter-reset aria-pressed="true" disabled>{say("全部", "All")}</button>{chips}</div></div>')
+           f'<button type="button" class="ch-field ch-field-all" data-filter-reset aria-pressed="true" disabled>{say("全部", "All")}</button>{chips}</div>'
+           f'<div class="ch-branches" data-branches hidden><label for="chronicle-branch">{say("分支", "Branch")}</label>'
+           f'<select id="chronicle-branch" data-track-select aria-controls="chronicle-content">'
+           f'<option value="">{say("全部分支", "All branches")}</option>'
+           + ''.join(f'<option value="{track["id"]}" data-topic="{topic["id"]}">{text(track["title"])}</option>'
+                     for topic in data["topics"] for track in topic.get("tracks", []))
+           + f'</select><span class="ch-result-count" data-result-count role="status"></span></div></div>')
 
     def item(node, key):
         name = node["id"]
@@ -164,7 +178,7 @@ def render(data, language):
         title = split_title(node["title"][language])[0]
         line = hook(node)
         line = f'<span class="ch-item-hook">{escape(line)}</span>' if line else ''
-        return (f'<li data-work-topic="{node["topic"]}" data-layer="{layer}"{" data-key" if key else ""}><a class="ch-item" href="#event-{name}" data-node="{name}" data-topic="{node["topic"]}" data-layer="{layer}">'
+        return (f'<li data-work-topic="{node["topic"]}" data-work-track="{node.get("track", "")}" data-layer="{layer}"{" data-key" if key else ""}><a class="ch-item" href="#event-{name}" data-node="{name}" data-topic="{node["topic"]}" data-layer="{layer}">'
                 f'<span class="ch-item-top"><time>{node["year"]}</time><span class="ch-item-name">{escape(title)}</span></span>{line}</a></li>')
 
     periods = []
@@ -210,7 +224,10 @@ def render(data, language):
         phrase = f'<span class="ch-sub">{escape(phrase)}</span>' if phrase else ''
         track = track_names.get((node["topic"], node.get("track")))
         track = f' · {escape(track)}' if track else ''
-        return (f'<article class="chronicle-work" id="event-{name}" data-work-topic="{node["topic"]}" data-layer="{topic["layer"]}" data-era="{era_of[name]}" aria-labelledby="event-{name}-title">{alias}'
+        notes = ''.join(f'<li><a href="../{escape(note["path"][:-3] + (".md" if chinese else ".en.md"), quote=True)}">{text(note["title"])} <span aria-hidden="true">→</span></a></li>'
+                        for note in node.get("notes", []))
+        notes = f'<nav class="ch-notes" aria-label="{say("相关笔记", "Related notes")}"><p>{say("展开读", "Read more")}</p><ul>{notes}</ul></nav>' if notes else ''
+        return (f'<article class="chronicle-work" id="event-{name}" data-work-topic="{node["topic"]}" data-work-track="{node.get("track", "")}" data-layer="{topic["layer"]}" data-era="{era_of[name]}" aria-labelledby="event-{name}-title">{alias}'
                 f'<p class="ch-work-meta"><time>{node["year"]}</time><span class="ch-topic"><i aria-hidden="true"></i>{text(topic["title"])}{track}</span>'
                 f'<span>{kinds[node["kind"]]}</span>{status}</p>'
                 f'<h3 id="event-{name}-title" data-work-title><span class="ch-name">{escape(title)}</span>{phrase}</h3>'
@@ -219,7 +236,7 @@ def render(data, language):
                 f'<div class="chronicle-more-body">{detail}<p class="ch-fold-label">{say("留下的问题", "Left open")}</p>'
                 f'<p class="chronicle-limit">{text(node["limit"])}</p>{evidence}</div></details>'
                 f'<details class="chronicle-references"><summary>{say("来源", "Sources")} <span class="chronicle-source-count">{len(node["sources"])}</span></summary>'
-                f'<ol class="chronicle-sources">{sources}</ol></details></article>')
+                f'<ol class="chronicle-sources">{sources}</ol></details>{notes}</article>')
 
     library = (f'<div class="ch-library" data-library aria-label="{say("全部节点", "All milestones")}">'
                f'{"".join(article(nodes[name]) for name in canonical)}</div>')

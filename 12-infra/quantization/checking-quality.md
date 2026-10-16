@@ -42,7 +42,7 @@ $$
 - 位置 1：$p=[0.60,\ 0.25,\ 0.10,\ 0.05]$，$q=[0.52,\ 0.30,\ 0.12,\ 0.06]$。KL 约 0.0129；最可能的 token 没变。
 - 位置 2：$p=[0.40,\ 0.38,\ 0.12,\ 0.10]$，$q=[0.37,\ 0.41,\ 0.12,\ 0.10]$。KL 约 0.0023，不到位置 1 的五分之一，可是前两名换了位置。
 
-贪心解码时，位置 2 会输出另一个 token，后面的每一步都建立在不同的前缀上，整段文本从这里分叉。所以要同时报**平均 KL** 和 **top-1 一致率**，并且去看 KL 最大、或者前两名很接近的那些位置。Dutta 等报告，在 MMLU 上 KL 和翻转率的 Spearman 相关系数是 0.981；Llama2-13B 在 WikiText-2 上的 KL，GPTQ W8A16 是 $7.9\times10^{-5}$，GPTQ W4A16 是 0.02。[Kurtic 等（2024-11）](https://arxiv.org/abs/2411.02355)用贪心解码在 Arena-Hard 提示上比较量化前后的回答，8B 在 FP8、INT8、INT4 三种方案上平均，ROUGE-L 只有 0.46，BERTScore 却有 0.92：**措辞变了不少，意思大多还在**，所以逐字比较文本没有意义，要比分布和任务分数。
+贪心解码时，位置 2 会输出另一个 token，后面的每一步都建立在不同的前缀上，整段文本从这里分叉。所以要同时报**平均 KL** 和 **top-1 一致率**，并且去看 KL 最大、或者前两名很接近的那些位置。Dutta 等报告，在 MMLU 上 KL 和翻转率的 Spearman 相关系数是 0.981；Llama2-13B 在 WikiText-2 上的 KL，GPTQ W8A16 是 $7.9\times10^{-5}$，GPTQ W4A16 是 0.02。[Kurtic 等（2024-11）](https://arxiv.org/abs/2411.02355)用贪心解码在 Arena-Hard 提示上比较量化前后的回答，8B 在 FP8、INT8、INT4 三种方案上平均，ROUGE-L 只有 0.46，BERTScore 却有 0.92：这说明词面重合与嵌入相似度给出的信号不同，不能仅凭 BERTScore 断言事实或意思保真。一个否定词、数字或代码符号的变化就可能改变答案；开放式改写不宜只看逐字相同，数值、代码和严格格式任务则仍要做精确匹配、执行检查或人工核验。
 
 还有一个容易漏的偏差：困惑度要在校准数据之外的文本上测。[GPTQ](https://arxiv.org/abs/2210.17323) 自己注明，校准数据取自 C4 训练集，所以它报告的 C4 困惑度不完全是零样本结果。用你自己领域的留出文本，而且不要和校准集重叠。
 
@@ -67,22 +67,31 @@ $$
 from math import comb, sqrt
 
 def paired_report(base_correct, quant_correct):
+    base_correct = list(base_correct)
+    quant_correct = list(quant_correct)
+    if not base_correct or len(base_correct) != len(quant_correct):
+        raise ValueError("Need non-empty, equally sized paired results")
     pairs = list(zip(base_correct, quant_correct))
-    n = len(pairs)
-    lost = sum(b and not q for b, q in pairs)
-    gained = sum(q and not b for b, q in pairs)
-    d = (gained - lost) / n
-    se = sqrt(((gained + lost) / n - d * d) / n)
-    k = gained + lost
-    tail = sum(comb(k, j) for j in range(min(gained, lost) + 1))
-    p = min(1.0, 2 * tail / 2 ** k) if k else 1.0
-    return {"flips": k / n, "diff": d, "ci95": (d - 1.96 * se, d + 1.96 * se), "p": p}
+    count = len(pairs)
+    lost = sum(base and not quant for base, quant in pairs)
+    gained = sum(quant and not base for base, quant in pairs)
+    difference = (gained - lost) / count
+    standard_error = sqrt(((gained + lost) / count - difference ** 2) / count)
+    discordant = gained + lost
+    tail = sum(comb(discordant, index) for index in range(min(gained, lost) + 1))
+    p_value = min(1.0, 2 * tail / 2 ** discordant) if discordant else 1.0
+    return {
+        "flips": discordant / count,
+        "diff": difference,
+        "ci95": (difference - 1.96 * standard_error, difference + 1.96 * standard_error),
+        "p": p_value,
+    }
 
 base = [True] * 720 + [False] * 280
 quant = [True] * 690 + [False] * 30 + [True] * 26 + [False] * 254
-r = paired_report(base, quant)
-assert r["flips"] == 0.056 and abs(r["diff"] + 0.004) < 1e-12
-assert abs(r["p"] - 0.6889) < 1e-4
+report = paired_report(base, quant)
+assert report["flips"] == 0.056 and abs(report["diff"] + 0.004) < 1e-12
+assert abs(report["p"] - 0.6889) < 1e-4
 ```
 
 公开的测量（Dutta 等，MMLU 5-shot，表 5；翻转只数对→错和错→对，不数错→另一个错）：
@@ -121,7 +130,7 @@ assert abs(r["p"] - 0.6889) < 1e-4
 | 原模型和量化模型的版本或哈希 | 能复现、能回滚 |
 | 量化方法、工具及版本；位数、组长、对称与否；哪些层没压（输出层、embedding、sliding-window 层） | 同叫“INT4”，做法可以差很多 |
 | 校准数据的来源、条数、长度，是否和评测文本重叠 | GPTQ 的 C4 困惑度就是一例 |
-| 权重、激活、KV 各自的格式和 scale 定法（静态、动态、每个 head） | vLLM 未校准时 KV 的 scale 是 1.0 |
+| 权重、激活、KV 各自的格式和 scale 定法（静态、动态、每个 head） | 普通 FP8 未校准时 scale 回退为 1.0；动态逐 token/head 路径不同 |
 | 引擎版本、attention backend、kernel、GPU 型号 | 硬件不支持时会悄悄退回 W8A16 |
 | 评测协议：模板、解码参数、种子、上下文长度 | 量化前后必须一致 |
 | 两边的逐题结果；固定文本上的平均 KL 和 top-1 一致率 | 才能算翻转和配对区间 |
@@ -137,7 +146,7 @@ assert abs(r["p"] - 0.6889) < 1e-4
 | 长对话后半段开始出错 | KV 量化误差随长度积累，或某些层（如 sliding window）更敏感 | 关掉 KV 量化做对照；用跳过敏感层的选项 |
 | 偶发 NaN 或个别输出崩坏 | FP8 超出范围（溢出模式下 E4M3 会变 NaN）；静态 scale 偏小 | 统计激活和 KV 的最大值；改用饱和模式或动态 scale |
 | 显存省了，速度没变 | 硬件没有对应的 Tensor Core，退回反量化；或 batch 已经进入算力受限区 | 引擎日志里实际用的 kernel；GPU 的 compute capability；[第 2 篇](weight-only-and-ptq.md)的 batch 表 |
-| 量化前后的输出逐字不同 | 接近平局的 token 翻转以后，后文整体分叉 | 比较分布和任务分数，不比逐字文本 |
+| 量化前后的输出逐字不同 | 接近平局的 token 翻转以后，后文整体分叉 | 比较分布和任务分数；数值、代码、严格格式仍需精确检查 |
 
 这张表是排查的起点，不是诊断结论；每一行都要用对照实验确认。
 

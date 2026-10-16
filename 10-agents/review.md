@@ -23,7 +23,7 @@ workflow 用事先写好的代码路径串起模型和工具；agent 让模型�
 <details class="interview" markdown="1">
 <summary>为什么写代码是 agent 最成熟的场景之一？</summary>
 
-因为验证信号最强：代码能跑，测试能过，每一步都有客观反馈，agent 可以在沙箱里多试，通过后仍要人看 diff。相比之下，客服、个人助理这类场景很难自动判断对错，更依赖规则、权限和人工。即使在写代码的场景，测试通过也不等于改对了。
+因为不少编程步骤能得到编译器、测试和静态检查的可重复反馈，适合在受限环境里迭代；这不是说每一步都有完整的正确性判据。测试通过后仍要查需求、安全和 diff，沙箱也要限制凭据与网络。客服和个人助理同样可以检查部分状态与规则，但开放式结果往往还需要人工判断。
 
 </details>
 
@@ -58,7 +58,7 @@ workflow 用事先写好的代码路径串起模型和工具；agent 让模型�
 <details class="interview" markdown="1">
 <summary>级联和路由都是在小模型和 frontier 模型之间分配请求，区别在哪？</summary>
 
-级联让小模型先答，看了答案再决定要不要升级，所以判断更准，但被升级的请求要付两次钱，还要串着等两个模型。路由在看到答案之前就决定派给谁，每条请求只调用一次模型（另加路由开销）、延迟更低，但可能派错；派错后要靠输出检查或兜底补救，这部分成本和延迟也要算进去。两种方案都只有在难度判断足够准的时候才划算。
+级联先让小模型回答，再由检查器决定是否升级；多看了答案不保证判断更准，检查器也可能被流畅的错误答案骗过。请求前路由则只用生成前的信息选模型。按一次升级、无重试的简化设置，级联成本是 $C_A+v+uC_B$，路由成本是 $r+(1-u)C_A+uC_B$，其中 $u$ 是交给 B 的比例，$v$、$r$ 分别是检查和路由成本；两种方案的 $u$ 未必相同。升级会增加串行等待，路由也有误派与补救成本。质量和端到端延迟都要实测，不能由结构名保证。见[四条请求的算例](model-choice.md#routing-example)。
 
 </details>
 
@@ -79,7 +79,7 @@ workflow 用事先写好的代码路径串起模型和工具；agent 让模型�
 
 - [Building effective agents](https://www.anthropic.com/engineering/building-effective-agents)：workflow 与 agent 的区分和常见结构
 - [ReAct](https://arxiv.org/abs/2210.03629)：推理与行动交替
-- [SWE-bench](https://arxiv.org/abs/2310.06770)：用真实 issue 评估写代码的 agent；Verified 子集已接近做满，OpenAI 自 2026-02 起改为推荐 [SWE-bench Pro](https://arxiv.org/abs/2509.16941)
+- [SWE-bench](https://arxiv.org/abs/2310.06770)：用真实 issue 评估代码修改；Verified 的评分缺陷、污染问题和 OpenAI 转向推荐 Pro 的出处，见[不同场景怎么评估](scenarios.md)
 - [τ-bench](https://arxiv.org/abs/2406.12045)：带政策约束的工具与对话，以及 pass^k；后续的 [τ²-bench](https://arxiv.org/abs/2506.07982) 加入用户也要动手的 dual control，仓库截至 2026-10 已发布 τ³-bench
 - [WebArena](https://arxiv.org/abs/2307.13854)
 - [OSWorld](https://arxiv.org/abs/2404.07972)

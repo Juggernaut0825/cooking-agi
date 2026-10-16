@@ -20,21 +20,21 @@ W4A16 只压权重：省显存，decode 每步少读字节，batch 小时几乎�
 <details class="interview" markdown="1">
 <summary>一个离群值为什么能毁掉 per-tensor INT4？per-channel、per-group 各解决了多少？激活为什么不能按输入通道设 scale？</summary>
 
-步长由共用 scale 的那组数里的最大值决定。8 个权重的例子里最大值是 1.40 时 $s=0.2$，MSE 0.0042；换成 14.0，$s=2$，其余 7 个数全舍成 0，MSE 约 0.296。分组把伤害关在一组里，不能消除离群值。权重的输出通道、激活的 token 是 GEMM 的外侧维度，scale 可以在整数矩阵乘之后乘回去；激活的输入通道是求和的维度，scale 在点积中途变化，Tensor Core 的整数累加里插不进去。LLM 激活的离群值恰好固定在少数输入通道上，这就是 SmoothQuant 要做等价变换的原因。
+步长由共用 scale 的那组数里的最大值决定。8 个权重的例子里最大值是 1.40 时 $s=0.2$，MSE 0.0042；换成 14.0，$s=2$，其余 7 个数全舍成 0，按全部 8 个权重计算的 MSE 为 0.2592（只看未替换的 7 个是约 0.296）。分组把伤害关在一组里，不能消除离群值。权重的输出通道、激活的 token 是 GEMM 的外侧维度，scale 可以在整数矩阵乘之后乘回去；激活的输入通道是求和的维度，scale 在点积中途变化，Tensor Core 的整数累加里插不进去。LLM 激活的离群值恰好固定在少数输入通道上，这就是 SmoothQuant 要做等价变换的原因。
 
 </details>
 
 <details class="interview" markdown="1">
 <summary>FP8（E4M3）和 INT8 的误差有什么不同？MXFP4 和 NVFP4 又差在哪里？</summary>
 
-INT8 格子等距，绝对误差处处一样；E4M3 在每个 2 的幂区间里有 8 个格子，相对误差大致不变，最坏约 6.25%。对 $[0.02,-0.3,1.7,12]$ 做 per-tensor 量化，0.02 在 INT8 下变成 0，在 E4M3 下误差 0.45%；1.7 则是 INT8 更准。Qualcomm 的结论是看离群值：分布有明显离群值时 FP8 好，规整时 INT8 好。4 位时都要块缩放：MXFP4 每 32 个值共享一个 2 的幂 scale（E8M0），平均 4.25 位；NVFP4 每 16 个值一个 E4M3 scale，再乘张量级 FP32，平均 4.5 位。块 $[0.3,-1.2,2.4,5.0]$：MX 的 scale 只能取 1，5.0 读回 4，MSE 0.31；NVFP4 的 scale 取 0.8125，MSE 约 0.0072。
+INT8 格子等距，在不截断时绝对舍入误差的上界处处相同，不是实际误差处处相同；E4M3 在正规数范围内每个 2 的幂区间有 8 个格子，相对误差大致稳定，就近舍入可用约 6.25% 作上界。次正规数和溢出不适用。对 $[0.02,-0.3,1.7,12]$ 做 per-tensor 量化，0.02 在 INT8 下变成 0，在 E4M3 下误差 0.45%；1.7 则是 INT8 更准。Qualcomm 的结论是看离群值：分布有明显离群值时 FP8 好，规整时 INT8 好。4 位时都要块缩放：MXFP4 每 32 个值共享一个 2 的幂 scale（E8M0），平均 4.25 位；NVFP4 每 16 个值一个 E4M3 scale，再乘张量级 FP32，平均 4.5 位。块 $[0.3,-1.2,2.4,5.0]$：MX 的 scale 只能取 1，5.0 读回 4，MSE 0.31；NVFP4 的 scale 取 0.8125，MSE 约 0.0072。
 
 </details>
 
 <details class="interview" markdown="1">
 <summary>为什么 batch 1 时 W4A16 能快三倍多，batch 大了优势就没了？交点怎么估？</summary>
 
-batch 1 的 decode 每读 1 字节只做约 1 次运算，时间约等于权重字节除以带宽。教学 8B 模型 BF16 是 16 GB、4.77 ms；W4A16 g128（输出层保留 BF16）是 4.87 GB、1.45 ms，约 3.29 倍，不到 4 倍是因为没压的输出层和 scale。W4A16 用 BF16 算，batch $B$ 时运算时间是 $B\times2N/989.4$ TFLOPS，令它等于 1.45 ms，得 $B\approx90$；之后就和 BF16 一样被算力卡住，FP8 W8A8 的屋顶则高一倍。实测更早掉队：Marlin 自报 batch 16–32 以内接近 4 倍；Kurtic 等建议同步低延迟场景用 W4A16，高吞吐连续组 batch 用 W8A8。
+batch 1 的 decode 每读 1 字节只做约 1 次运算，时间约等于权重字节除以带宽。教学 8B 模型 BF16 是 16 GB、4.77 ms；W4A16 g128（输出层保留 BF16）是 4.87 GB、1.45 ms，约 3.29 倍，不到 4 倍是因为没压的输出层和 scale。W4A16 用 BF16 算，batch $B$ 时运算时间是 $B\times2N/989.4$ TFLOPS，令它等于 1.45 ms，得 $B\approx90$；之后就和 BF16 一样被算力卡住，FP8 部分的硬件峰值约翻倍，但本例保留 BF16 输出层，整体饱和吞吐上限只提高约 88%。实测更早掉队：Marlin 自报 batch 16–32 以内接近 4 倍；Kurtic 等建议同步低延迟场景用 W4A16，高吞吐连续组 batch 用 W8A8。
 
 </details>
 
@@ -55,7 +55,7 @@ GPTQ 逐层最小化 $\|WX-\hat WX\|^2$，Hessian 是 $H=2XX^\top$；量化一�
 <details class="interview" markdown="1">
 <summary>KV cache 量化时，为什么 key 要按通道、value 要按 token？</summary>
 
-KIVI 观察到 key 里有少数固定通道幅值特别大，value 没有明显离群模式，而 attention 输出主要来自少数重要 token 的 value。key 按 token 量化时，一行的步长被离群通道撑大：4×4 的例子里 2 bit 下普通通道全变成同一个值，分数从 $[1.2,0.9,0.9,1.6]$ 变成 $[0.3,-0.1,-0.8,0.6]$；按通道量化时最大误差只有 0.067。$K$ 本身的相对误差 8.6% 对 0.6%，低估了分数被破坏的程度。KIVI 在 Llama-2-7B 上，2 bit 两者都按 token 时 GSM8K 只剩 0.83，KIVI-2 是 12.74（16 位 13.50）。部署时还要注意引擎的默认值：vLLM 不校准时 KV 的 scale 全是 1.0。
+KIVI 观察到 key 里有少数固定通道幅值特别大，value 没有明显离群模式，而 attention 输出主要来自少数重要 token 的 value。key 按 token 量化时，一行的步长被离群通道撑大：4×4 的例子里 2 bit 下普通通道全变成同一个值，分数从 $[1.2,0.9,0.9,1.6]$ 变成 $[0.3,-0.1,-0.8,0.6]$；按通道量化时最大误差只有 0.067。$K$ 本身的相对误差 8.6% 对 0.6%，低估了分数被破坏的程度。KIVI 在 Llama-2-7B 上，2 bit 两者都按 token 时 GSM8K 只剩 0.83，KIVI-2 是 12.74（16 位 13.50）。部署时还要注意引擎的默认值：vLLM 普通 FP8 路径未提供校准 scale 时回退到 1.0；不能推广到动态 per-token-head 格式。
 
 </details>
 

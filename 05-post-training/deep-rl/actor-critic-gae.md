@@ -101,15 +101,19 @@ def gae(rewards, values, next_values, terminated, truncated,
     result = [0.0] * len(rewards)
     carry = 0.0
     for step in reversed(range(len(rewards))):
-        bootstrap = 0.0 if terminated[step] else next_values[step]
+        bootstrap = 0.0 if terminated[step] or gamma == 0 else next_values[step]
         residual = rewards[step] + gamma * bootstrap - values[step]
         same_episode = not (terminated[step] or truncated[step])
-        carry = residual + gamma * trace_decay * same_episode * carry
+        continuation = (gamma * trace_decay * carry
+                        if same_episode and gamma != 0 and trace_decay != 0 else 0.0)
+        carry = residual + continuation
         result[step] = carry
     return result
 ```
 
-next_values 必须来自对应 transition 的 final observation，不是 reset 后的 observation。Gymnasium 1.x 默认的 next-step autoreset 下，结束后的下一次 `step` 才返回 reset 后的观察，这一条要 mask 掉，不能拿来续接 GAE；细节见[MC、TD 与终止条件](returns-and-td.md)和 [Farama 的说明](https://farama.org/Vector-Autoreset-Mode)。普通 rollout buffer 到尾但任务没结束，也可以用尾部 value bootstrap，递推在 buffer 边界停下。
+这里用条件分支截断 continuation，不用零掩码去乘未来 carry：`0 * NaN` 仍是 NaN，下一回合的无效值不能因此污染已经终止或截断的前一回合。$\gamma=0$ 时也不读取无用的下一状态估值；有效动作自己的奖励或当前估值若无效，则仍应报错或单独检查，不能悄悄置零。
+
+next_values 必须来自对应 transition 的 final observation，不是 reset 后的 observation。对 [Gymnasium v1.1 的 vector autoreset 模式](https://farama.org/Vector-Autoreset-Mode)，应检查所选模式，而不是只看 `done`：next-step 模式下，结束后的下一次 `step` 才返回 reset 观察，该子环境这一次是重置，不是真实动作转移，要在进入 buffer 前排除；same-step 模式下，结束当步返回 reset 观察，要从 `info["final_obs"]` 取结束前的最终观察；disabled 模式由调用方显式 reset。其他 wrapper 或版本需核对自己的接口。普通 rollout buffer 到尾但任务没结束，也可以用尾部 value bootstrap，递推在 buffer 边界停下；详见[MC、TD 与终止条件](returns-and-td.md)。
 
 ## Critic 的误差怎样进入 Actor？
 

@@ -20,14 +20,14 @@ The skeleton stays: sample, score, update the policy by the advantage, and updat
 <details class="interview" markdown="1">
 <summary>Why are tokens returned by tools kept out of the loss? What happens if you do not mask them?</summary>
 
-The log-probability of a trajectory splits into two parts: the probability of the policy choosing its actions, plus the probability of the environment returning its observations. The latter does not depend on the parameters, so its gradient is zero and the policy gradient contains only action tokens to begin with. Without the mask, training would raise or lower the probability of "the model writing this file content or this error message itself", even though that text came from the environment; and since tool outputs are often much longer than actions, they would dominate the gradient. In Search-R1's ablation (2025-03), average exact match was 0.431 with the mask and 0.343 without. Masked tokens remain in the context; they just produce no gradient.
+With fixed environment dynamics, trajectory log-probability separates into action log-probabilities and conditional environment-transition log-probabilities. The latter have no direct derivative with respect to policy parameters, so only actions are policy-loss targets. Without the mask, environment text is incorrectly treated as something the model should generate or avoid generating. Search-R1's Qwen2.5-7B-base / PPO ablation reports average exact match of 0.431 with masking and 0.343 without. A loss mask does not stop later actions from depending on tool context: gradients can still flow through attention into parameters processing it. It is not correct to say tool positions have no gradient at all.
 
 </details>
 
 <details class="interview" markdown="1">
 <summary>Four 3-turn trajectories on the same task get rewards [1, 0, 1, 1]. What are the group-relative advantages, and which tokens receive gradient?</summary>
 
-The mean is 0.75 and the population standard deviation about 0.433, so the normalised advantages are [+0.577, −1.732, +0.577, +0.577]; dividing by $G-1$ gives [+0.5, −1.5, +0.5, +0.5]; without the standard deviation and with a leave-one-out baseline, as in DeepSWE, they are [+0.333, −1, +0.333, +0.333]. In the episode-level approach this number is spread over every model-generated token in that trajectory; the prompt and tool outputs such as file contents and test logs have mask 0. In the teaching example a trajectory has 1,800 tokens, of which only 200 action tokens receive gradient. A step shared by several trajectories (same context, same tokens) adds up its gradients; if all 4 had an identical first step, the sum would be 0.
+The mean is 0.75 and population standard deviation about 0.433, giving [+0.577, −1.732, +0.577, +0.577]. Using $G-1$ in the variance gives [+0.5, −1.5, +0.5, +0.5]; omitting standard-deviation scaling and using a leave-one-out baseline gives [+0.333, −1, +0.333, +0.333]. Episode-level advantages are shared by action tokens; prompts and tool outputs receive no direct policy loss. Of 1,800 positions in the example, 200 are direct loss targets. Shared first-step gradient terms cancel only under conditions such as matching probabilities, a common denominator, and no other losses; per-trajectory averaging changes the coefficients, as the [length-2 versus length-6 counterexample](credit-and-training.en.md) shows.
 
 </details>
 
@@ -55,7 +55,7 @@ OpenAI's Baker et al. (2025-03) recorded agents in training using `exit(0)` to l
 <details class="interview" markdown="1">
 <summary>How should a trajectory that hits the context limit, the step limit or a timeout be scored?</summary>
 
-Three choices. Scoring it 0 teaches the model to hand in early and systematically pushes down long tasks. Dropping it from the loss loses negative samples but stops penalising "not finished yet"; DeepSWE's (2025-07) compact filtering does this, reasoning that rewarding only deliberate submissions encourages careful testing. Treating it as truncated and bootstrapping the remaining return with a value estimate needs a critic. Environment failures need separate handling: GLM-5 excludes samples that failed because a sandbox crashed. Whatever you choose, count limit hits, timeouts and tool errors separately; a falling truncation rate is not necessarily better ability.
+Distinguish task budgets from external collection limits first. Exhausting a task's “finish within 10 steps or fail” budget is true termination and can legitimately earn zero. Pausing collection while a task can continue is truncation: resume to obtain a complete return, or bootstrap with a critic. Dropping the whole trajectory is another choice that changes the data distribution, not an automatically unbiased fix; DeepSWE's compact filtering is one example. Record infrastructure failures separately too; GLM-5 excludes sandbox-crash failures. A falling truncation rate is not necessarily better ability.
 
 </details>
 
@@ -71,7 +71,7 @@ A large share of the time is spent off the GPU: starting containers, running com
 <div class="taste-check">
   <strong>If you really understand it, you should be able to explain:</strong>
   <ol>
-    <li>Starting from the decomposition of a trajectory's log-probability, why should tool-output tokens produce no gradient, yet stay in the context?</li>
+    <li>Starting from trajectory log-probability, why do tool outputs have no direct policy loss while still influencing parameter gradients through later actions?</li>
     <li>With rewards [1, 0, 1, 1], what advantages do the three baseline conventions (population standard deviation, sample standard deviation, leave-one-out) give? Why does each sum to 0?</li>
     <li>When does a GiGPO anchor-state group add information beyond episode-level group-relative advantages, and when does it degrade to GRPO?</li>
     <li>In the "tests catch only some failures" example, how does the expected-reward formula show which outcome categories account for most of the reward gain under checker v1?</li>

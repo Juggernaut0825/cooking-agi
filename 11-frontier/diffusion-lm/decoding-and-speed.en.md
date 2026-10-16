@@ -54,7 +54,9 @@ The cost of a fixed $\tau$ has been measured by a third party. Kim et al. (2025-
 
 The 73.6 is the one-token-per-step baseline in this setting. It is not the same setting as LLaDA's self-reported 69.4 (generation length 512, no blocks), so the two cannot be compared directly; what the table compares is the drop from left to right.
 
-Adapting by confidence does much better, but those numbers come from the method's own authors: Fast-dLLM reports LLaDA on GSM8K (5-shot, generation length 256, A100 80GB) going from 79.3 to 78.5 while throughput rises from 6.7 to 54.4 tokens/s, 8.1 times, from caching and parallel decoding combined. Google's model card self-reports that DiffusionGemma generates 15–20 tokens per forward pass, with at most 48 denoising steps. In theory, [Feng et al. (2025-02)](https://arxiv.org/abs/2502.09622) prove that if only perplexity matters, the number of steps need not grow with sequence length, but if the whole sequence must be correct (a chain of reasoning, say), the number of steps must grow linearly with length, and the efficiency advantage over AR models is gone.
+Adapting by confidence does much better, but those numbers come from the method's own authors: Fast-dLLM reports LLaDA on GSM8K (5-shot, generation length 256, A100 80GB) going from 79.3 to 78.5 while throughput rises from 6.7 to 54.4 tokens/s, 8.1 times, from caching and parallel decoding combined. Google's model card self-reports that DiffusionGemma generates 15–20 tokens per forward pass, with at most 48 denoising steps. [Feng et al.'s Theorems 4.2 and 4.4](https://arxiv.org/html/2502.09622v2#S4) have narrower scopes: for a fixed-order n-gram distribution, bounded conditional-distribution learning error and a fixed error tolerance, among other assumptions, there exists a masking schedule whose step count is independent of length and whose token-level metric is near optimal. They also construct a hidden Markov model (HMM) for which controlling sequence error requires at least linearly many steps, even with a well-learned reverse model. The latter is a worst-case lower bound, not a proof that every reasoning task or practical dLLM has no speedup.
+
+The Fast-dLLM theorem above is not a blanket losslessness guarantee either. Its marginals must come from one joint distribution; it guarantees agreement of greedy joint maxima, not that independent sampling preserves the joint distribution or that model confidence is calibrated. At the default threshold of 0.9, this sufficient condition directly covers at most 9 positions committed together. More positions need not be wrong, but this theorem no longer guarantees them.
 
 ## KV cache: why bidirectional attention cannot be cached
 
@@ -79,9 +81,9 @@ Below about 295 positions, reading the weights dominates and extra positions are
 
 | Scheme | Positions per step | Lower bound per step | Steps | Total time | Relative to AR |
 | --- | --- | --- | --- | --- | --- |
-| AR + KV cache | 1 (plus one 512-token prefill, 7.24 ms) | 4.18 ms | 256 | 1,076 ms | 1× |
+| AR + KV cache | 1 (plus one 512-token prefill, 7.24 ms) | 4.18 ms | 255 | 1,072 ms | 1× |
 | Whole-sequence diffusion, no cache, 1 per step | 768 | 10.87 ms | 256 | 2,782 ms | 0.39× |
-| Same, 4 per step | 768 | 10.87 ms | 64 | 696 ms | 1.55× |
+| Same, 4 per step | 768 | 10.87 ms | 64 | 696 ms | 1.54× |
 | Blocks $G=32$ + prefix cache, 1 per step | 32 | 4.18 ms | 256 | 1,076 ms | 1.0× |
 | Same, 4 per step | 32 | 4.18 ms | 64 | 275 ms | 3.9× |
 
@@ -96,17 +98,19 @@ Now many concurrent requests (still the teaching model, decode phase only, block
 | 64 | 64 | 15,323 tok/s | 2,048 | 8,834 tok/s |
 | 295 | 295 | 70,631 tok/s | 9,440 | 8,834 tok/s |
 
-Diffusion uses up the compute at about 9 concurrent requests ($9\times32=288$ positions) and caps at 8,834 tok/s from then on, exactly 1/8 of AR's cap of 70,671: each committed token costs $G/\tau=8$ positions of compute. AR catches up at about 37 concurrent requests and is faster beyond that. Both tables can be recomputed with a few lines:
+AR prefill already produces the first generated token, so 256 output tokens require only 255 further decode passes; the block-diffusion teaching model counts prefill and denoising separately. Diffusion's compute crossover is at about $295.17/32=9.22$ concurrent requests: the first compute-bound integer batch is 10 (320 positions). It caps at 8,834 tok/s, exactly 1/8 of AR's cap of 70,671: each committed token costs $G/\tau=8$ positions of compute. AR catches up at about 37 concurrent requests and is faster beyond that. Both tables can be recomputed with a few lines:
 
 ```python
-W = 1.4e10 / 3.352e12 * 1e3      # reading the weights once: 4.18 ms
-C = 1.4e10 / 989.4e12 * 1e3      # compute per position: 0.01415 ms
-step = lambda n: max(W, n * C)   # lower bound for one forward pass over n positions
-prefill = step(512)              # 7.24 ms
-print(prefill + 256 * step(1), 256 * step(768), 64 * step(768))           # 1076 2782 696
-print(prefill + 64 * step(32), prefill + 72 * step(32))                   # 275 308 (the latter with 8 cache writes)
-for b in (1, 8, 64, 295):
-    print(b, round(b / step(b) * 1e3), round(4 * b / step(32 * b) * 1e3))  # AR and diffusion tok/s at concurrency b
+weight_read_ms = 1.4e10 / 3.352e12 * 1e3
+position_compute_ms = 1.4e10 / 989.4e12 * 1e3
+def step(positions):
+    return max(weight_read_ms, positions * position_compute_ms)
+
+prefill = step(512)
+print(prefill + 255 * step(1), 256 * step(768), 64 * step(768))
+print(prefill + 64 * step(32), prefill + 72 * step(32))
+for batch in (1, 8, 64, 295):
+    print(batch, round(batch / step(batch) * 1e3), round(4 * batch / step(32 * batch) * 1e3))
 ```
 
 Putting the two regimes together:
@@ -139,12 +143,12 @@ When you read "N times faster", ask four things first: at what concurrency; is t
 
 ## The relation to DFlash: diffusion only writes the draft
 
-[DFlash](../../00-foundations/deep-dives/dflash.en.md) (2026-02, ICML 2026) takes a different route: a small block-diffusion model reads the target model's features and writes a block of draft tokens in one forward pass; the AR target model verifies it and keeps only the contiguously accepted prefix. The target model's output distribution is unchanged, so the quality risk does not sit on the diffusion side. The authors self-report lossless speedups above 6 times across models and tasks, and up to 2.5 times the speedup of EAGLE-3. Its accounting has the same shape as above: drafting and verification both compute a whole block, and the more is accepted, the better the trade.
+[DFlash](../../00-foundations/deep-dives/dflash.en.md) (2026-02, ICML 2026) takes a different route: a small block-diffusion model reads the target model's features and writes a block of draft tokens in one forward pass; the AR target model verifies it and keeps only the contiguously accepted prefix. Distributional equivalence also requires exact verification: greedy decoding must match target tokens; stochastic decoding needs the correct acceptance rule and correction distribution at the first rejection, with matching target temperature and truncation settings ([the original speculative-decoding paper](https://proceedings.mlr.press/v202/leviathan23a.html)). Keeping a prefix alone is not sufficient. The authors self-report a maximum lossless speedup of about 6.1 times across their tested models and tasks, and up to 2.5 times the speedup of EAGLE-3. Its accounting has the same shape as above: drafting and verification both compute a whole block, and the more is accepted, the better the trade.
 
 | Route | Who decides the final token | Quality risk | Where the speed comes from | At high concurrency |
 | --- | --- | --- | --- | --- |
-| Native diffusion LM (LLaDA, DiffusionGemma) | The diffusion model itself | Tokens committed in parallel can be inconsistent; lower quality than the same family's AR model | $\tau$ tokens per step | Each token costs about $G/\tau$ times more compute |
-| Diffusion draft + AR verification (DFlash) | The AR target model | The target model's distribution is unchanged | Several draft tokens accepted per round | Drafting and verification both use compute; the gain shrinks too |
+| Native diffusion LM (LLaDA, DiffusionGemma) | The diffusion model itself | Tokens committed in parallel can be inconsistent; lower quality on some same-family benchmarks | $\tau$ tokens per step | Each token costs about $G/\tau$ times more compute |
+| Diffusion draft + AR verification (DFlash) | The AR target model | Distribution unchanged with exact verification and matching target sampling settings | Several draft tokens accepted per round | Drafting and verification both use compute; the gain shrinks too |
 | Plain autoregressive | The AR model | No extra risk | No parallelism | Throughput grows with batch until compute saturates |
 
 ## What to check when you try it

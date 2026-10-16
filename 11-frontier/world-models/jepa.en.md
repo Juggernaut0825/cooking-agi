@@ -4,7 +4,7 @@
 
 > Reading time: ~12 min · Last reviewed: 2026-10
 
-If the robot arm pushes 5 cm, will the cup fall? Ask a pixel-level video model and it must also draw the shadow's texture, the reflections on the table, even where the shards land. Most of that detail cannot be predicted, and none of it decides whether the cup falls. A JEPA (joint-embedding predictive architecture) works differently: it first encodes the future into a vector and asks only that the vector be predicted. **It skips unpredictable detail, at the price of having to stop the encoder from squashing everything into the same vector; and without a decoder you cannot see the frames it "imagines".**
+If a robot arm pushes 5 cm, will the cup fall? A pixel-level video model must also generate shadows and reflections, some hard to predict and potentially irrelevant to the task. A JEPA (joint-embedding predictive architecture) predicts representations of masked regions or future segments; I-JEPA targets image regions, not necessarily the future. **This objective allows an encoder to discard detail, but does not guarantee that only irrelevant information is discarded.** Constant representations must also be prevented, and predicted features cannot be rendered directly without an additional decoder.
 
 ## Where pixel prediction spends its effort
 
@@ -13,7 +13,7 @@ Imagine a frame with only 100 "pixels" (a teaching setup): 4 describe the cup's 
 - For the 96 random pixels, the best prediction is the mean 0, with expected error 1 each, 96 in total, and no amount of training lowers it;
 - For the 4 cup pixels, a right guess costs 0 and a wrong one (drawing "stayed" when it "fell") costs 1 each, 4 in total.
 
-So the total loss is 96 with the cup right and 100 with it wrong: the thing that actually decides the outcome is 4% of the loss, and the loss curve alone barely shows whether it was learned. For the 96 pixels the model outputs a grey average, the same problem as "averaging two paths into a wall" in the [model-based note](../../05-post-training/deep-rl/model-based.en.md); a generative model such as a diffusion model can draw sharp textures, but must then spend capacity learning their distribution.
+The total loss is 96 with the cup right and 100 with it wrong: the cup-related difference is only 4% of the latter total, so aggregate loss can obscure task progress. This does not prove that the cup cannot be learned: at the conditional mean, the irreducible noise has zero expected prediction gradient. Those 96 pixels become a grey average, as with “averaging two paths into a wall” in the [model-based note](../../05-post-training/deep-rl/model-based.en.md). Diffusion can generate sharp textures but must also learn their distribution.
 
 Now suppose an encoder compresses the frame into two numbers: (how far the cup moved along the table, whether it tipped). With the error computed only on those, a right and a wrong cup differ by 0 versus 2, and the whole loss is about the cup. This is exactly [LeCun (2022)](https://openreview.net/forum?id=BZ5a1r-kVsf)'s argument against generative architectures (§4.5–4.6): pixel-level futures such as leaves and textures are inherently unpredictable, and a JEPA can drop them.
 
@@ -67,13 +67,13 @@ LeCun 2022 takes VICReg as an example (§4.5.1): a variance term keeps each embe
 
 ### Fix two: an EMA target encoder plus stop-gradient
 
-I-JEPA and V-JEPA 2 use this one. The target encoder's parameters $\bar\theta$ receive no gradient; they are an exponential moving average of the context encoder's parameters, $\bar\theta\leftarrow m\bar\theta+(1-m)\theta$, with $m$ rising from 0.996 to 1.0 in I-JEPA (Appendix A). One step: $\bar\theta=1$, $\theta$ suddenly becomes 0, and after the update $\bar\theta=0.996$; even if $\theta$ stays at 0, $\bar\theta$ is still about 0.67 after 100 steps. The target moves slowly.
+I-JEPA and V-JEPA 2 use this one. The target encoder's parameters $\bar\theta$ receive no gradient; they are an exponential moving average of the context encoder's parameters, $\bar\theta\leftarrow m\bar\theta+(1-m)\theta$, with $m$ rising from 0.996 to 1.0 in I-JEPA (Appendix A). For a teaching calculation, fix $m=0.996$: start with $\bar\theta=1$ and let $\theta$ drop to 0. After one update $\bar\theta=0.996$; if $\theta$ stays at 0, after 100 steps $\bar\theta=0.996^{100}\approx0.67$. This uses fixed momentum, not the paper's full schedule.
 
 I-JEPA calls the EMA target encoder essential (§3), and V-JEPA 2 also says stop-gradient plus EMA prevents collapse. But no term in the loss explicitly forbids collapse; this is a design that works empirically, and LeJEPA's [title](https://arxiv.org/abs/2511.08544) calls such techniques heuristics: "Without the Heuristics".
 
 ### Fix three: require embeddings to look standard Gaussian
 
-[LeJEPA](https://arxiv.org/abs/2511.08544) (Balestriero, LeCun, 2025-11) argues theoretically that downstream prediction risk is lowest when embeddings follow an isotropic Gaussian. Its SIGReg projects embeddings onto many random one-dimensional directions and uses the Epps–Pulley statistic to test whether each projection looks like $N(0,1)$. A collapsed encoder projects to a single point in every direction, with variance 0, so it cannot look standard Gaussian and is penalised. The abstract reports no need for stop-gradient or teacher-student, a single trade-off hyperparameter, and 79% ImageNet-1K linear probe accuracy with a ViT-H/14.
+[LeJEPA v1, §3 and Appendix A](https://arxiv.org/html/2511.08544v1) (Balestriero, LeCun, 2025-11) analyzes specified probes under assumptions including fixed total variance. Its linear comparison holds the representation's column space fixed; nonlinear results add conditions such as isotropic task gradients. This is not a guarantee that Gaussian features are best for every task. SIGReg penalizes deviations from $N(0,1)$ through random one-dimensional projections and the Epps–Pulley statistic. Constants are penalized, but Gaussian noise independent of the labels still carries no predictive information. The reported 79% ImageNet-1K linear-probe accuracy with ViT-H/14 is an experimental result, not an accuracy guaranteed by the distribution's shape.
 
 | Approach | Source | How it prevents collapse | What needs tuning |
 | --- | --- | --- | --- |
@@ -110,7 +110,9 @@ $$
 E(\hat a_{1:T};z_k,s_k,z_g)=\big\|P(\hat a_{1:T};s_k,z_k)-z_g\big\|_1
 $$
 
-The paper minimises this energy with [CEM](../../05-post-training/deep-rl/planning-and-control.en.md): sample action sequences from zero-mean, unit-variance Gaussians, refit the mean and variance to the lowest-energy batch, repeat a few times and return the mean; execute only the first action and re-plan after seeing the new frame, which is MPC. Every sampled action is confined to an L1 ball of radius 0.075, so the end effector moves at most about 13 cm; the paper's reason is that large actions are out of the models' training distribution (§4.1).
+The paper minimises this energy with [CEM](../../05-post-training/deep-rl/planning-and-control.en.md): sample action sequences from zero-mean, unit-variance Gaussians, refit the mean and variance to the lowest-energy batch, repeat a few times and return the mean; execute only the first action and re-plan after seeing the new frame, which is MPC. The authors also limit action magnitude to avoid searching outside the training distribution.
+
+[V-JEPA 2 v1, §4.1 and Figure 8](https://arxiv.org/html/2506.09985v1) describe both an L1 ball of radius 0.075 and a maximum displacement near 13 cm. These do not follow from each other for translation coordinates in metres: $\|a\|_2\le\|a\|_1\le0.075$ permits at most 7.5 cm. Bounding each coordinate separately by 0.075 is an L∞ constraint and instead permits $\sqrt3\times0.075\approx0.130$ m. We flag the discrepancy rather than guessing the authors' intent; reproduction still requires checking action scaling and clipping code.
 
 <!-- paper-figure:vjepa2-ac-planning -->
 
@@ -154,14 +156,14 @@ Keep in mind when reading these numbers: pick-and-place is given two sub-goal im
 | Predicts what | Embeddings of masked or future parts | Future frames, or latents that decode back into frames | Next latent state, reward, continuation, while reconstructing observations |
 | Needs a decoder? | No, so you also cannot see the frames it predicts | Yes, frames are the output | Reconstruction supplies the training signal; no decoding during imagination |
 | Good for | Representation learning; planning toward a goal image | Viewing by people, playable worlds, synthetic data, policy evaluation | Training a policy in imagination |
-| Typical failure | Representation collapse; embeddings that drop what the task needs; goals must be images | Slow and expensive, Cosmos needs 4 minutes per action inside CEM; realistic frames are not correct physics | Policies exploit model flaws; reconstruction spends capacity on irrelevant detail |
+| Typical failure | Representation collapse; embeddings that drop task information; the V-JEPA 2-AC interface discussed here accepts only image goals | This Cosmos comparison takes 4 minutes per action under its specific CEM configuration, not a universal video-model cost; realistic frames are not correct physics | Policies exploit model flaws; reconstruction spends capacity on irrelevant detail |
 
 The lines are not always this clean: [Dreamer 4](dreamer.en.md)'s world model is itself a video model; [DINO-WM](https://arxiv.org/abs/2411.04983) (2024-11) uses frozen DINOv2 patch features as its representation and plans with CEM, close to a JEPA except that the encoder is off the shelf.
 
 ## Limits and open questions
 
 - **Planning does not reach far.** The V-JEPA 2-AC paper lists three limits itself (§4.3): sensitivity to camera position; error accumulation over long horizons, with the search space of action sequences growing exponentially in the horizon; and goals that can only be given as images.
-- **You cannot see what it is thinking.** Without a decoder, embeddings can only be checked with probes. Joseph et al. (2026-02, ICML 2026) found physical variables becoming decodable abruptly at about one-third depth in V-JEPA 2; Punzo et al. (2026) compared V-JEPA, VideoMAE and a diffusion generator and found that what can be decoded depends more on the benchmark and probe than on the pretraining objective. More in [do they actually understand the world?](do-they-understand.en.md)
+- **Predicted frames are not directly visible.** Probes, planning outcomes, and separately trained visualization decoders offer different checks. [I-JEPA, §8 and Appendix D](https://arxiv.org/html/2301.08243v3) uses an additional conditional generator to illustrate information in representations. Such images also reflect the decoder's assumptions; they are not direct photographs of internal states. For physical-variable probes and their limits, see [do they actually understand the world?](do-they-understand.en.md).
 - **Collapse prevention keeps changing recipes.** From EMA plus stop-gradient to SIGReg and LeWM's Gaussian regulariser; LeJEPA's main results are on images, and LeWM is a control model of about 15M parameters, so at V-JEPA 2's scale of a million hours of video this note found no matching result.
 
 ## What to watch on this line next

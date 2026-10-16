@@ -50,7 +50,7 @@ For example, $[2,1,0]$ becomes approximately $[0.665,0.245,0.090]$. It does not 
 
 Three common follow-ups are each worked through in [multi-head attention](core/multi-head-attention.en.md):
 
-- **Why divide by $\sqrt{d_k}$**: under the simplifying assumption of independent, unit-variance components, the dot product has variance $d_k$; dividing by $\sqrt{d_k}$ brings it back to 1, so the softmax does not sharpen early just because the width grew. The variance derivation, the `[8, −8]` example, and why the gradient shrinks are in [that section](core/multi-head-attention.en.md#why-divide-by-sqrtd_k).
+- **Why divide by $\sqrt{d_k}$**: under the simplifying assumption that all Q/K components are mutually independent, zero-mean and unit-variance, the dot product has variance $d_k$; dividing by $\sqrt{d_k}$ brings it back to 1, so the softmax does not sharpen early just because the width grew. The variance derivation, the `[8, −8]` example, and why the gradient shrinks are in [that section](core/multi-head-attention.en.md#why-divide-by-sqrtd_k).
 - **Where the mask goes**: set blocked positions to `-inf` before the softmax; setting them to 0 still assigns weight, and zeroing after the softmax without renormalizing is not equivalent either. The two-score example is in [the six common mistakes](core/multi-head-attention.en.md#the-six-places-a-from-scratch-implementation-goes-wrong).
 - **What $Q=K$ does**: the pre-scaling scores $QQ^\top$ are symmetric, the row-wise softmax is generally not, and attention does not stop working; see the [interview questions](core/multi-head-attention.en.md#common-interview-questions).
 
@@ -62,7 +62,7 @@ $$Q=XW_Q,\qquad K=XW_K,\qquad V=XW_V.$$
 
 The answer has two levels:
 
-- **A single parameter value or a single coordinate usually has no fixed human meaning.** With a different random seed, the coordinate axes and weight values can be completely different while the model still implements similar behavior; for any invertible matrix $R$, replacing $Q,K$ with $QR$ and $KR^{-\top}$ leaves the scores unchanged.
+- **A single parameter value or a single coordinate usually has no fixed human meaning.** With a different random seed, the coordinate axes and weight values can be completely different while the model still implements similar behavior; for any invertible matrix $R$, replacing $Q,K$ with $QR$ and $KR^{-\top}$ leaves the scores unchanged. This statement concerns the plain dot product; inserting RoPE or QK-norm generally removes invariance to an arbitrary such basis change.
 - **The computational roles carried by the three matrices are meaningful.** $W_Q$ produces queries, $W_K$ produces the keys used for matching, and $W_V$ decides what content is actually transmitted after a match. Only with separate $W_Q$ and $W_K$ can $W_QW_K^\top$ be asymmetric, so that "$i$ queries $j$" and "$j$ queries $i$" can differ; $W_V$ decouples "why it was found" from "what to take from it".
 
 ## One module, three uses: changing where Q/K/V come from {#one-module-three-uses-changing-where-qkv-come-from}

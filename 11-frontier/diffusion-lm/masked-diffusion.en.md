@@ -48,7 +48,7 @@ Other masking schedules give the same result. MDLM writes $\alpha_t$ for the fra
 | --- | --- | --- | --- |
 | How much is masked | A fixed ~15%, with an 80/10/10 corruption of selected positions | Each example draws $t\sim U(0,1]$, from almost nothing to everything | Nothing; a causal mask hides the right side |
 | How the loss is weighted | Average over selected positions | Times $1/t$, giving an upper bound on the negative log-likelihood | $-\log p$ at every position, which sums to the exact negative log-likelihood |
-| Trained to start from all blanks? | No | Yes: $t=1$ is all blanks | Not needed: it writes one token at a time from the left |
+| Trained to start from all blanks? | Not covered by standard training | Yes: an all-blank input has probability $\int_0^1t^Ldt=1/(L+1)$; sampling the endpoint $t=1$ is unnecessary | Not needed: it writes one token at a time from the left |
 | Positions supervised per example | About 15% | Half on average | All $L$ |
 | Attention | Bidirectional | Bidirectional | Causal |
 
@@ -73,7 +73,7 @@ $$
 
 The $1/t$ cancels one factor of $t$, and the remaining $\int_0^1 t\,dt$ and $\int_0^1(1-t)\,dt$ are both $1/2$. The first bracket on the right is the AR loss written left to right: first `hot`, then `tea` after `hot`, $1.609+0.223=1.833$. The second is right to left: $2.303+0.693=2.996$. Their average, 2.414, is the diffusion objective on this sequence. **With the $1/t$, the objective is exactly the average loss over the two generation orders.** Drop the $1/t$ and the integral becomes $(\ell_1+\ell_2)/3+(\ell_{1\mid2}+\ell_{2\mid1})/6=1.457$, which is not an average over any orders and has no likelihood interpretation.
 
-Why is it an upper bound? The continuous-time sampler fills each position at an independent, uniformly distributed moment, which is the same as generating in a random order. This model generates `hot tea` with probability $\tfrac12(0.2\times0.8)+\tfrac12(0.1\times0.5)=0.105$, a negative log-likelihood of 2.254, below 2.414. The 0.16-nat gap comes from the two orders disagreeing; if the four conditional probabilities came from one joint distribution, both orders would give the same number and the bound would be tight. An AR model trains only the left-to-right order, with loss 1.833.
+Why is it an upper bound? Assume a linear schedule, a time-independent predictor and a continuous-time sampler that unmasks one position at a time. Each position is filled at an independent uniform time, giving a uniformly random generation order. This generator assigns `hot tea` probability $\tfrac12(0.2\times0.8)+\tfrac12(0.1\times0.5)=0.105$, with NLL 2.254, below 2.414. The 0.16-nat gap reflects disagreement between the orders; conditionals from one joint distribution would make the bound tight. Training only left to right gives loss 1.833. **The probability 0.105 is sampler-specific**: fixed left-to-right sampling gives 0.16. Confidence-selected orders, parallel commits and temperature changes can alter the output distribution, so this likelihood calculation does not automatically apply to them ([RADD v3, §3.2](https://arxiv.org/html/2406.03736v3#S3.SS2)).
 
 ```python
 import math
@@ -131,7 +131,7 @@ Uniform-state diffusion has no `[M]` in its input: every position holds a real w
 | Try first | What to observe | What you can NOT conclude |
 | --- | --- | --- |
 | Check an implementation on the $L=2$ example (the code above) | The objective equals the average of the two orders | The objective is the model's exact negative log-likelihood |
-| Log the average loss per $t$ bucket during training | Loss grows with $t$; buckets near $t=0$ have the highest variance | $1/t$ is the only workable weight (schedules can change; they affect variance) |
+| Log unweighted cross-entropy, weighted loss and variance per $t$ bucket | Heavy masking is often harder; $1/t$ can amplify estimator variance at small $t$, which needs measurement | Every model's loss increases monotonically with $t$, or variance necessarily peaks near 0 |
 | Compare perplexity with an AR model | Diffusion gives an upper bound (≤); AR gives the exact value | The difference is how much "worse" diffusion really is |
 | Compare across diffusion families | Within one family, perplexity and downstream results broadly agree | Between masked and uniform-state, perplexity decides which is better |
 | Evaluate generations with generative perplexity | Also report token diversity or entropy | Lower is better: [Zheng et al. (2024-09, ICLR 2025)](https://arxiv.org/abs/2409.02908) found that categorical sampling at 32-bit precision lowers the effective temperature, biasing this metric toward low-diversity samples |

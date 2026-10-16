@@ -4,26 +4,15 @@
 
 [中文](README.md) · **English**
 
-Not sure where to begin? [Choose a route for your goal](choose-your-path.en.md).
+These notes cover model architecture, training, evaluation, and inference. Examples introduce each topic; derivations and implementations explain what happens underneath.
 
-For interviews, go straight to [Interview prep](../interview/README.en.md) and pick the area you need. The full explanations stay here in Foundations whenever you want to go deeper.
+- **Starting out?** Follow the route below and work through a small computation.
+- **Reviewing?** Find your question in the table or browse the chapter list.
+- **Ready to build?** Try the small experiments, then follow a complete system in [Engineering practice](../practice/README.en.md).
 
-This section explains how models work, why training methods take the forms they do, and how to judge their results. Start with examples, then explore derivations and implementations as needed. You do not need every prerequisite or every new model; go straight to the subject you care about.
-
-- **New to the subject?** Follow the examples and computations first. Return to derivations on a second pass.
-- **Already have the basics?** Start with your question and fill in missing concepts as needed.
-- **Ready to build?** Check the implementation assumptions, run a small experiment, then see how the pieces fit in [Engineering practice](../practice/README.en.md).
+Not sure what to read? [Choose a route](choose-your-path.en.md). Preparing for interviews? Start with [Interview prep](../interview/README.en.md).
 
 <span id="how-the-sections-fit-together"></span>
-
-Recent additions (October 2026):
-
-- [Frontier watch](../11-frontier/README.en.md), a new fourth area. The [world models](../11-frontier/world-models/README.en.md) and [recursive self-improvement](../11-frontier/self-improvement/README.en.md) series have been reviewed; [test-time compute](../11-frontier/test-time-compute/README.en.md), [agent RL](../11-frontier/agentic-rl/README.en.md), and [interpretability](../11-frontier/interpretability/README.en.md) are drafts pending review.
-- [AI infrastructure](../12-infra/README.en.md) (from chips, GPUs, and CUDA up to frameworks and clusters) and [Perception, robots, and driving](../13-embodied/README.en.md): two new blocks, both drafts pending review.
-- Three more drafts pending review, added 2026-10-16: [scaling laws and hyperparameters](../00-foundations/scaling/README.en.md), on choosing model size, data and learning rate before a run; [diffusion language models](../11-frontier/diffusion-lm/README.en.md) in Frontier watch; and [quantization](../12-infra/quantization/README.en.md) in AI infrastructure.
-- Three new deep RL notes: [which model to learn](../05-post-training/deep-rl/model-types.en.md), [how planning and learning feed each other](../05-post-training/deep-rl/planning-and-learning.en.md), and [off-policy evaluation estimators](../05-post-training/deep-rl/ope-estimators.en.md).
-
-Drafts pending review open with a notice and are marked “(draft)” in the sidebar; check the primary sources they link before relying on a fact.
 
 ## Start with the foundations
 
@@ -42,7 +31,7 @@ If vectors, losses, and gradients are still unfamiliar, begin with [linear model
 
 ## Follow the question you have
 
-You do not need to finish an entire subject to resolve one doubt. Start with the first article in a route. If you can answer the question in the last column, that may be enough for now; the remaining links are ways to go further, not a checklist to finish.
+Find a question in the left column, follow its reading route, and use the last column to check what you learned.
 
 | What you want to understand | Reading route | What to inspect |
 | --- | --- | --- |
@@ -95,6 +84,21 @@ The four areas match the sidebar: **understand models → train and evaluate →
 Open an overview or expand a chapter for all its articles. Model families follow component fundamentals. Questions and coding exercises live in Interview preparation; design exercises and project walkthroughs live in Engineering practice. Switch whenever you want to try an idea, without finishing the whole section first.
 
 <!-- widget:study-atlas -->
+
+## Recent additions
+
+New series cover questions from training budgets to robot control. Series marked “draft” are still being checked, as their pages and sidebar labels indicate. Each note links to papers or documentation for a closer look.
+
+| What you want to understand | Start here |
+| --- | --- |
+| How to divide a limited compute budget between model size and data | [Scaling laws and hyperparameters](../00-foundations/scaling/README.en.md) (draft) |
+| Why a busy GPU may still run a model slowly | [AI infrastructure](../12-infra/README.en.md) · [Quantization and low precision](../12-infra/quantization/README.en.md) (draft) |
+| Alternatives to generating one token at a time | [Diffusion language models](../11-frontier/diffusion-lm/README.en.md) (draft) |
+| How models predict environments or improve their own outputs | [World models](../11-frontier/world-models/README.en.md) · [Recursive self-improvement](../11-frontier/self-improvement/README.en.md) |
+| Extra inference compute, agent training, and inspecting model internals | [Test-time compute](../11-frontier/test-time-compute/README.en.md) · [Agent RL](../11-frontier/agentic-rl/README.en.md) · [Interpretability](../11-frontier/interpretability/README.en.md) (draft) |
+| What lies between an image and a robot action | [Perception, robots, and driving](../13-embodied/README.en.md) (draft) |
+
+Deep RL also has new notes on [which model to learn](../05-post-training/deep-rl/model-types.en.md), [combining planning and learning](../05-post-training/deep-rl/planning-and-learning.en.md), and [off-policy evaluation](../05-post-training/deep-rl/ope-estimators.en.md). They extend the existing route rather than adding prerequisites for getting started.
 
 ## Reading and updates
 

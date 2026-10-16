@@ -6,37 +6,37 @@
 
 > **Read this first**: only public fundamentals are collected here. These are not any company's interview questions, and nothing here describes any company's process. Model configurations change quickly; for numbers, trust the papers and released configs at the end of [the interactive Transformer page](../00-foundations/transformer-lab.en.md).
 
-When a Transformer comes up, few interviewers stop at “what is the attention formula”. The gap opens in the follow-ups: the KV cache, MQA / GQA / MLA, RoPE, MoE, FlashAttention.
+When reviewing Transformers, follow the attention equation with concrete questions: why can a KV cache be reused, what do MQA / GQA / MLA save, and which computation do RoPE, MoE, and FlashAttention change? This is our practice sequence, not a survey of interview frequency or scoring criteria.
 
-This page is for a **run-through before an interview**: one question, one answer, compressed to what you can say in two sentences at a whiteboard. To actually learn it, with derivations and figures you can drag, go to the knowledge-block side: [The Transformer, interactively](../00-foundations/transformer-lab.en.md) and [The Transformer architecture](../00-foundations/transformer.en.md). Each section below ends with the matching figure.
+This page is for a **run-through before an interview**: one question and answer at a time, with the mechanism and its assumptions kept together. For full derivations and interactive figures, use [The Transformer, interactively](../00-foundations/transformer-lab.en.md) and [The Transformer architecture](../00-foundations/transformer.en.md). Each section below links to the matching figure.
 
 ## KV cache
 
 <details class="qa" markdown="1">
 <summary>Why does decoding need a KV cache? What happens without one?</summary>
 
-Generation happens one token at a time. Under a causal mask the K and V of past tokens never change, so recomputing them every step is wasted work. Without a cache, step $t$ recomputes $t$ keys, $t$ values and about $t^2/2$ scores; with a cache it computes one new K/V pair and one row of scores.
+Ordinary autoregressive generation appends one token at a time. With fixed weights, prefix, position encoding, and mask rules, and dropout disabled, appending a token to a causal model leaves earlier K/V unchanged. Recomputing the full prefix at step $t$ requires $t(t+1)/2$ valid scores per layer and attention head; caching adds one position's K/V and one row of $t$ scores. Changing the model, prefix, or position numbering can invalidate that reuse.
 
 </details>
 
 <details class="qa" markdown="1">
 <summary>With a cache, what is the per-step complexity, and what becomes the bottleneck?</summary>
 
-Per-step attention drops from $O(t^2)$ to $O(t)$. The price is memory that grows linearly with tokens, and every step has to read the entire cache: small-batch decoding is usually limited by the bandwidth for reading weights and the cache (**memory-bound**); for why a larger batch moves it toward compute-bound, see the [decode roofline example](../12-infra/performance.en.md#decode-batching). Everything that “shrinks the cache” afterwards (GQA, MLA, sliding windows) is aimed at exactly this.
+With fixed head counts and dimensions, full causal attention drops from $O(t^2)$ for prefix recomputation to $O(t)$ per step; this is not the cost of the whole model. Cache storage grows linearly with length, and each step still reads the visible K/V. Small-batch decoding is often **memory-bound** by weight and cache reads. Whether batching makes it compute-bound depends on hardware and workload; see the [decode roofline example](../12-infra/performance.en.md#decode-batching). GQA and MLA reduce storage per position; sliding windows limit the visible positions.
 
 </details>
 
 <details class="qa" markdown="1">
 <summary>How do you compute the size of the cache?</summary>
 
-$2 \times n_{\text{layers}} \times n_{\text{kv heads}} \times d_{\text{head}} \times \text{tokens} \times \text{bytes}$. Note that the number of query heads does not appear. A Llama-2-7B shape (32 layers, 32 KV heads, $d_{\text{head}}=128$, fp16) is 0.5 MB per token, so 16 GB at 32K context.
+For an uncompressed, single-sequence MHA / GQA cache with equal K/V widths: $2 \times n_{\text{layers}} \times n_{\text{kv heads}} \times d_{\text{head}} \times \text{tokens} \times \text{bytes}$. Multiply by batch size for equal-length sequences; paging, alignment, and runtime overhead are extra. Query-head count does not appear. A Llama-2-7B shape (32 layers, 32 KV heads, $d_{\text{head}}=128$, fp16 at 2 bytes per element) takes 524,288 bytes = **0.5 MiB per token**. At 32,768 tokens that is **16 GiB ≈ 17.18 GB**. This is a hypothetical capacity calculation, not a supported-context claim: [Llama 2 §2, Table 1](https://arxiv.org/html/2307.09288v2#S2) specifies 4,096 tokens.
 
 </details>
 
 <details class="qa" markdown="1">
 <summary>How do you prove a cached implementation is correct?</summary>
 
-The logits produced position by position on the cached path must be **numerically equivalent** to a full forward pass without a cache. The easy mistakes are the mask and the positions: a query's absolute position is `cache.pos + i`, the mask is a non-square $(T, S)$, and the RoPE cos/sin must be sliced starting at `cache.pos`.
+Fix weights and tokens, disable dropout, and use the same position and mask rules. Cached and full-forward per-position logits should agree within a dtype-appropriate tolerance, not necessarily bit for bit. For a simple contiguous cache, query position is `cache.pos + i`; $T$ new queries against $S$ accumulated keys need a non-square $(T,S)$ mask and the correct RoPE offset. Left padding, sliding windows, and paging require extra checks because logical positions need not equal cache-slot indices.
 
 </details>
 
@@ -47,21 +47,21 @@ Figure: [KV cache: what each decoding step computes](../00-foundations/transform
 <details class="qa" markdown="1">
 <summary>What do MQA and GQA change, and why touch only K/V and not Q?</summary>
 
-Cache size depends only on the number of KV heads, not on the number of query heads, so memory is saved entirely on the K/V side. **MQA**: all query heads share a single K/V head; the smallest cache, with some quality loss. **GQA**: groups of query heads share one K/V head, the middle ground; Llama 3 8B has 32 query heads and 8 KV heads.
+With other dimensions fixed, cache size scales with KV heads rather than query heads. **MQA** shares one K/V pair across all query heads; **GQA** shares within groups. Llama 3 8B uses 32 query heads and 8 KV heads. Sharing constrains the representation, but does not guarantee worse scores on every task: the results in [GQA §3, Table 1](https://arxiv.org/html/2305.13245v3#S3) depend on the model, uptraining recipe, and task.
 
 </details>
 
 <details class="qa" markdown="1">
 <summary>What does MLA cache, and why is its cache independent of the number of heads?</summary>
 
-MLA does not cache per-head K and V. It caches one low-dimensional latent vector per token and expands it, through an up-projection, into each head's own K and V when needed. DeepSeek's setting is a latent of $4\,d_{\text{head}}$ plus a $d_{\text{head}}/2$ RoPE key, $4.5\,d_{\text{head}}$ in total: what GQA would need with 2.25 KV heads, except that every head still gets its own K/V.
+MLA caches a shared KV latent plus a decoupled RoPE key per token and layer: $512+64=576$ elements in DeepSeek-V2. With those widths fixed, cache size does not grow with query-head count. Heads retain distinct projections, but efficient decoding absorbs the K up-projection into the query side and the V up-projection into the output side, **without expanding all historical K/V**. At equal precision and head width 128, $576/(2\times128)=2.25$ is a GQA storage comparison, not an actual head count. [DeepSeek-V2 §2.1.2–2.1.4](https://arxiv.org/html/2405.04434v5#S2.SS1)
 
 </details>
 
 <details class="qa" markdown="1">
 <summary>Why is RoPE handled separately in MLA?</summary>
 
-RoPE is a position-dependent rotation, so it cannot be absorbed into a position-independent low-rank projection. MLA therefore carries position on a separate, uncompressed small key (64 dims) and sends the rest of the content through the latent.
+Applying RoPE to expanded content keys puts a position-pair-dependent rotation between the Q/K projections, preventing their merger into a fixed projection. DeepSeek-V2 instead uses a shared 64-dimensional RoPE key and per-head RoPE queries, leaving content projections absorbable. This is not a claim that every low-rank attention design is incompatible with RoPE. [§2.1.3](https://arxiv.org/html/2405.04434v5#S2.SS1.SSS3)
 
 </details>
 
@@ -72,21 +72,23 @@ Figure: [MHA → GQA → MQA → MLA, with a memory calculator](../00-foundation
 <details class="qa" markdown="1">
 <summary>With a sliding window each layer sees only w tokens. How does distant information arrive?</summary>
 
-Through depth. Every extra layer extends the reach by another window, roughly $L\,(w-1)+1$ tokens after $L$ layers. Mistral 7B uses $w=4096$ over 32 layers, a theoretical reach of about 131K.
+Through layer-to-layer propagation. If $w$ **includes the current position**, each layer extends reach by at most $w-1$, giving $L(w-1)+1$ input positions after $L$ layers: $w=3,L=2$ gives 5. The original Mistral 7B report uses a 4096 window and 32 layers, reporting roughly 131K theoretical reach. **Reachability is not reliable recall or training context length**: Table 1 lists an 8192 context. [Mistral 7B §2](https://arxiv.org/pdf/2310.06825)
 
 </details>
 
 <details class="qa" markdown="1">
 <summary>What does it save?</summary>
 
-Compute goes from $O(n^2)$ to $O(n\,w)$, and the per-layer KV cache is capped at $w$. Gemma 3 interleaves five local layers with one global layer, and only the global layers need a full-length cache.
+A genuinely local attention kernel reduces a sliding-window layer's attention work from $O(n^2)$ to $O(n\min(n,w))$. Evicting invisible K/V through a rolling cache bounds storage to $w$ positions. Applying a local mask to a full score matrix alone saves neither quadratic computation nor allocated cache storage. Gemma 3 interleaves five local layers with one global layer, so global layers retain quadratic attention work and full-length caches; the pure sliding-window bound does not describe the whole model. [Gemma 3 §2](https://arxiv.org/html/2503.19786v1#S2)
 
 </details>
 
 <details class="qa" markdown="1">
 <summary>What is an attention sink, and why does evicting the first tokens from the cache break things?</summary>
 
-Softmax weights must sum to 1. When a head has “nothing to look at”, the model learns to dump the excess weight on the first few tokens. Evict them and that weight has nowhere to go, so the distribution falls apart. StreamingLLM keeps the first few tokens forever; gpt-oss adds a learned bias to the softmax denominator, which plays the same role.
+[StreamingLLM §3.1–3.2](https://arxiv.org/html/2309.17453v3#S3) observes high attention to initial tokens even when their meaning is unimportant; evicting their K/V changes normalization and can disrupt streaming. The paper explains this through softmax's need to allocate unit mass, not a universal theorem implied by normalization alone. StreamingLLM retains initial and recent tokens and handles their cached position encodings.
+
+The [gpt-oss reference implementation](https://github.com/openai/gpt-oss/blob/main/gpt_oss/torch/model.py) instead adds a learned **sink logit** $s$ per query head and discards its output weight. Ordinary weights become $e^{z_j}/(\sum_i e^{z_i}+e^s)$, not a denominator with $s$ added directly. With two ordinary logits and a sink logit all zero, each ordinary token receives $1/3$, totaling $2/3$. The sink carries no original token value, so this is not the same operation as retaining real initial tokens.
 
 </details>
 
@@ -97,7 +99,7 @@ Figure: [Who can see whom](../00-foundations/transformer-lab.en.md#tx-windows)
 <details class="qa" markdown="1">
 <summary>How does RoPE represent position, and why is it called “relative”?</summary>
 
-Each pair of dimensions in $q$ and $k$ is rotated by an angle proportional to the position, every pair at its own frequency. The dot product of two rotated vectors depends only on the difference of their angles, so the score depends only on the relative distance $m-n$.
+RoPE rotates each dimension pair of $q$ and $k$ according to position, at different frequencies. **For fixed content vectors $q,k$**, $\langle R_mq,R_nk\rangle=\langle q,R_{n-m}k\rangle$: the explicit position term depends on relative distance, but the score still depends on content. Doubling $q$ doubles the score at the same distance. RoPE does not make the entire model translation-invariant. [RoFormer §3.1–3.2](https://arxiv.org/html/2104.09864v5#S3)
 
 </details>
 
@@ -111,7 +113,7 @@ No. The relativity comes from the two rotations canceling: $\langle R_m q, R_n k
 <details class="qa" markdown="1">
 <summary>Why raise the RoPE base θ for long context?</summary>
 
-A larger base slows every pair except the first (whose frequency is $b^0=1$), so low-frequency pairs do not wrap around within a longer range and distant positions are less likely to alias. Changing the base alone does not guarantee good long-context behavior; training and evaluation still matter. Llama 3 uses $\theta = 500\text{k}$; Gemma 3 uses $\theta = 1\text{M}$ on its global layers.
+In the usual formula $\omega_i=\theta^{-2i/d}$, a larger base slows pairs with $i>0$ and lengthens their periods; $i=0$ remains at frequency 1. This does not ensure that every low-frequency pair avoids wrapping within a target length, or that distant positions become easier to distinguish. Frequencies, scaling, training, and evaluation still matter. Llama 3 uses $\theta=500\text{k}$; Gemma 3 uses $\theta=1\text{M}$ globally, with RoPE rescaling and training also used to extend its 4B / 12B / 27B models to 128K. [Llama 3 §3.2](https://arxiv.org/html/2407.21783v3#S3.SS2) · [Gemma 3 §5.3](https://arxiv.org/html/2503.19786v1#S5.SS3)
 
 </details>
 
@@ -122,7 +124,7 @@ Figure: [RoPE: position as rotation](../00-foundations/transformer-lab.en.md#tx-
 <details class="qa" markdown="1">
 <summary>What do total and active parameters each scale with in an MoE?</summary>
 
-The FFN is replaced by $N$ experts, and a router sends each token to only the top $k$. Total parameters scale with $N$; compute per token scales only with $k$. Mixtral is 8 choose 2 (about 47B total, about 13B active); DeepSeek-V3 routes to 8 of 256 experts, plus one shared expert that every token visits (671B total, 37B active).
+With expert width and layer count fixed, routing to $k$ of $N$ experts makes expert parameters scale with $N$ and **selected-expert FFN computation** scale with $k$. Total cost also includes routing, often scoring all $N$ experts, attention, shared experts, communication, and imbalance. It is not determined by $k$ alone. [Mixtral 8×7B](https://arxiv.org/html/2401.04088v1#S2) selects 2 of 8 (about 47B total, 13B active); [DeepSeek-V3 §4.2](https://arxiv.org/html/2412.19437v2#S4.SS2) uses 8 of 256 plus one shared expert in its MoE layers (671B total, 37B active per token).
 
 </details>
 
@@ -140,7 +142,7 @@ Figure: [MoE: routing drawn at the true number of experts](../00-foundations/tra
 <details class="qa" markdown="1">
 <summary>Is FlashAttention an approximation? What does it actually save?</summary>
 
-It is not an approximation; the result is **exact**. What it saves is memory traffic, not arithmetic: the standard implementation writes the full $n\times n$ score matrix to slow HBM and reads it back. FlashAttention cuts Q, K and V into blocks that fit in on-chip SRAM, computes block by block, and writes back only the $n\times d$ output, with extra memory linear in $n$. For how far apart HBM and on-chip SRAM are in capacity and bandwidth, see [the GPU memory hierarchy](../12-infra/gpu-architecture.en.md).
+It computes **exact attention**, not a sparse or low-rank approximation. Different floating-point reduction orders need not produce bitwise-identical results; [official tests](https://github.com/Dao-AILab/flash-attention#tests) use numerical tolerances. Tiling in SRAM avoids writing the full $n\times n$ score/probability matrices to HBM. It stores outputs and linear-size normalization statistics, recomputing blocks for backward. The main savings are memory traffic and intermediate storage: dense attention arithmetic remains quadratic, and backward may do extra recomputation. [FlashAttention §3.1](https://arxiv.org/html/2205.14135v2#S3.SS1) · [GPU memory hierarchy](../12-infra/gpu-architecture.en.md)
 
 </details>
 
@@ -158,14 +160,14 @@ Figure: [FlashAttention: where the attention matrix lives](../00-foundations/tra
 <details class="qa" markdown="1">
 <summary>Which parts of the block changed between the original Transformer and Llama 3?</summary>
 
-Four: the norm went from post-LN LayerNorm to pre-norm RMSNorm (deep stacks train more stably); position went from absolute encodings added to the embedding to RoPE; the FFN activation went from ReLU / GELU to SwiGLU; attention went from MHA to GQA. On top of that, the encoder and cross-attention are gone, and so are the biases.
+Four useful comparisons: post-LN LayerNorm becomes pre-norm RMSNorm; added position encodings become RoPE; **ReLU** FFNs become SwiGLU; and MHA becomes GQA. Llama 3 is also decoder-only, without encoder/cross-attention, and its main linear projections omit biases. The original Transformer used ReLU, not GELU. Norm placement and the RMSNorm formula are separate design choices, so stability should not be attributed to a name alone. [Original Transformer §3.1, §3.3](https://arxiv.org/html/1706.03762v7#S3) · [Llama 3 §3.2](https://arxiv.org/html/2407.21783v3#S3.SS2)
 
 </details>
 
 <details class="qa" markdown="1">
 <summary>What is the difference between pre-norm and post-norm?</summary>
 
-Post-norm puts the norm after the residual add, so the gradient passes through a norm at every layer and deep networks need warmup to train stably. Pre-norm moves the norm inside the residual branch, leaving an unscaled identity path along the trunk.
+Post-norm computes $\mathrm{Norm}(x+F(x))$, putting normalization on the residual path too. Pre-norm computes $x+F(\mathrm{Norm}(x))$, preserving a direct identity path. [Xiong et al. (2020), §3–4](https://arxiv.org/pdf/2002.04745) explain post-LN's greater warmup sensitivity under their initialization and experimental settings and demonstrate pre-LN training without warmup. This does not prove that every post-norm model requires warmup or that every pre-norm model can omit it.
 
 </details>
 

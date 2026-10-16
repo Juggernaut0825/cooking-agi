@@ -41,7 +41,7 @@ IsoFLOP：3–5 个小预算，每个训 5–10 个大小，schedule 对准训�
 <details class="interview" markdown="1">
 <summary>为什么 Llama 3 8B 要训 15T token？推理量怎样改变最优点？</summary>
 
-Chinchilla 只最小化训练算力。Sardana 等固定目标 loss，最小化 $6ND_{\rm tr}+2ND_{\rm inf}$：推理越多，模型越该小、数据越该多。用重拟曲面、以 $10^{22}$ FLOPs 最优模型的 loss 为目标，$D_{\rm inf}=10^{12}$ 时最优约 46 亿参数、4470 亿 token，训练多花 24%，总账省 23%。Sardana 等也发现用常规比例拟合会高估极端比例下的数据收益，所以推理量很大时的节省是乐观上限。Llama 3 报告自报较小的模型训练得远超算力最优，在同样推理预算下更好；405B 则接近它自己拟合的算力最优（402B、16.55T）。
+Chinchilla 只最小化训练算力。Sardana 等固定目标 loss，最小化 $6ND_{\rm tr}+2ND_{\rm inf}$：推理越多，模型越该小、数据越该多。用重拟曲面、以 $10^{22}$ FLOPs 最优模型的 loss 为目标，$D_{\rm inf}=10^{12}$ 时最优约 46 亿参数、4460 亿 token，训练多花 24%，总账省 23%。Sardana 等也发现用常规比例拟合会高估极端比例下的数据收益，所以推理量很大时的节省是可能偏乐观的外推估计，不是已证明的上界。Llama 3 报告自报较小的模型训练得远超算力最优，在同样推理预算下更好；405B 则接近它自己拟合的算力最优（402B、16.55T）。
 
 </details>
 
@@ -55,14 +55,14 @@ Muennighoff 等把重复折算成有效数据：$D'=U_D+U_DR_D^*(1-e^{-R_D/R_D^*
 <details class="interview" markdown="1">
 <summary>什么是临界 batch size？batch 和学习率一起变时该怎么换算？</summary>
 
-McCandlish 等：$S=S_{\min}(1+B_{\rm crit}/B)$，$E=E_{\min}(1+B/B_{\rm crit})$，$B_{\rm crit}=E_{\min}/S_{\min}$，约等于梯度噪声尺度。教学数字 $B_{\rm crit}=2$M：batch 从 4M 加到 16M 只省 25% 的步数，却多看 3 倍数据。它随 loss 下降变大（Kaplan：loss 降约 13% 翻一倍），近期工作发现主要随数据量增长（Zhang 等：固定数据只放大模型，指数只有 0.087）。换算：SGD 用线性规则；Adam 用平方根规则（学习率乘 $\sqrt\kappa$，$1-\beta$ 乘 $\kappa$），只适用于噪声主导的小 batch 区间。也可以用 DeepSeek LLM 的拟合当起点：$10^{22}$ FLOPs 时约 $5.5\times10^{-4}$、4.6M token。
+McCandlish 等：$S=S_{\min}(1+B_{\rm crit}/B)$，$E=E_{\min}(1+B/B_{\rm crit})$，$B_{\rm crit}=E_{\min}/S_{\min}$，约等于梯度噪声尺度。教学数字 $B_{\rm crit}=2$M：batch 从 4M 加到 16M 只省 25% 的步数，却多看 3 倍数据。它随 loss 下降变大（Kaplan：loss 降约 13% 翻一倍），近期工作发现主要随数据量增长（Zhang 等：固定数据只放大模型，指数只有 0.087）。换算：SGD 用线性规则；Adam 用平方根规则（学习率乘 $\sqrt\kappa$，$1-\beta_1$、$1-\beta_2$ 乘 $\kappa$，$\epsilon$ 除以 $\sqrt\kappa$），并检查新的 $\beta_i$ 仍在 $[0,1)$ 内；这些规则有噪声主导等推导前提。也可以把 DeepSeek LLM 的拟合当待验证的起点（以下预算超出拟合区间）：$10^{22}$ FLOPs 时约 $5.5\times10^{-4}$、4.6M token。
 
 </details>
 
 <details class="interview" markdown="1">
 <summary>最大更新参数化（µP）解决什么问题？为什么隐藏层学习率要随宽度缩小？哪些东西不能迁移？</summary>
 
-标准参数化（SP）下最优学习率随宽度移动（TP5 的 MLP 上宽度 256 到 8192 移动约一个数量级）。Adam 第一步更新约为 $-\eta\,{\rm sign}(g)$，和输入 $x$ 对齐，于是 $(\Delta Wx)_i\approx\eta\,n\,\mathbb E|x|$：$x=\pm1$、$\eta=0.01$ 时宽 512 变化 5.12，宽 4096 变化 40.96。µP 让隐藏层和输出层的 Adam 学习率 $\propto1/\text{fan\_in}$，输出层初始化方差 $1/\text{fan\_in}^2$，attention 用 $1/d$，于是宽 4096 的隐藏层学习率取 0.00125。不能迁移的：dropout、weight decay 等正则化；深度、batch、训练长度只有经验验证，Transformer 的多层块在深度上有根本限制（TP6）。Everett 等发现设对逐层学习率的 SP 也能迁移。
+标准参数化（SP）下最优学习率随宽度移动（TP5 的 MLP 上宽度 256 到 8192 移动约一个数量级）。从零矩状态出发、忽略 weight decay 且 $|g|\gg\epsilon$ 时，Adam 第一步更新约为 $-\eta\,{\rm sign}(g)$，和输入 $x$ 对齐，于是 $|(\Delta Wx)_i|\approx\eta\,n\,\mathbb E|x|$：$x=\pm1$、$\eta=0.01$ 时宽 512 变化 5.12，宽 4096 变化 40.96。µP 让隐藏层和输出层的 Adam 学习率 $\propto1/\text{fan\_in}$，输出层初始化方差 $1/\text{fan\_in}^2$，attention 用 $1/d$，于是宽 4096 的隐藏层学习率取 0.00125。不能迁移的：dropout、weight decay 等正则化；深度、batch、训练长度只有经验验证，Transformer 的多层块在深度上有根本限制（TP6）。Everett 等发现设对逐层学习率的 SP 也能迁移。
 
 </details>
 

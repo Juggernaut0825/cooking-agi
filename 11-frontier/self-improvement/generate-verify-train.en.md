@@ -4,7 +4,7 @@
 
 > Reading time: ~12 min · Last reviewed: 2026-10
 
-Have a model that writes Python functions generate a few solutions per problem, run the tests, fine-tune only on the ones that pass, and use the new model for the next round. No one writes answers, so the loop looks as if it could run forever. But if the tests accept some wrong solutions, those go into the training set too. **Each round can learn at most what the verifier knows beyond the model; errors the verifier cannot tell apart are not removed by the loop, and are learned along with everything else.**
+Have a model that writes Python functions generate a few solutions per problem, run the tests, fine-tune only on the ones that pass, and use the new model for the next round. No one writes answers, so the loop looks as if it could run forever. But if the tests accept some wrong solutions, those go into the training set too. **Filtering alone cannot distinguish solutions the verifier treats alike. Fine-tuning may generalise, but a high test pass rate does not establish that those errors disappeared.**
 
 ## One loop, three parts
 
@@ -94,7 +94,7 @@ $$
 J(f_{t+1})-J(f_t)\;\ge\;\operatorname{gap}(f_t,g)-\varepsilon_{\rm update}
 $$
 
-The same premise also caps the improvement at $\operatorname{gap}+\varepsilon_{\rm update}$, so **one round is worth about one gap**; when the model verifies no better than it generates (gap ≤ 0), the loop has nothing to learn. The paper also notes that fine-tuning sometimes beats this amount, for example when the model learns the required answer format, and that this part is not self-improvement.
+The same premise caps improvement at $\operatorname{gap}+\varepsilon_{\rm update}$. Thus **one round approximates the gap only when update error is small**. A non-positive gap means this reweighting did not improve true utility, not that every training procedure must fail to improve; under the premise, gains may still vary within the error term. The paper distinguishes gains such as learning the answer format from gains due to verifier reweighting. These are the assumptions of [v2 §2.1](https://arxiv.org/html/2412.02674v2), not an unconditional ceiling for all self-training.
 
 <!-- paper-figure:gv-gap-definitions -->
 
@@ -117,17 +117,23 @@ $$
 
 With these tests as the verifier, the first-round gap at $f=10\%$ is $87.0\%-40\%=47$ percentage points, and at $f=30\%$ it is 29 points. One round gains a lot, and in every case the tests report a 100% pass rate.
 
-Run another round. At $f=10\%$, the new model's solutions are 87% correct and 13% "wrong but passing". The tests treat both alike and accept all of them, so reweighting changes nothing and the gap is 0. The loop stops at 87% while the tests keep showing 100%. The 13% the verifier cannot tell apart never goes away, however many rounds you run. The toy hits its ceiling in one round because it assumes perfect imitation; real training learns imperfectly and also generalises, so it takes a few rounds, which matches the direction of Song et al.'s "gap near zero within two or three rounds".
+Run another round. At $f=10\%$, about 87% of the new model's solutions are correct and 13% are wrong but passing. In this toy with fixed problems, fixed tests and perfect imitation, all solutions pass, reweighting changes nothing, and the gap is zero. Later rounds remain at about 87%. Real training can generalise and change the sampling distribution; the toy does not prove saturation in a fixed number of rounds. Song et al.'s two or three rounds describe their experiments.
 
-What fine-tuning can do is concentrate the model on solutions the tests accept; if correct solutions share a learnable pattern, it may also transfer to new problems, which is the kind of gain STaR shows on its dev sets. What it cannot do is learn to separate "correct" from "wrong but passing", because that information is not in the training signal. Worse: if wrong solutions pass because of a reusable trick, such as special-casing the visible test inputs, fine-tuning may spread that trick to problems where it was not used before. That last point is a mechanistic conjecture; the measured cases below show agents do find such tricks.
+Fine-tuning can concentrate the model on accepted solutions; shared patterns in correct solutions may transfer to new problems, as STaR's dev-set gains illustrate. These filtering labels provide no direct signal distinguishing correct from wrong-but-passing solutions. Whether prior knowledge and inductive bias help separate them requires independent evaluation; it is not impossible in principle. Conversely, training may spread a reusable trick such as special-casing visible test inputs. That is a mechanistic conjecture; the measured cases below show agents finding such tricks.
 
-What moves the ceiling is $f$: lowering it from 10% to 2% raises the ceiling from 87.0% to 97.1%. Hidden tests, edge cases and property tests all strengthen the verifier, not the generator. Conversely, if the tests reject some correct solutions, say an unusual but valid style, precision is unaffected, but you lose data and diversity.
+Under these assumptions, lowering $f$ from 10% to 2% raises accepted-set precision from 87.0% to 97.1%. Hidden tests, edge cases and property tests strengthen the verifier. **Rejecting correct solutions can also lower precision.** Let $p$ be the candidate correctness rate, $r$ the acceptance rate for correct solutions and $f$ the acceptance rate for wrong ones. Conditional probability gives
+
+$$
+\operatorname{precision}=\frac{pr}{pr+(1-p)f}.
+$$
+
+The denominator must be positive. Among 1,000 candidates with 400 correct and 600 wrong solutions, accepting 60 wrong ones and all correct ones yields $400/460\approx87.0\%$ precision. Accepting only half the correct ones yields $200/260\approx76.9\%$, with less data and diversity too. Auditing accepted solutions estimates $P(\text{wrong}\mid\text{accepted})=1-\operatorname{precision}$, not $f=P(\text{accepted}\mid\text{wrong})$. Estimating the latter requires correctness labels from a candidate pool that includes rejected solutions.
 
 <!-- widget:step-verifier-ceiling -->
 
 ## Feeding your own outputs back: model collapse
 
-Shumailov et al. reported in [Nature (2024-07-24)](https://www.nature.com/articles/s41586-024-07566-y) that training indiscriminately on recursively generated data leaves irreversible defects, with the tails of the original distribution disappearing. A filtered loop is not exactly that case: the verifier brings in outside information, which is why the loop can gain at all. But filtering also favours typical, passing solutions and drops rare ones; Song et al. saw pass@k at large $k$ fall and suggested that the model fails to verify rare but correct answers. Both point to the same limit: without new information from outside, the loop has nothing to learn, and diversity can shrink with each round.
+Shumailov et al. observed degradation, including loss of distribution tails, in the recursive-training settings studied in [Nature (2024-07-24)](https://www.nature.com/articles/s41586-024-07566-y). Verifier-filtered training differs from indiscriminate feedback: verification may supply outside information or exploit judging ability already present in the model. Still, filtering can discard rare correct solutions; Song et al. observed declining pass@k at large $k$. Both motivate tracking coverage and diversity, not a theorem that progress without new external information is impossible.
 
 ## When the signal gets gamed: measured cases
 
@@ -154,7 +160,7 @@ The [survey by Chen, Wang and Qu (2026-07)](https://arxiv.org/abs/2607.07663) or
 
 | Try | Observe | What it does not establish |
 | --- | --- | --- |
-| Manually review a small batch of passing solutions | How far true precision is below the pass rate, i.e. an estimate of $f$ | A clean spot check means the tests have no blind spots |
+| Manually review a small batch of passing solutions | Estimate accepted-set precision and error share; estimating $f$ also needs a labelled representative sample of the full candidate pool | The accepted-set error share equals $f$; a clean spot check establishes no blind spots |
 | Add hidden tests and rerun a round | How much the pass rate drops, and on which problems | The hidden tests are themselves complete |
 | Log pass@1 and pass@k at large $k$ every round | A drop at large $k$ means diversity is being lost | A rising pass@1 equals rising ability |
 | Run more rounds and note when gains stop | Where saturation sets in | No gain means the model has peaked; it may be the verifier |
@@ -163,7 +169,7 @@ The [survey by Chen, Wang and Qu (2026-07)](https://arxiv.org/abs/2607.07663) or
 
 These are open questions and the kind of result that would change the current reading; they are not predictions.
 
-1. **How many rounds can self-proposed, self-checked training sustain?** Song et al. (2024-12) measured the gap near zero within two or three rounds; Absolute Zero (2025-05) and R-Zero (2025-08) keep supplying new tasks through an executor or a Challenger and report gains relative to the base model. A result that keeps improving on independent benchmarks well beyond three rounds would turn "saturates in a few rounds" into a conditional statement.
+1. **How many rounds can self-proposed, self-checked training sustain?** Song et al. (2024-12) measured near-zero gap within two or three rounds; Absolute Zero (2025-05) and R-Zero (2025-08) supply new tasks through an executor or a Challenger and report gains over the base model. Saturation within a few rounds is already conditional on the experiment. Sustained gains on independent benchmarks over many more rounds would help identify conditions that delay it.
 2. **Can learned verifiers stand in for executable checks?** Self-Rewarding (2024-01) ran only 3 iterations and its authors expect saturation. On tasks without answer keys, a self-judged loop that keeps improving on externally judged evals over a long run would call for revisiting the order of the verification hierarchy.
 3. **Do improvement loops make gaming more or less common?** DGM (2025-05), Anthropic's automated alignment researchers (2026-04-14) and PostTrainBench (2026-03-09) all recorded gaming; AIDE² (2026-09-22) saw the reward-hacking rate on one held-out task family fall from 55% to 32%, but in a single run. Repeated results across systems and runs would carry more weight.
 4. **Who designs the update rule?** The survey (2026-07) reports that nearly all papers study bounded self-refinement. A public result in which a model designs its own data, loss and training procedure and passes held-out evaluation would move this line from type (d) to type (a).

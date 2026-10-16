@@ -4,7 +4,7 @@
 
 > Reading time: about 14 minutes · Runtime: PyTorch / CPU · Last reviewed: 2026-10
 
-A model assigning 40% probability to the right answer and one assigning 1% might both count as wrong. Training should distinguish them: the second prediction needs a larger correction. Cross-entropy (CE) gives us a way to do that.
+A model assigning 40% probability to the right answer and one assigning 1% might both count as wrong. Accuracy only records the final choice; cross-entropy (CE) also measures the probability assigned to the correct class. A lower correct-class probability gives a higher loss.
 
 Start with three classes, then connect the calculation to language models. The first three sections cover the intuition. Continue into masks, reductions, and gradients when you want to implement it.
 
@@ -106,7 +106,7 @@ $$
 \frac{\partial\ell}{\partial z_c}=p_c-q_c.
 $$
 
-The hard-target example gives `[0.2, 0.3, −0.5]`. Gradient descent lowers the first two scores and raises the correct one. The soft target gives `[0.1, 0.1, −0.2]`: a similar direction, but less pressure to drive class 3 toward 100%.
+The hard-target example gives `[0.2, 0.3, −0.5]`. Gradient descent lowers the first two scores and raises the correct one. The soft target gives `[0.1, 0.1, −0.2]`. Class 3's target probability is now 0.7, not 1; when the prediction matches the target distribution, `p − q` is zero.
 
 <details markdown="1">
 <summary>Derivation: expand log Softmax</summary>

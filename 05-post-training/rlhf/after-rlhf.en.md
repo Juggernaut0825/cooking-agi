@@ -148,7 +148,7 @@ For our overfitting example, score the same prompt and response with the current
 <details markdown="1">
 <summary>How does this comparison lead to the DPO loss?</summary>
 
-The argument has three steps. KL-constrained reward maximization has a closed-form optimal policy. Rearranged, it expresses the reward as “$\beta$ times the policy's log-ratio to the Reference, plus a term that depends only on the prompt.” Substituted into a Bradley–Terry preference model, that term cancels when two responses to the same prompt are subtracted, leaving the difference between the two responses' relative changes above. For the full derivation and the conditions it needs, see the [DPO section of PPO, GRPO, and DPO](../after-ppo.en.md#dpo-derivation).
+The argument has three steps. For $\beta>0$, a finite partition function, and policies assigning no mass outside the Reference's support, the KL-regularized reward objective has a closed-form optimum over policy distributions. Rearranged, it expresses the reward as “$\beta$ times the policy's log-ratio to the Reference, plus a term that depends only on the prompt.” Substituted into a Bradley–Terry preference model, that term cancels when two responses to the same prompt are subtracted, leaving the difference between their relative changes. Probabilities inside the training pairs' logarithms must also be positive. This does not guarantee that a finite neural network reaches that distribution-space optimum; see the [full DPO derivation](../after-ppo.en.md#dpo-derivation).
 
 </details>
 

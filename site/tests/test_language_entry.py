@@ -1,4 +1,5 @@
 from html.parser import HTMLParser
+import json
 from pathlib import Path
 import re
 import shutil
@@ -108,6 +109,19 @@ class LanguageEntryTests(unittest.TestCase):
         for language, suffix in [('zh', ''), ('en', '.en')]:
             self.assertEqual(build.BY_SRC['career/journey.md'][language].url, f'career/journey{suffix}.html')
             self.assertEqual(build.BY_SRC['learn/README.md'][language].url, f'learn/index{suffix}.html')
+
+    def test_language_switch_only_lists_anchors_in_both_pages(self):
+        pair = build.BY_SRC['00-foundations/core/multi-head-attention.md']
+        for page in pair.values():
+            build.build_page(page, [], self.nav['site']['repo'], self.known)
+        for language in ['en', 'zh']:
+            page = pair[language]
+            attributes = Elements(build.reading_controls_html(page)).elements[0][1]
+            anchors = set(json.loads(attributes['data-language-anchors']))
+            expected = build.AnchorIds(page.body).identifiers & build.AnchorIds(page.sibling.body).identifiers
+            self.assertEqual(anchors, expected | {'content'})
+            self.assertIn('cached-causal-mask', anchors)
+            self.assertNotIn('_8', anchors)
 
     def test_question_bank_links_to_foundations_in_its_language(self):
         for language, suffix, label in [('zh', '', '基础与原理'), ('en', '.en', 'Foundations')]:

@@ -28,7 +28,7 @@ Two premises are easy to miss. First, v2 states that V3-Base's pretraining data 
 
 ### Why answers get longer: work it once
 
-A teaching assumption with made-up numbers. A problem can be tackled in two ways: answer directly, about 300 tokens, correct with probability 0.3; or answer, check, and redo with another method if it looks wrong, about 900 tokens, where the first attempt is still right with probability 0.3 and the redo after a wrong first attempt is right with probability 0.5, for $0.3+0.7\times0.5=0.65$ in total. With a reward that only checks correctness, the second way has more than twice the expected reward, policy gradient pushes probability toward it, and average length moves from 300 toward 900. Nothing rewards "long"; length is a by-product of the strategy that raises accuracy.
+A teaching assumption with made-up numbers: a direct answer takes about 300 tokens and is correct with probability 0.3; answering, checking, and redoing a detected mistake takes about 900. **Additionally assume that checking detects every wrong answer and never spoils a correct one.** If a redo succeeds with probability 0.5 conditional on the first answer being wrong, total success is $0.3+0.7\times0.5=0.65$. Detect only 40% of mistakes, still preserving correct answers, and success is $0.3+0.7\times0.4\times0.5=0.44$. If checking can spoil correct answers, subtract that loss too. Reliable checking can make a longer strategy earn more expected reward; length itself is not rewarded, and the example does not establish reliable self-diagnosis.
 
 The second source is how the objective is written. The original GRPO objective divides each answer's token-level objective by that answer's length $|o_i|$. Liu et al. point out that this creates a length bias: a wrong answer with advantage −1 spreads −0.01 per token if it is 100 tokens long, but only −0.001 per token if it is 1,000 tokens long. Both are wrong, yet the long one is penalised 10 times less per token, so wrong answers drift longer, while correct answers are pushed the other way, toward brevity. Their Dr. GRPO removes this normalisation; length then stops climbing during training and wrong answers become clearly shorter. The difference between averaging per answer and averaging per token is worked by hand in [the DAPO note](../../05-post-training/dapo.en.md).
 
@@ -43,10 +43,10 @@ The R1 report took 800,000 examples curated with R1 and used them for plain SFT 
 | Approach | What it needs | What it buys | Risks |
 | --- | --- | --- | --- |
 | Large-scale RL (verifiable rewards) | Many automatically checkable problems, rollout compute | The model finds reasoning moves that raise accuracy on its own | Length inflation, reward hacking, limited gains on small models |
-| Distilling long chains (SFT) | A stronger teacher and its reasoning traces | Small models cheaply pick up long-chain behaviour | Capped by the teacher; learns the teacher's mistakes and verbosity too |
+| Distilling long chains (SFT) | A stronger teacher and its reasoning traces | A supervised route to long-chain behaviour | Limited by data coverage and teacher errors; the teacher's score is not a mathematical upper bound on the student |
 | Distill first, then RL | Both | The full R1 does a cold start before RL; ProRL also starts from a distilled model | Costs add up |
 
-The general method is in [distillation](../../05-post-training/distillation.en.md).
+The general method is in [distillation](../../05-post-training/distillation.en.md). A teacher's test score is not a universal upper bound: [Born Again Neural Networks](https://arxiv.org/abs/1805.04770) reports students outperforming their teachers in supervised benchmarks. That is a counterexample to the general bound, not a forecast for a particular reasoning model.
 
 ## How long to think: budgets and length control
 
@@ -129,6 +129,6 @@ These are open questions and what kind of result would change the current pictur
 1. **Will length be reined in or keep growing?** R1-Zero's (2025-01) length rose with training; Kimi k1.5 (2025-01) and L1 (2025-03) rein it in with length rewards, and Dr. GRPO (2025-03) removes the normalisation bias. Watch whether new large-scale RL reports publish separate length curves for right and wrong answers during training.
 2. **Can models allocate their own budget?** From 2026-02-05 Anthropic hands "whether and how long to think" to the model; Fan et al. (2026-08) found cross-problem allocation still done poorly. Scores on evaluations that reward allocating by difficulty and point value will show how far adaptive thinking is from thinking on demand.
 3. **How long can chains of thought be monitored?** Baker et al. (2025-03) and Chen et al. (2025-05) show monitoring is useful but not sufficient, and that optimisation pressure can break it. Watch whether system cards publish monitorability measurements and commit to not optimising the chain of thought directly.
-4. **Small models: distillation or RL?** R1 (2025-01) found distillation clearly beat RL at 32B; [ProRL](https://arxiv.org/abs/2505.24864) (2025-05) ran more than 2,000 further RL steps on a 1.5B distilled model and reported gains on problems the base model could not solve. Controlled comparisons from several starting points at equal compute would make this clearer.
+4. **Small models: distillation or RL?** R1 (2025-01) found distillation clearly beat RL at 32B; [ProRL](https://arxiv.org/abs/2505.24864) (2025-05) ran more than 2,000 further RL steps on a 1.5B distilled model and reported gains on problems where up to 256 base-model samples had found no solution, a finite-budget observation. Controlled comparisons from several starting points at equal compute would make this clearer.
 
 Next: [how to compare and read the numbers](measuring.en.md).

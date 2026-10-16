@@ -138,7 +138,7 @@ assert len(torch.tensor_split(torch.arange(4), 3)) == 3
 
 `torch.tensor(array)` copies data; `from_numpy` and compatible `as_tensor` calls can share storage. Sharing avoids a copy but lets changes on either side affect training inputs.
 
-Default `.numpy()` requires a CPU tensor not requiring gradients, with supported dtype/layout and other conditions. It normally shares storage. `.numpy(force=True)` handles detach, CPU transfer, and conjugate-related conversions, but does not guarantee an independent copy. Explicitly copy when you need a snapshot. See the [numpy interface conditions](https://docs.pytorch.org/docs/2.14/generated/torch.Tensor.numpy.html).
+Default `.numpy()` requires a CPU tensor not requiring gradients, with supported dtype/layout and other conditions. It normally shares storage. `.numpy(force=True)` handles detach, CPU transfer, and conjugate-related conversions, but does not guarantee an independent copy. For an independent snapshot, use `tensor.detach().cpu().numpy().copy()` with a supported dtype/layout. See the [numpy interface conditions](https://docs.pytorch.org/docs/2.14/generated/torch.Tensor.numpy.html).
 
 `.tolist()` produces nested Python numbers; `list(tensor)` iterates over sub-tensors along the first axis. `.item()` needs exactly one element, not necessarily a zero-dimensional tensor. Its Python result carries no gradient connection. Frequent CUDA `item()` calls can also make the CPU wait, so use them for logging rather than constructing a differentiable loss.
 

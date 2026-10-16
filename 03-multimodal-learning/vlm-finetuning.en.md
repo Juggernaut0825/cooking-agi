@@ -2,7 +2,7 @@
 
 [中文](vlm-finetuning.md) · **English**
 
-> Last reviewed: 2026-10-09 · Prerequisites: [SFT](../05-post-training/sft-and-its-ceiling.en.md), [One training step](../00-foundations/deep-dives/training-step.en.md)
+> Last reviewed: 2026-10-16 · Prerequisites: [SFT](../05-post-training/sft-and-its-ceiling.en.md), [One training step](../00-foundations/deep-dives/training-step.en.md)
 
 You show a timetable and ask when the last bus leaves. The answer is “22:40.” Training loss falls, but the model still answers 22:40 when the image is hidden. It may have learned the dataset's most common answer rather than how to read a timetable.
 
@@ -109,6 +109,8 @@ Long answers contribute more tokens. Mixing long OCR transcriptions with short a
 TRL warns against unchecked VLM sequence truncation because it can remove image tokens. Its `max_length=None` recommendation disables that truncation; it does not provide unlimited memory. Still constrain image dimensions, image count, and text length, and inspect length tails. The advice is unchanged from v0.29.0 to v1.16.0 (released 2026-10-15). [TRL v1.16.0 documentation](https://huggingface.co/docs/trl/v1.16.0/en/sft_trainer)
 
 **As of October 2026, `assistant_only_loss=True` works for VLMs: TRL v1.15.0 added vision-dataset support, provided you have `transformers>=5.18.0` and a conversational language-modeling dataset; older transformers versions still raise** ([v1.15.0 release notes](https://github.com/huggingface/trl/releases/tag/v1.15.0)). Before turning it on, still decode one batch and confirm that the active labels fall only on assistant turns.
+
+Also inspect whether the chat template's `{% generation %}` / `{% endgeneration %}` span includes the assistant end-of-turn token, not just its answer text. The [v1.16.0 source](https://github.com/huggingface/trl/blob/v1.16.0/trl/trainer/sft_trainer.py) checks this: masking the stop token can produce a healthy-looking loss while failing to teach the model when to stop. Neither the version number nor a falling loss validates the labels on its own.
 
 This page was first written against TRL v0.29.0. That version rejects `assistant_only_loss=True` for VLMs, even if the template supplies an assistant mask. If your environment is pinned to the old version, for single-turn QA use `prompt` / `completion` data with the answer in completion and `completion_only_loss=True`. That is not automatic assistant-turn selection in an arbitrary multi-turn conversation. For the latter, use validated custom labels / a collator while leaving the unsupported flag off. Setting it to `False` merely to get training running does not establish answer-only supervision. [v0.29.0 guard and collator implementation](https://github.com/huggingface/trl/blob/v0.29.0/trl/trainer/sft_trainer.py)
 

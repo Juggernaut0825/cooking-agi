@@ -46,7 +46,7 @@ Continue with the booking policy. This is an action record for developers, not a
 
 A model's tool-call output only proposes a tool name and arguments, and producing arguments grants no permission to execute; the application's executor validates and makes the call, and does not treat tool-returned text as system instructions; MCP is the protocol layer that connects external tools, and it does not choose the plan, set permissions, or certify the answer. The three layers are laid out in one table, with one running example, in [tools, MCP, and skills](tools-and-skills.en.md#three-layers).
 
-Read-only search and booking cancellation also carry different risks. One retrieves information; the other changes external state. A cancellation tool should require confirmation and use an idempotency key so a retry after a timeout does not duplicate the operation. Remembering an action mentioned in history does not authorize executing it.
+Read-only search and booking cancellation carry different risks. Search can send private query text to an external service as well as retrieve bad evidence; cancellation changes external state. Constrain outbound content and destinations for search, and verify authorization and the specific booking before cancellation. If the backend supports idempotency, reuse the same operation key on retries; otherwise inspect the outcome first. Merely generating a key does not prevent duplicates. Remembering an action does not authorize it. See [tool and permission checks](tools-and-skills.en.md#trust).
 
 For a complete example, see [tools, MCP, and skills](tools-and-skills.en.md): follow a review-only request and separate task instructions, tool protocols, and execution permissions.
 

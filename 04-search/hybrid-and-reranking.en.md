@@ -27,7 +27,7 @@ Inspect unique relevant results before combining sources. If both always return 
 
 ## 2. Why not just add the scores? {#rank-fusion}
 
-A BM25 score of 12.4 and a cosine similarity of 0.81 are not on the same scale. Raw addition can let the numerically larger source dominate. Normalization is an option, but its calibration still needs checking as queries change.
+A BM25 score of 12.4 and a cosine similarity of 0.81 are not on the same scale. With raw addition, the source with larger score differences between candidates may dominate ranking; a larger absolute value alone does not establish that. Normalization is an option, but a shared range is not a calibrated relevance probability. Validate fusion again when queries or candidate ranges change.
 
 Reciprocal Rank Fusion (RRF) is a simple starting point: use ranks instead of requiring comparable raw scores.
 
@@ -77,6 +77,8 @@ RRF discards raw score gaps, so it cannot distinguish a narrow first-place win f
 After fusion, we still need to determine whether A is outdated and B applies to the current environment. A cross-encoder jointly reads the query and candidate for finer comparisons. An LLM judge with clear criteria is another option, but cost, consistency, and resistance to instructions inside retrieved content need testing.
 
 One concrete scoring rule: [Qwen3-Reranker](https://huggingface.co/Qwen/Qwen3-Reranker-0.6B) puts the query and the candidate into one prompt asking whether the candidate meets the requirement, takes the logits of the “yes” and “no” tokens at the last position, applies a softmax over just those two, and uses the probability of “yes” as the score. With logits 2 and 0 the score is $e^2/(e^2+1)\approx0.881$. This is hand arithmetic, not model output; it shows that the score comes from one joint reading, not from the dot product of two independent vectors.
+
+The 0.881 is a **score conditional on the yes/no label set**, not an established 88.1% probability of document relevance. If yes has vocabulary probability 0.10 and no has 0.01, renormalizing gives $0.10/(0.10+0.01)\approx0.909$, although their combined mass was only 0.11. Good ranking does not establish calibrated probabilities. Before using a score to abstain or approve automatically, validate thresholds and error rates on independent labeled data; see [judge calibration](../07-evaluation/llm-as-a-judge/calibration.en.md).
 
 ```text
 Documents the user may access

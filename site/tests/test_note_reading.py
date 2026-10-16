@@ -48,6 +48,20 @@ class NoteReadingTests(unittest.TestCase):
         page.kind = 'index'
         self.assertNotIn('data-reading-note', build.page_header_html(page))
 
+    def test_directories_do_not_turn_generated_links_into_a_reading_deadline(self):
+        for language, label in (('zh', '按需选读'), ('en', 'Browse by topic')):
+            for kind in ('home', 'index'):
+                with self.subTest(language=language, kind=kind):
+                    page = self.page(language)
+                    page.kind = kind
+                    page.read_minutes = 999
+                    header = build.page_header_html(page)
+                    self.assertIn(label, header)
+                    self.assertNotIn('999', header)
+            article = self.page(language)
+            self.assertIn('约 10 分钟' if language == 'zh' else '10 min read',
+                          build.page_header_html(article))
+
     def test_missing_overview_does_not_create_broken_link(self):
         page = self.page('zh')
         page.section['pages'] = []

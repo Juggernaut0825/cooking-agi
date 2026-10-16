@@ -101,15 +101,19 @@ def gae(rewards, values, next_values, terminated, truncated,
     result = [0.0] * len(rewards)
     carry = 0.0
     for step in reversed(range(len(rewards))):
-        bootstrap = 0.0 if terminated[step] else next_values[step]
+        bootstrap = 0.0 if terminated[step] or gamma == 0 else next_values[step]
         residual = rewards[step] + gamma * bootstrap - values[step]
         same_episode = not (terminated[step] or truncated[step])
-        carry = residual + gamma * trace_decay * same_episode * carry
+        continuation = (gamma * trace_decay * carry
+                        if same_episode and gamma != 0 and trace_decay != 0 else 0.0)
+        carry = residual + continuation
         result[step] = carry
     return result
 ```
 
-Each next_values entry must use that transition's final observation, not a reset observation. Under Gymnasium 1.x's default next-step autoreset, the reset observation arrives on the step after the episode ends; mask that step out rather than continuing GAE through it. See [MC, TD, and boundaries](returns-and-td.en.md) and [Farama's explanation](https://farama.org/Vector-Autoreset-Mode). A rollout buffer that ends before the task does can also bootstrap its final value while stopping recurrence at the buffer boundary.
+The branch stops continuation without multiplying a future carry by zero: `0 * NaN` remains NaN, so an invalid next episode must not contaminate an already terminated or truncated episode. With $\gamma=0$, the unused successor value is also skipped. Invalid rewards or current values for genuine actions should still fail validation or be investigated, not silently become zero.
+
+Each next_values entry must use that transition's final observation, not a reset observation. For [Gymnasium v1.1 vector autoreset modes](https://farama.org/Vector-Autoreset-Mode), inspect the selected mode rather than only `done`: in next-step mode, the next `step` resets that sub-environment instead of executing an action, so exclude that entry before buffering; in same-step mode, the ending step returns the reset observation and the actual final observation is in `info["final_obs"]`; disabled mode requires an explicit reset. Other wrappers and versions need their own API checks. A buffer ending before task termination can bootstrap its final value while stopping recurrence at the buffer boundary; see [MC, TD, and boundaries](returns-and-td.en.md).
 
 ## How does Critic error reach the Actor?
 

@@ -3,9 +3,16 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../static/language.js'), 'utf8');
-const {entryDecision, storageKeys, linkLanguage} = require('../static/language.js');
+const {entryDecision, storageKeys, linkLanguage, switchHref} = require('../static/language.js');
 const base = 'https://example.org/cooking-agi/';
 const keys = storageKeys(base);
+assert.equal(switchHref(base + 'note.html', base + 'note.en.html#cache', ['cache']), base + 'note.html#cache');
+assert.equal(switchHref(base + 'note.html', base + 'note.en.html#only-english', ['cache']), base + 'note.html');
+assert.equal(switchHref(base + 'note.html', base + 'note.en.html#%E7%BC%93%E5%AD%98', ['缓存']), base + 'note.html#%E7%BC%93%E5%AD%98');
+assert.equal(switchHref(base + 'note.html', base + 'note.en.html#%broken', ['cache']), base + 'note.html');
+assert.equal(switchHref(base + 'note.html?field=rl#event-ppo', base + 'note.en.html#event-ppo', []), base + 'note.html?field=rl#event-ppo');
+assert.equal(switchHref('https://elsewhere.org/', base + '#cache', ['cache']), 'https://elsewhere.org/');
+assert.equal(switchHref(base + 'note.html', base + 'note.en.html#cache', null), base + 'note.html');
 const {prepareIndex, rankNotes, safePath} = require('../static/search.js');
 const homes = prepareIndex([
   {u: 'index.html', t: 'AGI Study Notes', s: 'Home', l: 'en', x: 'Start here'},
@@ -111,6 +118,10 @@ const chineseLink = {
   href: base + 'learn/index.html', dataset: {languageSwitch: 'zh'},
   hasAttribute: name => name === 'data-language-switch'
 };
+const anchored = simulate({href: base + 'learn/index.en.html#cache', prefix: '../'});
+const anchoredLink = {...chineseLink, dataset: {languageSwitch: 'zh', languageAnchors: '["cache"]'}};
+anchored.handlers.click({target: {closest: () => anchoredLink}, button: 0});
+assert.equal(anchoredLink.href, base + 'learn/index.html#cache');
 linked.handlers.click({target: {closest: () => chineseLink}, button: 0});
 assert.equal(linked.local.get(keys.choice), 'zh');
 assert.equal(linked.guide.hidden, true);

@@ -21,7 +21,7 @@ $$
 $s$ is the scale, the step between two neighboring grid points; $z$ is the zero-point, the integer that corresponds to the real value 0; $\hat x$ is the approximation you read back. [Jacob et al. (Google, 2017-12)](https://arxiv.org/abs/1712.05877) define $z$ this way so that 0 is represented exactly, because many operators pad with zeros at the borders. Two common choices:
 
 - **Symmetric**: $z=0$, INT4 uses $-7$ to $7$ (leaving out $-8$ to keep positive and negative symmetric), $s=\max|x|/7$.
-- **Asymmetric**: INT4 uses $0$ to $15$, $s=(\max x-\min x)/15$, $z=\operatorname{round}(-\min x/s)$.
+- **Asymmetric**: unsigned 4-bit codes use $0$ to $15$. To represent zero exactly, first set $a=\min(0,\min x)$ and $b=\max(0,\max x)$, then $s=(b-a)/15$ and $z=\operatorname{clamp}(\operatorname{round}(-a/s),0,15)$. Handle an all-zero group separately, for example with $s=1,z=0$. Using only the observed endpoints of an all-positive group can put $z$ outside the code range, violating the exact-zero requirement.
 
 As long as $x$ is in range, the rounding error is at most $s/2$; if the error is uniform on $[-s/2,s/2]$, the MSE is about $s^2/12$. **Halve the step and the squared error drops to a quarter.**
 
@@ -49,7 +49,7 @@ The per-tensor MSE is 0.0042, the same order as $s^2/12=0.0033$; with groups it 
 
 ### Swap in one outlier
 
-Replace 1.40 with 14.0. The per-tensor scale becomes $14/7=2$; the other 7 values are all below 0.5 after dividing by 2 and all round to 0, so their MSE rises from 0.0042 to about 0.296, seventy times as much. With groups, the first group is unaffected, the other 3 values in the second group become 0, and the MSE over the 7 values is about 0.143. **Grouping does not remove an outlier; it only confines the damage to its own group.**
+Replace 1.40 with 14.0. The per-tensor scale becomes $14/7=2$; the other 7 values have magnitude below 0.5 after dividing by 2 and all round to 0. Using all 8 weights consistently, MSE rises from 0.0042 to 0.2592, about 61.7 times. Over only the 7 unchanged values, it rises from 0.0048 to about 0.296. With groups, the first group is unaffected and the other 3 values in the second group become 0; MSE over all 8 values is about 0.125 (about 0.143 over those 7). **Grouping does not remove an outlier; it only confines the damage to its own group.**
 
 [SmoothQuant (2022-11)](https://arxiv.org/abs/2211.10438) puts this into one number: with 8-bit per-tensor quantization, a channel whose maximum is $m_i$ gets only about $2^8\cdot m_i/m$ grid points, where $m$ is the maximum of the whole matrix. In the activations of OPT and similar models they saw outliers about 100 times larger than most values, leaving non-outlier channels with only two or three grid points. The outliers are not random either:
 
@@ -84,11 +84,11 @@ An INT grid is evenly spaced; an FP grid divides each power-of-two interval even
 
 | Format | Sign / exponent / mantissa bits | Exponent bias | Maximum | Smallest normal | Relative gap between neighbors |
 | --- | --- | ---: | ---: | ---: | ---: |
-| E4M3 | 1 / 4 / 3 | 7 | 448 | $2^{-6}$ | $2^{-3}$, i.e. 12.5% |
-| E5M2 | 1 / 5 / 2 | 15 | 57,344 | $2^{-14}$ | $2^{-2}$, i.e. 25% |
+| E4M3 | 1 / 4 / 3 | 7 | 448 | $2^{-6}$ | $2^{-3}$ (12.5%) at a normal power of two; decreases with the significand within that interval |
+| E5M2 | 1 / 5 / 2 | 15 | 57,344 | $2^{-14}$ | $2^{-2}$ (25%) at a normal power of two; decreases with the significand within that interval |
 | INT8 (symmetric, for comparison) | — | — | $127s$ | — | $s$ everywhere |
 
-E4M3 has no infinities and uses only one mantissa pattern for NaN, and the encodings saved push its maximum to 448; E5M2 keeps the IEEE 754 special values. E4M3 has a gap of 1 between 8 and 16 and a gap of 4 between 32 and 64: **the absolute error grows with the value while the relative error stays roughly constant**, at worst about half the gap, about 6.25% for E4M3.
+E4M3 has no infinities and uses only one mantissa pattern for NaN, pushing its maximum to 448; E5M2 keeps IEEE 754 special values. E4M3 has a gap of 1 between 8 and 16 and 4 between 32 and 64: **within the normal range, absolute error grows with magnitude while relative precision stays roughly stable**. Without overflow, about 6.25% bounds the relative round-to-nearest error. This does not apply near zero in the subnormal range: rounding to zero can give 100% relative error.
 
 Compare by hand. Four numbers, $[0.02,\ -0.3,\ 1.7,\ 12.0]$, each with a per-tensor scale that maps the maximum to the top of the format: E4M3 uses $s=12/448\approx0.0268$, INT8 uses $s=12/127\approx0.0945$.
 
@@ -101,7 +101,7 @@ Compare by hand. Four numbers, $[0.02,\ -0.3,\ 1.7,\ 12.0]$, each with a per-ten
 
 Near the maximum INT8 is more accurate; far below the maximum FP8 is. [Van Baalen et al. of Qualcomm AI Research (2023-03)](https://arxiv.org/abs/2303.17951) sum it up as "all about the outliers": when a distribution has significant outliers FP8 gives the smaller error, and when it is well behaved INT8 is more accurate. They also estimate that in dedicated hardware an FP8 multiply-accumulate unit is 50%–180% less efficient than an INT8 one, and conclude that edge inference does not justify a dedicated FP8 implementation. On datacenter GPUs the choice also depends on what the Tensor Cores support; see the hardware section below.
 
-Being called FP8 does not mean the bit patterns are the same. AMD's [HIP 7.16 documentation](https://rocm.docs.amd.com/projects/HIP/en/latest/reference/fp8_numbers.html) states that CDNA 3 (the MI300 series) supports the FNUZ variant in hardware and CDNA 4 (the MI350 series) supports the OCP variant. As defined in the [ONNX float8 notes](https://onnx.ai/onnx/technical/float8.html), E4M3FNUZ has exponent bias 8 (7 for OCP), no infinities and no negative zero, with NaN taking the negative-zero pattern, so the all-ones `S.1111.111` is an ordinary number too. That definition gives a maximum of $1.875\times2^{15-8}=240$ (the ONNX table gives only the bit pattern), against 448 for OCP E4M3. Read as FNUZ, the same bit pattern means exactly half the value, so an OCP checkpoint needs its scales doubled and its negative zeros handled separately before it can be used as FNUZ (this is derived from the bit definitions).
+Being called FP8 does not mean the bit patterns are the same. AMD's [HIP 7.16 documentation](https://rocm.docs.amd.com/projects/HIP/en/latest/reference/fp8_numbers.html) states that CDNA 3 (the MI300 series) supports the FNUZ variant in hardware and CDNA 4 (the MI350 series) supports the OCP variant. As defined in the [ONNX float8 notes](https://onnx.ai/onnx/technical/float8.html), E4M3FNUZ has exponent bias 8 (7 for OCP), no infinities and no negative zero, with NaN taking the negative-zero pattern, so the all-ones `S.1111.111` is an ordinary number too. That definition gives a maximum of $1.875\times2^{15-8}=240$ (the ONNX table gives only the bit pattern), against 448 for OCP E4M3. For finite nonzero encodings shared by both formats, reinterpreting the payload as FNUZ halves the value. Keeping those payload bits and dequantizing as $x=sq$, doubling the scale compensates. This is not a general cast: OCP negative zero 0x80 becomes NaN, while OCP NaNs 0x7f/0xff become finite in FNUZ, so each needs explicit conversion. An inverse-scale convention requires the opposite adjustment. This derivation does not make arbitrary FP8 checkpoints interchangeable.
 
 ## Why 4-bit formats need block scaling: MXFP4 and NVFP4
 
@@ -136,31 +136,49 @@ A format that saves memory is not automatically fast: if the Tensor Cores do not
 
 The 9.0 row agrees with the [H100 whitepaper V1.04](https://dam-cdn.nvd.orangelogic.com/AssetLink/705n6ur546g0uk43w0117r17n8042d73.pdf), which lists FP8, FP16, BF16, TF32, FP64 and INT8 as the supported MMA data types, with no INT4.
 
-Being in the table does not mean being fast. As of October 2026, NVIDIA's [HGX page](https://www.nvidia.com/en-us/data-center/hgx/) (8-GPU systems, sparse figures, dense is half) gives HGX B300 3 POPS of INT8 and 72 PFLOPS of FP8, and HGX B200 72 for both. On the same B300, INT8 is 1/24 of FP8, so on B300 INT8 W8A8 is no longer a route to speed, and 8-bit compute should go through FP8. Throughput across generations is compared in [NVIDIA generations](../nvidia-generations.en.md). On the AMD side, the [precision-support page](https://rocm.docs.amd.com/en/latest/reference/precision-support.html) of the ROCm 10.1 documentation, as of October 2026, lists INT8 and FP8 for the CDNA 3 (MI300 series) matrix cores, with FP8 only in the FNUZ variant, and INT8 plus OCP FP8, FP6 and FP4 for CDNA 4 (MI350 series). The [MI350 architecture page](https://rocm.docs.amd.com/en/latest/reference/gpu-arch/mi350.html) also lists MXFP8, MXFP6 and MXFP4, and its peak table gives INT8 the same rate as FP8. When the hardware lacks a format, engines often fall back to weight-only quantization; note 3 has a vLLM example.
+Being in the table does not mean being fast. As of October 2026, NVIDIA's [HGX page](https://www.nvidia.com/en-us/data-center/hgx/) (8-GPU systems, sparse figures, dense is half) gives HGX B300 3 POPS of INT8 and 72 PFLOPS of FP8, and HGX B200 72 for both. On the same B300, INT8 is 1/24 of FP8, so equal INT8/FP8 compute ceilings are not a valid B300 assumption. FP8 is the first candidate to evaluate for compute-bound 8-bit GEMMs; small-batch INT8 can still benefit from reduced weight traffic. End-to-end speed depends on kernels, conversion overhead and quality requirements. Throughput across generations is compared in [NVIDIA generations](../nvidia-generations.en.md). On the AMD side, the [precision-support page](https://rocm.docs.amd.com/en/latest/reference/precision-support.html) of the ROCm 10.1 documentation, as of October 2026, lists INT8 and FP8 for the CDNA 3 (MI300 series) matrix cores, with FP8 only in the FNUZ variant, and INT8 plus OCP FP8, FP6 and FP4 for CDNA 4 (MI350 series). The [MI350 architecture page](https://rocm.docs.amd.com/en/latest/reference/gpu-arch/mi350.html) also lists MXFP8, MXFP6 and MXFP4, and its peak table gives INT8 the same rate as FP8. When the hardware lacks a format, engines often fall back to weight-only quantization; note 3 has a vLLM example.
 
 ## Compute it yourself
 
 ```python
 def quantize_sym(values, bits=4):
-    qmax = 2 ** (bits - 1) - 1
-    scale = max(abs(v) for v in values) / qmax
-    codes = [max(-qmax, min(qmax, round(v / scale))) for v in values]
-    return scale, codes, [c * scale for c in codes]
+    if not values or bits < 2:
+        raise ValueError("Need values and at least two bits")
+    maximum_code = 2 ** (bits - 1) - 1
+    scale = max(abs(value) for value in values) / maximum_code or 1.0
+    codes = [max(-maximum_code, min(maximum_code, round(value / scale))) for value in values]
+    return scale, codes, [code * scale for code in codes]
 
-def mse(a, b):
-    return sum((x - y) ** 2 for x, y in zip(a, b)) / len(a)
+def quantize_affine(values, bits=4):
+    if not values or bits < 1:
+        raise ValueError("Need values and at least one bit")
+    maximum_code = 2 ** bits - 1
+    lower = min(0, min(values))
+    upper = max(0, max(values))
+    scale = (upper - lower) / maximum_code or 1.0
+    zero_point = max(0, min(maximum_code, round(-lower / scale)))
+    codes = [max(0, min(maximum_code, round(value / scale) + zero_point)) for value in values]
+    return scale, zero_point, codes, [scale * (code - zero_point) for code in codes]
 
-w = [0.12, -0.53, 0.88, -0.07, 0.31, 1.40, -0.95, 0.02]
-scale, codes, restored = quantize_sym(w)
+def mse(original, restored):
+    if not original or len(original) != len(restored):
+        raise ValueError("Need non-empty, equally sized vectors")
+    return sum((before - after) ** 2 for before, after in zip(original, restored)) / len(original)
+
+weights = [0.12, -0.53, 0.88, -0.07, 0.31, 1.40, -0.95, 0.02]
+scale, codes, restored = quantize_sym(weights)
 assert codes == [1, -3, 4, 0, 2, 7, -5, 0]
-assert abs(mse(w, restored) - 0.0042) < 1e-9
+assert abs(mse(weights, restored) - 0.0042) < 1e-9
 
-grouped = quantize_sym(w[:4])[2] + quantize_sym(w[4:])[2]
-assert abs(mse(w, grouped) - 0.0018592) < 1e-6
+grouped = quantize_sym(weights[:4])[2] + quantize_sym(weights[4:])[2]
+assert abs(mse(weights, grouped) - 0.0018592) < 1e-6
 
-w_out = w[:5] + [14.0] + w[6:]
-_, codes_out, restored_out = quantize_sym(w_out)
-assert codes_out == [0, 0, 0, 0, 0, 7, 0, 0]
+outlier_weights = weights[:5] + [14.0] + weights[6:]
+_, outlier_codes, outlier_restored = quantize_sym(outlier_weights)
+assert outlier_codes == [0, 0, 0, 0, 0, 7, 0, 0]
+assert abs(mse(outlier_weights, outlier_restored) - 0.2592) < 1e-9
+assert quantize_sym([0.0, 0.0])[2] == [0.0, 0.0]
+assert quantize_affine([1.0, 2.0])[1] == 0
 ```
 
 Change `bits` to 8, or change the group length to 2, and watch the MSE. Python's `round` rounds half to even, matching the default rounding of most hardware.

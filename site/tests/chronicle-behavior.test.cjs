@@ -29,17 +29,17 @@ const MILESTONES = [
   ['perceptron', 'models', 'origins', false], ['grpo', 'rl', 'recent', true]
 ];
 
-function environment(href = 'https://example.com/cooking-agi/learn/technology-timeline.en.html') {
+function environment(href = 'https://example.com/cooking-agi/learn/technology-timeline.en.html', milestones = MILESTONES) {
   const location = new URL(href);
   const english = location.pathname.endsWith('.en.html');
   const switcher = {href: new URL(english ? 'technology-timeline.html' : 'technology-timeline.en.html', location).href};
-  const links = MILESTONES.map(([id]) => element({dataset: {node: id}}));
-  const items = MILESTONES.map(([, topic, , key], index) => element({
-    dataset: Object.assign({workTopic: topic}, key ? {key: ''} : {}),
+  const links = milestones.map(([id]) => element({dataset: {node: id}}));
+  const items = milestones.map(([, topic, , key, track], index) => element({
+    dataset: Object.assign({workTopic: topic, workTrack: track}, key ? {key: ''} : {}),
     querySelector: selector => (selector === '[data-node]' ? links[index] : null)
   }));
   const eras = ['origins', 'recent'].map(era => {
-    const own = items.filter((item, index) => MILESTONES[index][2] === era);
+    const own = items.filter((item, index) => milestones[index][2] === era);
     const more = own.length > own.filter(item => 'key' in item.dataset).length
       ? element({dataset: {moreLabel: 'Show all', lessLabel: 'Show fewer'}}) : null;
     return element({
@@ -49,14 +49,22 @@ function environment(href = 'https://example.com/cooking-agi/learn/technology-ti
     });
   });
   const chips = ['energy', 'algorithms', 'chips', 'models', 'rl'].map(field => element({dataset: {field}}));
-  const articles = MILESTONES.map(([id, topic, era]) => element({id: `event-${id}`, dataset: {workTopic: topic, era}}));
+  const articles = milestones.map(([id, topic, era, , track]) => element({id: `event-${id}`, dataset: {workTopic: topic, era, workTrack: track}}));
+  const branches = element();
+  const resultCount = element();
+  const options = [...new Map(milestones.filter(row => row[4]).map(row => [row[4], row[1]])).entries()]
+    .map(([track, topic]) => element({value: track, dataset: {topic}}));
+  const trackSelect = element({value: '', querySelectorAll: selector => selector === 'option[data-topic]' ? options : []});
   const reset = element();
   const empty = element();
   const root = element({
     querySelectorAll: selector => ({
       '.ch-era': eras, '.ch-spine > li': items, '[data-field]': chips, '.chronicle-work': articles, '[data-node]': links
     })[selector] || [],
-    querySelector: selector => ({'[data-filter-reset]': reset, '[data-filter-empty]': empty})[selector] || null
+    querySelector: selector => ({
+      '[data-filter-reset]': reset, '[data-filter-empty]': empty, '[data-branches]': branches,
+      '[data-track-select]': trackSelect, '[data-result-count]': resultCount
+    })[selector] || null
   });
   const events = {};
   const document = {
@@ -71,7 +79,7 @@ function environment(href = 'https://example.com/cooking-agi/learn/technology-ti
     addEventListener: (name, callback) => { events[name] = callback; },
     matchMedia: () => ({matches: true}), requestAnimationFrame: callback => callback()
   });
-  return {location, switcher, events, chips, reset, items, eras, panel: document.body.children[0]};
+  return {location, switcher, events, chips, reset, items, eras, branches, trackSelect, options, resultCount, panel: document.body.children[0]};
 }
 
 test('legacy branch links open their previously hidden article', () => {
@@ -176,4 +184,74 @@ test('browser history restores the field and language destination together', () 
   context.events.popstate();
   assert.deepEqual(hidden(context), FOLDED);
   assert.equal(new URL(context.switcher.href).search, '');
+});
+
+const BRANCH_MILESTONES = [
+  ['perceptron', 'models', 'origins', true, 'vision'],
+  ['qlearning', 'models', 'origins', false, 'rl'],
+  ['grpo', 'models', 'recent', true, 'rl'],
+  ['ijepa', 'models', 'recent', true, 'vision'],
+  ['cuda', 'chips', 'recent', true, 'accelerators']
+];
+
+test('branch links preserve filters through language switches, including field fragments', () => {
+  for (const suffix of ['', '.en']) {
+    const context = environment(`https://example.com/cooking-agi/learn/technology-timeline${suffix}.html?field=models&track=rl#field-models`, BRANCH_MILESTONES);
+    assert.deepEqual(hidden(context), [true, false, false, true, true]);
+    assert.equal(context.trackSelect.value, 'rl');
+    assert.equal(context.branches.hidden, false);
+    const translated = new URL(context.switcher.href);
+    assert.equal(translated.searchParams.get('track'), 'rl');
+    assert.deepEqual(hidden(environment(translated.href, BRANCH_MILESTONES)), hidden(context));
+    assert.equal(context.resultCount.textContent, suffix ? '2 milestones · in date order' : '2 个节点 · 按年份排列');
+    assert.equal(context.options.find(option => option.value === 'accelerators').disabled, true);
+  }
+});
+
+test('selecting another branch closes details and reset clears branch state', () => {
+  const context = environment('https://example.com/learn/technology-timeline.en.html?field=models&track=rl#event-grpo', BRANCH_MILESTONES);
+  context.trackSelect.value = 'vision';
+  context.trackSelect.events.change();
+  assert.equal(context.panel.hidden, true);
+  assert.deepEqual(hidden(context), [false, true, true, false, true]);
+  assert.equal(context.location.hash, '');
+  assert.equal(context.location.searchParams.get('track'), 'vision');
+  context.reset.events.click();
+  assert.equal(context.branches.hidden, true);
+  assert.equal(context.trackSelect.value, '');
+  assert.equal(new URL(context.switcher.href).searchParams.has('track'), false);
+});
+
+test('branch reading steps across periods in chronological order', () => {
+  const context = environment('https://example.com/learn/technology-timeline.en.html?field=models&track=rl#event-qlearning', BRANCH_MILESTONES);
+  const [previous, next, count] = context.panel.children[0].children;
+  assert.equal(previous.disabled, true);
+  assert.equal(next.disabled, false);
+  assert.equal(count.textContent, '1 / 2');
+  next.events.click();
+  assert.equal(context.location.hash, '#event-grpo');
+  assert.equal(next.disabled, true);
+  assert.equal(count.textContent, '2 / 2');
+  previous.events.click();
+  assert.equal(context.location.hash, '#event-qlearning');
+});
+
+test('opening a related milestone outside the branch clears only the incompatible filter', () => {
+  const context = environment('https://example.com/learn/technology-timeline.en.html?field=models&track=rl#event-grpo', BRANCH_MILESTONES);
+  context.location.hash = '#event-ijepa';
+  context.events.hashchange();
+  assert.equal(context.trackSelect.value, '');
+  assert.equal(context.panel.hidden, false);
+  assert.deepEqual(hidden(context), [false, false, false, false, true]);
+  assert.equal(new URL(context.switcher.href).searchParams.get('field'), 'models');
+  assert.equal(new URL(context.switcher.href).searchParams.has('track'), false);
+});
+
+test('unknown branches and branches from a different field cannot hide all results', () => {
+  for (const track of ['missing', 'accelerators']) {
+    const context = environment(`https://example.com/learn/technology-timeline.en.html?field=models&track=${track}`, BRANCH_MILESTONES);
+    assert.deepEqual(hidden(context), [false, false, false, false, true]);
+    assert.equal(context.trackSelect.value, '');
+    assert.equal(new URL(context.switcher.href).searchParams.has('track'), false);
+  }
 });

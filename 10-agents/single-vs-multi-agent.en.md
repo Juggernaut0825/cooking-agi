@@ -71,18 +71,19 @@ Task: find this year's holiday opening rules for three libraries, A, B and C (re
 - Each subquestion needs 4 tool calls; each call (one model step plus the tool's return) takes 10 seconds and returns 4k tokens.
 - Each context carries a fixed 3k prompt (system prompt, tool descriptions, task); the final answer is 2k, and writing it is one more 10-second step.
 - In the multi-agent version, the coordinator plans for 10 seconds and writes a 0.5k brief per subagent; each subagent returns a 1k summary; the coordinator then spends 10 seconds synthesising.
-- Tokens count each piece of content once per context it enters, which amounts to assuming re-reads are cached. A real bill also depends on whether every step re-reads the whole context: the longer a single agent's context, the more each re-read costs.
+- The table counts each piece of content once per context it enters. This is content volume, not cumulative API usage or a bill: it omits history rereads and different input/output prices. A cache hit is not necessarily free; for example, [Claude's caching documentation](https://platform.claude.com/docs/en/build-with-claude/prompt-caching) accounts for and prices cache writes, cache reads, and uncached input separately. Compare actual per-call usage under the same pricing convention.
+- To isolate parallelism, the table omits subagent summary-generation time, queueing, network overhead, and retries. If each summary takes another $s$ seconds, add $s$ to the independent parallel case and $3s$ to the sequential case below.
 
 | Item | Single agent | Coordinator + 3 subagents |
 | --- | --- | --- |
 | Tool calls | 12, one after another | 12, three branches in parallel |
 | Wall-clock time | 12×10+10 = 130 s | 10+4×10+10 = 60 s |
-| Tokens | 3+12×4+2 = 53k | coordinator 3+1.5+3+2 = 9.5k, subagents 3×(3+0.5+16+1) = 61.5k, total 71k |
+| Content volume, not cumulative billed tokens | 3+12×4+2 = 53k | coordinator 3+1.5+3+2 = 9.5k, subagents 3×(3+0.5+16+1) = 61.5k, total 71k |
 | Longest single context | 53k | 20.5k |
 
-Time drops to 60 seconds, but not to a third: planning and synthesis cannot run in parallel. Tokens rise by about 34%, from the repeated fixed prompts, the briefs and the summaries.
+Under these simplifying assumptions, time drops to 60 seconds, but not to a third: planning and synthesis cannot run in parallel. Content volume rises by about 34%, from repeated fixed prompts, briefs, and summaries. That does not establish a 34% increase in the bill.
 
-Now the chance of a correct answer. Suppose the final answer needs one key fact from each subquestion. Let $s_1$ be the probability that the single agent, in a long context mixing 12 results, finds and keeps each fact; let $s_2$ be the same probability for a subagent whose short context holds only its own 4 results; let $d$ be the probability that a summary drops the fact. All three facts must be right:
+Now the chance of a correct answer. Suppose the final answer needs one key fact from each subquestion. Let $s_1$ be the probability that the single agent finds and keeps each fact in its long context of 12 results; let $s_2$ be that probability for a subagent with only its own 4 results; let $d$ be the conditional probability of dropping a fact in the summary after finding it. Also assume independent, equally probable success events across the three subquestions and no additional coordinator errors. Only under these assumptions do we get:
 
 $$
 P_{\rm single}=s_1^{\,3},\qquad P_{\rm multi}=\big(s_2\,(1-d)\big)^{3}.
@@ -90,13 +91,13 @@ $$
 
 Take $s_1=0.90$ and $s_2=0.95$. The single agent gets $0.9^3=0.729$. With $d=0.02$, the multi-agent version gets $(0.95\times0.98)^3\approx0.807$ and the split wins; with $d=0.10$, it gets $0.855^3\approx0.625$ and the split loses. They break even when $s_2(1-d)=s_1$, that is $d^*=1-0.90/0.95\approx5.3\%$.
 
-The formula shows that **any accuracy gain from splitting comes entirely from $s_2>s_1$, that is, from short contexts missing less than a long one.** If the single agent already uses its context well ($s_1=s_2$), any $d>0$ makes the multi-agent version worse. This points the same way as Tran and Kiela's argument.
+**In this toy model of fact retention alone**, a gain requires $s_2>s_1$ and enough improvement to offset hand-off loss. If $s_1=s_2>0$, any $d>0$ makes the multi-agent version worse. Real errors can be correlated: if all three facts are always right or wrong together, each with success probability 0.9, the probability that all are right is 0.9, not $0.9^3$. This model cannot establish that every benefit of splitting comes from shorter contexts.
 
-Now change one condition: the subquestions become sequential. First check whether library A switched to the city's new notice, then use that notice to check library B, then library C. The parallel width drops to 1, and the multi-agent time becomes $10+40+10+40+10+40+10=160$ seconds, slower than the single agent's 130; tokens stay around 71k; and A's finding is retold twice, through "summary → coordinator → next brief". The split keeps only one benefit, context isolation, and costs an extra 30 seconds and about 18k tokens.
+Now change one condition: the subquestions become sequential. First check whether library A switched to the city's new notice, then use that notice to check library B, then library C. Parallel width drops to 1, and the simplified multi-agent time becomes $10+40+10+40+10+40+10=160$ seconds, slower than the single agent's 130. Content volume stays around 71k under the same convention, and A's finding is retold twice through "summary → coordinator → next brief". This model retains context isolation but adds 30 seconds and about 18k of content. If each summary takes another 10 seconds, independent parallel execution takes 70 seconds and the sequential split takes 190. The figure's 60/160-second values retain the assumption that summary-generation time is omitted.
 
 <!-- widget:step-subagent-timeline -->
 
-Change a different condition: the three subquestions are independent again, but each must decide whether "holiday" includes the eve of a public holiday (many libraries close early that day). If the brief does not say, and each subagent independently picks one reading with probability 0.8 and the other with 0.2, the three results use a consistent definition with probability only $0.8^3+0.2^3=0.52$. A single agent makes this decision once, so its results are consistent by construction, though possibly consistently wrong. The fix is to put the definition into every brief, or to check definitions explicitly during synthesis, not to add another agent.
+Change a different condition: the three subquestions are independent again, but each must decide whether "holiday" includes the eve of a public holiday (many libraries close early that day). If the brief does not say, and each subagent independently picks one reading with probability 0.8 and the other with 0.2, the three results use a consistent definition with probability only $0.8^3+0.2^3=0.52$. A single agent is consistent if it decides once and preserves that decision, though it may be consistently wrong; single-agent execution does not itself prevent contradictions. Put the definition into every brief, or check definitions explicitly during synthesis, rather than adding another agent.
 
 ## How to choose: start from the shape of the task
 

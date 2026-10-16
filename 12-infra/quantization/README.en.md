@@ -34,7 +34,7 @@ Which one to pick depends on which side of the roofline you are on ([Performance
 
 ## The teaching example used in this series
 
-The later notes use one **teaching model**: an 8B dense model with 32 layers, 32 query heads, 8 KV heads and head dimension 128, the same assumed configuration as in the [KV cache](../../00-foundations/deep-dives/kv-cache-and-inference.en.md) and [Performance](../performance.en.md) notes; the GPU is still worked out by hand from the public H100 SXM5 specifications. What each note covers is in the reading order at the end.
+The later notes use one **teaching model**: an 8B dense model with 32 layers, 32 query heads, 8 KV heads and head dimension 128, the same KV-head configuration as in the [KV cache](../../00-foundations/deep-dives/kv-cache-and-inference.en.md) and [Performance](../performance.en.md) notes (Performance uses 7B parameters for its weight ledger, rather than 8B); the GPU is still worked out by hand from the public H100 SXM5 specifications. What each note covers is in the reading order at the end.
 
 ## Timeline
 

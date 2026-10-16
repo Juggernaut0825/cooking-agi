@@ -20,19 +20,21 @@ $$
 
 $D_{\rm tr}$ is the number of training tokens and $D_{\rm inf}$ the number of inference tokens the model will process over its service life; each inference token is forward-only and costs $2N$. With $D_{\rm inf}=0$ this reduces to Chinchilla's problem (stated the other way round: fix the loss and find the cheapest compute); the larger $D_{\rm inf}$, the more each extra bit of model size costs on the inference side. There is no closed form, so it is solved numerically.
 
+$D_{\rm inf}$ includes input and output tokens actually processed. The $2N$ term is a parameter-dominated dense forward-FLOPs approximation that omits context-dependent attention work; autoregressive generation assumes KV-cache reuse rather than recomputing the full prefix. It does not model bandwidth, latency or actual charges after cache hits.
+
 ### Work the previous note's example once
 
 Keep the previous note's teaching surface (Besiroglu et al.'s refit of the Chinchilla data). Set the target loss to that of the compute-optimal model at $10^{22}$ FLOPs (about 9B parameters, 184B tokens), vary the lifetime inference volume, and solve numerically for the $N$ with the smallest total bill in each row. Every number in the table is a teaching number on this surface, not a measurement:
 
 | Inference tokens $D_{\rm inf}$ | Optimal $N$ | Training tokens | $D/N$ | Training FLOPs | Total FLOPs | Total saving vs the Chinchilla-optimal model |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0 | 9.0B | 184B | 20 | $1.00\times10^{22}$ | $1.00\times10^{22}$ | 0 |
+| 0 | 9.1B | 184B | 20 | $1.00\times10^{22}$ | $1.00\times10^{22}$ | 0 |
 | $10^{11}$ | 7.5B | 225B | 30 | $1.01\times10^{22}$ | $1.16\times10^{22}$ | 1.5% |
-| $10^{12}$ | 4.6B | 447B | 97 | $1.24\times10^{22}$ | $2.16\times10^{22}$ | 23% |
-| $10^{13}$ | 2.8B | 1.49T | 536 | $2.48\times10^{22}$ | $8.03\times10^{22}$ | 58% |
-| $10^{14}$ | 2.0B | 6.41T | 3211 | $7.68\times10^{22}$ | $4.76\times10^{23}$ | 74% |
+| $10^{12}$ | 4.6B | 446B | 96 | $1.24\times10^{22}$ | $2.16\times10^{22}$ | 23% |
+| $10^{13}$ | 2.8B | 1.49T | 535 | $2.48\times10^{22}$ | $8.04\times10^{22}$ | 58% |
+| $10^{14}$ | 2.0B | 6.41T | 3204 | $7.69\times10^{22}$ | $4.77\times10^{23}$ | 74% |
 
-$10^{12}$ inference tokens is not extreme: a million requests a day at 1,000 tokens each for 1,000 days. The optimal model is then half the Chinchilla answer; training costs 24% more compute, and the total bill falls by 23%. The last two rows are already outside the fitted surface: as the next section shows, at hundreds to thousands of tokens per parameter the real loss is higher than this surface predicts, so 58% and 74% are optimistic upper bounds.
+$10^{12}$ inference tokens is not extreme: a million requests a day at 1,000 tokens each for 1,000 days. The optimal model is then half the Chinchilla answer; training costs 24% more compute, and the total bill falls by 23%. The last two rows are already outside the fitted surface: as the next section shows, at hundreds to thousands of tokens per parameter the real loss is higher than this surface predicts, so 58% and 74% are potentially optimistic extrapolations, not proven upper bounds on savings.
 
 With the original Chinchilla coefficients ($\alpha=0.336$, $\beta=0.283$), Sardana et al. report that to match a Chinchilla-style 30B model while serving $10^{13}$ inference tokens, the optimum is 13.6B parameters on 2.84 times the data, with 28% fewer total FLOPs (we recomputed with their coefficients and got the same numbers). They also convert FLOPs to dollars: training and prompt processing at 50% MFU, token-by-token generation at only 1% MFU, which pushes the answer further toward small models. Why generation runs at low utilization is covered in [performance](../../12-infra/performance.en.md#decode-batching).
 

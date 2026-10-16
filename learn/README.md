@@ -10,15 +10,6 @@
 
 不确定该选哪一部分，可以先看[阅读路线](choose-your-path.md)；主要为面试复习，直接去[面试准备](../interview/README.md)。
 
-近期补充（2026-10）：
-
-- [前沿观察](../11-frontier/README.md)：新增的第四部分。[世界模型](../11-frontier/world-models/README.md)和[递归自我改进（RSI）](../11-frontier/self-improvement/README.md)两组已审阅；[测试时计算（test-time compute）](../11-frontier/test-time-compute/README.md)、[用 RL 训练 agent](../11-frontier/agentic-rl/README.md)、[机制可解释性](../11-frontier/interpretability/README.md)三组是待审核草稿。
-- 两个新板块，都是待审核草稿：[AI 基础设施（AI infra）](../12-infra/README.md)，从芯片、GPU、CUDA 讲到框架和集群；[感知、机器人与自动驾驶](../13-embodied/README.md)。
-- 2026-10-16 又加了三组待审核草稿：[Scaling law 与超参数](../00-foundations/scaling/README.md)，开训前怎样定模型大小、数据量和学习率（LR）；[扩散语言模型（dLLM）](../11-frontier/diffusion-lm/README.md)，放在前沿观察里；[量化](../12-infra/quantization/README.md)，放在 AI 基础设施里。
-- 强化学习补了三篇：[学什么样的模型](../05-post-training/deep-rl/model-types.md)、[规划和学习怎样互相喂](../05-post-training/deep-rl/planning-and-learning.md)、[离线策略评估（OPE）的估计量](../05-post-training/deep-rl/ope-estimators.md)。
-
-待审核草稿的开头有提示框，侧栏标「（待审核）」；引用其中的事实前，请回到文中链接的一手资料核对。
-
 ## 从基础开始
 
 向量、loss 和梯度还不熟，可以先读[从线性模型到神经网络](../00-foundations/from-linear-to-neural.md)。下面的第 1–3 步是模型计算与训练的基础，第 5 步讲评估；后训练和推理优化可以稍后再看。阅读时可以配合 [PyTorch 小实验](../00-foundations/pytorch/README.md)。
@@ -85,6 +76,21 @@
 分为**理解模型、训练与检验、推理与应用、前沿观察**四个部分，与左侧目录一致。点标题看导读，展开小节找文章。相关主题会在文中互相链接。
 
 <!-- widget:study-atlas -->
+
+## 最近补充
+
+这次补充了从训练预算到机器人控制的几组内容，可以按问题选读。标为「草稿」的系列还在核对，页面和侧栏也会提示；有疑问可以从文中的原论文或文档继续查。
+
+| 想了解什么 | 入口 |
+| --- | --- |
+| 算力有限，模型和数据该怎么配 | [Scaling law 与超参数](../00-foundations/scaling/README.md)（草稿） |
+| GPU 为什么忙，模型却跑不快 | [AI 基础设施](../12-infra/README.md) · [量化与低精度](../12-infra/quantization/README.md)（草稿） |
+| 除了逐 token 生成，还有什么做法 | [扩散语言模型](../11-frontier/diffusion-lm/README.md)（草稿） |
+| 模型怎样预测环境、改进自己的输出 | [世界模型](../11-frontier/world-models/README.md) · [递归自我改进](../11-frontier/self-improvement/README.md) |
+| 怎样多花一些推理计算、训练 agent 或分析模型内部 | [测试时计算](../11-frontier/test-time-compute/README.md) · [Agent RL](../11-frontier/agentic-rl/README.md) · [机制可解释性](../11-frontier/interpretability/README.md)（草稿） |
+| 从图片走到机器人动作，中间还有什么 | [感知、机器人与自动驾驶](../13-embodied/README.md)（草稿） |
+
+强化学习还补了[学什么样的模型](../05-post-training/deep-rl/model-types.md)、[规划与学习如何配合](../05-post-training/deep-rl/planning-and-learning.md)和[离线策略评估](../05-post-training/deep-rl/ope-estimators.md)。它们接在已有的 Deep RL 主线之后，不必先看完这些新内容才开始学习。
 
 ## 阅读与更新
 

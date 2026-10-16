@@ -179,7 +179,7 @@ A plain Python list does not automatically register child layers like `ModuleLis
 
 ## 6. Saving and logging: what exactly was restored?
 
-The next example saves and loads in memory without creating a file. `deepcopy` makes an independent snapshot so continued training does not mutate the state you thought you had saved in memory. `weights_only=True` is an explicit loading choice here, not permission to load arbitrary untrusted files.
+The next example saves and loads in memory without creating a file. `deepcopy` makes an independent snapshot so continued training does not mutate the state you thought you had saved in memory. `weights_only=True` restricts the object types available to deserialization, but does not make arbitrary files safe; still load checkpoints only from trusted sources.
 
 ```python
 import copy

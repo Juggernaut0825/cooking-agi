@@ -42,7 +42,7 @@ $$
 - Position 1: $p=[0.60,\ 0.25,\ 0.10,\ 0.05]$, $q=[0.52,\ 0.30,\ 0.12,\ 0.06]$. KL is about 0.0129; the most likely token is unchanged.
 - Position 2: $p=[0.40,\ 0.38,\ 0.12,\ 0.10]$, $q=[0.37,\ 0.41,\ 0.12,\ 0.10]$. KL is about 0.0023, less than a fifth of position 1's, yet the top two swap places.
 
-Under greedy decoding, position 2 outputs a different token, every later step builds on a different prefix, and the text diverges from here. So report **mean KL** together with **top-1 agreement**, and look at the positions with the largest KL or with the top two close together. Dutta et al. report a Spearman correlation of 0.981 between KL and flip rate on MMLU; for Llama2-13B on WikiText-2, the KL is $7.9\times10^{-5}$ for GPTQ W8A16 and 0.02 for GPTQ W4A16. [Kurtic et al. (2024-11)](https://arxiv.org/abs/2411.02355) compared answers before and after quantization with greedy decoding on Arena-Hard prompts; for 8B, averaged over FP8, INT8 and INT4, ROUGE-L is only 0.46 while BERTScore is 0.92: **the wording changes a lot while the meaning mostly survives**, so comparing text word for word is meaningless; compare distributions and task scores.
+Under greedy decoding, position 2 outputs a different token, every later step builds on a different prefix, and the text diverges from here. So report **mean KL** together with **top-1 agreement**, and look at the positions with the largest KL or with the top two close together. Dutta et al. report a Spearman correlation of 0.981 between KL and flip rate on MMLU; for Llama2-13B on WikiText-2, the KL is $7.9\times10^{-5}$ for GPTQ W8A16 and 0.02 for GPTQ W4A16. [Kurtic et al. (2024-11)](https://arxiv.org/abs/2411.02355) compared answers before and after quantization with greedy decoding on Arena-Hard prompts; for 8B, averaged over FP8, INT8 and INT4, ROUGE-L is only 0.46 while BERTScore is 0.92: this shows that lexical overlap and embedding similarity give different signals, not that facts or meaning are preserved. A changed negation, number or code symbol can change the answer. Do not judge open-ended paraphrases by literal equality alone, but retain exact matching, execution checks or human review for numerical, code and strict-format tasks.
 
 One more easily missed bias: measure perplexity on text outside the calibration data. [GPTQ](https://arxiv.org/abs/2210.17323) itself notes that its calibration data comes from the C4 training set, so the C4 perplexity it reports is not fully zero-shot. Use held-out text from your own domain, with no overlap with the calibration set.
 
@@ -67,22 +67,31 @@ Plugging in, $\hat d=-0.004$, the standard error is about 0.0075, and the 95% in
 from math import comb, sqrt
 
 def paired_report(base_correct, quant_correct):
+    base_correct = list(base_correct)
+    quant_correct = list(quant_correct)
+    if not base_correct or len(base_correct) != len(quant_correct):
+        raise ValueError("Need non-empty, equally sized paired results")
     pairs = list(zip(base_correct, quant_correct))
-    n = len(pairs)
-    lost = sum(b and not q for b, q in pairs)
-    gained = sum(q and not b for b, q in pairs)
-    d = (gained - lost) / n
-    se = sqrt(((gained + lost) / n - d * d) / n)
-    k = gained + lost
-    tail = sum(comb(k, j) for j in range(min(gained, lost) + 1))
-    p = min(1.0, 2 * tail / 2 ** k) if k else 1.0
-    return {"flips": k / n, "diff": d, "ci95": (d - 1.96 * se, d + 1.96 * se), "p": p}
+    count = len(pairs)
+    lost = sum(base and not quant for base, quant in pairs)
+    gained = sum(quant and not base for base, quant in pairs)
+    difference = (gained - lost) / count
+    standard_error = sqrt(((gained + lost) / count - difference ** 2) / count)
+    discordant = gained + lost
+    tail = sum(comb(discordant, index) for index in range(min(gained, lost) + 1))
+    p_value = min(1.0, 2 * tail / 2 ** discordant) if discordant else 1.0
+    return {
+        "flips": discordant / count,
+        "diff": difference,
+        "ci95": (difference - 1.96 * standard_error, difference + 1.96 * standard_error),
+        "p": p_value,
+    }
 
 base = [True] * 720 + [False] * 280
 quant = [True] * 690 + [False] * 30 + [True] * 26 + [False] * 254
-r = paired_report(base, quant)
-assert r["flips"] == 0.056 and abs(r["diff"] + 0.004) < 1e-12
-assert abs(r["p"] - 0.6889) < 1e-4
+report = paired_report(base, quant)
+assert report["flips"] == 0.056 and abs(report["diff"] + 0.004) < 1e-12
+assert abs(report["p"] - 0.6889) < 1e-4
 ```
 
 Public measurements (Dutta et al., MMLU 5-shot, Table 5; flips count only right-to-wrong and wrong-to-right, not one wrong answer turning into another):
@@ -121,7 +130,7 @@ The total drops by only 0.4, while the long-context slice drops by 6 points. Wit
 | Versions or hashes of the original and quantized models | so you can reproduce and roll back |
 | Quantization method, tool and version; bits, group length, symmetric or not; which layers were left uncompressed (output layer, embeddings, sliding-window layers) | two things both called "INT4" can be done very differently |
 | Source, count and length of the calibration data, and whether it overlaps the evaluation text | GPTQ's C4 perplexity is one example |
-| The format and scale method for weights, activations and KV separately (static, dynamic, per head) | uncalibrated vLLM KV scales are 1.0 |
+| The format and scale method for weights, activations and KV separately (static, dynamic, per head) | ordinary uncalibrated FP8 scales fall back to 1.0; dynamic per-token/head paths differ |
 | Engine version, attention backend, kernels, GPU model | without hardware support, it silently falls back to W8A16 |
 | Evaluation protocol: template, decoding parameters, seeds, context length | must be identical before and after quantization |
 | Per-item results for both models; mean KL and top-1 agreement on fixed text | needed to count flips and compute paired intervals |
@@ -137,7 +146,7 @@ The total drops by only 0.4, while the long-context slice drops by 6 points. Wit
 | Errors start in the second half of long conversations | KV quantization error builds up with length, or some layers (such as sliding window) are more sensitive | turn KV quantization off as a control; use the option to skip sensitive layers |
 | Occasional NaNs or individual broken outputs | FP8 out of range (E4M3 becomes NaN in overflow mode); a static scale that is too small | measure the maximum of activations and KV; switch to saturating mode or dynamic scales |
 | Memory went down but speed did not change | the hardware lacks the matching Tensor Core and falls back to dequantizing, or the batch is already compute-bound | the kernel actually used, in the engine log; the GPU's compute capability; the batch table in [note 2](weight-only-and-ptq.en.md) |
-| Outputs before and after quantization differ word for word | a near-tied token flips and the rest of the text diverges | compare distributions and task scores, not the literal text |
+| Outputs before and after quantization differ word for word | a near-tied token flips and the rest of the text diverges | compare distributions and task scores; retain exact checks for numbers, code and strict formats |
 
 This table is a starting point for debugging, not a diagnosis; each row has to be confirmed with a controlled comparison.
 

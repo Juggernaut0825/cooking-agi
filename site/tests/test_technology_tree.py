@@ -151,6 +151,48 @@ class TechnologyTreeTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 technology_chronicle.validate(data)
 
+    def test_branch_controls_and_note_links_are_bilingual(self):
+        data = json.loads(technology_chronicle.DATA.read_text())
+        for language in ("zh", "en"):
+            markup = TreeMarkup(technology_chronicle.render(data, language))
+            options = [attributes for tag, attributes in markup.elements
+                       if tag == "option" and "data-topic" in attributes]
+            self.assertEqual(len(options), sum(len(topic["tracks"]) for topic in data["topics"]))
+            for node in data["nodes"]:
+                article = next(attributes for tag, attributes in markup.elements
+                               if tag == "article" and attributes.get("id") == f'event-{node["id"]}')
+                self.assertEqual(article["data-work-track"], node["track"])
+                for note in node.get("notes", []):
+                    suffix = ".md" if language == "zh" else ".en.md"
+                    self.assertIn("../" + note["path"][:-3] + suffix,
+                                  [link.get("href") for link in markup.links])
+
+    def test_linked_notes_require_safe_existing_bilingual_sources(self):
+        original = json.loads(technology_chronicle.DATA.read_text())
+        valid = {"path": "11-frontier/world-models/dreamer.md",
+                 "title": {"zh": "Dreamer", "en": "Dreamer"}}
+        for invalid in (None, "note", {}, [None], [valid] * 4,
+                        [{"path": "../README.md", "title": valid["title"]}],
+                        [{"path": "11-frontier/missing.md", "title": valid["title"]}],
+                        [{"path": valid["path"], "title": {"zh": "Dreamer"}}]):
+            with self.subTest(invalid=invalid):
+                data = json.loads(json.dumps(original))
+                data["nodes"][0]["notes"] = invalid
+                with self.assertRaises(ValueError):
+                    technology_chronicle.validate(data)
+
+    def test_world_model_milestones_keep_distinct_dates_and_objectives(self):
+        data = json.loads(technology_chronicle.DATA.read_text())
+        nodes = technology_chronicle.validate(data)
+        self.assertEqual(nodes["dreamer-2019"]["year"], 2019)
+        self.assertEqual(nodes["dreamer-2019"]["track"], "rl")
+        self.assertEqual(nodes["ijepa-2023"]["year"], 2023)
+        self.assertEqual(nodes["ijepa-2023"]["track"], "vision")
+        self.assertIn("1912.01603", str(nodes["dreamer-2019"]["sources"]))
+        self.assertIn("2301.08243", str(nodes["ijepa-2023"]["sources"]))
+        self.assertTrue(any(connection["from"] == "ijepa-2023" and connection["to"] == "vit"
+                            for connection in data["connections"]))
+
     def test_atlas_data_has_bilingual_evidence_and_valid_routes(self):
         data = json.loads((ROOT / "site/static/technology-tree-data.json").read_text())
         self.assertEqual(data["version"], 3)

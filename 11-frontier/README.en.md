@@ -4,15 +4,13 @@
 
 > Reading time: ~3 min · Last reviewed: 2026-10
 
-"World model" can mean a reinforcement-learning component that predicts the next step in a latent space, or a generated video you can walk into with your keyboard. "Self-improvement" can mean a model filtering its own answers and training on them, or a lab saying that AI now writes most of its code. **The same word often covers several different things; work out which one is meant before weighing the evidence.** This block collects directions of that kind, ones that are still moving.
+Can a model predict what an action will do before choosing it? Does spending more time on inference produce better answers? Can we trace how a model reaches an answer? These notes explore the methods behind those questions, with worked examples and a closer look at the experiments.
 
 ## Why a separate block
 
-Things change fast here: within six months there may be new systems and new claims, so every note carries a "Last reviewed" date and is rechecked every six months. Most other blocks on this site teach methods that have settled. This one is more about reading the news well: what was measured, under which conditions, and what is only a statement or a prediction.
+These research directions are still developing, and the same name can cover different methods. Dreamer trains a policy in a learned environment model. I-JEPA learns representations of image regions. An interactive video model generates frames in response to actions. All may appear in discussions of “world models,” but their prediction targets and uses differ.
 
-A direction gets notes here only if it already changes how real systems are designed and there is public evidence you can check. A word that is merely popular does not get its own note.
-
-Each series keeps three kinds of content apart: conclusions that have largely settled, parts that are still changing fast, and the signals worth watching next. Every fast-moving fact carries its date and says who measured it and under which conditions; numbers that companies report about themselves are marked as self-reported. When a piece of news goes stale, you still know which line to check a newer result against.
+Each series explains a method through examples, then examines what its experiments establish. Time-sensitive claims include dates and sources; articles marked “pending review” are still drafts. Pick a series below to follow the question that interests you.
 
 | A claim you read | Ask first |
 | --- | --- |

@@ -25,13 +25,13 @@ $x\in\mathbb R^d$ is an activation somewhere in the model, $f(x)\in\mathbb R^F$ 
 | Variant | How sparsity is controlled | What it fixes | Cost or problem | Used in |
 | --- | --- | --- | --- | --- |
 | ReLU + L1 | Penalise the sum of activations, tune $\lambda$ | Simple | Shrinkage: non-zero activations are systematically underestimated | [Bricken et al. 2023](https://transformer-circuits.pub/2023/monosemantic-features/index.html), Templeton et al. 2024 |
-| TopK | Keep only the $k$ largest per token; the loss is just reconstruction | Sets sparsity directly, with no L1 shrinkage | The features learned are less stable across random seeds | [Gao et al. 2024](https://arxiv.org/abs/2406.04093) (OpenAI) |
+| TopK | Keep the $k$ largest encoder activations per token; reconstruction is the main loss, optionally supplemented by AuxK | Sets sparsity directly, with no L1 shrinkage | The features learned are less stable across random seeds | [Gao et al. 2024](https://arxiv.org/abs/2406.04093) (OpenAI) |
 | JumpReLU + L0 | Learn a threshold per latent and penalise the number of non-zeros directly | More accurate reconstruction at the same sparsity | Not differentiable at the threshold, so it needs straight-through estimators | [Rajamanoharan et al. 2024](https://arxiv.org/abs/2407.14435), Gemma Scope |
 | Transcoder | Predict an MLP's output from the MLP's input | Can replace the MLP directly, which helps with drawing circuits | Only an approximation of the MLP; the mechanism may differ | [Dunefsky et al. 2024](https://arxiv.org/abs/2406.11944); see [note 3](circuits.en.md) |
 
 ## By hand: one 2-D activation, three dictionary directions (a teaching example)
 
-Take $d=2$ and a dictionary of three unit directions: $d_1=(1,0)$, $d_2=(0,1)$, $d_3=(0.707,0.707)$. The activation is $x=(1,1)$. To see the objective itself, we solve directly for the best non-negative coefficients rather than going through an encoder:
+Take $d=2$ and a dictionary of three unit directions: $d_1=(1,0)$, $d_2=(0,1)$, $d_3=(1/\sqrt2,1/\sqrt2)\approx(0.707,0.707)$. The activation is $x=(1,1)$. To see the objective itself, we solve directly for the best non-negative coefficients rather than going through an encoder:
 
 $$
 \min_{f\ge 0}\ \|x-Df\|_2^2+\lambda\,(f_1+f_2+f_3)
@@ -39,7 +39,7 @@ $$
 
 With $\lambda=0$ there are infinitely many solutions: $(1,1,0)$, $(0,0,\sqrt2)$ and any mixture of the two all reconstruct $x$ exactly. Reconstruction alone cannot pick out which of them is "the" feature.
 
-Adding L1 changes that. For an exact reconstruction, using only $d_3$ costs $\sqrt2\approx1.414$ in L1, while $d_1+d_2$ costs 2. Compare the optimal coefficients of the two options at two values of $\lambda$: with $d_3$ alone, $a=\sqrt2-\lambda/2$; with only $d_1,d_2$, $b=1-\lambda/2$ (take the derivative of the loss with respect to the coefficient and set it to zero).
+Adding L1 changes that. For an exact reconstruction, using only $d_3$ costs $\sqrt2\approx1.414$ in L1, while $d_1+d_2$ costs 2. The optimal coefficients are $a=\max(0,\sqrt2-\lambda/2)$ for $d_3$ alone and $b=\max(0,1-\lambda/2)$ for $d_1,d_2$. Find the stationary point, then enforce non-negativity to obtain the table.
 
 | $\lambda$ | Option | Coefficient | Reconstruction | Squared error | $\lambda\times$ L1 | Total loss |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -51,8 +51,8 @@ Adding L1 changes that. For an exact reconstruction, using only $d_3$ costs $\sq
 At both values of $\lambda$, using only $d_3$ wins (the KKT conditions confirm it is the global optimum). Three things can be read off the table:
 
 - **L1 prefers few directions that point "straight at" the data.** If the data were really two independent features that often co-occur, an SAE might learn one merged direction instead of the two atomic features.
-- **Shrinkage.** Without the penalty, the coefficient on $d_3$ should be $\sqrt2\approx1.414$. At $\lambda=0.1$ it loses 0.05; at $\lambda=1.0$ only 0.914 is left, with an error of 0.25, so only 87.5% of $\|x\|^2=2$ is reconstructed. For $\lambda\ge2\sqrt2\approx2.83$ the optimum is all zeros and nothing fires.
-- **TopK makes a different trade.** With $k=1$ it picks the single direction that best explains $x$, which is $d_3$, with a coefficient equal to the projection $\sqrt2$: exact reconstruction and no shrinkage. The price is that how many latents fire per token is fixed in advance.
+- **Shrinkage.** Without the penalty, the coefficient on $d_3$ should be $\sqrt2\approx1.414$. At $\lambda=0.1$ it loses 0.05; at $\lambda=1.0$ only 0.914 remains and squared error is 0.25. Thus $1-\|x-\hat x\|^2/\|x\|^2=87.5\%$, but the reconstructed vector does not retain 87.5% of the energy: $\|\hat x\|^2/\|x\|^2=(\sqrt2-0.5)^2/2\approx41.8\%$. Nor is the first single-sample ratio explained variance relative to a dataset mean. For $\lambda\ge2\sqrt2\approx2.83$, the optimum is all zeros.
+- **TopK makes a different trade.** If the encoder selects $d_3$ with coefficient $\sqrt2$ at $k=1$, it reconstructs exactly without L1 shrinkage. But TopK in [Gao et al. v1 §2.3](https://arxiv.org/html/2406.04093v1) ranks learned encoder activations; it does not search all dictionary directions for minimum reconstruction error or guarantee that projection coefficient. The value of $k$ limits how many activations are retained per token.
 
 A real SAE does not solve this optimisation separately for every input; a single-layer encoder computes the coefficients directly, so under the same objective it can only match the optimum or do worse.
 

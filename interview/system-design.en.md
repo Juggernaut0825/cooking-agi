@@ -10,7 +10,7 @@ I'm still learning system design too. This page keeps the public resources and i
 
 ## There is no fixed formula
 
-My sense is that system design has no template you can memorize and apply. What is really being probed is two things: **do you know the trade-off behind each choice**, and **can you connect the whole system end to end**.
+I have not found a template that replaces reasoning about the problem. In practice, I check two things first: **can I explain the trade-offs behind each choice**, and **can I connect the system end to end**? These are my preparation priorities, not a scoring rubric shared by every employer.
 
 So start from the basics:
 
@@ -24,7 +24,8 @@ So start from the basics:
 Say you are building recommendations. Start from what you have:
 
 - **If follows, friendships, or interactions are available**, use those relationships to find candidates. A graph need not be a social graph: [PinSage](https://arxiv.org/abs/1806.01973) uses Pinterest's item–board relationships. Keep these different data structures distinct.
-- **And if there is no relationship data?** Fall back to behavior itself: item–item co-occurrence, two-tower retrieval, content features (titles, categories, multimodal embeddings). In cold start, content features and a popularity fallback often beat a complicated model.
+- **No social graph, but some behavioral history?** Start with item–item co-occurrence or two-tower retrieval trained on interactions. Clicks and saves themselves define relationships; no social graph does not mean no interaction data.
+- **Very few interactions at all?** New items can use titles, categories, or multimodal embeddings; new users can start with explicitly chosen interests or non-personalized candidates. A popularity fallback still needs other users' history—it is not available from nothing in a brand-new service. Content, manual rules, and popularity are baselines to compare, not guaranteed winners over complex models. [The YouTube recommendation paper (2016), §3.2–3.3](https://research.google/pubs/deep-neural-networks-for-youtube-recommendations/) distinguishes watch history, side information, and training signals.
 
 Every layer below that is a trade-off: how fast retrieval has to be, how large a model ranking can afford, how fresh the features must be, whether an offline gain will show up online, and whether the complexity is worth maintaining. Saying those clearly is worth more than reciting an architecture diagram.
 
@@ -34,7 +35,7 @@ General system design:
 
 - [System Design Primer](https://github.com/donnemartin/system-design-primer): free, broad, good for building the skeleton
 - [ByteByteGo](https://bytebytego.com): Alex Xu's *System Design Interview* series, heavily illustrated and easy to read
-- [Designing Data-Intensive Applications](https://www.dataintensive.net): the one worth real time if you want to understand the underlying trade-offs. As of October 2026 the latest is the [second edition, published in March 2026](https://martin.kleppmann.com/2026/03/24/designing-data-intensive-applications-2e.html) (Martin Kleppmann and Chris Riccomini, O'Reilly); the book's website still describes the first edition
+- [Designing Data-Intensive Applications, second edition](https://www.oreilly.com/library/view/designing-data-intensive-applications/9781098119058/): a deeper treatment of data-system trade-offs, by Martin Kleppmann and Chris Riccomini, published by O'Reilly in 2026. Cross-check the edition against [the author's bibliography](https://martin.kleppmann.com/#publications). The publisher lists February 2026 and the author lists March; those records should not be presented as one precise release date
 
 ML and recommendation:
 

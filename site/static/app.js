@@ -424,12 +424,18 @@
     });
     });
   }
-  if (document.readyState === "complete") typeset();
-  else addEventListener("load", typeset);
+  var mathLayout = new Promise(function (resolve) {
+    function finishTypesetting() {
+      try { typeset(); } finally { resolve(); }
+    }
+    if (document.readyState === "complete") finishTypesetting();
+    else addEventListener("load", finishTypesetting, {once: true});
+  });
 
+  var diagramLayout = Promise.resolve();
   if ($(".mermaid")) {
     // Exact version, imported directly: no inline module script for the CSP to allow.
-    import("https://cdn.jsdelivr.net/npm/mermaid@10.9.8/dist/mermaid.esm.min.mjs").then(function (module) {
+    diagramLayout = import("https://cdn.jsdelivr.net/npm/mermaid@10.9.8/dist/mermaid.esm.min.mjs").then(function (module) {
       var m = module.default;
       var theme = document.documentElement.dataset.theme;
       var dark = theme === "dark" || (!theme && matchMedia("(prefers-color-scheme: dark)").matches);
@@ -437,6 +443,7 @@
       return m.run({querySelector: ".mermaid"});
     }).catch(function () {});
   }
+  if (window.NoteFragments) window.NoteFragments.settle(Promise.all([mathLayout, diagramLayout]));
 
   /* ====================================================================== */
   /* XOR playground                                                          */

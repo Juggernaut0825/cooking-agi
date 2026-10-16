@@ -4,7 +4,7 @@
 
 > Reading time: ~11 min · Draft, pending review
 
-At 128K context, one sequence of this series' 8B teaching model has 16 GiB of BF16 KV, more than the BF16 weights themselves (16 GB, about 14.9 GiB); an 80 GB H100 holds only 3 such sequences. Store the KV in FP8 and it holds 6; with the same 3 sequences, the bytes read per step drop by 38%. **At long context the KV cache has more bytes than the weights, so compressing the KV decides more directly than compressing the weights how many requests you can serve at once and how many bytes each step reads. FP8 is today's most common 8-bit starting point, usable for weights, activations and KV, and whether it is stable depends mostly on how the scales are set; to push the KV further to 4 or 2 bits, keys must be quantized per channel and values per token, and only long-context tasks can tell you whether it worked.**
+At 128K context, one sequence of this series' 8B teaching model has 16 GiB of BF16 KV, more than the BF16 weights themselves (16 GB, about 14.9 GiB); the teaching budget below (80 decimal GB with another 6 GB reserved) holds only 3 such sequences, not a measurement of available device capacity. Store the KV in FP8 and it holds 6; with the same 3 sequences, the bytes read per step drop by 38%. **At long context the KV cache has more bytes than the weights, so compressing the KV decides more directly than compressing the weights how many requests you can serve at once and how many bytes each step reads. FP8 is today's most common 8-bit starting point, usable for weights, activations and KV, and whether it is stable depends mostly on how the scales are set; pushing KV to 4 or 2 bits requires model- and method-specific granularity. KIVI uses keys per channel and values per token at 2 bits, not a universal requirement for every low-bit method. Acceptance testing must include long-context tasks.**
 
 > **Draft, pending review.** The site owner has not reviewed this note yet; facts, emphasis and wording may change. Check the primary sources linked in the text before relying on it.
 
@@ -25,7 +25,7 @@ The E4M3 maximum is 448. Two tokens' activations (teaching numbers): A is $[0.01
 - **Dynamic, per token**: A's scale is $3.2/448\approx0.00714$ and B's is $180/448\approx0.402$. Each token's maximum lands exactly on 448, and all three values read back accurately; A's 0.01 reads back as 0.0098.
 - **Static, per tensor**: suppose the largest value seen during calibration was 120, so $s=120/448\approx0.268$. A is fine: 0.01 reads back as 0.0105, a 4.6% error, since FP8's exponent bits keep relative precision for small values. B's 180 divided by $s$ is 672, above 448; in saturating mode it is clamped to 448 and reads back as 120, a third short.
 
-The cost of dynamic scales is a maximum over each token on every forward pass; static scales cost nothing at run time but clip any input more extreme than the calibration set. What clipping does also depends on configuration: OCP FP8 conversion requires support for both a saturating and an overflow mode, and in overflow mode an out-of-range E4M3 value becomes NaN (Table 3 of the [OCP MX specification v1.0](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf), reproduced there). In [SmoothQuant](https://arxiv.org/abs/2211.10438)'s measurements, static per-tensor O3 was faster than dynamic O1, so they recommend the coarser granularity whenever accuracy allows.
+The cost of dynamic scales is a maximum over each token on every forward pass; static scales avoid runtime range estimation, not scaling or conversion costs, and clip any input more extreme than the calibration set. What clipping does also depends on configuration: OCP FP8 conversion requires support for both a saturating and an overflow mode, and in overflow mode an out-of-range E4M3 value becomes NaN (Table 3 of the [OCP MX specification v1.0](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf), reproduced there). In [SmoothQuant](https://arxiv.org/abs/2211.10438)'s measurements, static per-tensor O3 was faster than dynamic O1, so they recommend the coarser granularity whenever accuracy allows.
 
 ## Training in FP8 or lower: the extra problems
 
@@ -42,7 +42,7 @@ Two details deserve their own sentence. First, accumulation precision. DeepSeek-
 
 ## KV cache: the real bulk at long context
 
-Teaching configuration: 32 layers, 8 KV heads, head dimension 128. Each token's K and V together hold $2\times32\times8\times128=65{,}536$ values:
+Teaching configuration: 32 layers, 8 KV heads, head dimension 128; here 128K = 131,072 tokens, GB = $10^9$ bytes and GiB = $2^{30}$ bytes. Each token's K and V together hold $2\times32\times8\times128=65{,}536$ values:
 
 | KV format | Average bits per value | Per token | One 128K-token sequence |
 | --- | ---: | ---: | ---: |
@@ -51,9 +51,9 @@ Teaching configuration: 32 layers, 8 KV heads, head dimension 128. Each token's 
 | INT4, groups of 32, FP16 scale and zero-point | 5 | 40 KiB | 5 GiB |
 | INT2, same grouping | 3 | 24 KiB | 3 GiB |
 
-The INT4 and INT2 rows are estimated with [KIVI](https://arxiv.org/abs/2402.02750)'s grouping (group length 32), each group storing one FP16 scale and one FP16 zero-point, which adds $32/32=1$ bit per value on average; KIVI also keeps the most recent 128 tokens in full precision; that part is only 16 MiB in BF16 and is not counted in the table.
+The INT4 and INT2 rows use [KIVI](https://arxiv.org/abs/2402.02750)'s group length 32, storing one FP16 scale and one FP16 minimum-value offset per group: $32/32=1$ extra bit per value. KIVI §3.1 calls that real-valued offset a zero-point; it is not the integer zero-point from the previous note that represents zero exactly. KIVI also retains a high-precision residual cache; budgeting 128 recent tokens here adds only 16 MiB in BF16, excluded from the table.
 
-Fit them into the 80 GB of an H100 SXM5, reserving 6 GB for the runtime (a teaching assumption), and count how many 128K sequences fit:
+Fix a decimal 80 GB total budget and reserve 6 GB for runtime, then estimate how many 128K sequences fit. This teaching budget is not measured allocatable H100 memory; deployment must recalculate from driver-reported free bytes, engine reservations and workspace:
 
 | Weights | BF16 KV | FP8 KV | INT4 KV |
 | --- | ---: | ---: | ---: |
@@ -70,13 +70,13 @@ At batch 3 with 128K each, every decode step reads the weights plus 3 copies of 
 | FP8 + FP8 | 34.3 GB | 10.2 ms | 75% |
 | BF16 + INT4 | 32.1 GB | 9.6 ms | 50% |
 
-At this length, compressing only the weights goes from 20.2 ms to 17.9 ms, while compressing only the KV goes to 12.5 ms: **compress whatever holds the bulk of the bytes first.** During decode the attention part has an arithmetic intensity that does not depend on the batch, only a few operations per byte, see [Performance](../performance.en.md#decode-batching), so almost every byte saved turns into time saved. At short context the conclusion flips: at 2K tokens one sequence's BF16 KV is only 0.27 GB, and the weights are the bulk.
+At this length, compressing only the weights goes from 20.2 ms to 17.9 ms, while compressing only the KV goes to 12.5 ms: **compress whatever holds the bulk of the bytes first.** During decode the attention part has an arithmetic intensity that does not depend on the batch, only a few operations per byte, see [Performance](../performance.en.md#decode-batching), so fewer bytes can relieve that bottleneck, but dequantization, scale loads, kernel utilization and scheduling can absorb the savings. Byte reduction is not a measured speedup. At short context the conclusion flips: at 2K tokens one sequence's BF16 KV is only 0.27 GB, and the weights are the bulk.
 
 ### Why keys and values are quantized differently
 
 KIVI (2024-02, ICML 2024) measured the KV cache's distributions: the keys have a few fixed channels with very large magnitudes, the values have no clear outlier pattern, and the attention output is mainly a weighted sum of the values of a few important tokens, so quantizing values per token keeps each error within its own token. Their scheme is therefore **keys per channel, values per token**.
 
-**Worked once.** A key with 4 tokens and 4 channels, channel 3 being the outlier channel (teaching numbers); the query is $q=[1,\ 1,\ 0.1,\ 1]$; asymmetric 2 bits, 4 grid points per group.
+**Worked once.** A key with 4 tokens and 4 channels, channel 3 being the outlier channel (teaching numbers); the query is $q=[1,\ 1,\ 0.1,\ 1]$. KIVI-style min–max asymmetric 2-bit quantization gives 4 grid points per group: $a=\min x$, $s=(\max x-a)/3$, $q_{\rm code}=\operatorname{clip}(\operatorname{round}((x-a)/s),0,3)$ and $\hat x=a+sq_{\rm code}$. Zero need not be exactly representable. The scores below are unscaled dot products; scaled pre-softmax logits and their absolute errors divide by $\sqrt{d_k}=2$.
 
 $$
 K=\begin{bmatrix}0.4&-0.2&9.0&0.1\\-0.3&0.5&11.0&-0.4\\0.2&-0.6&10.0&0.3\\0.5&0.1&12.0&-0.2\end{bmatrix},\qquad Kq=\begin{bmatrix}1.2\\0.9\\0.9\\1.6\end{bmatrix}.
@@ -91,9 +91,9 @@ KIVI's measurements (Llama-2-7B, Table 3): GSM8K is 13.50 at 16 bits; with simul
 
 ### Turning it on in an engine
 
-As of October 2026, the [Quantized KV Cache documentation](https://docs.vllm.ai/en/v0.31.0/features/quantization/quantized_kvcache.html) for vLLM v0.31.0 lists `kv_cache_dtype` values `auto`, `fp8`, `fp8_e4m3` (CUDA 11.8+ and ROCm) and `fp8_e5m2` (CUDA 11.8+), and lists no INT4 or INT2 (the API reference shows an INT4 KV attention kernel module, but the feature documentation gives no usage). The main points:
+Checked on 2026-10-16, vLLM v0.31.0's [Quantized KV Cache guide](https://docs.vllm.ai/en/v0.31.0/features/quantization/quantized_kvcache/) focuses on `auto`, `fp8`, `fp8_e4m3` and `fp8_e5m2`, but is not the complete format list. The [versioned arguments](https://docs.vllm.ai/en/v0.31.0/configuration/engine_args/#--kv-cache-dtype) and [`CacheDType` source](https://github.com/vllm-project/vllm/blob/v0.31.0/vllm/config/cache.py) also list `int4_per_token_head`, `fp8_per_token_head` and `nvfp4`, among others. An enum entry does not establish compatibility with every model, GPU or backend; those combinations were not run here. The guide lists CUDA 11.8+ or ROCm for E4M3, and CUDA 11.8+ for E5M2; these format requirements alone do not establish compatibility with the engine and attention kernels. The following points refer to the guide's ordinary FP8 path:
 
-- Without calibration, **all scales are set to 1.0**; the documentation recommends calibrating on data with llm-compressor.
+- On that default FP8 path, absent calibrated scales, **scales fall back to 1.0**; this does not describe `*_per_token_head` formats that compute scales at runtime. The guide recommends dataset calibration with llm-compressor.
 - Scales can be one per tensor (one each for Q, K and V) or one per attention head; the latter is only available on the Flash Attention backend and requires calibration.
 - With the Flash Attention 3 backend, attention itself runs in FP8, and the queries are quantized to FP8 too.
 - The documentation warns that layer types such as sliding-window attention are more sensitive to KV quantization, and `--kv-cache-dtype-skip-layers` keeps those layers at the original precision.

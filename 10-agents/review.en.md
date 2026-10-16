@@ -23,7 +23,7 @@ A model (decides the next step), tools (act on the world), a loop (results go ba
 <details class="interview" markdown="1">
 <summary>Why is coding one of the most mature settings for agents?</summary>
 
-Because its verification signal is the strongest: code runs, tests pass, every step gets objective feedback, and the agent can try again in a sandbox, with a person still reviewing the diff once tests pass. Settings such as customer support or personal assistants are much harder to judge automatically and lean more on rules, permissions, and people. Even in coding, passing tests does not mean the change is right.
+Many coding steps have repeatable compiler, test, and static-check feedback, making them suitable for iteration in a restricted environment. This does not give every step a complete correctness test. Passing tests still needs requirements, security, and diff review; sandboxes also need credential and network restrictions. Support and personal assistants can check some states and rules too, while open-ended outcomes often require human judgment.
 
 </details>
 
@@ -58,7 +58,7 @@ A model optimizes the reward you actually give it, not the goal you had in mind,
 <details class="interview" markdown="1">
 <summary>Cascades and routers both split requests between a small model and a frontier one. What is the difference?</summary>
 
-A cascade lets the small model answer first and decides whether to escalate after seeing the answer, so it judges better — but escalated requests are paid for twice, and wait for two models in series. A router decides before any answer exists: each request pays for one model call plus the router and waits less, but it can misroute; catching that takes an output check or a fallback, whose cost and delay count too. Either one only pays off when difficulty is judged accurately.
+A cascade checks the small model's answer before deciding whether to escalate; seeing an answer does not guarantee a better decision, since a fluent error may fool the checker. A pre-generation router selects using information available before either answer. With at most one escalation and no retries, cascade cost is $C_A+v+uC_B$, versus routing cost $r+(1-u)C_A+uC_B$: $u$ is the fraction sent to B, while $v$ and $r$ are checking and routing costs. The two systems need not share the same $u$. Escalation adds serial waiting; routing can misroute and need recovery. Measure quality and end-to-end latency rather than inferring them from the architecture name. See [the four-request example](model-choice.en.md#routing-example).
 
 </details>
 
@@ -79,7 +79,7 @@ A cascade lets the small model answer first and decides whether to escalate afte
 
 - [Building effective agents](https://www.anthropic.com/engineering/building-effective-agents): the workflow and agent distinction, and common structures
 - [ReAct](https://arxiv.org/abs/2210.03629): interleaving reasoning and acting
-- [SWE-bench](https://arxiv.org/abs/2310.06770): evaluating coding agents on real issues; the Verified subset is close to saturated, and since February 2026 OpenAI recommends [SWE-bench Pro](https://arxiv.org/abs/2509.16941) instead
+- [SWE-bench](https://arxiv.org/abs/2310.06770): evaluating changes for real issues; see [evaluation by setting](scenarios.en.md) for Verified's grading flaws, contamination, and the source for OpenAI's recommendation of Pro
 - [τ-bench](https://arxiv.org/abs/2406.12045): tools and dialogue under policy constraints, and pass^k; its successor [τ²-bench](https://arxiv.org/abs/2506.07982) adds dual control, where the user also acts, and as of October 2026 the repository has released τ³-bench
 - [WebArena](https://arxiv.org/abs/2307.13854)
 - [OSWorld](https://arxiv.org/abs/2404.07972)

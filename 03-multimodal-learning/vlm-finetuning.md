@@ -2,7 +2,7 @@
 
 **中文** · [English](vlm-finetuning.en.md)
 
-> 最近审阅：2026-10-09 · 先读：[SFT](../05-post-training/sft-and-its-ceiling.md)、[一次训练怎么走](../00-foundations/deep-dives/training-step.md)
+> 最近审阅：2026-10-16 · 先读：[SFT](../05-post-training/sft-and-its-ceiling.md)、[一次训练怎么走](../00-foundations/deep-dives/training-step.md)
 
 给模型一张时刻表，问“末班车几点？”，标准答案是“22:40”。训练 loss 在降，你却发现遮住图片后它还是回答 22:40。可能模型根本没学会看图，只记住了这个数据集里最常见的答案。
 
@@ -109,6 +109,8 @@ $$
 TRL 的 VLM 指南建议避免未经检查的序列截断，因为可能切掉图像 token；其中 `max_length=None` 是关闭这种截断，不是无限显存。仍要在数据侧限制图片尺寸、张数、文本长度，并检查高分位长度。这条建议从 v0.29.0 到 v1.16.0（2026-10-15 发布）都没变。[v1.16.0 的 TRL 文档](https://huggingface.co/docs/trl/v1.16.0/en/sft_trainer)
 
 **截至 2026-10，VLM 也能用 `assistant_only_loss=True` 了：TRL v1.15.0 起支持图片数据，但要求 `transformers>=5.18.0` 和对话格式的 language-modeling 数据，更旧的 transformers 仍会报错**（[v1.15.0 发布说明](https://github.com/huggingface/trl/releases/tag/v1.15.0)）。打开它之前，仍要解码一批数据，确认有效 labels 只落在 assistant 回合上。
+
+还要检查 chat template 的 `{% generation %}` / `{% endgeneration %}` 区间是否包含 assistant 的回合结束 token，而不只是答案正文。[v1.16.0 源码](https://github.com/huggingface/trl/blob/v1.16.0/trl/trainer/sft_trainer.py)会检查这件事：如果结束 token 被 mask 掉，loss 可以正常下降，模型却可能学不会何时停止。不能只凭版本号或 loss 曲线判断 labels 正确。
 
 本页最初对照 TRL v0.29.0 写成。那个版本的 VLM 不支持 `assistant_only_loss=True`，即使模板能返回 assistant mask，trainer 也会报错。如果环境固定在旧版本，单轮问答可以使用 `prompt` / `completion` 数据格式和 `completion_only_loss=True`，把答案放在 completion 中；它不等同于从任意多轮对话里自动挑出所有 assistant 回合。若需要后者，应使用经过检查的自定义 labels / collator，并保持不支持的开关关闭。仅把开关改成 `False` 让训练跑起来，不代表 loss 已经只覆盖答案。[v0.29.0 的限制与 collator 实现](https://github.com/huggingface/trl/blob/v0.29.0/trl/trainer/sft_trainer.py)
 

@@ -77,7 +77,7 @@ You don't need to follow the routes above first. These are topic entrances, each
 | Inference speed, cost, and reliability | [Inference](inference/README.en.md) · [AI systems](../06-systems/README.en.md) · [Model experience](../08-model-experience/README.en.md) |
 | Chips, GPUs, CUDA, and clusters | [AI infrastructure](../12-infra/README.en.md) (draft, pending review) |
 | Perception, robots, and driving | [From pixels to actions](../13-embodied/README.en.md) (draft, pending review) |
-| Directions still in motion | [Frontier](../11-frontier/README.en.md): world models and recursive self-improvement are reviewed; test-time compute, agent RL, and interpretability are drafts pending review |
+| Directions still in motion | [Frontier](../11-frontier/README.en.md): world models, recursive self-improvement, test-time compute, agent RL, interpretability, and diffusion language models; series still in draft are marked at their entrances |
 
 </div>
 

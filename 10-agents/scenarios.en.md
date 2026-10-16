@@ -10,7 +10,7 @@ Writing code and booking a flight are both called agents, yet they are entirely 
 
 | Setting | Environment and tools | Automatically verifiable? | Most common failure | Guardrails |
 | --- | --- | --- | --- | --- |
-| Coding | repository, shell, tests | yes: run the tests | tests pass but the logic is wrong; editing tests to make them pass | sandboxed execution; a person reviews the diff |
+| Coding | repository, shell, tests | partly: tests check covered behavior | tests pass but the logic is wrong; editing tests to make them pass | sandboxed execution; diff review; restricted credentials and network |
 | Search and research | search, reading web pages | partly: sources can be checked | invented citations; not knowing when to stop | require sources; set a budget |
 | Customer support | order and user systems, policy documents | partly: rules can be checked | breaking policy; answering the same question differently each time | limit tool permissions; hand hard cases to a person |
 | Data analysis | SQL, notebooks | partly: queries run, but results still need checking | a wrong join or filter whose result still looks plausible | show the query; check row counts and definitions |
@@ -19,19 +19,19 @@ Writing code and booking a flight are both called agents, yet they are entirely 
 
 ## Coding: the strongest verification signal
 
-Code that runs and tests that pass make the ideal agent environment: every step gets objective feedback. SWE-bench evaluates such agents on real GitHub issues with their tests. Its most-cited Verified subset is close to saturated, and models may have seen its problems: in a 2026-02-23 post OpenAI said it no longer reports SWE-bench Verified and recommends the harder, broader [SWE-bench Pro](https://arxiv.org/abs/2509.16941) instead ([OpenAI's post](https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/)). Why benchmarks saturate and get contaminated is covered in [Test-time compute: reading the numbers](../11-frontier/test-time-compute/measuring.en.md). Note that "tests pass" does not mean "fixed correctly": what the tests do not cover still needs a person's eyes.
+Compilers, tests, and static checks provide repeatable feedback for many coding steps, but not every step has an adequate grader, and tests can be wrong. SWE-bench evaluates changes against real GitHub issues and tests. On 2026-02-23, OpenAI stopped reporting Verified and recommended [SWE-bench Pro](https://arxiv.org/abs/2509.16941), citing flawed grading and evidence of training contamination, not proof that all tasks were solved ([source](https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/)). See [Test-time compute: reading the numbers](../11-frontier/test-time-compute/measuring.en.md) for benchmark discrimination and contamination. Real projects still need requirements coverage, security checks, and diff review; passing tests cannot replace them.
 
 ## Customer support: reliability beats one-off success
 
-An agent that answers a customer's question correctly this time and wrongly next time is not acceptable in support. τ-bench simulates users and a tool environment with policy constraints, and measures reliability with pass^k: the probability that k independent runs of the same task all succeed, averaged over tasks. That is closer to the real requirement than a single success: a task solved 90% of the time per run is solved in all 8 runs only $0.9^8\approx0.43$ of the time. Its successor [τ²-bench](https://arxiv.org/abs/2506.07982) adds a telecom support domain where the user must also operate the device (dual control), so the agent has to guide the user through the fix. As of October 2026 the [repository](https://github.com/sierra-research/tau2-bench) has released τ³-bench; its July 2026 v1.0.1 fixed several task errors in the banking_knowledge domain, and the repository says results from before 1.0.1 are not comparable with later ones.
+Answering the same customer question correctly once and incorrectly next time undermines reliability. τ-bench simulates users and tools under policy constraints. Its pass^k is the probability that k independent runs of the same task all succeed, averaged over tasks. One task with 90% per-run success succeeds in all eight runs with probability $0.9^8\approx0.43$. Do not raise the overall average success rate to the eighth power: tasks differ in difficulty. [τ²-bench](https://arxiv.org/abs/2506.07982) adds telecom support with dual control, where the user must operate a device under the agent's guidance. As of October 2026 the [repository](https://github.com/sierra-research/tau2-bench) has released τ³-bench. Its July 2026 v1.0.1 corrected banking_knowledge task errors: **that domain's** scores are not comparable across the fix; the maintainers explicitly say other domains are unaffected.
 
 ## Agents that read outside content: beware of injection
 
-As soon as an agent reads uncontrolled content such as web pages, email, or documents, instructions hidden inside can hijack it (indirect prompt injection, Greshake et al., 2023). The basic rules: treat outside content as data, never as instructions; actions with side effects need permission boundaries and a person's confirmation.
+Web pages, email, and documents can carry indirect prompt injection. Outside text cannot expand authorization, but stating that in a prompt is not a security boundary. The execution layer must constrain readable resources, credentials, outbound destinations, and action scope; confirm concrete parameters before high-risk actions or actions beyond existing authorization. Read-only tools can still disclose private text in search queries or URLs. Test those exfiltration paths, not only file writes. [OWASP: layered defenses and tool checks](https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html)
 
 ## How to evaluate
 
-- code: SWE-bench, now mostly SWE-bench Pro;
+- code: choose SWE-bench / SWE-bench Pro for the task, recording versions and contamination limits;
 - web tasks: WebArena;
 - using a computer: OSWorld;
 - dialogue and tools under policy constraints: τ-bench and its successors τ²/τ³-bench.

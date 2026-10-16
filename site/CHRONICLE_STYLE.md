@@ -39,29 +39,14 @@
 - 数字必须与原文一致（单位、量级、对比对象）。原文里有「注意这个数是集成结果」之类的限定，正文里写比赛成绩可以，但不要写错对象。
 - 拿不准就删掉那句。
 
-## 三个样例（已定稿）
+## 写作样例怎么查
 
-**Transformer（2017）**
-- title：Transformer · 翻译只靠注意力
-- hook：去掉循环，让每个词直接看到整句话。
-- body：2017 年以前，翻译模型得一个词一个词往下算，句子越长越慢。Transformer 把循环整个拿掉，每个词直接用注意力看整句话，训练可以并行。它在英德翻译上比此前最好的成绩高出 2 BLEU 以上，八块 GPU 训了三天半。后来的 BERT 只用它的编码器，GPT 只用解码器。
-- detail：拿一句 50 个词的话来算：循环网络要串行走 50 步，注意力一层就让任意两个词直接相连。代价是每层要算 50×50 个词对，句子越长，计算量按平方涨。
-- limit：生成时还是得一个词一个词往外吐；长文本的平方开销也留给了后人。
-- EN title: Transformer · Translation with attention alone
-- EN hook: It dropped recurrence so every word could look at the whole sentence at once.
-- EN body: Before 2017, translation models processed a sentence one word at a time, so long sentences trained slowly. The Transformer removed recurrence entirely: each word uses attention to look at every other word, and training runs in parallel. It beat the previous best English–German result by more than 2 BLEU after three and a half days on eight GPUs. BERT later kept only its encoder, and GPT only its decoder.
-- EN detail: Take a 50-word sentence. A recurrent network needs 50 sequential steps; one attention layer connects any two words directly. The price is 50 × 50 word pairs per layer, so cost grows with the square of the length.
-- EN limit: Generation still emits one word at a time, and the quadratic cost on long inputs was left for later work.
+直接查看 [节点数据](static/technology-tree-data.json) 中的 `transformer`、`chatgpt` 和 `alexnet`。中英文正文、细节、限制和来源都在一起；这里不再保存第二份正文，免得例子停留在旧版本。
 
-**ChatGPT（2022）**
-- title：ChatGPT · 大模型走进对话框
-- hook：普通人第一次能直接和语言模型聊天、追问、改要求。
-- body：2022 年 11 月，OpenAI 以研究预览的形式放出 ChatGPT。不用写代码，打开网页就能提问，还能接着追问、让它改。语言模型从论文和 API 里走出来，成了很多人每天在用的东西。
-- limit：它会一本正经地答错，发布公告里就写了这一条。
+改写时尤其注意：
 
-**AlexNet（2012）**
-- title：AlexNet · 让网络自己学看图
-- hook：不再手工设计图像特征，交给卷积网络自己学。
-- body：2012 年以前，图像识别要先靠人设计特征，再交给分类器。AlexNet 让网络自己学特征：八层、六千万参数，在两块游戏显卡上训了五六天。ImageNet 比赛里，它的错误率是 15.3%，第二名是 26.2%。作者说，成绩主要来自更大的网络、更多的数据和更长的训练。
-- detail：能训起来靠几处改动：激活函数换成 ReLU，训练快了好几倍；用 dropout 和随机裁剪对抗过拟合；一块显卡放不下，就把网络拆到两块卡上。
-- limit：它只会从一千个类别里挑一个答案，图里有什么、在哪、彼此什么关系，还管不了。
+- Transformer 的“看整句话”要区分 encoder 和 causal decoder，不能把所有 attention 都写成双向。
+- ChatGPT 的公众影响不等于“人类第一次能和语言模型聊天”。“首次”“所有”“彻底取代”都需要额外证据。
+- AlexNet 的竞赛结果要分清单模型与集成；不要为了讲出转折，把此前的神经网络研究抹掉。
+
+节点可以通过可选的 `notes` 字段链接最多三篇相关笔记。每项写仓库内的中文 Markdown 路径，以及 `zh`、`en` 两个标题；构建器检查两版文件都存在。链接是深入阅读的入口，不表示目标文章已完成审稿。领域与分支分别由 `topic`、`track` 管理，同一分支会按年份跨时期排列。

@@ -12,7 +12,7 @@ Training and generation use the same parameterized distribution:
 
 $$p_\theta(x_{1:T})=\prod_{t=1}^{T}p_\theta(x_t\mid x_{<t})$$
 
-The only difference is whether the future is known. In training the whole ground-truth sequence is already laid out on the table; in generation the next token does not exist yet, so the model can only write one, look at it, and then keep writing. The [roofline](../../12-infra/performance.en.md#roofline) explains the split in the table's “main bottleneck” row.
+First compare teacher-forced forward computation with autoregressive generation: although training data contains the whole sequence, a causal mask still hides future tokens from each position while allowing positions to compute in parallel. Generation usually proceeds step by step because the new tokens are not yet determined. Training additionally requires backward computation and parameter updates. The [roofline](../../12-infra/performance.en.md#roofline) explains the split in the table's “main bottleneck” row.
 
 | | training / prefill | autoregressive decode |
 | --- | --- | --- |
@@ -46,20 +46,20 @@ Different tokenizers have different token units, so perplexity cannot be compare
 
 ## Training uses the true prefix; generation depends on the model's own output {#dissection-two-training-uses-the-true-prefix-generation-depends-on-the-models-own-output}
 
-In training the model always predicts on top of the true prefix (teacher forcing); in generation it must continue from its own output. This mismatch is commonly called exposure bias; see [Seq2Seq](../core/seq2seq.en.md) for a worked example. A low-probability error at one step can carry the subsequent context into a region that the training data rarely covers.
+Standard teacher-forced maximum-likelihood training predicts on prefixes supplied by the data; in generation it must continue from its own output. This mismatch is commonly called exposure bias; see [Seq2Seq](../core/seq2seq.en.md) for a worked example. A low-probability error at one step can carry the subsequent context into a region that the training data rarely covers.
 
 It is very easy here to say, by reflex, “then use RL”. Before that, check where the problem actually comes from:
 
 1. the training data does not cover the target behavior;
 2. the loss mask or the template is wrong;
-3. the sampling strategy is unsuitable (to tell 1 from 3, score a reference answer: a low log-likelihood suggests training never covered it; a reasonable likelihood with bad samples points to temperature, top-p, and similar settings);
+3. the sampling strategy is unsuitable (score several acceptable answers under the same prompt/template and report NLL per valid token. Raw sequence probability decreases with length; a low score can also reflect wording, capacity or optimization, not necessarily missing training coverage. Reasonable answer scores alongside poor samples motivate controlled comparisons of temperature, top-p and similar settings);
 4. a long-horizon objective cannot be expressed by per-token likelihood.
 
 The fourth category points most directly to a sequence-level preference or an RL objective; if the problem is exactly that the model's own outputs carry the context away from the training distribution, training on the model's own prefixes (on-policy data, RL, and similar) is also worth considering.
 
 ## A cache must match the full forward pass {#the-correctness-floor-a-cache-is-not-fine-as-long-as-it-runs-it-must-be-equivalent}
 
-Incremental decoding must agree with a one-shot forward pass within numerical tolerance. A small error in positions, the mask, or K/V order can still produce fluent sentences while the logits have already changed, so compare logits step by step rather than judging whether the text looks right. The item-by-item checklist is in the [KV cache note](kv-cache-and-inference.en.md#cache-checks), and [`../code/test_model.py`](../code/test_model.py) has the matching equivalence test.
+For a cache retaining all required K/V without approximations such as quantization or eviction, incremental decoding should match a one-shot forward pass within numerical tolerance when weights, prefix, positions and visibility match and dropout is off. Approximate caches require separate evaluation of their intentional error. A small error in positions, the mask, or K/V order can still produce fluent sentences while the logits have already changed, so compare logits step by step rather than judging whether the text looks right. The item-by-item checklist is in the [KV cache note](kv-cache-and-inference.en.md#cache-checks), and [`../code/test_model.py`](../code/test_model.py) has the matching equivalence test.
 
 <span id="self-check"></span><span id="quick-learning-one-factorization-two-execution-paths"></span>
 

@@ -4,7 +4,7 @@
 
 > 阅读时间：约 11 分钟 · 草稿，待审核
 
-本系列的 8B 教学模型在 128K 上下文时，一条序列的 BF16 KV 就有 16 GiB，比 BF16 权重本身（16 GB，约 14.9 GiB）还大；一张 80 GB 的 H100 上，只放得下 3 条这样的序列。KV 改存 FP8，就能放 6 条；仍是 3 条时，每步要读的字节少 38%。**长上下文时，KV cache 的字节比权重还多，压 KV 比压权重更直接地决定能同时服务几条请求、每一步读多少字节。FP8 是目前最常用的 8 位起点，权重、激活、KV 都能用，稳不稳主要看 scale 怎么定；KV 再压到 4 位、2 位，key 要按通道、value 要按 token 分开量化，而且只能拿长上下文任务来验收。**
+本系列的 8B 教学模型在 128K 上下文时，一条序列的 BF16 KV 就有 16 GiB，比 BF16 权重本身（16 GB，约 14.9 GiB）还大；按下文的教学预算（80 个十进制 GB，另预留 6 GB）只能放 3 条这样的序列，不是对实卡可用容量的测量。KV 改存 FP8，就能放 6 条；仍是 3 条时，每步要读的字节少 38%。**长上下文时，KV cache 的字节比权重还多，压 KV 比压权重更直接地决定能同时服务几条请求、每一步读多少字节。FP8 是目前最常用的 8 位起点，权重、激活、KV 都能用，稳不稳主要看 scale 怎么定；KV 再压到 4 位、2 位，要按模型和方法选择粒度：KIVI 的 2 位方案是 key 按通道、value 按 token，这不是所有低位方案的必需条件；验收还必须包含长上下文任务。**
 
 > **待审核草稿。** 这一篇还没有经过站主审阅，事实、取舍和措辞都可能修改；引用前请回到文中链接的一手资料核对。
 
@@ -25,7 +25,7 @@ E4M3 最大是 448。两个 token 的激活（教学数字）：A 是 $[0.01,\ -
 - **按 token 动态**：A 的 scale 是 $3.2/448\approx0.00714$，B 的是 $180/448\approx0.402$。每个 token 的最大值都正好落在 448 上，三个数都读回得很准，A 里的 0.01 读回 0.0098。
 - **静态 per-tensor**：假设校准时见过的最大值是 120，$s=120/448\approx0.268$。A 没问题，0.01 读回 0.0105，误差 4.6%，FP8 的指数位让小数值仍有相对精度。B 的 180 除以 $s$ 是 672，超过 448，按饱和模式截到 448，读回 120，少了三分之一。
 
-动态 scale 的代价是每次前向都要对每个 token 求一次最大值；静态 scale 运行时不花钱，但遇到比校准集更极端的输入就会截断。截断的行为也要看配置：OCP 的 FP8 转换要求同时支持饱和与溢出两种模式，E4M3 在溢出模式下超出范围会变成 NaN（[OCP MX 规范 v1.0](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) 表 3 转载）。[SmoothQuant](https://arxiv.org/abs/2211.10438) 的测量里，静态 per-tensor 的 O3 比动态的 O1 快，所以只要精度允许，他们建议用更粗的粒度。
+动态 scale 的代价是每次前向都要对每个 token 求一次最大值；静态 scale 不需要在运行时重新统计范围，但缩放、转换本身仍有成本，但遇到比校准集更极端的输入就会截断。截断的行为也要看配置：OCP 的 FP8 转换要求同时支持饱和与溢出两种模式，E4M3 在溢出模式下超出范围会变成 NaN（[OCP MX 规范 v1.0](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) 表 3 转载）。[SmoothQuant](https://arxiv.org/abs/2211.10438) 的测量里，静态 per-tensor 的 O3 比动态的 O1 快，所以只要精度允许，他们建议用更粗的粒度。
 
 ## 训练也用 FP8 或更低：多出来的几个问题
 
@@ -42,7 +42,7 @@ E4M3 最大是 448。两个 token 的激活（教学数字）：A 是 $[0.01,\ -
 
 ## KV cache：长上下文时真正的大头
 
-教学配置：32 层、8 个 KV head、head dim 128。每个 token 的 K 和 V 合起来有 $2\times32\times8\times128=65{,}536$ 个值：
+教学配置：32 层、8 个 KV head、head dim 128；这里 128K = 131,072 tokens，GB = $10^9$ 字节，GiB = $2^{30}$ 字节。每个 token 的 K 和 V 合起来有 $2\times32\times8\times128=65{,}536$ 个值：
 
 | KV 格式 | 每个值平均位数 | 每个 token | 128K token 一条序列 |
 | --- | ---: | ---: | ---: |
@@ -51,9 +51,9 @@ E4M3 最大是 448。两个 token 的激活（教学数字）：A 是 $[0.01,\ -
 | INT4，每 32 个一组，FP16 scale 和 zero-point | 5 | 40 KiB | 5 GiB |
 | INT2，同样分组 | 3 | 24 KiB | 3 GiB |
 
-INT4 和 INT2 两行按 [KIVI](https://arxiv.org/abs/2402.02750) 的分组方式（组长 32）估算，每组多存一个 FP16 scale 和一个 FP16 zero-point，每个值平均多 $32/32=1$ 位；KIVI 另外把最近 128 个 token 保持全精度，这部分 BF16 只有 16 MiB，表里没算。
+INT4 和 INT2 两行按 [KIVI](https://arxiv.org/abs/2402.02750) 的分组方式（组长 32）估算，每组多存一个 FP16 scale 和一个 FP16 最小值偏移，每个值平均多 $32/32=1$ 位。KIVI §3.1 把这个实数偏移也叫 zero-point，但它不是上一篇保证精确表示 0 的整数零点。KIVI 还保留高精度 residual cache；本例按最近 128 个 token 估算，这部分 BF16 只有 16 MiB，表里没算。
 
-放进 H100 SXM5 的 80 GB，给运行时留 6 GB（教学假设），看能放几条 128K 的序列：
+下面把总可用预算固定为十进制 80 GB，给运行时留 6 GB，估计能放几条 128K 序列。这是容量教学假设，不是读取某张 H100 后得到的可分配显存；实际部署须用驱动报告的可用字节、引擎预留比例和工作区重算：
 
 | 权重 | BF16 KV | FP8 KV | INT4 KV |
 | --- | ---: | ---: | ---: |
@@ -70,13 +70,13 @@ batch 3、每条 128K 时，每一步 decode 要读权重加 3 份 KV。按 3,35
 | FP8 + FP8 | 34.3 GB | 10.2 ms | 75% |
 | BF16 + INT4 | 32.1 GB | 9.6 ms | 50% |
 
-在这个长度上，只压权重从 20.2 ms 到 17.9 ms，只压 KV 到 12.5 ms：**谁占字节的大头，就先压谁。** decode 时 attention 部分的算术强度和 batch 无关，只有每字节几次运算，见[性能](../performance.md#decode-batching)，所以少读的字节几乎都会变成时间。短上下文时情况相反：2K token 时一条序列的 BF16 KV 只有 0.27 GB，权重才是大头。
+在这个长度上，只压权重从 20.2 ms 到 17.9 ms，只压 KV 到 12.5 ms：**谁占字节的大头，就先压谁。** decode 时 attention 部分的算术强度和 batch 无关，只有每字节几次运算，见[性能](../performance.md#decode-batching)，因此少读字节有望降低带宽瓶颈；反量化、scale 读取、内核利用率和调度可能抵消部分收益，不能把字节降幅当成实测加速。短上下文时情况相反：2K token 时一条序列的 BF16 KV 只有 0.27 GB，权重才是大头。
 
 ### key 和 value 为什么要分开量化
 
 KIVI（2024-02，ICML 2024）统计了 KV cache 的分布：key 里有少数几个固定通道的幅值特别大，value 没有明显的离群模式；而 attention 的输出主要是少数几个重要 token 的 value 的加权和，所以 value 按 token 量化，误差只留在各自的 token 里。于是他们的方案是 **key 按通道（per-channel）、value 按 token（per-token）**。
 
-**手算一次。** 4 个 token、4 个通道的 key，第 3 个通道是离群通道（教学数字）；query 取 $q=[1,\ 1,\ 0.1,\ 1]$；非对称 2 bit，每组 4 个格子。
+**手算一次。** 4 个 token、4 个通道的 key，第 3 个通道是离群通道（教学数字）；query 取 $q=[1,\ 1,\ 0.1,\ 1]$；采用 KIVI 的 min–max 非对称 2 bit，每组 4 个格子。此处 $a=\min x$、$s=(\max x-a)/3$、$q_{\rm code}=\operatorname{clip}(\operatorname{round}((x-a)/s),0,3)$、$\hat x=a+sq_{\rm code}$，不保证 0 精确可表示。下文先比较未除以 $\sqrt{d_k}=2$ 的点积分数；若比较 softmax 前的缩放 logits，数值和绝对误差都要除以 2。
 
 $$
 K=\begin{bmatrix}0.4&-0.2&9.0&0.1\\-0.3&0.5&11.0&-0.4\\0.2&-0.6&10.0&0.3\\0.5&0.1&12.0&-0.2\end{bmatrix},\qquad Kq=\begin{bmatrix}1.2\\0.9\\0.9\\1.6\end{bmatrix}.
@@ -91,9 +91,9 @@ KIVI 的实测（Llama-2-7B，表 3）：16 位时 GSM8K 13.50；用模拟量化
 
 ### 在引擎里怎么开
 
-截至 2026 年 10 月，vLLM v0.31.0 的 [Quantized KV Cache 文档](https://docs.vllm.ai/en/v0.31.0/features/quantization/quantized_kvcache.html)列出 `kv_cache_dtype` 可取 `auto`、`fp8`、`fp8_e4m3`（CUDA 11.8 以上和 ROCm）、`fp8_e5m2`（CUDA 11.8 以上），没有列出 INT4、INT2（API 参考里能看到一个 INT4 KV 的 attention 算子，但功能文档没有给用法）。几个要点：
+截至 2026-10-16，vLLM v0.31.0 的 [Quantized KV Cache 文档](https://docs.vllm.ai/en/v0.31.0/features/quantization/quantized_kvcache/)主要介绍 `auto`、`fp8`、`fp8_e4m3`、`fp8_e5m2`，但不是完整的格式清单。[同版本参数表](https://docs.vllm.ai/en/v0.31.0/configuration/engine_args/#--kv-cache-dtype)和 [`CacheDType` 源码](https://github.com/vllm-project/vllm/blob/v0.31.0/vllm/config/cache.py)还列出 `int4_per_token_head`、`fp8_per_token_head`、`nvfp4` 等。枚举里有名字不等于所有模型、GPU、backend 都能运行；本文没有实测这些组合。指南列出的格式条件是 E4M3 支持 CUDA 11.8+ 或 ROCm，E5M2 支持 CUDA 11.8+；这不是整套引擎和 attention kernel 的充分兼容条件。以下要点限定于功能页的普通 FP8 路径：
 
-- 不做校准时，**所有 scale 都设成 1.0**；文档推荐用 llm-compressor 在数据上校准。
+- 该默认 FP8 路径未提供校准 scale 时，**scale 回退为 1.0**；不要推广到运行时计算 scale 的 `*_per_token_head` 格式。文档推荐用 llm-compressor 在数据上校准。
 - scale 可以每个张量一个（Q、K、V 各一个），也可以每个 attention head 一个，后者只在 Flash Attention backend 上可用，并且要校准。
 - 用 Flash Attention 3 backend 时，attention 本身也在 FP8 里算，query 也会被量化成 FP8。
 - 文档提醒 sliding-window 等层对 KV 量化更敏感，可以用 `--kv-cache-dtype-skip-layers` 让这些层保留原精度。

@@ -59,6 +59,9 @@ jobs:
       - name: Check built pages for script injection
         run: python site/htmlcheck.py
 
+      - name: Check internal links and anchors
+        run: python site/linkcheck.py
+
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa  # v3.0.1
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         with:

@@ -10,7 +10,7 @@
 
 | 场景 | 环境与工具 | 能不能自动验证 | 最常见的失败 | 护栏 |
 | --- | --- | --- | --- | --- |
-| 写代码 | 代码仓库、shell、测试 | 能：跑测试 | 测试过了但逻辑是错的；为了过测试去改测试 | 沙箱执行；人看 diff |
+| 写代码 | 代码仓库、shell、测试 | 部分：测试能检查覆盖到的行为 | 测试过了但逻辑是错的；为了过测试去改测试 | 沙箱执行；人看 diff；限制凭据和网络 |
 | 搜索与研究 | 搜索、网页读取 | 部分：能核对来源 | 编造引用；不知道什么时候该停 | 要求给出处；设预算 |
 | 客服 | 订单与用户系统、政策文档 | 部分：规则能查 | 违反政策；同一问题几次回答不一样 | 限制工具权限；复杂情况转人工 |
 | 数据分析 | SQL、notebook | 部分：查询能跑，结果对不对还要核对 | join 或过滤条件写错，结果看起来却很合理 | 展示实际执行的查询；核对行数和统计口径 |
@@ -19,19 +19,19 @@
 
 ## 写代码：验证信号最强的场景
 
-代码能运行、测试能判断对错，这是 agent 最理想的环境：每一步都有客观反馈。SWE-bench 就是用真实的 GitHub issue 和配套测试来评估这类 agent 的。它最常被引用的 Verified 子集已经接近做满，题目也可能被模型见过：OpenAI 在 2026-02-23 的说明里表示不再报告 SWE-bench Verified，改为推荐题目更难、仓库更多的 [SWE-bench Pro](https://arxiv.org/abs/2509.16941)（[OpenAI 的说明](https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/)）。基准为什么会被做满、被污染，见[测试时计算：怎么读数字](../11-frontier/test-time-compute/measuring.md)。但测试通过不等于改对了，测试没覆盖到的地方，还是需要人来检查。
+编译器、测试和静态检查能为不少编程步骤提供可重复的反馈，但不是每一步都有充分的判分器，测试本身也可能写错。SWE-bench 用真实 GitHub issue 和测试评估代码修改。OpenAI 在 2026-02-23 表示不再报告 Verified，转而推荐 [SWE-bench Pro](https://arxiv.org/abs/2509.16941)，依据包括审查中发现的测试缺陷和训练污染证据，而不是证明所有题都已解决（[原文](https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/)）。基准区分度和污染问题见[测试时计算：怎么读数字](../11-frontier/test-time-compute/measuring.md)。实际项目仍需检查需求覆盖、安全和 diff，不能用通过测试替代这些判断。
 
 ## 客服：可靠性比单次成功率重要
 
-同一个问题，这次答对、下次答错，在客服场景里是不能接受的。τ-bench 模拟用户和受政策约束的工具环境，用 pass^k 衡量可靠性：同一个任务独立跑 k 次、k 次全部成功的概率，再对任务取平均。它比只看一次成功率更接近真实要求：单次成功率 90% 的任务，8 次全对的概率只有 $0.9^8\approx0.43$。它的后续版本 [τ²-bench](https://arxiv.org/abs/2506.07982) 加了电信客服场景：用户也要自己动手操作设备（dual control），agent 得指导用户一起完成。截至 2026-10，[仓库](https://github.com/sierra-research/tau2-bench)已发布 τ³-bench；2026-07 的 v1.0.1 修正了 banking_knowledge 领域的几处任务错误，仓库说明 1.0.1 之前和之后的结果不能直接比较。
+同一个问题，这次答对、下次答错，在客服场景里会损害可靠性。τ-bench 模拟用户和受政策约束的工具环境，用 pass^k 衡量可靠性：同一个任务独立跑 k 次、k 次全部成功的概率，再对任务取平均。单次成功率 90% 的一个任务，8 次全对的概率只有 $0.9^8\approx0.43$；不能把全体任务的平均成功率直接取八次方，因为任务难度不同。它的后续版本 [τ²-bench](https://arxiv.org/abs/2506.07982) 加了电信客服场景：用户也要自己动手操作设备（dual control），agent 得指导用户一起完成。截至 2026-10，[仓库](https://github.com/sierra-research/tau2-bench)已发布 τ³-bench；2026-07 的 v1.0.1 修正了 banking_knowledge 的任务错误，**该领域**修复前后的分数不能直接比较，官方说明其他领域不受这次修复影响。
 
 ## 读外部内容的 agent：小心注入
 
-只要 agent 会读取网页、邮件、文档这类不受你控制的内容，就可能被其中隐藏的指令劫持（indirect prompt injection，Greshake 等，2023）。要守住两条底线：外部内容只当数据，不当指令执行；有副作用的操作要限制权限，并且要经过人确认。
+只要 agent 会读取网页、邮件、文档这类不受你控制的内容，就可能受到间接提示注入。外部文本不能增加授权，但仅在 prompt 里声明这一点并不构成安全边界。执行层还要限制可读资源、凭据、外发目的地和操作范围，并在高风险或超出既有授权的动作前确认具体参数。只读工具也可能通过搜索词或 URL 把私密内容发出去；应测试这种外泄路径，而不只测试“有没有改文件”。[OWASP 的分层防护与工具检查](https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html)
 
 ## 怎么评估
 
-- 代码：SWE-bench，现在多看 SWE-bench Pro；
+- 代码：按任务选择 SWE-bench / SWE-bench Pro，注明版本与污染限制；
 - 网页任务：WebArena；
 - 操作电脑：OSWorld；
 - 带政策约束的对话与工具：τ-bench 及后续的 τ²/τ³-bench。

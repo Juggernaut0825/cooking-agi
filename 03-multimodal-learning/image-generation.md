@@ -2,7 +2,7 @@
 
 **中文** · [English](image-generation.en.md)
 
-> 最近审阅：2026-10-08 · 先读：[图片怎样进入 LLM](vision-to-language.md)
+> 最近审阅：2026-10-16 · 先读：[图片怎样进入 LLM](vision-to-language.md)
 
 “把海报上的周五改成周六，别动其他地方。”这句话看起来简单，模型却要同时做好几件事：找到文字、理解修改范围、画对新字，还要保留背景。**一个会描述图片的 VLM，并不因此就会改图片。**
 
@@ -74,7 +74,7 @@ assert linear_flow_example(2, 10, 0.25, 6, 0.1) == (4.0, 8, 4, 4.6)
 | Qwen-Image-2.0，2026-05 技术报告 | 在同一个框架里统一生成与编辑；条件编码器改为 Qwen3-VL；VAE 空间压缩从 8 倍提高到 16 倍 | 初版的视觉与 latent 长度预算不能原样照搬 |
 | Qwen-Image-2.0-RL，2026-06 | 按任务设计奖励，用 GRPO 与 on-policy distillation 整合策略 | 不是给所有图片一个“美观分”就够了 |
 | Qwen-Image-2.1，2026-09 开放权重 | 换了生成主干：视觉生成部分是 7B 参数、32 层 single-stream DiT（初版是 20B 的 MMDiT）；能按提示直接输出带透明通道的 RGBA 图 | 发布说明和模型卡不等于已验证本地部署和训练配方 |
-| Qwen-Image-3.0，截至 2026-10 仅托管 API | 阿里云 Model Studio 列出 `qwen-image-3.0-pro` 和更快的 `qwen-image-3.0`，生成和编辑共用一个模型 ID，编辑时接收 1–3 张输入图；我们在 Qwen 的 Hugging Face 和 arXiv 上都没找到 3.0 的权重或技术报告 | 架构没有公开，不能按 2.x 推测它的主干和 VAE |
+| Qwen-Image-3.0，2026-10-16 核对托管 API 文档 | 阿里云 Model Studio 列出 `qwen-image-3.0-pro` 和更快的 `qwen-image-3.0`，生成和编辑共用一个模型 ID，编辑时接收 1–3 张输入图 | 所引 API 文档没有给出主干和 VAE 细节，不能按 2.x 推测；本次未确认 3.0 的开放权重发布，不把检索未找到写成“绝不存在” |
 
 来源：[2.0 报告](https://arxiv.org/abs/2605.10730)、[2.0-RL 报告](https://arxiv.org/abs/2606.27608)、[2.1 官方发布](https://qwen.ai/blog?id=qwen-image-2.1)、[2.1 模型卡](https://huggingface.co/Qwen/Qwen-Image-2.1)、[Model Studio 的图像模型列表](https://www.alibabacloud.com/help/en/model-studio/image-model)（3.0，2026-10-16 核对）。这里区分报告内容与发布公告，没有复现它们的性能结果。
 

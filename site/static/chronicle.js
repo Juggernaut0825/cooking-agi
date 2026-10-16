@@ -15,11 +15,16 @@
   const chips = $$('[data-field]');
   const reset = root.querySelector('[data-filter-reset]');
   const empty = root.querySelector('[data-filter-empty]');
+  const branches = root.querySelector('[data-branches]');
+  const trackSelect = root.querySelector('[data-track-select]');
+  const trackOptions = trackSelect ? [...trackSelect.querySelectorAll('option[data-topic]')] : [];
+  const resultCount = root.querySelector('[data-result-count]');
   const articles = new Map($$('.chronicle-work').map(article => [article.id.replace(/^event-/, ''), article]));
   const topics = new Set(chips.map(chip => chip.dataset.field));
   const languageLinks = [...document.querySelectorAll('[data-language-switch]')];
   const opened = new Set();
   let field = null;
+  let track = null;
   let current = null;
 
   root.classList.add('is-enhanced');
@@ -32,6 +37,7 @@
       const target = new URL(link.href, location.href);
       target.search = location.search;
       if (field) target.searchParams.set('field', field); else target.searchParams.delete('field');
+      if (track) target.searchParams.set('track', track); else target.searchParams.delete('track');
       target.hash = location.hash;
       link.href = target.href;
     });
@@ -39,6 +45,7 @@
   function writeAddress(hash) {
     const url = new URL(location.href);
     if (field) url.searchParams.set('field', field); else url.searchParams.delete('field');
+    if (track) url.searchParams.set('track', track); else url.searchParams.delete('track');
     url.hash = hash;
     history.replaceState(history.state, '', url);
     syncLanguageLinks();
@@ -46,6 +53,7 @@
 
   /* ------------------------------------------------------------ the timeline */
   const linkOf = item => (item.querySelector ? item.querySelector('[data-node]') : null);
+  const matches = item => (!field || item.dataset.workTopic === field) && (!track || item.dataset.workTrack === track);
   function refresh() {
     eras.forEach(era => {
       const name = era.dataset.era;
@@ -53,7 +61,7 @@
       const expanded = opened.has(name) || Boolean(field);
       let shown = 0, folded = 0;
       list.forEach(item => {
-        const match = !field || item.dataset.workTopic === field;
+        const match = matches(item);
         const visible = match && (expanded || 'key' in item.dataset);
         item.hidden = !visible;
         if (visible) shown++; else if (match) folded++;
@@ -67,10 +75,21 @@
       }
     });
     if (empty) empty.hidden = !field || items.some(item => !item.hidden);
+    if (branches) branches.hidden = !field;
+    trackOptions.forEach(option => {
+      option.hidden = option.dataset.topic !== field;
+      option.disabled = option.hidden;
+    });
+    if (trackSelect) trackSelect.value = track || '';
+    if (resultCount) {
+      const total = items.filter(matches).length;
+      resultCount.textContent = zh ? `${total} 个节点 · 按年份排列` : `${total} milestones · in date order`;
+    }
   }
   function setField(name, remember = true) {
     if (remember && current) closePanel({write: false, refocus: false});
     field = topics.has(name) ? name : null;
+    track = null;
     chips.forEach(chip => chip.setAttribute('aria-pressed', String(chip.dataset.field === field)));
     if (reset) reset.setAttribute('aria-pressed', String(!field));
     refresh();
@@ -78,6 +97,12 @@
   }
   chips.forEach(chip => chip.addEventListener('click', () => setField(chip.dataset.field === field ? null : chip.dataset.field)));
   if (reset) reset.addEventListener('click', () => setField(null));
+  if (trackSelect) trackSelect.addEventListener('change', () => {
+    if (current) closePanel({write: false, refocus: false});
+    track = trackOptions.some(option => option.dataset.topic === field && option.value === trackSelect.value) ? trackSelect.value : null;
+    refresh();
+    writeAddress('');
+  });
   eras.forEach(era => {
     const more = era.querySelector('[data-more]');
     if (!more) return;
@@ -123,13 +148,13 @@
   if (document.body) document.body.append(panel);
   let slot = null, opener = null;
 
-  // Steps go through the whole period (folded milestones included), within the field filter.
-  const order = era => (eraItems.get(era) || []).filter(item => !field || item.dataset.workTopic === field).map(linkOf).filter(Boolean).map(link => link.dataset.node);
+  const order = era => (field ? items : (eraItems.get(era) || [])).filter(matches).map(linkOf).filter(Boolean).map(link => link.dataset.node);
   function openNode(id, {write = true, focus = true} = {}) {
     const article = articles.get(id);
     if (!article) return false;
     closePanel({write: false, refocus: false});
     if (field && article.dataset.workTopic !== field) setField(null, false);
+    if (track && article.dataset.workTrack !== track) track = null;
     opened.add(article.dataset.era);
     refresh();
     if (article.replaceWith && document.createComment) {
@@ -202,12 +227,16 @@
       history.replaceState(history.state, '', url);
     }
     setField(new URLSearchParams(location.search).get('field'), false);
+    const requestedTrack = new URLSearchParams(location.search).get('track');
+    track = trackOptions.some(option => option.dataset.topic === field && option.value === requestedTrack) ? requestedTrack : null;
+    refresh();
+    syncLanguageLinks();
     let hash;
     try { hash = decodeURIComponent(location.hash.slice(1)); } catch { hash = ''; }
     const legacyArticle = document.getElementById(hash)?.closest?.('.chronicle-work');
     if (hash.startsWith('field-')) {
       closePanel({write: false, refocus: false});
-      setField(hash.slice(6), false);
+      if (field !== hash.slice(6)) setField(hash.slice(6), false);
     } else if (hash.startsWith('event-') && articles.has(hash.slice(6))) {
       openNode(hash.slice(6), {write: false, focus: false});
     } else if (legacyArticle && articles.has(legacyArticle.id.slice(6))) {

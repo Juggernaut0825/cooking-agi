@@ -108,7 +108,7 @@ Hold GPU count, arrival load, input/output lengths, and cache warmup fixed. Alon
 
 ### Serving DP does not always mean independent replicas {#moe-deployment}
 
-Training DDP synchronizes gradients; serving data parallelism typically distributes requests. With MoE, check whether experts are shared across those replicas. In [vLLM's EP deployment documentation](https://docs.vllm.ai/en/latest/serving/expert_parallel_deployment/), checked on 2026-10-09, enabling EP forms an expert group of size TP × DP. Attention replication/sharding and expert placement are different decisions. This is a framework convention, not a universal definition.
+Training DDP synchronizes gradients; serving data parallelism typically distributes requests. With MoE, check whether experts are shared across those replicas. In [vLLM's EP deployment documentation](https://docs.vllm.ai/en/latest/serving/expert_parallel_deployment/), checked on 2026-10-09, under this section's PCP=1 assumption (no extra prefill-context partitioning), enabling EP forms an expert group of size TP × DP. Attention replication/sharding and expert placement are different decisions. This is not a universal definition. The [v0.31.0 arguments](https://docs.vllm.ai/en/v0.31.0/configuration/engine_args/#--data-parallel-size) give the more general MoE sharding size as TP × PCP × DP; the four-GPU examples below keep PCP=1.
 
 Take a **hypothetical weight budget**: 6 GiB of shardable non-expert weights and 42 GiB of routed experts on four GPUs. Ignore replicated small tensors, quantization metadata, KV, and workspace:
 
@@ -161,11 +161,13 @@ Both engines support prefix reuse, and both turn it on by default (vLLM's `--ena
 | Question | vLLM V1 | SGLang radix tree (default `UnifiedRadixCache`) |
 | --- | --- | --- |
 | How is reusable state organized? | Prefix-dependent block hashes and a block pool, looked up by hash | A tree of shared token paths; v0.5.21 prefers a Rust tree core, with Python fallbacks for incompatible platforms or features |
-| What is the reuse boundary? | Base default: 16-token blocks; the model, attention backend, and configuration can change the size. Only full blocks are reused | Page size 1 by default, so a match can stop at any token; some backends or models raise the page to 64, 128, and so on, and matches then align down to whole pages |
+| What is the reuse boundary? | Base default: 16-token blocks; matches normally align to complete hash units. In v0.31.0, `prefix_match_unit` can be finer than physical KV blocks if it divides every cache group's block size; matching granularity is not state-storage frequency | Page size 1 by default, so a match can stop at any token; some backends or models raise the page to 64, 128, and so on, and matches then align down to whole pages |
 | How is state managed? | Reference counts, an LRU free queue for eviction, reallocation | Locking, references, node splitting; LRU by default, with LFU, SLRU, priority, and T-LRU as options |
 | What cannot be inferred? | Blocks do not prove better service performance | Trees do not prove better performance for every workload |
 
 Defaults are not universal guarantees. Check vLLM's [runner and async-scheduling conditions](https://github.com/vllm-project/vllm/blob/10cc2f6ae2c9ba7cc5841ece95e27d0562aef1bf/vllm/config/vllm.py#L709), its [cache configuration](https://github.com/vllm-project/vllm/blob/10cc2f6ae2c9ba7cc5841ece95e27d0562aef1bf/vllm/config/cache.py#L67), and SGLang's [tree-core fallback conditions](https://github.com/sgl-project/sglang/blob/v0.5.21/python/sglang/srt/mem_cache/unified_cache/tree_core_registry.py#L44). Confirm the resolved configuration in startup logs before benchmarking.
+
+For example, the [v0.31.0 configuration guide](https://docs.vllm.ai/en/v0.31.0/configuration/engine_args/#--prefix-match-unit) permits 32-token matching boundaries inside a hybrid model's 1024-token physical blocks; this does not guarantee restorable state at every interior position. See also the [tagged source](https://github.com/vllm-project/vllm/blob/v0.31.0/vllm/config/cache.py).
 
 See the pinned implementations and page-alignment example in [cache lifecycle](../00-foundations/deep-dives/attention-kernels.en.md#cache-lifecycle). The [original SGLang paper](https://arxiv.org/abs/2312.07104) explains RadixAttention's context, not the complete feature boundary of today's products.
 

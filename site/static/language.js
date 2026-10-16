@@ -39,8 +39,18 @@
     return null;
   }
 
+  function switchHref(href, currentHref, sharedAnchors) {
+    var current = new URL(currentHref);
+    var target = new URL(href, current);
+    if (target.origin !== current.origin || !Array.isArray(sharedAnchors)) return href;
+    try {
+      if (sharedAnchors.includes(decodeURIComponent(current.hash.slice(1)))) target.hash = current.hash;
+    } catch (error) {}
+    return target.href;
+  }
+
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = {entryDecision: entryDecision, storageKeys: storageKeys, linkLanguage: linkLanguage};
+    module.exports = {entryDecision: entryDecision, storageKeys: storageKeys, linkLanguage: linkLanguage, switchHref: switchHref};
   }
   if (typeof document === "undefined") return;
 
@@ -87,6 +97,9 @@
       if (!language) return;
       save(keys.choice, language);
       if (link.hasAttribute("data-language-switch")) {
+        try {
+          link.href = switchHref(link.href, window.location.href, JSON.parse(link.dataset.languageAnchors || "[]"));
+        } catch (error) {}
         save(keys.guide, "seen");
         dismiss();
       }

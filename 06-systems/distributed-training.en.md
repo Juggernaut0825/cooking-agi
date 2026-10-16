@@ -215,6 +215,14 @@ EP solves a different problem. If a token selects two remote experts, send its a
 
 The parallelism used in training needs a different question at serving time: with the same eight GPUs, do all eight cooperate on one model (TP8), or do eight replicas take requests separately (DP8)? How are MoE experts spread across replicas? Which GPU holds PP's KV, and how many bytes cross a stage boundary each step? Those calculations live in [vLLM and SGLang: several ways to use several GPUs](inference-frameworks.en.md#deployment-map), next to the engine's scheduling.
 
+## Serving DP does not always mean independent replicas
+
+The deployment example now lives in [MoE's DP / EP combination](inference-frameworks.en.md#moe-deployment): experts can be shared across request replicas, so DP need not mean independent services. This heading preserves the original entry point.
+
+## Where does PP keep KV, and what crosses a boundary?
+
+The KV placement and transfer examples now live in [PP cache and boundary transfers](inference-frameworks.en.md#pp-kv): layer-partitioned stages retain their own KV, but boundary activations still depend on batch size and prefill length. This heading preserves the original entry point.
+
 ## Offload moves state, but transfers still take time
 
 CPU memory relieves GPU pressure; it is not free expansion. CPU optimizer updates require accounting for outgoing gradients, returning parameters, and CPU compute. With small batches, a fast GPU can spend its time waiting for the CPU. [ZeRO-Offload](https://arxiv.org/abs/2101.06840) studies these placement and scheduling choices.

@@ -34,7 +34,7 @@
 
 ## 本系列的教学例子
 
-后面几篇用同一个**教学模型**：8B dense，32 层、32 个 query head、8 个 KV head、head dim 128，与 [KV cache](../../00-foundations/deep-dives/kv-cache-and-inference.md) 和[性能](../performance.md)两篇的假设配置相同；GPU 仍按 H100 SXM5 的公开规格手算。每篇讲什么，见文末的阅读顺序。
+后面几篇用同一个**教学模型**：8B dense，32 层、32 个 query head、8 个 KV head、head dim 128，沿用 [KV cache](../../00-foundations/deep-dives/kv-cache-and-inference.md) 和[性能](../performance.md)两篇的 KV 头部配置（性能篇的权重算例用 7B，而这里用 8B）；GPU 仍按 H100 SXM5 的公开规格手算。每篇讲什么，见文末的阅读顺序。
 
 ## 时间线
 

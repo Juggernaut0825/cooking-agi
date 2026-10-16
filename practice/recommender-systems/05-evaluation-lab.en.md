@@ -29,7 +29,7 @@ print(recall_at_k(small_pool, {"P"}, 2))
 print(recall_at_k(larger_pool, {"P"}, 2))
 ```
 
-This prints `1.0` and `0.0`. [evaluation.py](code/evaluation.py) contains the runnable example using only Python's standard library.
+This prints `1.0` and `0.0`. The complete [evaluation.py](code/evaluation.py) requires **Python 3.10+** with no third-party dependencies: its `float | None` annotation uses the [union syntax introduced in Python 3.10](https://docs.python.org/3.10/whatsnew/3.10.html#pep-604-new-type-union-operator).
 
 ## Don't mix two Recall definitions
 
@@ -78,7 +78,9 @@ The old aggregate is `(20×0.8 + 80×0.2)/100 = 0.32`; the new one is `0.68`. Th
 
 Fixed weights aren't the only legitimate aggregate. Traffic weighting describes the current population; equal group weights expose smaller cohorts; paired users reduce changes in sample composition. State the question your summary answers and retain group counts and scores.
 
-When comparing representations, fix queries, the item tower/index, candidate budgets, and labels, then inspect per-query differences. Repeated training estimates training variation; appropriate paired resampling estimates evaluation-sample uncertainty. Neither substitutes for the other. Related requests from one user may require user-level grouping rather than treating every request as independent.
+When comparing retrieval representations, fix the query set, candidate catalog, candidate budget, and labeling protocol, then inspect per-query differences. Keeping the item tower/index fixed is valid when **only the user tower changes and remains compatible with the same representation space**. If both towers are retrained, each variant needs its own matching item vectors and index; new query vectors must not be scored against an unrelated old coordinate system. See the jointly learned scoring space in [TensorFlow Recommenders' two-tower example](https://www.tensorflow.org/recommenders/examples/basic_retrieval) and the release checks in [episode 8](08-serving-lifecycle.en.md).
+
+Repeated training estimates training variation; appropriate paired resampling estimates evaluation-sample uncertainty. Neither substitutes for the other. Related requests from one user may require user-level grouping rather than treating every request as independent.
 
 Balancing counts does not repair missing labels or exposure bias. Higher Recall in one group may reflect a smaller, easier set of known positives rather than a better experience. Inspect coverage and topical diversity alongside relevance.
 

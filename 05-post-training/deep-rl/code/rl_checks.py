@@ -21,10 +21,12 @@ def gae(rewards, values, next_values, terminated, truncated,
     result = [0.0] * len(rewards)
     carry = 0.0
     for step in reversed(range(len(rewards))):
-        bootstrap = 0.0 if terminated[step] else next_values[step]
+        bootstrap = 0.0 if terminated[step] or gamma == 0 else next_values[step]
         residual = rewards[step] + gamma * bootstrap - values[step]
         same_episode = not (terminated[step] or truncated[step])
-        carry = residual + gamma * trace_decay * same_episode * carry
+        continuation = (gamma * trace_decay * carry
+                        if same_episode and gamma != 0 and trace_decay != 0 else 0.0)
+        carry = residual + continuation
         result[step] = carry
     return result
 
