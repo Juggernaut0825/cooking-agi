@@ -87,13 +87,13 @@ class CurriculumTests(unittest.TestCase):
         self.assertEqual(self.catalog['03-multimodal-learning/siglip.md']['zh'].previous.src.name, 'clip.md')
         self.assertEqual(self.catalog['03-multimodal-learning/vision-to-language.md']['zh'].previous.src.name, 'siglip.md')
 
-    def test_atlas_groups_concepts_into_three_reading_areas(self):
+    def test_atlas_groups_concepts_into_four_reading_areas(self):
         for language in ('zh', 'en'):
             page = self.catalog['learn/README.md'][language]
             markup = curriculum.study_atlas(page, self.navigation, self.sections, self.catalog)
-            self.assertEqual(markup.count('class="atlas-area"'), 3)
-            anchors = [f'id="area-{area}"' for area in ('basics', 'applications', 'design')]
-            self.assertEqual([markup.count(anchor) for anchor in anchors], [1, 1, 1])
+            self.assertEqual(markup.count('class="atlas-area"'), 4)
+            anchors = [f'id="area-{area}"' for area in ('basics', 'applications', 'design', 'frontier')]
+            self.assertEqual([markup.count(anchor) for anchor in anchors], [1, 1, 1, 1])
             self.assertEqual(sorted(markup.index(anchor) for anchor in anchors),
                              [markup.index(anchor) for anchor in anchors])
             for group in self.navigation['group']:

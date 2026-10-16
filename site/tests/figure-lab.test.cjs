@@ -234,3 +234,291 @@ test('expert budget: 196,608 active three ways, 221,184 with an extra shared exp
   assert.equal(end.coarse.total, 786432);
   assert.equal(end.increase, 0.125);
 });
+
+test('verifier ceiling: 46 pass, 87.0% right, ceilings 100 / 97.1 / 87.0 / 69.0', () => {
+  const frames = F.verifierCeiling(0.10), end = last(frames);
+  assert.equal(frames[1].kept, 46);
+  assert.equal(Number((end.precision * 100).toFixed(1)), 87);
+  assert.equal(end.right, 87);
+  assert.deepEqual(end.ceilings.map(c => Number((c.value * 100).toFixed(1))), [100, 97.1, 87, 69]);
+});
+
+test('time horizon: slope -0.74, 2 h at 50%, 33 min at 80%, then 34 h and 108 h beyond the task range', () => {
+  const frames = F.timeHorizon();
+  assert.equal(Number(frames[1].run.slope.toFixed(2)), -0.74);
+  assert.equal(Number(frames[2].run.h50.toFixed(2)), 2);
+  assert.equal(Math.round(frames[3].run.h80 * 60), 33);
+  assert.equal(Math.round(frames[4].run.h50), 34);
+  assert.equal(Math.round(last(frames).run.h50), 108);
+});
+
+test('evaluator rank: Pearson 0.98, Spearman 0.9, MMRV 0.04, picks D over E, top-3 Spearman 0.5', () => {
+  const end = last(F.evaluatorRank());
+  assert.equal(Number(end.pearson.toFixed(2)), 0.98);
+  assert.equal(Number(end.spearman.toFixed(2)), 0.9);
+  assert.equal(Number(end.mmrv.toFixed(2)), 0.04);
+  assert.equal(end.picked, 'D');
+  assert.equal(end.best, 'E');
+  assert.equal(Number(end.top3.toFixed(2)), 0.5);
+});
+
+test('MCTS visits: L, L, R, R, R, R gives N = (2, 4) and pi = (0.33, 0.67), (0.2, 0.8) at tau 0.5', () => {
+  const frames = F.mctsVisits();
+  assert.deepEqual(frames.slice(1, 7).map(f => f.pick), [0, 0, 1, 1, 1, 1]);
+  assert.deepEqual(round(frames[3].score, 2), [0.48, 0.57]);
+  const end = last(frames);
+  assert.deepEqual(end.N, [2, 4]);
+  assert.deepEqual(round(end.pi1, 2), [0.33, 0.67]);
+  assert.deepEqual(round(end.pi05, 2), [0.2, 0.8]);
+});
+
+test('lambda return: 0.8, 1.72, 1.044, 0.695; lambda 0 gives 0.45, lambda 1 gives 1.393; a wrong fall gives -0.225', () => {
+  const frames = F.lambdaReturn();
+  assert.deepEqual(frames[4].R.map(x => Number(x.toFixed(3))), [0.695, 1.044, 1.72, 0.8]);
+  assert.equal(Number(frames[5].lam0.toFixed(3)), 0.45);
+  assert.equal(Number(frames[5].lam1.toFixed(3)), 1.393);
+  const end = frames[frames.length - 1];
+  assert.equal(Number(end.R[0].toFixed(3)), -0.225);
+  assert.equal(end.R[1], -1);
+});
+
+test('roofline: ridge 295, add 0.56 TFLOPS, decode 4.18 ms and 239 tokens/s, GEMM 1.11 ms; batching to 70,700 tokens/s, KV toward 30, 77 GiB at B = 128', () => {
+  const frames = F.roofline(), end = last(frames);
+  assert.equal(Math.round(end.ridge), 295);
+  assert.equal(Math.round(end.vectorRidge), 40);
+  assert.equal(Number(end.add.perf.toFixed(2)), 0.56);
+  assert.equal(Number(end.single.ms.toFixed(2)), 4.18);
+  assert.equal(Math.round(end.single.tokens), 239);
+  assert.equal(Math.round(end.gemm.I), 2731);
+  assert.equal(Number(end.gemm.ms.toFixed(2)), 1.11);
+  assert.deepEqual(end.plain.map(p => Number(p.tokens.toPrecision(3))), [239, 15300, 70600, 70700]);
+  assert.deepEqual(end.plain.map(p => Number(p.ms.toPrecision(3))), [4.18, 4.18, 4.18, 7.24]);
+  assert.deepEqual(end.cached.map(p => Number(p.I.toFixed(1))), [1.1, 7.1, 21.4]);
+  assert.deepEqual(end.cached.map(p => Number(p.tokens.toPrecision(3))), [231, 1470, 4440]);
+  assert.equal(Math.round(end.limit), 30);
+  assert.equal(Math.round(end.full.gib), 77);
+  assert.equal(end.done, true);
+});
+
+test('latency hiding: U 9%, 36%, 73%, 100% at N = 1, 4, 8, 11; W = 60 needs 6 warps; registers 32/64/128 give 16/8/4 warps', () => {
+  const frames = F.latencyHiding(), end = last(frames);
+  assert.deepEqual(frames.slice(0, 4).map(f => [f.N, Math.round(f.U * 100)]), [[1, 9], [4, 36], [8, 73], [11, 100]]);
+  assert.deepEqual([frames[4].N, frames[4].period, frames[4].U], [6, 360, 1]);
+  assert.deepEqual(end.table.map(r => [r.regs, r.N, Math.round(r.U * 100)]), [[32, 16, 100], [64, 8, 73], [128, 4, 36]]);
+});
+
+test('tiling reads: 8 for C00, 128 untiled (4 per element), 8 then 16 for block (0, 0), 64 tiled (2 per element); 550 GB vs 17 GB', () => {
+  const frames = F.tilingReads(), end = last(frames);
+  assert.deepEqual(frames.map(f => f.reads), [8, 128, 8, 16, 64, 64]);
+  assert.ok([...frames[1].a.flat(), ...frames[1].b.flat()].every(v => v === 4));
+  assert.ok([...end.a.flat(), ...end.b.flat()].every(v => v === 2));
+  assert.equal(end.untiled, 128);
+  assert.deepEqual([end.untiledGB, end.tiledGB], [550, 17]);
+});
+
+test('cache walk: row walk 1/16 then 256/4096, column walk 64/64, 65/65, 4096/4096, 64-line cache 64/1024 then 256', () => {
+  const frames = F.cacheWalk(), end = last(frames);
+  assert.deepEqual(frames.map(f => [f.misses, f.accesses]), [[1, 16], [256, 4096], [64, 64], [65, 65], [4096, 4096], [64, 1024], [256, 4096], [256, 4096]]);
+  assert.deepEqual(frames[2].cache, [224, 228, 232, 236, 240, 244, 248, 252]);
+  assert.equal(frames[4].useful, 4);
+  assert.deepEqual(end.bars, [256, 4096, 256]);
+});
+
+test('reliance groups: AI 0.80; teams 0.70, 0.80, 0.85, 0.825, 0.80, 0.76; chance agreement in L 0.53', () => {
+  const frames = F.relianceGroups(), end = last(frames);
+  assert.equal(Number(frames[1].overall.toFixed(3)), 0.8);
+  assert.equal(frames[2].shown, 3);
+  assert.deepEqual(end.policies.map(p => Number(p.acc.toFixed(3))), [0.7, 0.8, 0.85, 0.825, 0.8, 0.76]);
+  assert.equal(Number(end.agree.toFixed(3)), 0.53);
+  assert.equal(end.shown, 6);
+});
+
+test('judge sampling: q 0.87, corrected 0.90 ± 2.6, MDE 5.3, Wilson 64–95%, 1,480 calls, slice MDE 7.4, drift still 0.870', () => {
+  const frames = F.judgeSampling(), end = last(frames);
+  assert.equal(Number(frames[1].q.toFixed(3)), 0.87);
+  assert.deepEqual([frames[1].cells.tp, frames[1].cells.fp].map(x => Number(x.toFixed(3))), [0.855, 0.015]);
+  assert.equal(Number(frames[2].pHat.toFixed(3)), 0.9);
+  assert.equal(Number((frames[2].half * 100).toFixed(1)), 2.6);
+  assert.equal(Number((frames[3].mdeAll * 100).toFixed(1)), 5.3);
+  assert.equal(frames[4].sliceN, 20);
+  assert.deepEqual([frames[4].lo, frames[4].hi].map(x => Math.round(x * 100)), [64, 95]);
+  assert.equal(Number((frames[4].move * 100).toFixed(1)), 0.6);
+  assert.equal(frames[5].strat + frames[5].rest, 1480);
+  assert.equal(Number((frames[5].sliceMde * 100).toFixed(1)), 7.4);
+  assert.equal(end.q2.toFixed(3), '0.870');
+  assert.equal(end.cells.t, 0.75);
+});
+
+test('subagent timeline: 130 s, 60 s, 160 s; 53k vs 71k (+34%), longest 20.5k; 0.729, 0.807, 0.625, d* 5.3%', () => {
+  const frames = F.subagentTimeline(), end = last(frames);
+  assert.deepEqual(end.time, {single: 130, parallel: 60, chained: 160});
+  assert.deepEqual([end.tokens.single, end.tokens.lead, end.tokens.sub, end.tokens.multi], [53, 9.5, 20.5, 71]);
+  assert.equal(Math.round(end.rise * 100), 34);
+  assert.equal(Number(frames[3].pSingle.toFixed(3)), 0.729);
+  assert.deepEqual(frames[3].pMulti.map(x => Number(x.toFixed(3))), [0.807, 0.625]);
+  assert.equal(Number((frames[3].dStar * 100).toFixed(1)), 5.3);
+  assert.equal(end.chained.filter(b => b.lane === 'lead').length, 4);
+});
+
+test('lift-splat: lifted (0.2, 0.1) … (0.2, 0.1), cells (0.2, 0.1) / (1.6, 0.8) / (0.2, 0.1) sum to c, 80% vs 10% in the right cell', () => {
+  const frames = F.liftSplat();
+  assert.deepEqual(frames[2].lifted.map(v => round(v, 2)), [[0.2, 0.1], [1.2, 0.6], [0.4, 0.2], [0.2, 0.1]]);
+  assert.deepEqual(frames[3].cells.map(c => round(c.sum, 2)), [[0.2, 0.1], [1.6, 0.8], [0.2, 0.1]]);
+  assert.deepEqual(round(frames[3].total, 2), [2, 1]);
+  assert.deepEqual([frames[4].right, frames[4].text.shares[frames[4].right]], [1, '80%']);
+  assert.deepEqual([frames[5].right, frames[5].text.shares[frames[5].right], frames[5].most], [2, '10%', 1]);
+  const end = last(frames);
+  assert.equal(end.done, true);
+  assert.deepEqual(end.ratios, [0.25, 0.25, 0.25, 0.25]);
+});
+
+test('trajectory cost: gaps 14 / 22 / 12, J = 2, 3, 4.17 picks A, (1, 1, 2) gives 4, 3, 6.83 and B, tie at w_s = 1.5', () => {
+  const frames = F.trajectoryCost();
+  const [A, B, C, D] = frames[0].cands;
+  assert.deepEqual([A.gap, B.gap, C.gap], [14, 22, 12]);
+  assert.deepEqual([A.cost, B.cost, round(C.cost, 2)], [[0, 0, 2], [2, 1, 0], [0, 1.5, 2.67]]);
+  assert.equal(D.rejected, true);
+  assert.deepEqual([round(frames[4].J, 2), frames[4].pick], [[2, 3, 4.17], 'A']);
+  assert.deepEqual([round(frames[5].J, 2), frames[5].pick], [[4, 3, 6.83], 'B']);
+  const end = last(frames);
+  assert.deepEqual([end.tie, end.dominated, end.below, end.above], [1.5, true, 'A', 'B']);
+});
+
+test('open vs closed loop: L2 0.2 / 0.4 / 0.6 for both; A 0.1 … 2.1 m, B 0.100 … 0.197 m, wheels on the line by 2.0 s', () => {
+  const frames = F.openClosedLoop(), end = last(frames);
+  assert.deepEqual(round(end.openL2, 2), [0.2, 0.4, 0.6]);
+  assert.deepEqual(end.A.slice(1).map(p => end.fa(p.y)), ['0.1', '0.3', '0.6', '1.0', '1.5', '2.1']);
+  assert.deepEqual(end.B.slice(1).map(p => end.fb(p.y)), ['0.100', '0.150', '0.175', '0.188', '0.194', '0.197']);
+  assert.equal(end.A[end.touch].t, 2);
+  assert.equal(end.wheels, 0.85);
+  assert.equal(Number(end.limit.toFixed(3)), 0.2);
+});
+
+test('flow Euler steps: n = 1, 2, 5, 10 end at 0, 0.46, 1.00, 1.00 from 0.5 and 0, 0.02, 0.57, 1.00 from 0.02', () => {
+  const frames = F.flowEulerSteps(), end = last(frames);
+  assert.deepEqual(end.table.map(r => r.a), ['0', '0.46', '1.00', '1.00']);
+  assert.deepEqual(end.table.map(r => r.b), ['0', '0.02', '0.57', '1.00']);
+  assert.deepEqual(end.runs['0.5/10'].xs.slice(1, 10).map(x => x.toFixed(2)), ['0.45', '0.41', '0.37', '0.35', '0.35', '0.40', '0.53', '0.69', '0.84']);
+  assert.deepEqual(end.runs['0.02/5'].xs.slice(1, 5).map(x => x.toFixed(3)), ['0.016', '0.013', '0.014', '0.033']);
+  assert.equal(end.end(end.runs['-0.5/10'].end), '−1.00');
+});
+
+test('VLA latency: 3,540 / 440 / 70 ms, about 51× and 6×, 110 ms one step at a time, π0 measured 73 ms', () => {
+  const frames = F.vlaLatency(), end = last(frames);
+  assert.deepEqual(end.lanes.map(l => l.total), [3540, 440, 70]);
+  assert.equal(Number(end.slower.toFixed(1)), 3.5);
+  assert.deepEqual(end.ratios.map(Math.round), [51, 6]);
+  assert.deepEqual([end.single, Math.floor(end.singleHz)], [110, 9]);
+  assert.equal(Math.round(end.share * 100), 57);
+  assert.deepEqual([end.measured.total, Math.round(end.measured.share * 100)], [73, 63]);
+});
+
+test('good dies: 640 / 143 / 64 sites, about 579 / 96 / 29 good, 657 / 151 / 71 whole squares, 48 pairs vs 29', () => {
+  const frames = F.goodDies(0.1), end = last(frames);
+  assert.deepEqual(end.sizes.map(z => z.sites), [640, 143, 64]);
+  assert.deepEqual(end.sizes.map(z => Number(z.Y.toFixed(3))), [0.905, 0.67, 0.449]);
+  assert.deepEqual(end.sizes.map(z => z.good), [579, 96, 29]);
+  assert.deepEqual(end.sizes.map(z => z.whole.length), [657, 151, 71]);
+  assert.equal(frames[0].count, 71);
+  assert.equal(frames[3].drop, 20);
+  assert.deepEqual([end.pairs, end.mono], [48, 29]);
+  assert.deepEqual(end.compare.map(c => [c.d0, c.pairs, c.mono]), [[0.05, 58, 43], [0.1, 48, 29], [0.2, 32, 13]]);
+  assert.deepEqual([last(F.goodDies(0.05)).pairs, last(F.goodDies(0.2)).mono], [58, 13]);
+});
+
+test('fusion traffic: 128 / 64 / 64 / 0 MiB, 67 µs = 24% of a 275 µs GEMM; at M = 8, 15 µs of CPU becomes 5', () => {
+  const frames = F.fusionTraffic();
+  assert.deepEqual(frames.slice(0, 4).map(f => f.variant.mib), [128, 64, 64, 0]);
+  assert.equal(Math.round(frames[0].gemm), 275);
+  assert.deepEqual([Math.round(frames[0].variant.time), Math.round(frames[0].variant.share * 100)], [67, 24]);
+  assert.deepEqual([Math.round(frames[1].variant.time), Math.round(frames[1].variant.share * 100)], [34, 12]);
+  assert.equal(Math.round(frames[4].gemmSmall), 17);
+  assert.equal(frames[4].elementwise.toFixed(2), '0.13');
+  const end = last(frames);
+  assert.deepEqual([frames[4].line.cpuTotal, end.line.cpuTotal], [15, 5]);
+  assert.equal(end.line.gpuEnd, frames[4].line.gpuEnd);
+});
+
+test('decode floor: 20.9 ms twice on H100, 31.1 vs 34.3, 29.2, 8.8, 3.2–3.6, 39.1 and 256 ms', () => {
+  const frames = F.decodeFloor(), by = last(frames).by, ms = id => by[id].ms.map(x => Number(x.toFixed(1)));
+  assert.deepEqual([by['h100-bf16'].n, by['h100-fp8'].n, by.v100.n, by.a100.n, by.h200.n], [2, 1, 5, 2, 1]);
+  assert.deepEqual([ms('h100-bf16'), ms('h100-fp8')], [[20.9], [20.9]]);
+  assert.deepEqual([ms('v100'), ms('a100'), ms('h200'), ms('b200'), ms('b300')], [[31.1], [34.3], [29.2], [8.8], [8.8]]);
+  assert.deepEqual(ms('rubin'), [3.6, 3.2]);
+  assert.deepEqual([ms('rtx'), Math.round(by.spark.ms[0])], [[39.1], 256]);
+  assert.equal(last(frames).shown.length, 10);
+});
+
+test('gang scheduling: 8, then 4 with 16 held, then 16 and 24 working; rings cross the network 2 and 3 times', () => {
+  const frames = F.gangScheduling(), end = last(frames);
+  assert.deepEqual(frames.slice(1, 5).map(f => [f.working, f.held]), [[8, 8], [4, 16], [16, 0], [24, 0]]);
+  assert.deepEqual(frames[1].free, {A: 4, B: 4, C: 0});
+  assert.deepEqual(frames[1].queued.map(q => q.name), ['T16 Pod 1', 'T8']);
+  assert.deepEqual(frames[3].queued.map(q => q.name), ['T16']);
+  assert.deepEqual(frames[4].queued.map(q => q.name), ['T8']);
+  assert.deepEqual(end.rings.map(r => r.cross), [2, 3]);
+  assert.deepEqual(end.all.map(s => s.working), [8, 16, 24]);
+});
+
+test('pixel ray: X_c (-1, 1.5, 10), pixel (860, 690), ground guess 15 m, disparity 50 px, 0.2 m and 3.2 m per px', () => {
+  const frames = F.pixelRay(), end = last(frames);
+  assert.deepEqual(round(frames[1].Xc), [-1, 1.5, 10]);
+  assert.deepEqual(round(frames[2].norm), [-0.1, 0.15]);
+  assert.deepEqual(round(frames[3].pixel), [860, 690]);
+  assert.equal(Number(frames[4].ground.toFixed(3)), 10);
+  assert.equal(frames[5].raisedPixel[1], 640);
+  assert.equal(Number(frames[5].guess.toFixed(3)), 15);
+  assert.deepEqual(round(end.pixel2), [810, 690]);
+  assert.equal(end.disparity, 50);
+  assert.equal(end.depth, 10);
+  assert.deepEqual(end.errors.map(e => [e.d, Number(e.e.toFixed(3))]), [[50, 0.2], [12.5, 3.2]]);
+});
+
+test('1D Kalman: predict N(12, 1.5), K 0.75, posterior N(12.75, 0.375); R 4.5 gives 12.25, 1.125; y 18 has NIS 18 and is gated', () => {
+  const frames = F.kalman1d();
+  const main = frames[3].run;
+  assert.deepEqual([main.xp, main.Pp, main.K, main.x, main.P], [12, 1.5, 0.75, 12.75, 0.375]);
+  const occluded = frames[4].run;
+  assert.deepEqual([occluded.K, occluded.x, occluded.P].map(x => Number(x.toFixed(3))), [0.25, 12.25, 1.125]);
+  const far = frames[5];
+  assert.deepEqual([far.run.e, far.run.S, far.run.nis, far.run.x], [6, 2, 18, 16.5]);
+  assert.equal(far.gated, true);
+  const end = last(frames);
+  assert.ok(end.run.P < end.run.R && end.run.P < end.run.Pp);
+});
+
+test('COCO AP: TP FP TP FP TP, AP50 0.756, 0.467 / 0.333 / 0, mean 0.358 (101-point 0.359), NMS 0.917, tighter P3 0.489', () => {
+  const frames = F.cocoAp(), end = last(frames), o = end.original;
+  assert.deepEqual(o.at50.hits.map(h => h.tp), [true, false, true, false, true]);
+  assert.deepEqual(o.at50.points.map(p => [Number(p.precision.toFixed(2)), Number(p.recall.toFixed(2))]), [[1, 0.33], [0.5, 0.33], [0.67, 0.67], [0.5, 0.67], [0.6, 1]]);
+  assert.deepEqual(round(o.byT.map(r => r.ap)), [0.756, 0.756, 0.467, 0.467, 0.467, 0.333, 0.333, 0, 0, 0]);
+  assert.equal(Number(o.mean.toFixed(3)), 0.358);
+  assert.equal(Number(o.mean101.toFixed(3)), 0.359);
+  assert.equal(Number(end.nms.at50.ap.toFixed(3)), 0.917);
+  assert.equal(Number(end.dup.toFixed(3)), 0.681);
+  assert.equal(Number(end.tight.at50.ap.toFixed(3)), 0.756);
+  assert.equal(Number(end.tight.mean.toFixed(3)), 0.489);
+});
+
+test('depth scale: (1160, 640) for P and 2P, k = 4 gives (4, 8, 20), (s, t) = (4, 4) or (2, 6), road fixes s = t = 4, ray 1.025 and 5.12 m', () => {
+  const frames = F.depthScale(), end = last(frames);
+  assert.deepEqual(frames[0].pixel, [1160, 640]);
+  assert.deepEqual(frames[1].pixelScaled, [1160, 640]);
+  assert.deepEqual(frames[3].metric, [4, 8, 20]);
+  assert.deepEqual(frames[4].family.map(c => [c.d, c.fits]), [[[4, 8, 20], true], [[6, 8, 14], true]]);
+  assert.deepEqual([end.s, end.t, end.unique[2]], [4, 4, 20]);
+  assert.equal(Number(end.length.toFixed(3)), 1.025);
+  assert.equal(Number(end.along.toFixed(2)), 5.12);
+});
+
+test('alpha blending: weights 0.5, 0.2, 0.15, 0.135, colour (0.635, 0.335, 0.285), T 0.015 both ways, swapped colour (0.915, 0.94, 0.93)', () => {
+  const end = last(F.alphaBlend());
+  assert.deepEqual(round(end.steps.map(x => x.w)), [0.5, 0.2, 0.15, 0.135]);
+  assert.deepEqual(round(end.steps[3].colour), [0.635, 0.335, 0.285]);
+  assert.equal(Number(end.sum.toFixed(3)), 0.985);
+  assert.equal(Number(end.depth.toFixed(2)), 7.36);
+  assert.deepEqual(round(end.swapped.map(x => x.w)), [0.9, 0.04, 0.03, 0.015]);
+  assert.deepEqual(round(end.swapped[3].colour), [0.915, 0.94, 0.93]);
+  assert.equal(Number(end.steps[3].Tout.toFixed(3)), 0.015);
+  assert.equal(Number(end.swapped[3].Tout.toFixed(3)), 0.015);
+});

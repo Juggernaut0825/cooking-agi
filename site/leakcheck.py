@@ -19,8 +19,9 @@ ROOT = Path(__file__).resolve().parents[1]
 RULES = [
     # 雇主与平台内部叫法
     ("employer / internal term", r"linkedin|领英|字节跳动|bytedance"),
-    # 形如集群规模与超参
-    ("cluster size / hyperparam", r"\b\d+\s*(张卡|块卡|GPUs?|devices)\b|world_size\s*=\s*\d+"),
+    # 形如集群规模与超参。12-infra/ 讲的是公开的硬件与集群配置（厂商规格书里的“8 GPUs”“NVL72”），
+    # GPU 数量就是正文本身，所以只对这一个目录放行这一条；雇主名称、内部配置键等其他规则照常生效。
+    ("cluster size / hyperparam", r"^(?!12-infra/)", r"\b\d+\s*(张卡|块卡|GPUs?|devices)\b|world_size\s*=\s*\d+"),
     ("internal config key", r"per_device\w*\s*[:=]\s*\d+|in_batch_negatives"),
     # 形如内部代码路径
     ("internal code path", r"\b\w+\.py:\d+"),
@@ -33,6 +34,8 @@ EXEMPT = [r"sub-1B", r"pytorch\.org", r"^\s*<!--",
 PUBLIC_REFERENCE_URLS = {
     "https://huggingface.co/ByteDance/Ouro-1.4B/blob/7ea635ba1575ae9ab4ae1d83d83e16a6e47fe696/modeling_ouro.py":
         "Public model implementation, pinned for the looped-model code audit; surrounding text remains scanned.",
+    "https://github.com/ByteDance-Seed/Depth-Anything-3":
+        "Public research repository cited by the perception notes for Depth Anything 3; surrounding text remains scanned.",
 }
 
 
@@ -52,7 +55,7 @@ def redact_public_career_role(line, source):
 SCAN = ["00-foundations", "quant", "01-data-and-feedback", "02-memory",
         "03-multimodal-learning", "04-search", "05-post-training", "06-systems",
         "07-evaluation", "08-model-experience", "09-personal-agi",
-        "10-agents", "papers", "career", "interview", "practice", "learn", "community", "discussions"]
+        "10-agents", "11-frontier", "12-infra", "13-embodied", "papers", "career", "interview", "practice", "learn", "community", "discussions"]
 
 
 def main():

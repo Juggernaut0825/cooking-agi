@@ -99,6 +99,13 @@ en = "03 · Inference & applications"
 summary_zh = "从生成一个回答，到检索资料、使用工具和维持长期状态。"
 summary_en = "Move from generating an answer to retrieving evidence, using tools, and maintaining state."
 
+[[zone]]
+id = "frontier"
+zh = "04 · 前沿观察"
+en = "04 · Frontier watch"
+summary_zh = "变化快、还没定型的方向：先分清说的是哪件事，再看证据走到了哪一步。"
+summary_en = "Fast-moving directions that have not settled: pin down what is meant, then see how far the evidence goes."
+
 [[group]]
 id = "start"
 zh = "开始"
@@ -220,6 +227,36 @@ en = "AI systems & experience"
 home = "06-systems/README.md"
 summary_zh = "把一次请求放回完整产品：看可观测性、人工参与和长期使用体验。"
 summary_en = "Put a request back in its product context: observability, human oversight, and long-term use."
+
+[[group]]
+id = "infra"
+category = "learn"
+zone = "design"
+zh = "AI 基础设施（待审核）"
+en = "AI infrastructure (draft)"
+home = "12-infra/README.md"
+summary_zh = "一次请求背后的整条链路：从晶圆、芯片、GPU 和 CUDA，到框架、集群和产品。草稿，待审核。"
+summary_en = "The whole chain behind one request: wafers, chips, GPUs and CUDA, up to frameworks, clusters and products. Draft, pending review."
+
+[[group]]
+id = "embodied"
+category = "learn"
+zone = "design"
+zh = "感知、机器人与自动驾驶（待审核）"
+en = "Perception, robots & driving (draft)"
+home = "13-embodied/README.md"
+summary_zh = "从像素到动作：相机几何与跟踪、鸟瞰图与规划、模仿学习与 VLA。草稿，待审核。"
+summary_en = "From pixels to actions: camera geometry and tracking, bird's-eye view and planning, imitation learning and VLAs. Draft, pending review."
+
+[[group]]
+id = "frontier"
+category = "learn"
+zone = "frontier"
+zh = "前沿"
+en = "Frontier"
+home = "11-frontier/README.md"
+summary_zh = "世界模型、递归自我改进这类正在变化的方向：先问清楚指的是什么，再看有哪些可核对的证据。"
+summary_en = "Moving targets such as world models and recursive self-improvement: ask what is meant, then check the evidence."
 
 [[group]]
 id = "coding"
@@ -579,16 +616,16 @@ dir = "05-post-training/deep-rl/algorithms"
 group = "deep-rl"
 zh = "02 · 核心算法"
 en = "02 · Core algorithms"
-include = ["05-post-training/deep-rl/dqn.md", "05-post-training/deep-rl/continuous-control.md", "05-post-training/deep-rl/soft-actor-critic.md", "05-post-training/deep-rl/model-based.md", "05-post-training/deep-rl/planning-and-control.md"]
-order = ["dqn.md", "continuous-control.md", "soft-actor-critic.md", "model-based.md", "planning-and-control.md"]
+include = ["05-post-training/deep-rl/dqn.md", "05-post-training/deep-rl/continuous-control.md", "05-post-training/deep-rl/soft-actor-critic.md", "05-post-training/deep-rl/model-based.md", "05-post-training/deep-rl/model-types.md", "05-post-training/deep-rl/planning-and-control.md", "05-post-training/deep-rl/planning-and-learning.md"]
+order = ["dqn.md", "continuous-control.md", "soft-actor-critic.md", "model-based.md", "model-types.md", "planning-and-control.md", "planning-and-learning.md"]
 
 [[section]]
 dir = "05-post-training/deep-rl/extensions"
 group = "deep-rl"
 zh = "03 · 数据与实验"
 en = "03 · Data & experiments"
-include = ["05-post-training/deep-rl/imitation-and-rewards.md", "05-post-training/deep-rl/offline-and-ope.md", "05-post-training/deep-rl/exploration-and-hierarchy.md", "05-post-training/deep-rl/experiments.md", "05-post-training/deep-rl/llm-bridge.md", "05-post-training/deep-rl/why-rl-is-hard.md"]
-order = ["imitation-and-rewards.md", "offline-and-ope.md", "exploration-and-hierarchy.md", "experiments.md", "llm-bridge.md", "why-rl-is-hard.md"]
+include = ["05-post-training/deep-rl/imitation-and-rewards.md", "05-post-training/deep-rl/offline-and-ope.md", "05-post-training/deep-rl/ope-estimators.md", "05-post-training/deep-rl/exploration-and-hierarchy.md", "05-post-training/deep-rl/experiments.md", "05-post-training/deep-rl/llm-bridge.md", "05-post-training/deep-rl/why-rl-is-hard.md"]
+order = ["imitation-and-rewards.md", "offline-and-ope.md", "ope-estimators.md", "exploration-and-hierarchy.md", "experiments.md", "llm-bridge.md", "why-rl-is-hard.md"]
 
 [[section]]
 dir   = "05-post-training/rlhf"
@@ -605,14 +642,14 @@ dir   = "06-systems"
 group = "systems"
 zh    = "系统"
 en    = "Systems"
-order = ["README.md", "distributed-training.md", "agent-observability.md", "human-in-the-loop.md"]
+order = ["README.md", "distributed-training.md", "agent-observability.md", "human-in-the-loop.md", "decision-support.md"]
 
 [[section]]
 dir   = "07-evaluation"
 group = "eval"
 zh    = "评估基础"
 en    = "Evaluation basics"
-order = ["README.md", "evaluation-stack.md", "text-metrics.md", "benchmark-protocols.md", "ablation-and-slices.md", "metric-robustness.md"]
+order = ["README.md", "evaluation-stack.md", "text-metrics.md", "benchmark-protocols.md", "ablation-and-slices.md", "metric-robustness.md", "eval-observability.md"]
 
 [[section]]
 dir   = "07-evaluation/llm-as-a-judge"
@@ -639,7 +676,84 @@ dir   = "10-agents"
 group = "agents"
 zh    = "Agents"
 en    = "Agents"
-order = ["README.md", "prompting.md", "patterns.md", "tools-and-skills.md", "deep-research.md", "scenarios.md", "model-choice.md", "review.md"]
+order = ["README.md", "prompting.md", "patterns.md", "single-vs-multi-agent.md", "tools-and-skills.md", "deep-research.md", "scenarios.md", "model-choice.md", "review.md"]
+
+[[section]]
+dir   = "12-infra"
+group = "infra"
+zh    = "从芯片到产品"
+en    = "From silicon to product"
+order = ["README.md", "chips-and-fabs.md", "cpu-architecture.md", "gpu-architecture.md", "nvidia-generations.md", "cuda.md", "performance.md", "frameworks.md", "kubernetes.md", "review.md"]
+
+[[section]]
+dir   = "13-embodied"
+group = "embodied"
+zh    = "从这里开始"
+en    = "Start here"
+order = ["README.md"]
+
+[[section]]
+dir   = "13-embodied/perception"
+group = "embodied"
+zh    = "感知与几何"
+en    = "Perception & geometry"
+order = ["README.md", "camera-geometry.md", "tracking.md", "detection.md", "foundation-models.md", "reconstruction.md"]
+
+[[section]]
+dir   = "13-embodied/driving"
+group = "embodied"
+zh    = "自动驾驶"
+en    = "Autonomous driving"
+order = ["README.md", "bev-occupancy.md", "prediction-planning.md", "end-to-end.md"]
+
+[[section]]
+dir   = "13-embodied/robot-learning"
+group = "embodied"
+zh    = "机器人学习"
+en    = "Robot learning"
+order = ["README.md", "imitation.md", "vla.md"]
+
+[[section]]
+dir   = "11-frontier"
+group = "frontier"
+zh    = "从这里开始"
+en    = "Start here"
+order = ["README.md"]
+
+[[section]]
+dir   = "11-frontier/world-models"
+group = "frontier"
+zh    = "世界模型"
+en    = "World models"
+order = ["README.md", "dreamer.md", "jepa.md", "interactive-video.md", "robotics-driving.md", "do-they-understand.md", "review.md"]
+
+[[section]]
+dir   = "11-frontier/self-improvement"
+group = "frontier"
+zh    = "递归自我改进"
+en    = "Recursive self-improvement"
+order = ["README.md", "generate-verify-train.md", "code-not-weights.md", "measuring.md", "review.md"]
+
+[[section]]
+dir   = "11-frontier/test-time-compute"
+group = "frontier"
+zh    = "测试时计算（待审核）"
+en    = "Test-time compute (draft)"
+order = ["README.md", "parallel-and-verify.md", "long-chains.md", "measuring.md", "review.md"]
+
+[[section]]
+dir   = "11-frontier/agentic-rl"
+group = "frontier"
+zh    = "用 RL 训练 agent（待审核）"
+en    = "Agent RL (draft)"
+order = ["README.md", "environments-and-rewards.md", "credit-and-training.md", "review.md"]
+
+[[section]]
+dir   = "11-frontier/interpretability"
+group = "frontier"
+zh    = "机制可解释性（待审核）"
+en    = "Interpretability (draft)"
+order = ["README.md", "features-and-superposition.md", "sparse-autoencoders.md", "circuits.md", "review.md"]
 
 [[section]]
 dir   = "practice"
@@ -872,8 +986,11 @@ en  = "Templates"
 "05-post-training/deep-rl/soft-actor-critic.md" = ["SAC 与最大熵", "SAC & maximum entropy"]
 "05-post-training/deep-rl/model-based.md" = ["Model-based RL", "Model-based RL"]
 "05-post-training/deep-rl/planning-and-control.md" = ["规划与 LQR", "Planning & LQR"]
+"05-post-training/deep-rl/model-types.md" = ["学什么样的模型", "Which model to learn"]
+"05-post-training/deep-rl/planning-and-learning.md" = ["规划与学习互相喂", "Planning meets learning"]
 "05-post-training/deep-rl/imitation-and-rewards.md" = ["模仿与奖励", "Imitation & rewards"]
 "05-post-training/deep-rl/offline-and-ope.md" = ["Offline RL 与 OPE", "Offline RL & OPE"]
+"05-post-training/deep-rl/ope-estimators.md" = ["OPE 估计器", "OPE estimators"]
 "05-post-training/deep-rl/exploration-and-hierarchy.md" = ["探索与层级", "Exploration & hierarchy"]
 "05-post-training/deep-rl/experiments.md" = ["实验与排错", "Experiments & debugging"]
 "05-post-training/deep-rl/llm-bridge.md" = ["接到 LLM 与 Agents", "LLMs & agents"]
@@ -902,7 +1019,9 @@ en  = "Templates"
 "06-systems/README.md"                                  = ["总览", "Overview"]
 "06-systems/agent-observability.md"                     = ["Agent 可观测性", "Agent observability"]
 "06-systems/human-in-the-loop.md"                       = ["人工参与", "Human in the loop"]
+"06-systems/decision-support.md" = ["LLM 辅助决策（待审核）", "Decision support (draft)"]
 "07-evaluation/README.md"                               = ["总览", "Overview"]
+"07-evaluation/eval-observability.md" = ["评估接到线上（待审核）", "Evaluation online (draft)"]
 "07-evaluation/evaluation-stack.md" = ["分层评估", "Evaluation stack"]
 "07-evaluation/text-metrics.md" = ["BLEU、ROUGE 与编辑距离", "BLEU, ROUGE & edit distance"]
 "07-evaluation/benchmark-protocols.md" = ["Benchmark 与长上下文测试", "Benchmarks & long-context tests"]
@@ -976,6 +1095,58 @@ en  = "Templates"
 "10-agents/model-choice.md"                                      = ["模型选择与路由", "Model selection & routing"]
 "10-agents/tools-and-skills.md" = ["工具、MCP 与 Skills", "Tools, MCP & skills"]
 "10-agents/review.md"                                            = ["复习题", "Review"]
+"10-agents/single-vs-multi-agent.md" = ["一个还是多个 agent（待审核）", "One agent or several (draft)"]
+"11-frontier/README.md" = ["从这里开始", "Start here"]
+"13-embodied/README.md" = ["从这里开始", "Start here"]
+"13-embodied/perception/README.md" = ["总览", "Overview"]
+"13-embodied/perception/camera-geometry.md" = ["三维点怎样变成像素", "From 3D point to pixel"]
+"13-embodied/perception/tracking.md" = ["状态估计与跟踪", "Estimation & tracking"]
+"13-embodied/perception/detection.md" = ["检测与分割", "Detection & segmentation"]
+"13-embodied/perception/foundation-models.md" = ["几何基础模型", "Geometry foundation models"]
+"13-embodied/perception/reconstruction.md" = ["三维重建与神经渲染", "Reconstruction & rendering"]
+"13-embodied/driving/README.md" = ["总览", "Overview"]
+"13-embodied/driving/bev-occupancy.md" = ["鸟瞰图与占用", "BEV & occupancy"]
+"13-embodied/driving/prediction-planning.md" = ["预测与规划", "Forecasting & planning"]
+"13-embodied/driving/end-to-end.md" = ["端到端与闭环评测", "End-to-end & closed loop"]
+"13-embodied/robot-learning/README.md" = ["总览", "Overview"]
+"13-embodied/robot-learning/imitation.md" = ["从示范中学动作", "Learning from demonstrations"]
+"13-embodied/robot-learning/vla.md" = ["VLA 与仿真到现实", "VLAs & sim-to-real"]
+"12-infra/README.md" = ["总览：一次请求的链路", "Overview: one request"]
+"12-infra/chips-and-fabs.md" = ["芯片怎么造出来", "How chips are made"]
+"12-infra/cpu-architecture.md" = ["CPU 架构", "CPU architecture"]
+"12-infra/gpu-architecture.md" = ["GPU 架构", "GPU architecture"]
+"12-infra/nvidia-generations.md" = ["英伟达各代 GPU", "NVIDIA generations"]
+"12-infra/cuda.md" = ["CUDA", "CUDA"]
+"12-infra/performance.md" = ["性能：roofline 与 MFU", "Performance: roofline & MFU"]
+"12-infra/frameworks.md" = ["框架这一层", "The framework layer"]
+"12-infra/kubernetes.md" = ["Kubernetes 与 GPU 集群", "Kubernetes & GPU clusters"]
+"12-infra/review.md" = ["复习题", "Review"]
+"11-frontier/world-models/README.md" = ["总览", "Overview"]
+"11-frontier/world-models/dreamer.md" = ["在想象里学", "Learning in imagination"]
+"11-frontier/world-models/jepa.md" = ["预测表示：JEPA", "Predicting representations"]
+"11-frontier/world-models/interactive-video.md" = ["能交互的视频", "Video you can act in"]
+"11-frontier/world-models/robotics-driving.md" = ["机器人与自动驾驶", "Robots & driving"]
+"11-frontier/world-models/do-they-understand.md" = ["它真的懂世界吗", "Do they understand?"]
+"11-frontier/world-models/review.md" = ["复习题", "Review"]
+"11-frontier/self-improvement/README.md" = ["总览", "Overview"]
+"11-frontier/self-improvement/generate-verify-train.md" = ["生成、验证、再训练", "Generate, verify, retrain"]
+"11-frontier/self-improvement/code-not-weights.md" = ["改代码不改权重", "Code, not weights"]
+"11-frontier/self-improvement/measuring.md" = ["怎么量 AI 加速 AI", "Measuring AI speeding AI"]
+"11-frontier/self-improvement/review.md" = ["复习题", "Review"]
+"11-frontier/test-time-compute/README.md" = ["总览", "Overview"]
+"11-frontier/test-time-compute/parallel-and-verify.md" = ["多采样、投票与验证器", "Sampling, voting & verifiers"]
+"11-frontier/test-time-compute/long-chains.md" = ["长思维链怎样训练", "Training long chains"]
+"11-frontier/test-time-compute/measuring.md" = ["怎么比较、怎么读数字", "Comparing & reading numbers"]
+"11-frontier/test-time-compute/review.md" = ["复习题", "Review"]
+"11-frontier/agentic-rl/README.md" = ["总览", "Overview"]
+"11-frontier/agentic-rl/environments-and-rewards.md" = ["环境与奖励", "Environments & rewards"]
+"11-frontier/agentic-rl/credit-and-training.md" = ["信用分配与训练系统", "Credit & training systems"]
+"11-frontier/agentic-rl/review.md" = ["复习题", "Review"]
+"11-frontier/interpretability/README.md" = ["总览", "Overview"]
+"11-frontier/interpretability/features-and-superposition.md" = ["特征、叠加与探针", "Features & superposition"]
+"11-frontier/interpretability/sparse-autoencoders.md" = ["稀疏自编码器", "Sparse autoencoders"]
+"11-frontier/interpretability/circuits.md" = ["电路、归因与干预", "Circuits & interventions"]
+"11-frontier/interpretability/review.md" = ["复习题", "Review"]
 "learn/README.md" = ["基础目录与导读", "Foundations catalog & guide"]
 "learn/choose-your-path.md" = ["按目标找路线", "Find your route"]
 "learn/ml-exercises/README.md" = ["从代码开始", "Start with code"]

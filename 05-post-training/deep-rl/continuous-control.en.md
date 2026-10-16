@@ -2,7 +2,7 @@
 
 [中文](continuous-control.md) · **English**
 
-> Reading time: ~8–10 min · Last reviewed: 2026-10
+> Reading time: ~10–12 min · Last reviewed: 2026-10
 
 Discrete actions can be enumerated; steering angles cannot. DDPG learns an additional network $\mu_\theta(s)$ that proposes an action, then improves it along the Critic's slope. TD3 modifies this approach to reduce the damage from estimation errors.
 
@@ -77,6 +77,37 @@ $$
 $$
 
 Smoothing evaluates a neighborhood, not just a point. For a peak $Q(a)=-k(a-a^*)^2$, smoothing subtracts $k\sigma^2$: the sharper the peak (larger $k$), the larger the penalty, so narrow spikes are less able to dominate the target. Neural-network peaks can have more complex shapes; noise truncation and action clipping change the distribution. Interpret noise relative to action range rather than copying a scale between environments.
+
+## Can you take the max over continuous actions without training an actor?
+
+DDPG's Actor is essentially an "approximate argmax function": in each state it finds a high-scoring action on the Critic's behalf. For the $\max_{a'}Q(s',a')$ in a Q-learning target, there are two other options that train no separate network.
+
+**Maximize by sampling.** Whenever you need the max, sample $N$ actions, score each with the Critic, and keep the best; this is random shooting. CEM iterates a few more rounds: keep the best few, fit a new Gaussian, and sample again (a one-step hand calculation is in [planning and LQR](planning-and-control.en.md)). [QT-Opt (Kalashnikov et al., 2018)](https://arxiv.org/abs/1806.10293) replaces the Actor with CEM for vision-based grasping: 64 samples per round, keep 6, two rounds; the same procedure computes training targets and chooses actions on real robots. The authors argue that this avoids actor–critic instability and say CEM is moderately robust to local optima in low-dimensional problems. The cost is just as direct: one max takes $64\times2=128$ Q forward passes, and every sample in a batch needs one for its target. The best sampled value never exceeds the Q curve's own maximum, so targets run low with few samples; and relative to the true value, errors in Q itself are still amplified by the max.
+
+**Make Q easy to maximize.** [NAF (Gu et al., 2016)](https://arxiv.org/abs/1603.00748) writes Q as a state value minus a term quadratic in the action:
+
+$$
+Q(s,a)=V(s)-\tfrac12\big(a-\mu(s)\big)^\top P(s)\big(a-\mu(s)\big),\qquad P(s)=L(s)L(s)^\top .
+$$
+
+$L(s)$ is a lower-triangular matrix output by the network, with exponentiated diagonal entries so that $P(s)$ is positive definite. Q then peaks at $a=\mu(s)$ with value $V(s)$, and the max in the target needs no search. What you give up is expressiveness: in each state, Q has a single peak in the action. The paper itself acknowledges that the quadratic form is more restrictive than a general network; the QT-Opt authors argue that such shapes are a poor fit for grasping, where reaching toward objects is valuable and reaching into the gaps between them is not, so Q has several peaks in the action.
+
+Work it once by hand. Take a one-dimensional action $a\in[-1,1]$ and a made-up Q curve $Q(a)=\max\big(1-8(a-0.5)^2,\;0.8-2(a+0.5)^2\big)$ with two peaks: a narrow, high one on the right reaching the true maximum 1 at $a=0.5$, and a broad, low one on the left reaching 0.8 at $a=-0.5$.
+
+- **8 random samples**: suppose one uniform draw happens to give −0.85, −0.6, −0.35, −0.1, 0.15, 0.3, 0.75, 0.95, with Q values 0.555, 0.78, 0.755, 0.48, 0.02, 0.68, 0.5, −0.62. The best is $a=-0.6$, on the low left peak; 0.3, the sample closest to the true peak, scores only 0.68 because the right peak is so narrow.
+- **CEM**: use these 8 samples as round 1 and keep the best 2 (−0.6, −0.35); the new Gaussian has mean −0.475 and standard deviation 0.125. To beat 0.8, a sample must land at $a>0.34$, more than 6.5 standard deviations from the new mean, which in practice never happens. Later rounds converge reliably to the top of the left peak: CEM lets the first round decide which hill to climb, and afterwards only climbs that hill more precisely.
+- **NAF-style quadratic Q**: suppose a function quadratic in the action is fit to this curve with equal weight over $[-1,1]$ (a teaching assumption; real training uses Bellman regression, and the data distribution decides which peak it leans toward). The fitted peak sits at $a\approx-0.23$, where the true Q is only about 0.65, lower than either peak.
+- **Actor gradient ascent**: DDPG climbs along $\partial Q/\partial a$. Starting from $a=0$, the left piece is higher with slope $-2$, and the actor climbs to −0.5; starting from $a=0.2$, the right piece is higher with slope 4.8, and it climbs to 0.5.
+
+| Method | Computation per max | Action found | True Q there |
+| --- | --- | --- | --- |
+| 8 random samples | 8 Q forward passes | −0.6 | 0.78 |
+| CEM, 8 per round, keep 2 | 8 Q forward passes per round | About −0.5 | About 0.8 |
+| NAF-style quadratic Q | 1 forward pass, read off $\mu(s)$ | About −0.23 | About 0.65 |
+| Learned Actor | 1 forward pass, plus Actor training | Depends on the start: −0.5 or 0.5 | 0.8 or 1 |
+| True maximum | — | 0.5 | 1 |
+
+The example illustrates mechanisms, not performance: none of the methods automatically finds the narrow peak. With only a few action dimensions, large-scale training, and expensive tuning, sampling or CEM removes a hard-to-tune network at the cost of many Q calls at inference. When value is close to unimodal in the action (say, "reach a position"), NAF-style methods are cheapest. With dozens of action dimensions and a high control rate, the number of samples needed grows quickly with dimension, and learning an Actor (DDPG, TD3) pays off, provided you accept that it also climbs only locally and chases the Critic's errors.
 
 ## Trace one update round
 
