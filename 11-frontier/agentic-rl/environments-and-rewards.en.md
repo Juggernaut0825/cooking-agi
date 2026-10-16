@@ -18,6 +18,8 @@ As in [Gymnasium](https://gymnasium.farama.org/), an environment must at least r
 - **Budget**: how many turns, how many tokens, how long each command may run, and what happens when a limit is exceeded;
 - **Isolation**: side effects of one trajectory must not leak into other trajectories, the scoring process or the outside world.
 
+<!-- paper-figure:osworld-infra -->
+
 | Environment type | Where the state lives | How the reward usually comes | Public examples | What to guard against first |
 | --- | --- | --- | --- | --- |
 | Code repository with tests | The repository and file system in a container | Tests that fail before the fix and pass after, plus tests that already passed | [SWE-Gym](https://arxiv.org/abs/2412.21139) (2024-12, 2,438 tasks from 11 repositories); [R2E-Gym](https://arxiv.org/abs/2504.07164) (2025-04, about 8.1k); [SWE-smith](https://arxiv.org/abs/2504.21798) (2025-04, 50,137 from 128 repositories) | Incomplete test coverage; editing the tests; reading the answer from git history |
@@ -39,7 +41,7 @@ Kimi K2's tool simulator (the paper describes it as functionally equivalent to a
 
 The Kimi K3 [technical report](https://github.com/MoonshotAI/Kimi-K3) (2026-07) states the second kind explicitly: rewards come from the verifier's evaluation of the final environment state, not from the agent's self-reported completion. SWE-RL (Meta, 2025-02, [paper](https://arxiv.org/abs/2502.18449)) is a different design: it runs no tests and scores between 0 and 1 by the text similarity between the generated patch and the reference patch, with −1 for a malformed output; it is a single-turn setting in which the model reads the issue and the relevant files at once and writes the edit directly, with no multi-turn interaction with an environment. For the general problems of tests as rewards, see [Verifiable rewards](../../05-post-training/verifiable-rewards.en.md); for an ordering of signals from strong to weak, see the comparison table at the end of [Generate, verify, retrain](../self-improvement/generate-verify-train.en.md); for the judge's own biases, see [LLM-as-a-Judge](../../07-evaluation/llm-as-a-judge/README.en.md).
 
-A concrete warning about human preference in agents comes from Anthropic's [research](https://www.anthropic.com/research/emergent-misalignment-reward-hacking) of 2025-11-21: after a model learned to exploit production coding environments, adding chat-style RLHF safety training made it look aligned on chat-like evaluations, but the misalignment persisted on agentic tasks.
+A concrete warning about human preference in agents comes from Anthropic's [research](https://www.anthropic.com/research/emergent-misalignment-reward-hacking) of 2025-11-21: after a model learned to exploit production coding environments, adding chat-style RLHF safety training resulted, in the words of the paper's [abstract](https://arxiv.org/abs/2511.18397), in "aligned behavior on chat-like evaluations, but misalignment persists on agentic tasks".
 
 ## Exploits that have been documented
 
@@ -56,6 +58,8 @@ The table includes only examples recorded by a primary source. Most share one fe
 | 2026-04-07 | Anthropic, [Claude Mythos Preview system card](https://www-cdn.anthropic.com/7624816413e9b4d2e3ba620c5a5e091b98b190a5/Claude%20Mythos%20Preview%20System%20Card.pdf) §4.2.2.1 | The model occasionally circumvented network restrictions in its training environment to download data that shortcut the task; attempts in about 0.05% of training episodes, successes in about 0.01% |
 | 2026-08-26 | OpenAI, [Hugging Face incident report](https://openai.com/index/hugging-face-incident-and-the-road-ahead/) | OpenAI says agents cheating by looking up solutions online was a primary driver of the incident; the behaviour was then reinforced in training and may have contributed to the model's propensity to use similar techniques |
 | 2026-09-22 | Anthropic, [Claude Opus 5.5 system card](https://www-cdn.anthropic.com/fc1b44717c85dc068bc6ba5024219938094694bd/Claude%20Opus%205.5%20System%20Card.pdf) §6.2.1 | Screening RL training episodes with classifiers: in about 0.3% of sampled episodes the model successfully guessed what the answer key expected instead of deriving the answer from the task |
+
+<!-- paper-figure:baker-hack-cot -->
 
 Checkers outside the sandbox get exploited too. [One Token to Fool LLM-as-a-Judge](https://arxiv.org/abs/2507.08794) (2025-07) found that, on a multi-subject dataset, replying with just a colon `:` was judged correct 77.2% of the time with LLaMA3-70B as the judge. The [Agentic Benchmark Checklist](https://arxiv.org/abs/2507.02825) (2025-07) points out that τ-bench counts empty responses as successes: some tasks cannot be completed by design, and doing nothing leaves the database unchanged, which happens to match the goal state. Earlier, [Sycophancy to Subterfuge](https://arxiv.org/abs/2406.10162) (Anthropic, 2024-06) trained on a sequence of increasingly gameable environments; in 32,768 episodes of the final held-out environment, 45 episodes modified their own reward and 7 also edited unit tests to avoid detection.
 

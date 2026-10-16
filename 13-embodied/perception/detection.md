@@ -78,7 +78,7 @@ COCO 的主指标 AP 还要在 10 个 IoU 阈值 0.50, 0.55, …, 0.95 上再平
 
 NMS 的问题也在这里：如果 P2 其实框的是站在 G1 身后、和它 IoU 0.68 的另一个人，NMS 就删掉了一个真阳性。阈值是手调的，拥挤场景里很难两头顾。
 
-[DETR（2020）](https://arxiv.org/abs/2005.12872)把检测写成集合预测：解码器固定输出 $N$ 个槽位（论文用 $N=100$），训练时用 Hungarian 算法在预测和真值（不够 $N$ 个就补“无物体” $\varnothing$）之间找一对一配对：
+[DETR（2020）](https://arxiv.org/abs/2005.12872)把检测写成集合预测，摘要说这样做“effectively removing the need for many hand-designed components like a non-maximum suppression procedure …”，即不再需要 NMS 这类手工设计的组件。具体做法是：解码器固定输出 $N$ 个槽位（论文用 $N=100$），训练时用 Hungarian 算法在预测和真值（不够 $N$ 个就补“无物体” $\varnothing$）之间找一对一配对：
 
 $$
 \hat\sigma=\arg\min_{\sigma}\sum_{i=1}^{N}\mathcal L_{\rm match}\big(y_i,\hat y_{\sigma(i)}\big),\qquad
@@ -86,6 +86,8 @@ $$
 $$
 
 $c_i$ 是真值类别，$\hat p_{\sigma(i)}(c_i)$ 是配上的那个槽位给这个类别的概率，$\mathcal L_{\rm box}$ 是 L1 损失和 generalized IoU 损失的加权和。没配上的槽位被训练去预测 $\varnothing$，所以模型自己学会不出重复框。放到上面的例子里：G1 只会配给 P1、P2 中代价更低的一个，另一个被推向“无物体”。这和[跟踪那篇](tracking.md)用的是同一个 Hungarian 算法，只是那里用来在运行时配轨迹，这里用来在训练时分配监督目标。
+
+<!-- paper-figure:detr-set-prediction -->
 
 论文的消融也说明了这一点：对第一层解码器的输出做 NMS 有帮助，到最后几层反而略微降低 AP，因为 NMS 删掉了真阳性。DETR 的短板是收敛慢；[Deformable DETR](https://arxiv.org/abs/2010.04159) 作者报告训练轮数少 10 倍，之后 [RT-DETR](https://arxiv.org/abs/2304.08069)、[D-FINE](https://arxiv.org/abs/2410.13842)、[DEIM](https://arxiv.org/abs/2412.04234) 和 [RF-DETR](https://arxiv.org/abs/2511.09554) 把这条线做到了实时。
 
@@ -100,6 +102,8 @@ YOLO 这条线在 2026 年也去掉了 NMS。[YOLO26 论文（2026-06-02）](htt
 | 可提示概念分割 | 图像或视频 + 名词短语或示例框 | 所有匹配实例的掩码和 ID | [SAM 3](https://arxiv.org/abs/2511.16719)：COCO 框 AP 56.4、LVIS 框 AP 53.6（[README](https://github.com/facebookresearch/sam3)）；H200 上一张有 100 多个目标的图约 30 ms | 自动标注、长尾概念、在视频里找“所有的 X” |
 
 开放词表这条线的前身包括 [GLIP](https://arxiv.org/abs/2112.03857)、[OWL-ViT](https://arxiv.org/abs/2205.06230) / [OWLv2](https://arxiv.org/abs/2306.09683)、[YOLO-World](https://arxiv.org/abs/2401.17270) 和 [YOLOE](https://arxiv.org/abs/2503.07465)。SAM 3（2025-11-20）把它和分割合在一起：给一个短名词短语（如“黄色校车”）或示例框，返回图像或视频里所有匹配实例的掩码和 ID。它由一个 DETR 式检测器和一个带记忆的视频跟踪器组成，共用一个骨干；一个 presence head 单独判断“这个概念在不在图里”，把识别和定位拆开（论文摘要）。
+
+<!-- paper-figure:sam3-arch -->
 
 数字要连着条件看。同一个 SAM 3，在 COCO 上框 AP 56.4（论文表 1 把它列为零样本结果）；在 [RF100-VL](https://arxiv.org/abs/2505.20612) 的 100 个多领域数据集上，零样本平均只有 15.2 AP，其中医学类 2.6；用每类约 10 个标注实例微调（10-shot）后平均 36.5，全量微调 61.6（论文 v2 表 36、37，作者报告）。论文附录 B 自己写明：零样本时难以泛化到细粒度的领域外概念（如飞机型号、医学术语），热成像这类小众领域尤其如此；提示只能是简单名词短语，长的指代描述要配一个多模态大模型。
 

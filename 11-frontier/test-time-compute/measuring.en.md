@@ -54,7 +54,9 @@ An example from the public record: on 2024-12-20 ARC Prize tested o3 on the ARC-
 
 ## Does RL only "sharpen"? The pass@k debate
 
-[Yue et al. (2025-04, NeurIPS 2025 oral)](https://arxiv.org/abs/2504.13837) compared base models with the same models after RL with verifiable rewards on math, code and visual reasoning: at small $k$ (for example 1) the RL models are better; at large $k$ the base models overtake them, and the longer the training, the fewer problems remain solvable. They use perplexity to argue that the RL models' reasoning paths were already within the base model's sampling distribution; six RLVR algorithms performed similarly and remained far from using the base model's potential fully; distillation, by contrast, brings in the teacher's new reasoning patterns and stays above the base model at every $k$. To rule out lucky guesses they checked chains of thought on hard problems by hand: among AIME 2024 problems with average accuracy below 5%, the base model solved 7, and of the 6 that were not ambiguous, 5 had at least one correct chain; the RL model solved 6, of which 4 did.
+[Yue et al. (2025-04, NeurIPS 2025 oral)](https://arxiv.org/abs/2504.13837) compared base models with the same models after RL with verifiable rewards on math, code and visual reasoning: at small $k$ (for example 1) the RL models are better; at large $k$ the base models overtake them, and the longer the training, the fewer problems remain solvable. The abstract concludes that "the current training setup does not elicit fundamentally new reasoning patterns". They use perplexity to argue that the RL models' reasoning paths were already within the base model's sampling distribution; six RLVR algorithms performed similarly and remained far from using the base model's potential fully; distillation, by contrast, brings in the teacher's new reasoning patterns and stays above the base model at every $k$. To rule out lucky guesses they checked chains of thought on hard problems by hand: among AIME 2024 problems with average accuracy below 5%, the base model solved 7, and of the 6 that were not ambiguous, 5 had at least one correct chain; the RL model solved 6, of which 4 did.
+
+<!-- paper-figure:rlvr-search-trees -->
 
 ### Work it once: why $k=1$ and $k=100$ can point in opposite directions
 
@@ -93,6 +95,8 @@ AIME has two exams a year with 15 problems each, 30 in total, so one problem is 
 - **DeepSeek's own check.** The R1 v2 report decontaminates with 10-gram matching, removing about six million pretraining texts in math alone, but acknowledges this cannot catch paraphrased problems, so benchmarks released before 2024 may be contaminated. They also tested AIME 2025, released after training: 75% pass@1, against 79.8% on AIME 2024.
 - **SWE-bench Verified.** [OpenAI announced on 2026-02-23 that it no longer reports it](https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/): of 138 problems that o3 could not solve consistently over 64 runs, 59.4% had material issues in tests or problem descriptions (35.5% with tests that enforce implementation details, 18.8% testing functionality the problem never asked for); every frontier model they tested could reproduce the original fix or problem details for some tasks; the best score had moved only from 74.9% to 80.9% over the previous 6 months. They now recommend SWE-bench Pro.
 - **GPQA.** The [original paper](https://arxiv.org/abs/2311.12022) embeds a canary string in the data and asks people not to post the questions in plain text, to reduce the chance they end up in training corpora. The 198 questions of the Diamond subset require both experts to answer correctly (or the second expert's mistake to be clearly documented) and most non-experts to answer incorrectly.
+
+<!-- paper-figure:matharena-contamination -->
 
 ### Saturation
 

@@ -22,11 +22,13 @@ $x_{0:t}$ 是到时刻 $t$ 为止的观测，通常是视频帧；$c_t$ 是当�
 | 策略评测器 | 策略的动作 → 模型里的 rollout → 成功与否 | 真机评测 | 模型打分的排序是否和真机一致 | WorldEval、WorldGym、Veo 评测器、dWorldEval、Ctrl-World、1X |
 | 策略本身 | 当前画面 + 任务 → 预测未来 → 动作 | 单独训练的 VLA 策略 | 闭环成功率、延迟、泛化 | DreamZero、Cosmos Policy、1X NEO、Praxis-1 |
 
-[WorldArena](https://arxiv.org/abs/2602.08971)（Shang 等，2026-02 论文）正是按数据引擎、策略评测器和规划器三种用途，分别测了 14 个具身世界模型，结论是画面好看不等于具身任务上有用，作者称之为 perception–functionality gap。[World-in-World](https://arxiv.org/abs/2510.18135)（2025-10，ICLR 2026 Oral）也报告：闭环任务成功更取决于可控性，而不是画质。
+[WorldArena](https://arxiv.org/abs/2602.08971)（Shang 等，2026-02 论文）正是按数据引擎、策略评测器和规划器三种用途，分别测了 14 个具身世界模型，摘要的结论是“high visual quality does not necessarily translate into strong embodied task capability”，即画面好看不等于具身任务上有用，作者称之为 perception–functionality gap。[World-in-World](https://arxiv.org/abs/2510.18135)（2025-10，ICLR 2026 Oral）也报告：闭环任务成功更取决于可控性，而不是画质。
 
 ## 活一：造数据
 
 [DreamGen](https://arxiv.org/abs/2505.12705)（NVIDIA GEAR 等，2025-05 论文）摘要里的流程是：先把一个 image-to-video 模型适配到目标机器人，生成熟悉或全新任务、不同场景的视频；视频没有动作标签，就用 latent action model 或逆动力学模型（inverse dynamics model，IDM）推出伪动作。这和[交互视频一篇](interactive-video.md)里 Genie 的 latent action 是同一个思路。论文把这种合成数据叫 neural trajectories，报告人形机器人只用一个环境里一个抓放任务的遥操作数据，就学会了 22 种新行为。
+
+<!-- paper-figure:dreamgen-overview -->
 
 代价也要算。[DreamGen 论文](https://arxiv.org/abs/2505.12705)报告：生成 24 万条 RoboCasa 样本，用 1,500 张 L40 跑了 54 小时，即 $1500\times54=81{,}000$ GPU 小时，平均每条约 $81{,}000/240{,}000\approx0.34$ GPU 小时，每条约 20 分钟的 GPU 时间。真机采一条示范贵不贵，要和这个数放在一起比。
 
@@ -61,6 +63,8 @@ Cosmos 3 的规模，NVIDIA 自己的两处说法不一致：[开发者博客](h
 | [PiL-World](https://arxiv.org/abs/2606.05773)（2026-06） | 成功率估计误差从 63.2% 降到 12.0% | 只有 3 个双臂任务 |
 
 Veo 评测器这一篇我们读了原文。它把 Veo 2 文生视频模型在机器人数据上微调，评测 ALOHA 2 双臂平台上的策略（4 个相机，§2、§3.1）；摘要写共做了 1,600 多次真机评测，涉及 8 个 checkpoint、5 个任务。Pearson 0.86 和 MMRV 0.06 是针对最强的那一个策略，在背景、小干扰物、大干扰物、物体这几条 OOD 泛化轴上比较预测成功率和真实成功率（§4.1）；正文没写点数，要回图 8 去数。论文自述的局限：预测的绝对成功率低于真实值（§3.2、§4.1）；接触密集、特别是小物体的交互难模拟（§7）；每次 rollout 8 秒，分钟级的多视角一致生成仍是待达成的目标（§7）；成功与否目前靠人工判定（§7）。
+
+<!-- paper-figure:veo-eval-ood -->
 
 Veo 评测器论文 §3.2 给出的 MMRV 定义如下（指标出自 Li 等 2024）：
 

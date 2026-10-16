@@ -29,7 +29,7 @@ To discuss the evidence separately, this note uses a working framework. It is ou
 
 ## A theorem: competence at multi-step goals implies a world model inside the policy
 
-[Richens et al.](https://arxiv.org/abs/2506.01622) (Google DeepMind, ICML 2025) titled v1 "...need world models"; it is now "General agents contain world models". We read the paper; the conditions are:
+[Richens et al.](https://arxiv.org/abs/2506.01622) (Google DeepMind, ICML 2025) titled v1 "...need world models"; it is now "General agents contain world models". The abstract's central claim is that "any agent capable of generalizing to multi-step goal-directed tasks must have learned a predictive model …" of its environment. We read the paper; the conditions are:
 
 - **Environment**: a controlled Markov process, i.e. an MDP without rewards; finite, communicating, stationary, and fully observed by the agent (§2.2, §2.4).
 - **Agent**: a goal-conditioned policy whose success probability on every composite goal of depth at most $n$ is at least $(1-\delta)$ times optimal (§2.4). Only competence is assumed, not rationality.
@@ -67,11 +67,15 @@ Imagine a model that watches cup-pushing videos and predicts "falls or not" (all
 
 Readable (level 1) holds, used (level 2) does not, and behavioural consistency (level 3) fails at a new starting point. Othello-GPT did run interventions, which goes further than probing alone; but some interpretability work argues it may be running "a bag of heuristics" rather than one coherent algorithm, and that [Alignment Forum post](https://www.alignmentforum.org/posts/gcpNuEZnxAPayaKBY) is not peer reviewed.
 
+<!-- paper-figure:othello-intervention -->
+
 ## Behavioural tests say "often inconsistent"
 
 [Vafa et al. 2024](https://arxiv.org/abs/2406.03689) (NeurIPS 2024) borrow the idea of the Myhill–Nerode theorem: in a deterministic finite automaton, two histories that reach the same state must allow exactly the same continuations; histories that reach different states must be distinguishable by some continuation. That gives two tests: does the model treat different histories of the same state the same way (compression), and can it tell different states apart (distinction)?
 
 They trained Transformers on Manhattan taxi routes: next-step validity is about 1.00, yet sequence-compression precision is only 0.10–0.50; a shortest-path model facing 10% random detours drops from 0.99 to 0.08 valid routes.
+
+<!-- paper-figure:vafa-manhattan-maps -->
 
 Now with the cup (a teaching setup that assumes no momentum and uniform friction): history (a) pushes 3 cm and then 2 cm, history (b) pushes 5 cm once. Both leave the cup in the same place, so reasonable predictions afterwards should match. If the model says the cup is still on the table after (a) but falls after (b), it is tracking "how far the last push went", not the cup.
 

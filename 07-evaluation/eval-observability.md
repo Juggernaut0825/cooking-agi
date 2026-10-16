@@ -29,7 +29,7 @@
 
 OpenTelemetry（OTel）为这些字段定义了 GenAI 语义约定（semantic conventions）。字段名还在变，所以先说状态，截至 2026-10-15：
 
-- 这套约定的状态是 **Development**（OTel 以前把这一级叫 Experimental）。按 [OTel 的版本与稳定性说明](https://opentelemetry.io/docs/specs/otel/versioning-and-stability/)，这一级可能有 breaking change，不应对它建立长期依赖。
+- 这套约定的状态是 **Development**（OTel 以前把这一级叫 Experimental）。按 [OTel 的版本与稳定性说明](https://opentelemetry.io/docs/specs/otel/versioning-and-stability/#development)，这一级可能有 breaking change，而且“Long-term dependencies SHOULD NOT be taken against signals in Development”，即不应对它建立长期依赖。
 - 核心语义约定从 [v1.42.0](https://github.com/open-telemetry/semantic-conventions/releases/tag/v1.42.0)（2026-06-12）起弃用全部 `gen_ai.*` 定义，迁到独立的 [semantic-conventions-genai 仓库](https://github.com/open-telemetry/semantic-conventions-genai)；从 v1.42.0 到目前最新的 v1.44.0（2026-08-04），核心仓库和 [opentelemetry.io 上的 GenAI 页面](https://opentelemetry.io/docs/specs/semconv/gen-ai/)都只剩“已迁移”的说明。
 - 新仓库截至 2026-10-15 没有任何 release 或 tag，CHANGELOG 只有“Unreleased”，其中已攒下约 10 条 breaking 变更。
 
@@ -175,6 +175,8 @@ for n, (p_hat, half_width, mde) in rows.items():
 - 同时盯 20 个切片、5 个指标，即使什么都没变，每天也会冒出几个“显著”。
 
 另一种做法不依赖固定的 $s,t$：每个统计周期从随机样本里再抽一小部分请人标注，用 judge 在大样本上的平均，减去 judge 与人工在小样本上的平均差。这就是 [prediction-powered inference](https://arxiv.org/abs/2301.09633)（Angelopoulos 等，2023）的均值估计；正文的设定是人工样本和被评流量来自同一分布、独立抽取（随机审计正好满足），在这个前提下区间有效，不需要假设 judge 有多准。judge 越接近人工，区间越窄。代价是每个周期都要有新鲜的人工标签。
+
+<!-- paper-figure:ppi-intervals -->
 
 ## 哪些信号该告警，多快告警
 

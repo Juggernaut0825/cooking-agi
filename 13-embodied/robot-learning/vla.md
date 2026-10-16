@@ -16,9 +16,13 @@ VLA（vision-language-action）这个词出自 [RT-2](https://arxiv.org/abs/2307
 
 **1. 动作当文本 token。** RT-2 的动作是 8 个数：末端 6 个自由度的位移和转动、夹爪开合、一个“结束”标志；连续的维度均匀切成 256 个 bin，整条动作写成一串整数 token，再和网页上的看图问答数据混在一起微调（§3.2）。55B 的版本放在多 TPU 的云服务上，控制频率 1–3 Hz，5B 版本约 5 Hz（§3.3）。[OpenVLA](https://arxiv.org/abs/2406.09246v1)（Stanford 等，2024-06）沿用这个思路：Llama 2 7B 加 DINOv2 和 SigLIP 两路视觉特征；7 维动作，每维在训练数据 1%–99% 分位之间切 256 个 bin，占用 Llama 词表里最少用的 256 个 token；在一张 RTX 4090 上约 6 Hz（没做编译和投机解码）。
 
-**2. 先压缩，再变 token。** [FAST](https://arxiv.org/abs/2501.09747v1)（Physical Intelligence、UC Berkeley、Stanford，2025-01）的观察是：高频控制下相邻两步几乎一样，逐步逐维的 token 大多“抄上一个就对”，next-token 的学习信号很弱（§IV）。它对每一维做离散余弦变换（DCT），量化后用 BPE 压缩。作者报告的每 1 秒动作块 token 数：7 维、20 Hz 的收拾餐桌从 140 降到 28；14 维、50 Hz 的叠 T 恤从 700 降到 53（表 I）。π0-FAST 能追平扩散版 π0，训练时间最多少 5 倍（作者）。
+<!-- paper-figure:openvla-arch -->
+
+**2. 先压缩，再变 token。** [FAST](https://arxiv.org/abs/2501.09747v1)（Physical Intelligence、UC Berkeley、Stanford，2025-01）的观察是：高频控制下相邻两步几乎一样，逐步逐维的 token 大多“抄上一个就对”，next-token 的学习信号很弱。原文是“this marginal information approaches zero as the control frequency of the training signal increases …”，即训练信号的控制频率越高，每个新 token 带来的边际信息越趋近于零（[§IV](https://arxiv.org/html/2501.09747v1#S4)）。它对每一维做离散余弦变换（DCT），量化后用 BPE 压缩。作者报告的每 1 秒动作块 token 数：7 维、20 Hz 的收拾餐桌从 140 降到 28；14 维、50 Hz 的叠 T 恤从 700 降到 53（表 I）。π0-FAST 能追平扩散版 π0，训练时间最多少 5 倍（作者）。
 
 **3. 连续的动作专家。** [π0](https://arxiv.org/abs/2410.24164v1)（2024-10）= PaliGemma 3B + 约 3 亿参数的 flow-matching 动作专家；动作块长 50，最高 50 Hz；推理时积分 10 步，图像、文字和机器人状态组成的前缀只算一次、KV 缓存起来，每步只重算动作那一段（§IV）。[π0.5](https://arxiv.org/abs/2504.16054v1)（2025-04）先用文字预测下一个子任务，再由 3 亿参数的专家出 50 步的动作块；[π0.7](https://arxiv.org/abs/2604.15483v1)（2026-04）换成 Gemma 3 4B 加 8.6 亿参数的专家，提示里加入质量、速度等元数据和子目标图片。NVIDIA 的 [GR00T N1](https://arxiv.org/abs/2503.14734v1)（2025-03）是 VLM（System 2）加 diffusion transformer 动作模块（System 1）端到端联合训练；Hugging Face 的 [SmolVLA](https://arxiv.org/abs/2506.01844v1)（2025-06）总共约 4.5 亿参数，其中约 1 亿是 flow-matching 专家。直接给 VLM 接一个随机初始化的连续专家也有代价：PI 的 [knowledge insulation](https://arxiv.org/abs/2505.23705v1)（2025-05）报告这会明显拖慢训练、损害知识迁移；正文（§1、§5.2）的解释是专家的梯度回传会破坏 VLM 主干，做法是把主干和这部分梯度隔开。
+
+<!-- paper-figure:pi0-overview -->
 
 **4. 不用 token，也不用扩散。** [OpenVLA-OFT](https://arxiv.org/abs/2502.19645v1)（Stanford，2025-02）把 OpenVLA 改成并行解码（双向注意力，一次前向就出整块）、连续动作、L1 回归。作者报告 LIBERO 平均成功率从 76.5% 升到 97.1%（最好的配置用了额外输入），动作生成吞吐提高 26 倍（块长 8 时测得）。
 

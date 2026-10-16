@@ -66,7 +66,7 @@ $P$ is the prompt length and $B_{\rm KV}$ is the KV bytes read in this step. Plu
 - **Prefill**: $2\times8\times10^9\times2000=3.2\times10^{13}$ operations, divided by $0.5\times10^{15}$ FLOP/s, gives 64 ms. In the same pass the 16 GB of weights are read once, about 7.6 ms, so compute is the bottleneck.
 - **Each decode step**: only $1.6\times10^{10}$ operations, 0.032 ms at 50% of peak; but it must read the 16 GB of weights and up to 0.3 GB of KV, about 7.8 ms at 2.1 TB/s, so bandwidth is the bottleneck.
 
-Seen another way: prefill does about 2,000 operations per byte read, decode about 1. This teaching GPU's "ridge point" is $10^{15}/(3\times10^{12})\approx333$ FLOP per byte (with the H100 SXM5 specs above it is $989.4/3.352\approx295$). Above it you are compute-bound; below it, bandwidth-bound. [Pope et al. (2022)](https://arxiv.org/abs/2211.05102) also note that at small batch sizes and sequence lengths, the time to load weights dominates.
+Seen another way: prefill does about 2,000 operations per byte read, decode about 1. This teaching GPU's "ridge point" is $10^{15}/(3\times10^{12})\approx333$ FLOP per byte (with the H100 SXM5 specs above it is $989.4/3.352\approx295$). Above it you are compute-bound; below it, bandwidth-bound. [Pope et al. (2022)](https://arxiv.org/abs/2211.05102) also note, in their discussion of memory costs ([§2](https://arxiv.org/html/2211.05102v1#S2.SS0.SSS0.Px1)): "At small batch sizes and sequence lengths, the time to load weights dominates."
 
 | Stage | Layer | Teaching estimate | Main limit |
 | --- | --- | ---: | --- |
@@ -79,6 +79,8 @@ Seen another way: prefill does about 2,000 operations per byte read, decode abou
 | **Total** | | **~2.5 s** | Decode is ~94% |
 
 If 32 similar requests decode together, the weights are read once per step and shared: each step reads 16 GB of weights plus 32 copies of KV (about 9.6 GB at up to 0.3 GB each), roughly 25.6 GB, which takes about 12.2 ms. Each user's inter-token latency rises from 7.8 ms to 12.2 ms, but total throughput goes from about 129 tokens/s to about 2,600 tokens/s, roughly 20x. KV is now 38% of the bytes read per step; Pope et al. also note that with larger batches and longer sequences, loading the KV cache comes to dominate. This is why serving engines batch requests and also budget the KV cache carefully; see [How one request runs](../06-systems/llm-serving.en.md) and [KV cache](../00-foundations/deep-dives/kv-cache-and-inference.en.md).
+
+<!-- paper-figure:pope-cost-latency -->
 
 | Change one condition | What you see | What you cannot conclude |
 | --- | --- | --- |

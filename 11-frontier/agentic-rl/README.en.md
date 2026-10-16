@@ -21,6 +21,8 @@ When you train on maths problems with RLVR, one sample is a prompt, one answer a
 | Cost of one rollout | One generation plus a cheap check | Starting containers, running commands, running tests; DeepSWE (2025-07) used a 20-minute generation timeout and a 5-minute test timeout | Notes 1 and 2 |
 | How it ends | An end-of-sequence token | Submission, failure, budget exhausted, tool crash, timeout, each different | Note 2 |
 
+<!-- paper-figure:taubench-overview -->
+
 Why tool outputs carry no gradient follows directly from the probability of a trajectory. Let $h_k$ be the whole history before the $k$-th action, $a_k$ the $k$-th action (a span of tokens), and $o_k$ the observation the environment returns next:
 
 $$

@@ -76,7 +76,7 @@ Blackwell Ultra 在 2025 年 3 月 18 日的 GTC 上发布，合作伙伴产品�
 时间线：
 
 - 2025 年 3 月 GTC（[NVIDIA 博客汇总](https://blogs.nvidia.com/blog/nvidia-keynote-at-gtc-2025-ai-news-live-updates/)）：Vera Rubin NVL144 定在 2026 年下半年，Rubin Ultra 系统在 2027 年下半年。
-- 2026 年 1 月 5 日 CES（[新闻稿](https://nvidianews.nvidia.com/news/rubin-platform-ai-supercomputer)）：NVIDIA 称 Rubin“已全面投产”，合作伙伴产品下半年供货；机架改称 Vera Rubin NVL72（72 颗 Rubin GPU、36 颗 Vera CPU）。3 月 16 日 GTC 的[新闻稿](https://nvidianews.nvidia.com/news/nvidia-vera-rubin-platform)加入第七颗芯片 Groq 3 LPU，[POD 博客](https://developer.nvidia.com/blog/nvidia-vera-rubin-pod-seven-chips-five-rack-scale-systems-one-ai-supercomputer/)介绍了可扩到 576 颗 GPU 的 Rubin Ultra 和每柜 144 颗的 Kyber 机架，没给日期。
+- 2026 年 1 月 5 日 CES（[新闻稿](https://nvidianews.nvidia.com/news/rubin-platform-ai-supercomputer)）：NVIDIA 在其中的 Rubin Readiness 一节写道“NVIDIA Rubin is in full production …”（Rubin 已全面投产），合作伙伴产品下半年供货；机架改称 Vera Rubin NVL72（72 颗 Rubin GPU、36 颗 Vera CPU）。3 月 16 日 GTC 的[新闻稿](https://nvidianews.nvidia.com/news/nvidia-vera-rubin-platform)加入第七颗芯片 Groq 3 LPU，[POD 博客](https://developer.nvidia.com/blog/nvidia-vera-rubin-pod-seven-chips-five-rack-scale-systems-one-ai-supercomputer/)介绍了可扩到 576 颗 GPU 的 Rubin Ultra 和每柜 144 颗的 Kyber 机架，没给日期。
 - 2026 年 5 月 31 日 GTC Taipei（[新闻稿](https://nvidianews.nvidia.com/news/vera-rubin-full-production-agentic-ai-factory)）：量产出货“今年秋天”开始；8 月 27 日更新的 [NVIDIA 博客](https://blogs.nvidia.com/blog/vera-cpu-delivery/)说 AWS 收到了第一台 Vera CPU 服务器和 Vera Rubin GPU。
 
 截至 2026 年 10 月，[Vera Rubin NVL72 产品页](https://www.nvidia.com/en-us/data-center/vera-rubin-nvl72/)标着“Available Now”，但没找到能确认大批量供货的一手资料，所以本文把 Rubin 标为“已宣布”，数字都是 NVIDIA 公布的规格。

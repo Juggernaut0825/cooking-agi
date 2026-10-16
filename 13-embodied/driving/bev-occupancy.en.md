@@ -43,6 +43,8 @@ That is the **lift**: one pixel becomes 4 points with features along its ray. Th
 
 The three cells add up to $(2.0,1.0)=c$. Because $\sum\alpha_d=1$, the total feature from this pixel is unchanged; it is only distributed over distances along the ray. If the car really is at 8 m, 80% of its "car" feature lands in the right cell, 10% in a nearer cell and 10% in a farther one. The familiar "smear along the line of sight" in camera BEV comes from exactly this.
 
+<!-- paper-figure:lss-lift -->
+
 At the paper's real resolution (0.5 m cells, one depth per 1 m), neighbouring depth points on the same ray rarely share a cell; the adding happens mostly between neighbouring pixels and where two cameras' fields of view overlap.
 
 ### Change one condition: a sharper, flatter or misplaced distribution
@@ -60,6 +62,8 @@ The **shoot** in the name is planning: the network outputs a cost map in BEV, "s
 ## Pulling instead: BEV queries
 
 [BEVFormer](https://arxiv.org/abs/2203.17270) does not push outward from pixels; it pulls from cells into the images. It gives every BEV cell a learnable query. Per §3.3 and §4.2 of the paper: each cell is raised into a vertical pillar, with 4 reference points spaced evenly between −5 m and 3 m in height; the camera intrinsics and extrinsics project these points into the images, and features are taken only from the cameras they hit; around each projected point, deformable attention samples 4 more points. A separate temporal self-attention fuses in the previous BEV, aligned for ego motion. The abstract reports 56.9 NDS on the nuScenes test set, 9.0 above the previous best.
+
+<!-- paper-figure:bevformer-arch -->
 
 Use the same camera as before: the cell centred at $(12,3)$ satisfies $3=0.25\times12$, so it lies exactly on the ray from before and projects to the same pixel. $(4,1)$, $(8,2)$ and $(16,4)$ all project to the same column too. If each cell just copied that pixel's feature, all 4 cells would get the identical thing: the ambiguity along the ray has not gone away, it has moved. What separates them: the same cell is seen by another camera, or at the next time step from another angle; reference points at different heights project to different pixel rows, and a car body and the road surface look different at different heights; and the attention weights themselves are learned.
 

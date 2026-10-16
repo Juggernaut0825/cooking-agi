@@ -30,6 +30,8 @@
 
 换到写函数的例子：要进化的是函数体，$h$ 可以是“隐藏测试通过率加上运行速度”。$h$ 由人来写，AlphaEvolve 不改它，所以上一篇“测试放过错解”的问题在这里原样存在：$h$ 放过什么，进化就可能往哪里走。
 
+<!-- paper-figure:alphaevolve-loop -->
+
 评估级联（§2.4）是用户给出一组由易到难的测试，新程序只有在前面几层都表现不错才进入下一层；新程序还会先在小规模上跑一遍，尽早筛掉出错的程序。有些难以写进 $h$ 的性质，可以让 LLM 给出反馈。程序库（§2.5）借鉴 MAP-Elites 和 island 式种群模型，避免整个种群挤在同一个局部最优附近。
 
 ### 报告的结果，以及“自我”在哪里
@@ -66,6 +68,8 @@ return A
 
 保留比父代差的子代，是为了留“垫脚石”：论文报告在 SWE-bench 上，第 4 轮和第 56 轮的 agent 一度比父代低，但沿这条路径继续改，后来得到了超过所有前代的 agent。
 
+<!-- paper-figure:dgm-archive -->
+
 ### 选谁当父代：算一次
 
 附录 C.2 的抽样规则（Eq. 1–7）：
@@ -93,7 +97,7 @@ $\alpha_i$ 是 agent $i$ 的 benchmark 得分，$n_i$ 是它还能编辑代码�
 - **结果（§4.4）。** 80 轮之后，SWE-bench 从 20.0% 到 50.0%，完整的 Polyglot 从 14.2% 到 30.7%。改进能迁移到其他 FM 和编程语言：在 Polyglot 上进化出的最好 agent，在 SWE-bench 上得到 24.5%，高于初始的 20.0%。
 - **成本（附录 E.1）。** SWE-bench 上跑一次约 2 周、约 22,000 美元；两个消融基线各约 10,000 美元。
 - **消融（§4）。** 去掉自我改进（始终由初始 agent 去改别人，相当于复现 ADAS），早期有提升，但很快放缓；去掉开放式探索（只保留最新的 agent），一次坏的修改会让后面更难改进。两者在两个 benchmark 上都不如完整的 DGM。
-- **限制（§6）。** 作者写明 DGM 受底座 FM 能力的内在限制；实验在沙箱里、有人监督。附录 H 记录了 objective hacking，见[上一篇](generate-verify-train.md)。
+- **限制（§6）。** 作者写明 DGM “is inherently limited by the capabilities of the underlying FM”（[§6](https://arxiv.org/html/2505.22954v3#S6)），即受底座 FM 能力的内在限制；实验在沙箱里、有人监督。附录 H 记录了 objective hacking，见[上一篇](generate-verify-train.md)。
 
 ## 后来的几种做法：SICA、HGM、AIDE²
 

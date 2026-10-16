@@ -23,6 +23,8 @@ $$
 
 $t$ 是成功完成该任务的人类基线用时的几何平均；$h$ 和 $\beta$ 由拟合得到。$t=h$ 时 $\sigma(0)=0.5$，所以 $h$ 就是 50% horizon。连续打分的任务按代表人类水平的阈值换成成功／失败；每个任务按所属任务族大小的平方根倒数加权，避免任务多的族主导结果。
 
+<!-- paper-figure:metr-logistic-fits -->
+
 ### 手算一次
 
 教学例子，数字是编的：一个模型在四组任务上各跑 10 次。
@@ -58,7 +60,9 @@ $$
 
 ## 趋势数字，和它的几个前提
 
-METR 2025-03 的论文报告，前沿模型的 horizon 自 2019 年大约每 7 个月翻一倍，2024 年可能更快；论文对“5 年内能做月级软件任务”的外推是有条件的。METR 2026-01-29 发布的 [Time Horizon 1.1](https://metr.org/blog/2026-1-29-time-horizon-1-1/) 把任务从 170 个扩到 228 个，8 小时以上的任务从 14 个增加到 31 个；2023 年以后的翻倍时间是 131 天（旧版 TH1 为 165 天），2024 年以后是 89 天（TH1 为 109 天）。METR 当前的[数据文件](https://metr.org/assets/benchmark_results_1_1.yaml)给出 2023 年以后 128.7 天（95% CI 104.4–158.0），已剔除 50% 点超过 16 小时的模型。
+METR 2025-03 的论文[摘要](https://arxiv.org/abs/2503.14499)报告，前沿模型的 horizon “doubling approximately every seven months since 2019, though the trend may have accelerated in 2024”，即自 2019 年大约每 7 个月翻一倍，2024 年可能更快；论文对“5 年内能做月级软件任务”的外推是有条件的。METR 2026-01-29 发布的 [Time Horizon 1.1](https://metr.org/blog/2026-1-29-time-horizon-1-1/) 把任务从 170 个扩到 228 个，8 小时以上的任务从 14 个增加到 31 个；2023 年以后的翻倍时间是 131 天（旧版 TH1 为 165 天），2024 年以后是 89 天（TH1 为 109 天）。METR 当前的[数据文件](https://metr.org/assets/benchmark_results_1_1.yaml)给出 2023 年以后 128.7 天（95% CI 104.4–158.0），已剔除 50% 点超过 16 小时的模型。
+
+<!-- paper-figure:metr-time-horizon -->
 
 换算一下 131 天：一年约 $365/131\approx2.8$ 次翻倍，horizon 每年约乘以 6.9。这是对过去趋势的算术换算，不是预测。读这类数字时要带上四个前提：
 

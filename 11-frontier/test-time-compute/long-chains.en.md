@@ -10,7 +10,7 @@ DeepSeek-R1-Zero's reward checks only two things: whether the final answer is ri
 
 ## R1-Zero: reward only the answer, and length grows by itself
 
-In the [DeepSeek-R1 report](https://arxiv.org/abs/2501.12948) (v1 2025-01-22; the peer-reviewed version appeared in [*Nature*](https://doi.org/10.1038/s41586-025-09422-z) on 2025-09-17 and corresponds to arXiv v2), R1-Zero was trained like this:
+In the [DeepSeek-R1 report](https://arxiv.org/abs/2501.12948) (v1 2025-01-22; the peer-reviewed version appeared in [*Nature*](https://doi.org/10.1038/s41586-025-09422-z) on 2025-09-17 and corresponds to arXiv v2), the abstract claims that "the reasoning abilities of LLMs can be incentivized through pure reinforcement learning (RL) …". R1-Zero was trained like this:
 
 - **Starting point**: DeepSeek-V3-Base, with no SFT first.
 - **Algorithm**: GRPO. Sample a group of answers to the same problem and compute the advantage from the group's mean and standard deviation of rewards, with no critic. How the group signal is computed is in [GRPO's four-answer example](../../05-post-training/rlhf/after-rlhf.en.md#group-example).
@@ -19,6 +19,8 @@ In the [DeepSeek-R1 report](https://arxiv.org/abs/2501.12948) (v1 2025-01-22; th
 - **Hyperparameters (v2)**: learning rate 3e-6, KL coefficient 0.001, rollout temperature 1, 16 answers per problem; maximum length 32,768 tokens before step 8.2k and 65,536 after; 10,400 steps in total (1.6 epochs), 32 problems per step.
 
 What they observed: average answer length rose steadily during training, and when the maximum length was raised at step 8.2k, both performance and length jumped. AIME 2024 pass@1 went from 15.6% to 71.0% (v1); v2 reports a final 77.9%; with self-consistency voting both are 86.7%. v2 counts reflective words such as wait, mistake, verify and check, whose frequency rose 5 to 7 times during training; "wait" in particular was almost absent early, appeared occasionally between steps 4000 and 7000, and rose sharply after step 8000. An intermediate checkpoint showed what the paper calls an "aha moment". The price was poor readability and mixed Chinese and English, so the full R1 added a few thousand cold-start long-chain examples, a language-consistency reward, and a round of rejection-sampling SFT on about 800,000 examples (about 600,000 reasoning and 200,000 non-reasoning); the filtering is covered in [rejection sampling](../../05-post-training/rejection-sampling.en.md).
+
+<!-- paper-figure:r1zero-training -->
 
 The trained R1 adjusts its length to difficulty. Supplementary section E.4 of v2 measured, on 2024 competition problems: an average of 8,793 thinking tokens per problem at 61.8% pass@1; fewer than 7,000 for easy problems and more than 18,000 for the hardest; under 100 tokens for something like 1+1. All of this is self-reported by DeepSeek.
 
@@ -29,6 +31,8 @@ Two premises are easy to miss. First, v2 states that V3-Base's pretraining data 
 A teaching assumption with made-up numbers. A problem can be tackled in two ways: answer directly, about 300 tokens, correct with probability 0.3; or answer, check, and redo with another method if it looks wrong, about 900 tokens, where the first attempt is still right with probability 0.3 and the redo after a wrong first attempt is right with probability 0.5, for $0.3+0.7\times0.5=0.65$ in total. With a reward that only checks correctness, the second way has more than twice the expected reward, policy gradient pushes probability toward it, and average length moves from 300 toward 900. Nothing rewards "long"; length is a by-product of the strategy that raises accuracy.
 
 The second source is how the objective is written. The original GRPO objective divides each answer's token-level objective by that answer's length $|o_i|$. Liu et al. point out that this creates a length bias: a wrong answer with advantage −1 spreads −0.01 per token if it is 100 tokens long, but only −0.001 per token if it is 1,000 tokens long. Both are wrong, yet the long one is penalised 10 times less per token, so wrong answers drift longer, while correct answers are pushed the other way, toward brevity. Their Dr. GRPO removes this normalisation; length then stops climbing during training and wrong answers become clearly shorter. The difference between averaging per answer and averaging per token is worked by hand in [the DAPO note](../../05-post-training/dapo.en.md).
+
+<!-- paper-figure:drgrpo-bias -->
 
 ## Distillation: teaching long chains to small models
 

@@ -20,6 +20,8 @@ What they share: the gradient of the planning or driving objective can flow back
 | Tesla FSD v12–v14 | From 2023-12 | Cameras and more → vehicle controls | Tesla has published no architecture paper | Shareholder letters and talks, see below |
 | [Alpamayo](https://www.nvidia.com/en-us/solutions/autonomous-vehicles/alpamayo/llm-info/) (NVIDIA) | [R1](https://arxiv.org/abs/2511.00088) 2025-10; 2 Super weights 2026-08-04 | Cameras → reasoning text and trajectory | Cosmos reasoning VLM plus a diffusion trajectory decoder; 2 Super is 32B plus a 2.3B action expert | Vendor-reported; the AlpaSim score has no external definition |
 
+<!-- paper-figure:uniad-pipeline -->
+
 Below, only Tesla's own documents and talks, by date; all numbers are vendor-reported, and none of these primary sources gives a layer-by-layer structure for v12–v14:
 
 - [Q4 2023 shareholder letter](https://digitalassets.tesla.com/tesla-contents/image/upload/IR/TSLA-Q4-2023-Update.pdf): the V12 rollout began in late December 2023; it uses AI to influence vehicle controls instead of hard-coding every driving behaviour, and the letter says it uses end-to-end training.
@@ -75,7 +77,7 @@ Open loop cannot tell them apart because the log contains no state with $y\neq0$
 
 nuScenes open-loop planning evaluation compares the model's predicted ego trajectory with the logged one, reporting L2 error and collision rate at 1, 2 and 3 s. Some primary results:
 
-- [Li et al.](https://arxiv.org/abs/2312.03031) (CVPR 2024) count 73.9% of nuScenes as straight driving; their abstract says these models rely mainly on the ego state to plan, and that chasing this leaderboard may not yield convincing conclusions.
+- [Li et al.](https://arxiv.org/abs/2312.03031) (CVPR 2024) count 73.9% of nuScenes as straight driving; their abstract says "These models tend to rely predominantly on the ego vehicle's status for future path planning", and that chasing this leaderboard may not yield convincing conclusions.
 - The abstract of [AD-MLP](https://arxiv.org/abs/2305.10430) says an MLP that takes only past trajectory and velocity, with no images or lidar, actually lowers average L2 by about 20%, though its collision rate is worse than that of methods using perception. Put the same AD-MLP into Bench2Drive's closed-loop test and its success rate is 0 (the README's v0.0.4 table).
 - Implementations are not uniform either. UniAD's own [README](https://github.com/OpenDriveLab/UniAD) reports a nuScenes average L2 of 0.90 m, while the comparison table in the [SparseDrive](https://github.com/swc-17/SparseDrive) README lists UniAD at 0.73 m; collision rates are also computed differently across papers.
 - The [Bench2Drive](https://github.com/Thinklab-SJTU/Bench2Drive) README (2025-02-05) calls this metric unpersuasive, and its maintainers stopped reporting it.
@@ -108,6 +110,8 @@ PDMS on the paper's navtest split: human 94.8, TransFuser 84.0, UniAD 83.4, an M
 Back to our example: from the logged start, A and B give the very same plan, with a lateral offset of $0.2\times4=0.8$ m after 4 s, so their PDMS is naturally the same. v1 cannot tell them apart either, which is exactly what "ignores compounding error" means.
 
 [NAVSIM v2](https://arxiv.org/abs/2506.04218) (CoRL 2025) runs "pseudo-simulation" in two stages: stage one scores the plan as usual; stage two scores again from a set of precomputed, perturbed start states rendered with 3D Gaussian splatting, weighting each by how close its start is to the stage-one endpoint, and the two stages are multiplied. Its EPDMS adds driving direction and traffic lights to the multiplied terms, replaces comfort with history comfort, and adds lane keeping and extended comfort as weighted terms ([metrics documentation](https://github.com/autonomousvision/navsim/blob/main/docs/metrics.md)). The abstract reports an $R^2$ of 0.8 against closed-loop results, versus 0.7 for the best open-loop metric. By this design, if stage two's start states include something like "already 0.8 m left with the nose turned", A keeps drifting while B pulls back, and only then do the lane-keeping and drivable-area terms get a chance to separate them.
+
+<!-- paper-figure:navsim2-pseudosim -->
 
 ### CARLA and Bench2Drive: let the car drive the whole route
 

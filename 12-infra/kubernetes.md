@@ -22,7 +22,7 @@ Pod 里面的程序怎样把计算交给 GPU，见[框架这一层](frameworks.m
 | [Job](https://kubernetes.io/docs/concepts/workloads/controllers/job/) | 创建 Pod 并重试，直到指定数量的 Pod 成功结束；Indexed 模式给每个 Pod 一个 0 到 completions−1 的编号 | 训练、评测、批处理；编号可以拿来当 rank |
 | [requests / limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/) | scheduler 按 requests 选节点；kubelet 按 limits 限制容器用量 | GPU 写在 limits 里 |
 
-CPU 和内存的 limits 加起来可以超过节点容量（超卖）：CPU 超过 limit 会被限流，内存超过 limit 会被 OOM kill。GPU 不一样。它是 extended resource，文档写明只能是整数、**不能超卖**，同一块设备不能在容器之间共享；按 [GPU 调度页](https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/)，GPU 只写在 limits 里，requests 默认等于 limits，两处都写时必须相等。
+CPU 和内存的 limits 加起来可以超过节点容量（超卖）：CPU 超过 limit 会被限流，内存超过 limit 会被 OOM kill。GPU 不一样。它是 extended resource，文档写明只能是整数，而且“Extended resources cannot be overcommitted, so request and limit must be equal …”（[资源管理页](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#consuming-extended-resources)），即**不能超卖**，两处都写时 request 和 limit 必须相等；同一块设备也不能在容器之间共享。按 [GPU 调度页](https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/)，GPU 只写在 limits 里，requests 默认等于 limits。
 
 ## GPU 怎样变成可调度的资源
 

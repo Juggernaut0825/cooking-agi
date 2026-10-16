@@ -72,7 +72,7 @@ $$
 
 The terms do different jobs. The second pulls $p$ toward the search output $\pi$: treat search as a "policy improvement operator" that takes $p$ and returns a better $\pi$; training moves $p$ toward $\pi$, which leaves search less to improve. The first pulls $v$ toward the real game outcome $z$, not toward search's own estimate; that term is what corrects the value errors from the previous section. The last term is weight regularization.
 
-In return, the network makes search cheaper: the prior $p$ concentrates simulations on a few moves, and $v$ replaces random rollouts played to the end. [Expert Iteration (Anthony et al., 2017)](https://arxiv.org/abs/1705.08439) states the same division of labor plainly: tree search plans stronger policies, the network generalizes those plans to new positions, and the network then guides the search.
+In return, the network makes search cheaper: the prior $p$ concentrates simulations on a few moves, and $v$ replaces random rollouts played to the end. [Expert Iteration (Anthony et al., 2017)](https://arxiv.org/abs/1705.08439) states the same division of labor plainly in its abstract: "Planning new policies is performed by tree search, while a … network generalises those plans"; the network then guides the search.
 
 Note that AlphaZero's "model" is the exact rules of the game, not something learned. Where the rules are known and simulation is perfect, this loop is established practice; the problems in the next two sections become prominent when the model itself must be learned.
 
@@ -110,6 +110,8 @@ In the combinations above, the model and the planner are trained and checked sep
 - [Value Prediction Network (Oh et al., 2017)](https://arxiv.org/abs/1707.03497) learns dynamics over abstract states and trains them to predict future values (discounted sums of rewards) rather than future observations; the paper reports beating DQN on several Atari games even with very short lookahead.
 - [TreeQN (Farquhar et al., 2017)](https://arxiv.org/abs/1710.11417) recursively applies a learned transition function inside the network to build a tree of fixed depth, then combines predicted rewards and values into Q-values with a tree backup; end-to-end training optimizes the transition function for how the tree uses it.
 - MuZero predicts only rewards, values, and policies at each hypothetical step, then runs MCTS over those hidden states.
+
+<!-- paper-figure:muzero-model -->
 
 [Which model to learn](model-types.en.md) used box pushing to show the cost: such a model is tied to the current task and must be retrained when the reward changes; its hidden states do not correspond to inspectable physical states, so the steps that planning "imagines" cannot be checked against reality one by one, only the predicted rewards and values.
 

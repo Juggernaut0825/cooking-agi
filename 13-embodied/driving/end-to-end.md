@@ -20,6 +20,8 @@
 | Tesla FSD v12–v14 | 2023-12 起 | 相机等 → 车辆控制 | Tesla 没有发表架构论文 | 股东信和演讲，见下文 |
 | [Alpamayo](https://www.nvidia.com/en-us/solutions/autonomous-vehicles/alpamayo/llm-info/)（NVIDIA） | [R1](https://arxiv.org/abs/2511.00088) 2025-10；2 Super 权重 2026-08-04 | 相机 → 推理文本和轨迹 | Cosmos 推理 VLM 加 diffusion 轨迹解码器；2 Super 为 32B 加 2.3B action expert | 公司自报；AlpaSim 分数没有外部定义 |
 
+<!-- paper-figure:uniad-pipeline -->
+
 下面只按 Tesla 自己的文件和演讲、按日期列，数字都是公司自报；这些一手资料都没有给出 v12–v14 的逐层结构：
 
 - [2023 年第四季度股东信](https://digitalassets.tesla.com/tesla-contents/image/upload/IR/TSLA-Q4-2023-Update.pdf)：V12 于 2023 年 12 月底开始推送，用 AI 来影响车辆控制，而不是把每种驾驶行为都手写出来，并称用了端到端训练。
@@ -75,7 +77,7 @@ A 的航向每步加 0.02，偏移按 $0.05\,k(k+1)$ 增长：在 1.5 s 到 2.0 
 
 nuScenes 开环规划评测比较模型预测的自车轨迹和日志轨迹，报告 1、2、3 s 的 L2 误差和碰撞率。几项一手结果：
 
-- [Li 等](https://arxiv.org/abs/2312.03031)（CVPR 2024）统计出 nuScenes 有 73.9% 是直行；摘要说这些模型主要靠自车状态做规划，继续刷这个榜未必能得出可信的结论。
+- [Li 等](https://arxiv.org/abs/2312.03031)（CVPR 2024）统计出 nuScenes 有 73.9% 是直行；摘要说“These models tend to rely predominantly on the ego vehicle's status for future path planning”，即这些模型主要靠自车状态做规划，继续刷这个榜未必能得出可信的结论。
 - [AD-MLP](https://arxiv.org/abs/2305.10430) 的摘要说，只输入过去轨迹和速度、不看图像或 lidar 的 MLP，平均 L2 反而低约 20%，只是碰撞率不如用感知的方法。同一个 AD-MLP 放进 Bench2Drive 闭环测试，成功率是 0（README v0.0.4 的表）。
 - 实现也不统一。UniAD 自己的 [README](https://github.com/OpenDriveLab/UniAD) 报 nuScenes 平均 L2 0.90 m，[SparseDrive](https://github.com/swc-17/SparseDrive) README 的对比表里 UniAD 是 0.73 m；碰撞率的算法各篇也不一样。
 - [Bench2Drive](https://github.com/Thinklab-SJTU/Bench2Drive) 的 README（2025-02-05）说这个指标没有说服力，维护者已停止报告。
@@ -108,6 +110,8 @@ NC 是没有自己负责的碰撞，取 0、1/2 或 1；DAC 是没有驶出可�
 放回我们的例子：A 和 B 在日志起点给出的是同一条计划，4 s 后横向偏移 $0.2\times4=0.8$ m，PDMS 自然相同。v1 一样分不出它们，这正是“不看误差累积”的意思。
 
 [NAVSIM v2](https://arxiv.org/abs/2506.04218)（CoRL 2025）的“伪仿真”分两个阶段：第一阶段照常给计划打分；第二阶段从一批预先算好、用 3D Gaussian splatting 渲染的扰动起点出发再打分，按起点与第一阶段终点的接近程度加权，最后两段相乘。它的 EPDMS 在乘法项里加了行驶方向和红绿灯，把舒适项换成历史舒适，并新增车道保持和扩展舒适两个加权项（[指标文档](https://github.com/autonomousvision/navsim/blob/main/docs/metrics.md)）。摘要报告，它与闭环结果的 $R^2$ 为 0.8，最好的开环指标是 0.7。按这个设计，如果第二阶段的起点里有“已经偏左 0.8 m、车头也歪了”这样的状态，A 会继续偏，B 会拉回来，车道保持和可行驶区域两项才有机会把它们分开。
+
+<!-- paper-figure:navsim2-pseudosim -->
 
 ### CARLA 与 Bench2Drive：让车全程自己开
 

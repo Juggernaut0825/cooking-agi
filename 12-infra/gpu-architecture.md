@@ -163,6 +163,8 @@ V100 一行来自 Volta 白皮书，A100 一行来自 [Ampere 架构博客](http
 
 一条 `mma.sync` 相当于 32 个上面的 4×4×4 小块（4,096 / 128）。趋势是：一条指令做的活越来越多，越来越异步，发起它的线程越来越少。喂 Tensor Core 占用的线程和寄存器少了，其余 warp 就能去搬数据或算 softmax；[FlashAttention-3](https://arxiv.org/abs/2407.08608) 在 Hopper 上就用 warp specialization 让搬运和计算重叠，并把分块矩阵乘和 softmax 交错执行（另见 [attention kernel](../00-foundations/deep-dives/attention-kernels.md)）。实际写法交给 [CUDA](cuda.md) 和 CUTLASS 这类库。
 
+<!-- paper-figure:fa3-pingpong -->
+
 ## 数据类型：每一代 Tensor Core 加了什么
 
 | 格式 | 符号 / 指数 / 尾数位 | 首次有 Tensor Core 支持 | 备注 |

@@ -29,7 +29,7 @@ Also keep monitoring and experiments apart. Monitoring answers "did quality chan
 
 OpenTelemetry (OTel) defines GenAI semantic conventions for these fields. The names are still moving, so first their status as of 2026-10-15:
 
-- The conventions have status **Development** (OTel used to call this level Experimental). Per [OTel's versioning and stability document](https://opentelemetry.io/docs/specs/otel/versioning-and-stability/), this level allows breaking changes and long-term dependencies should not be taken on it.
+- The conventions have status **Development** (OTel used to call this level Experimental). Per the Development section of [OTel's versioning and stability document](https://opentelemetry.io/docs/specs/otel/versioning-and-stability/#development), this level allows breaking changes, and "Long-term dependencies SHOULD NOT be taken against signals in Development."
 - Starting with core semantic conventions [v1.42.0](https://github.com/open-telemetry/semantic-conventions/releases/tag/v1.42.0) (2026-06-12), all `gen_ai.*` definitions are deprecated and moved to the separate [semantic-conventions-genai repository](https://github.com/open-telemetry/semantic-conventions-genai); from v1.42.0 through the latest core release, v1.44.0 (2026-08-04), both the core repository and the [GenAI page on opentelemetry.io](https://opentelemetry.io/docs/specs/semconv/gen-ai/) carry only a "moved" notice.
 - As of 2026-10-15 the new repository has no release or tag at all; its CHANGELOG has only an "Unreleased" section, which already holds about 10 breaking changes.
 
@@ -175,6 +175,8 @@ These numbers cover sampling error only. Not yet included:
 - Watch 20 slices and 5 metrics at once and a few will look "significant" every day even when nothing changed.
 
 An alternative does not rely on fixed $s,t$: in each reporting period, have people label a small part of the random sample, and subtract the judge's average error on that small labeled part from the judge's average on the large sample. This is the mean estimator of [prediction-powered inference](https://arxiv.org/abs/2301.09633) (Angelopoulos et al., 2023); the paper's setting has the human-labeled samples and the judged traffic drawn independently from the same distribution (a random audit satisfies this), and under that assumption the intervals are valid without assuming anything about how accurate the judge is. The closer the judge is to humans, the narrower the interval. The cost is fresh human labels every period.
+
+<!-- paper-figure:ppi-intervals -->
 
 ## Which signals should alert, and how fast
 

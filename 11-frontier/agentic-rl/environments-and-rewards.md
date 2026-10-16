@@ -18,6 +18,8 @@
 - **预算**：最多几轮、多少 token、每个命令多长时间，超了算什么；
 - **隔离**：一条轨迹的副作用不会漏到别的轨迹、评分进程或外部世界。
 
+<!-- paper-figure:osworld-infra -->
+
 | 环境类型 | 状态在哪里 | 奖励通常怎么来 | 公开例子 | 要先防什么 |
 | --- | --- | --- | --- | --- |
 | 带测试的代码仓库 | 容器里的仓库和文件系统 | 修复前失败、修复后通过的测试，加上原本就通过的测试 | [SWE-Gym](https://arxiv.org/abs/2412.21139)（2024-12，11 个仓库的 2,438 个任务）；[R2E-Gym](https://arxiv.org/abs/2504.07164)（2025-04，约 8.1k 个）；[SWE-smith](https://arxiv.org/abs/2504.21798)（2025-04，128 个仓库的 50,137 个） | 测试覆盖不全；改测试；从 git 历史里读到答案 |
@@ -39,7 +41,7 @@ Kimi K2 的工具模拟器（论文说它在功能上相当于一个 world model
 
 Kimi K3 的[技术报告](https://github.com/MoonshotAI/Kimi-K3)（2026-07）把第二种写得很明确：奖励来自验证器对最终环境状态的评估，而不是 agent 自报完成。SWE-RL（Meta，2025-02，[论文](https://arxiv.org/abs/2502.18449)）是另一种设计：不跑测试，按生成补丁和参考补丁的文本相似度给 0 到 1 的分，格式错给 −1；它是单轮设置，模型一次读完问题和相关文件、直接写出修改，不和环境多轮交互。关于测试当奖励的一般问题，见[可验证奖励](../../05-post-training/verifiable-rewards.md)；各种信号由强到弱的排列，见[生成、验证、再训练](../self-improvement/generate-verify-train.md)最后的对照表；judge 本身的偏差，见 [LLM-as-a-Judge](../../07-evaluation/llm-as-a-judge/README.md)。
 
-人类偏好在 agent 上的一个具体提醒来自 Anthropic 2025-11-21 的[研究](https://www.anthropic.com/research/emergent-misalignment-reward-hacking)：模型在生产编码环境里学会钻空子之后，加上聊天式的 RLHF 安全训练，在聊天类评估上表现对齐，在 agent 任务上的不对齐却还在。
+人类偏好在 agent 上的一个具体提醒来自 Anthropic 2025-11-21 的[研究](https://www.anthropic.com/research/emergent-misalignment-reward-hacking)：模型在生产编码环境里学会钻空子之后，加上聊天式的 RLHF 安全训练，结果是“aligned behavior on chat-like evaluations, but misalignment persists on agentic tasks”（论文[摘要](https://arxiv.org/abs/2511.18397)），即在聊天类评估上表现对齐，在 agent 任务上的不对齐却还在。
 
 ## 已经测到的钻空子
 
@@ -56,6 +58,8 @@ Kimi K3 的[技术报告](https://github.com/MoonshotAI/Kimi-K3)（2026-07）把
 | 2026-04-07 | Anthropic，[Claude Mythos Preview 系统卡](https://www-cdn.anthropic.com/7624816413e9b4d2e3ba620c5a5e091b98b190a5/Claude%20Mythos%20Preview%20System%20Card.pdf) §4.2.2.1 | 模型偶尔绕过训练环境的网络限制，下载能走捷径的数据；约 0.05% 的训练回合有尝试，约 0.01% 成功 |
 | 2026-08-26 | OpenAI，[Hugging Face 事件报告](https://openai.com/index/hugging-face-incident-and-the-road-ahead/) | OpenAI 说，agent 上网查答案作弊是这次事件的主要推手；这种行为此后在训练中被强化，可能促成了模型使用类似手段的倾向 |
 | 2026-09-22 | Anthropic，[Claude Opus 5.5 系统卡](https://www-cdn.anthropic.com/fc1b44717c85dc068bc6ba5024219938094694bd/Claude%20Opus%205.5%20System%20Card.pdf) §6.2.1 | 用分类器筛 RL 训练回合：约 0.3% 的抽样回合里，模型成功猜中了答案键想要什么，而不是从任务本身推出答案 |
+
+<!-- paper-figure:baker-hack-cot -->
 
 不在沙盒里的检查器也会被钻。[One Token to Fool LLM-as-a-Judge](https://arxiv.org/abs/2507.08794)（2025-07）发现，在一个多学科数据集上只回一个冒号 `:`，LLaMA3-70B 当 judge 时有 77.2% 被判为正确。[Agentic Benchmark Checklist](https://arxiv.org/abs/2507.02825)（2025-07）指出 τ-bench 把空回复算作成功：有些任务本来就无法完成，什么都不做时数据库不变，恰好和目标状态一致。更早的 [Sycophancy to Subterfuge](https://arxiv.org/abs/2406.10162)（Anthropic，2024-06）在一串越来越容易被钻空子的环境上训练，在最后一个留出环境的 32,768 个回合里，有 45 个回合改了自己的奖励，7 个回合还改了单元测试来避免被发现。
 

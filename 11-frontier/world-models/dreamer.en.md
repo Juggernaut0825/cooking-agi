@@ -63,6 +63,8 @@ Teaching numbers show the division of labour. If the KL at some step is 0.6 nat,
 
 The actor and critic see only model states $s_t=\{h_t,z_t\}$. Real sequences from the replay buffer are encoded into start states; then the actor picks actions, the prior predicts the next state, the heads predict reward and continuation, and the rollout runs for $T$ steps. The DreamerV3 text gives $T=16$ (the hyperparameter table lists 15), discount $\gamma=0.997$ and $\lambda=0.95$.
 
+<!-- paper-figure:dreamerv3-training -->
+
 Imagination lasts only a dozen or so steps; the critic covers what comes after. The λ-return mixes the two:
 
 $$
@@ -115,13 +117,15 @@ Change another to see a model error. Suppose the model wrongly predicts that the
 | Version | Main changes | Results reported by the authors |
 | --- | --- | --- |
 | [DreamerV2](https://arxiv.org/abs/2010.02193) (2020) | Stochastic latents switch from Gaussians to 32 categorical variables with 32 classes each; KL balancing | The first agent to reach human-level performance on 55 Atari tasks by learning behaviours entirely inside a separately trained world model; 200M environment steps in under 10 days on a single V100 |
-| [DreamerV3](https://arxiv.org/abs/2301.04104) (2023; [Nature 2025](https://www.nature.com/articles/s41586-025-08744-2)) | One fixed set of hyperparameters; symlog transform, KL balance plus free bits, 1% uniform mixed into every categorical, percentile return normalisation, symexp twohot output heads | One configuration across 150+ tasks; the first algorithm to collect diamonds in Minecraft from scratch without human data or curricula, with every Minecraft run finding diamonds within 100M environment steps |
+| [DreamerV3](https://arxiv.org/abs/2301.04104) (2023; [Nature 2025](https://www.nature.com/articles/s41586-025-08744-2)) | One fixed set of hyperparameters; symlog transform, KL balance plus free bits, 1% uniform mixed into every categorical, percentile return normalisation, symexp twohot output heads | One configuration across 150+ tasks; in the abstract's words, "the first algorithm to collect diamonds in Minecraft from scratch without human data or curricula", with every Minecraft run finding diamonds within 100M environment steps |
 
 Most of these changes serve one goal, running without tuning: reward scales can differ by orders of magnitude, so targets are compressed with $\operatorname{symlog}(x)=\operatorname{sign}(x)\ln(|x|+1)$; the 1% uniform mixture keeps categoricals from ever becoming deterministic, so the KL does not spike. The paper's compute comparison is VPT using 720 V100 GPUs for 9 days to get diamonds versus DreamerV3 using a single GPU for 9 days; but DreamerV3 uses the MineRL competition action space, which includes abstract crafting actions.
 
 ## Dreamer 4: a video world model and offline data only
 
 Google DeepMind's [Dreamer 4](https://arxiv.org/abs/2509.24527) (Hafner, Yan, Lillicrap, 2025-09) keeps training in imagination but replaces the RSSM with a scalable video world model; Appendix F says the RSSM is light at inference but hard to scale to diverse data.
+
+<!-- paper-figure:dreamer4-world-model -->
 
 - **World model**: a causal tokenizer (400M) plus an interactive dynamics transformer (1.6B), about 2B in total (§4). The shortcut-forcing objective gives each frame its own noise level, also conditions the network on the step size, and predicts clean latents directly; inference uses 4 forward passes per frame (§3.2). The note on [video you can act in](interactive-video.en.md) covers this family of frame-by-frame diffusion recipes.
 - **Data**: only VPT's contractor dataset, 2,541 hours of 360p, 20 FPS gameplay with keyboard and mouse actions.

@@ -60,6 +60,8 @@ $$
 
 3DGS 快在渲染方式。屏幕先切成 16×16 像素的 tile，每个 Gaussian 按“tile 编号加深度”做一次 GPU 基数排序，然后每个 tile 内的像素从前往后叠加，透射率快用完就停。不用沿射线反复查网络，也不用逐像素排序。
 
+<!-- paper-figure:3dgs-pipeline -->
+
 ## 算一次：四个 Gaussian 合成一个像素
 
 教学例子。一个像素被四个 Gaussian 覆盖，已经按深度从近到远排好。$g$ 是该 Gaussian 在这个像素处的取值 $\exp(-\tfrac12m^2)$，$m$ 是像素到 Gaussian 中心的 Mahalanobis 距离：像素正好在中心时 $g=1$；$m^2=2\ln2\approx1.39$ 时 $g=0.5$。
@@ -126,7 +128,9 @@ $$
 | (0, 5)，日志终点 | 2.0 | 挡住 |
 | (−3.5, 0)，规划器改成向左换道 3.5 m | 1.375 | 看得见 |
 
-日志全程这个值在 2.25 和 2.0 之间，行人从没出现在任何一帧里，重建出的场景里也就没有代表他的 Gaussian。换道后的新视角本该看见他，渲染出来的却是空路面，或者一团没被约束过的 Gaussian。3DGS 论文自己的局限一节也写到：观测不充分的区域会出伪影。Waymo 在 2026-02-06 的[博客](https://waymo.com/blog/2026/02/the-waymo-world-model-a-new-frontier-for-autonomous-driving-simulation/)里说的正是这件事：模拟路线和原始驾驶差得太多时，纯重建方法（例如 3DGS）会因为缺观测而出现画面崩坏。
+日志全程这个值在 2.25 和 2.0 之间，行人从没出现在任何一帧里，重建出的场景里也就没有代表他的 Gaussian。换道后的新视角本该看见他，渲染出来的却是空路面，或者一团没被约束过的 Gaussian。3DGS 论文自己的[局限一节](https://arxiv.org/html/2308.04079v1#S7.SS4)也写到：“In regions where the scene is not well observed we have artifacts …”，即观测不充分的区域会出伪影。Waymo 在 2026-02-06 的[博客](https://waymo.com/blog/2026/02/the-waymo-world-model-a-new-frontier-for-autonomous-driving-simulation/)里说的正是这件事：模拟路线和原始驾驶差得太多时，纯重建方法（例如 3DGS）会因为缺观测而出现画面崩坏。
+
+<!-- paper-figure:3dgs-sparse-views -->
 
 | 做法 | 例子 | 补上了什么 | 代价 |
 | --- | --- | --- | --- |

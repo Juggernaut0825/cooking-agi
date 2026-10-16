@@ -16,6 +16,8 @@ A competition problem has an integer answer. The model is sampled 64 times: 26 t
 
 Coverage only says the right answer is somewhere in the samples, not that you can hand it over. [Brown et al. (2024-07)](https://arxiv.org/abs/2407.21787) saw coverage grow roughly log-linearly in the number of samples over four orders of magnitude on several tasks; on SWE-bench Lite, DeepSeek-Coder-V2-Instruct solved 15.9% with one sample and 56% with 250, because every patch could be run against tests. On tasks without an automatic verifier, they found that voting and reward models stop improving with more samples after a few hundred. The gap between coverage and selection is what this note is about. The general relation between pass@1 and pass@k is already covered in [alignment tax](../../05-post-training/alignment-tax.en.md#how-to-measure-it-no-single-score-will-show-you).
 
+<!-- paper-figure:monkeys-coverage-selection -->
+
 ## Majority voting: work it once
 
 [Self-consistency](https://arxiv.org/abs/2203.11171) (Wang et al., 2022-03, ICLR 2023) samples several reasoning paths, looks only at the final answers, and returns the most frequent one; the paper reports 17.9 points over greedy chain-of-thought decoding on GSM8K. Below, majority-vote accuracy maj@N is computed for three made-up answer distributions. The rule: return the answer with the most votes, and break ties at random.
@@ -70,6 +72,8 @@ When the verifier returns a score instead of 0/1, the usual move is to take the 
 
 A verifier can be a program (unit tests, answer matching, Lean) or a trained model. Trained ones come in two kinds: an outcome reward model (ORM) gives one score to the whole answer; a process reward model (PRM) scores every step and combines the step scores into a score for the answer.
 
+<!-- paper-figure:lightman-prm-grading -->
+
 [Lightman et al. (2023-05)](https://arxiv.org/abs/2305.20050) used a generator fine-tuned from GPT-4 on 500 MATH test problems, picking one of 1860 samples per problem: the PRM picked correctly 78.2% of the time, the ORM 72.4% and majority voting 69.6%, and the PRM's lead grew with N. The PRM's training data, PRM800K, holds 800,000 step-level human labels on 75,000 solutions to 12,000 problems; during labelling, they deliberately showed people "convincing wrong-answer solutions" that the current PRM rated highly. An answer's score is the product of the per-step probabilities of being correct. The study fixes the generator and compares how well each method picks answers; it does not train the generator with RL, a distinction that [verifiable rewards](../../05-post-training/verifiable-rewards.en.md#outcome-rewards-or-process-rewards) discusses directly.
 
 PRMs are hard to label and hard to define "one step" for. Snell et al. instead trained the PRM on Monte Carlo rollouts estimating "the chance of still getting it right after this step", with no human labels; they scored an answer by its last step; and they summed the scores of all samples that share a final answer before comparing (they call this best-of-N weighted), which combines voting and verification. The DeepSeek-R1 v1 report (§4.2) lists PRMs among its unsuccessful attempts: fine-grained steps are hard to define in general reasoning, automatic labelling by models does not work well while human labelling does not scale, and a neural PRM inside large-scale RL gets reward-hacked. Their conclusion is that PRMs suit reranking the top N or guiding search, but in large-scale RL the benefit did not justify the overhead.
@@ -90,7 +94,7 @@ The earlier [Tree of Thoughts](https://arxiv.org/abs/2305.10601) (Yao et al., 20
 
 ## Compute-optimal: what Snell et al. actually said
 
-The paper is often shortened to "a small model that thinks longer beats a 14 times larger model". The accurate version needs its conditions.
+The paper is often shortened to "a small model that thinks longer beats a 14 times larger model". The accurate version needs its conditions: the [abstract](https://arxiv.org/abs/2408.03314) says that in a FLOPs-matched comparison, on problems where the smaller model already has a non-trivial success rate, "test-time compute can be used to outperform a 14x larger model".
 
 **Setting.** The model is PaLM 2-S* and the problems are MATH (using Lightman et al.'s split of 12,000 training and 500 test problems). Two mechanisms for spending test-time compute are compared: search with a PRM, and a model fine-tuned to revise its answers after seeing earlier attempts, used for sequential revision at inference.
 

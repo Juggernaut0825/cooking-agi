@@ -66,7 +66,7 @@ $P$ 是 prompt 长度，$B_{\rm KV}$ 是这一步要读的 KV 字节数。代进
 - **Prefill**：$2\times8\times10^9\times2000=3.2\times10^{13}$ 次运算，除以 $0.5\times10^{15}$ FLOP/s，得 64 ms。同一时间里只需把 16 GB 权重读一遍，约 7.6 ms，所以算力是瓶颈。
 - **Decode 每一步**：只做 $1.6\times10^{10}$ 次运算，按 50% 峰值只要 0.032 ms；但要把 16 GB 权重和最多 0.3 GB KV 都读一遍，按 2.1 TB/s 约 7.8 ms，所以带宽是瓶颈。
 
-换一个角度看：prefill 每读 1 字节做约 2,000 次运算，decode 只做约 1 次；这块教学 GPU 的“屋脊点”是 $10^{15}/(3\times10^{12})\approx333$ FLOP/字节（H100 SXM5 按上面的规格是 $989.4/3.352\approx295$）。高于它受算力限制，低于它受带宽限制。[Pope 等（2022）](https://arxiv.org/abs/2211.05102)也指出，batch 和序列都小时，读权重的时间占主导。
+换一个角度看：prefill 每读 1 字节做约 2,000 次运算，decode 只做约 1 次；这块教学 GPU 的“屋脊点”是 $10^{15}/(3\times10^{12})\approx333$ FLOP/字节（H100 SXM5 按上面的规格是 $989.4/3.352\approx295$）。高于它受算力限制，低于它受带宽限制。[Pope 等（2022）](https://arxiv.org/abs/2211.05102)也指出（[§2 讲显存开销的一段](https://arxiv.org/html/2211.05102v1#S2.SS0.SSS0.Px1)）：“At small batch sizes and sequence lengths, the time to load weights dominates”，即 batch 和序列都小时，读权重的时间占主导。
 
 | 阶段 | 在哪一层 | 教学估计 | 主要受什么限制 |
 | --- | --- | ---: | --- |
@@ -79,6 +79,8 @@ $P$ 是 prompt 长度，$B_{\rm KV}$ 是这一步要读的 KV 字节数。代进
 | **合计** | | **约 2.5 s** | decode 约占 94% |
 
 如果 32 个差不多的请求一起 decode，权重每步只读一次，大家共用：每步读 16 GB 权重加 32 份 KV（按每份最多 0.3 GB 算，约 9.6 GB），共约 25.6 GB，一步约 12.2 ms。每个用户的 token 间隔从 7.8 ms 变成 12.2 ms，但总吞吐从约 129 tokens/s 涨到约 2,600 tokens/s，大约 20 倍。这时 KV 已经占了每步读取量的 38%；Pope 等也指出，batch 和序列一长，读 KV 的时间会超过读权重。这就是 serving engine 要组 batch、又要精打细算 KV 的原因，见[一次请求怎样跑完](../06-systems/llm-serving.md)和 [KV cache](../00-foundations/deep-dives/kv-cache-and-inference.md)。
+
+<!-- paper-figure:pope-cost-latency -->
 
 | 改一个条件 | 会看到什么 | 不能据此推出什么 |
 | --- | --- | --- |

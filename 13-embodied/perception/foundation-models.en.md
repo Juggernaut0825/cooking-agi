@@ -85,6 +85,8 @@ Continuing the example: pixel $(1160,640)$ at depth 5 m gives $K^{-1}[1160,640,1
 
 In the other direction, the pointmap hides the camera. The point $(1,0.5,5)$ lands at $u=1160$; assuming the principal point is at the image centre, $f=(u-c_x)Z/X=200\times5/1=1000$. DUSt3R §3.3 estimates the focal length this way, with a robust fit over all pixels (assuming a centred principal point and square pixels). Two images are where it pays off: DUSt3R expresses both images' pointmaps in the first camera's coordinate frame, so where the same 3D point appears in both images is the correspondence; aligning the same image's points in the two frames (Procrustes in closed form, or the more robust PnP with RANSAC) gives the relative pose. Its output is only defined up to an unknown scale: the training loss first normalises prediction and ground truth by "the average distance of all points to the origin", which removes exactly the $k$ of the previous section.
 
+<!-- paper-figure:dust3r-arch -->
+
 ## Cameras, depth and points in one forward pass
 
 The classical route matches features, runs structure-from-motion to get cameras, then does dense reconstruction, and every step is an iterative optimisation; [the next note](reconstruction.en.md) takes it apart. The line below turns it into one forward pass of a network:
@@ -100,6 +102,8 @@ The classical route matches features, runs structure-from-motion to get cameras,
 | 2025-11 | [Depth Anything 3](https://arxiv.org/abs/2511.10647) | Any number of images, posed or not → consistent depth and rays | A plain DINO-style transformer with a single depth-ray target |
 | 2025-12 | [D4RT](https://arxiv.org/abs/2512.08924) | One video → depth, spatio-temporal correspondence and cameras, with things in the scene allowed to move | A query-based decoder can ask about any point at any time; CVPR 2026 Best Paper ([closing page](https://cvpr.thecvf.com/Conferences/2026/News/Closing)) |
 
+<!-- paper-figure:vggt-arch -->
+
 A few things worth pausing on:
 
 - **The outputs are redundant.** VGGT returns depth, cameras and a pointmap; its [official README](https://github.com/facebookresearch/vggt) says that points unprojected from depth plus cameras are usually more accurate than those from the pointmap branch. The redundancy can be used as a consistency check.
@@ -107,7 +111,7 @@ A few things worth pausing on:
 - **z-depth and distance along the ray are not the same thing.** The example pixel's ray direction is $(0.2,0.1,1)$, of length $\sqrt{1.05}\approx1.025$. A z-depth of 5 m is a distance along the ray of $5\times1.025\approx5.12$ m. The further from the principal point, the bigger the gap; use one as the other and the points near the image edges are pushed away wholesale.
 - **Check where the scale comes from, model by model.** DUSt3R is up to scale; [CUT3R](https://arxiv.org/abs/2501.12387) and MapAnything output metric; Depth Anything 3 gets metric scale from its Metric and Nested versions.
 
-All comparison numbers are author-reported. For example, Depth Anything 3 reports being on average 44.3% better than VGGT on camera pose and 25.1% better on geometry, measured on a benchmark the authors built themselves.
+All comparison numbers are author-reported. For example, the Depth Anything 3 [abstract](https://arxiv.org/abs/2511.10647) reports "surpassing prior SOTA VGGT by an average of 44.3% in camera pose accuracy …", and 25.1% on geometry, measured on a benchmark the authors built themselves.
 
 ## Can you ship it? Licences of popular checkpoints
 

@@ -10,7 +10,7 @@
 
 In a 1965 paper (the volume is often dated 1966), I. J. Good imagined that a machine smarter than people could design even better machines, setting off an "intelligence explosion" ([DOI](https://doi.org/10.1016/S0065-2458%2808%2960418-0)). Schmidhuber's 2003 [Gödel Machine](https://arxiv.org/abs/cs/0309048) put a strict gate on self-rewriting: the system changes its own code only after it finds a formal proof that the rewrite helps under a given utility function. In [LOGI (2007)](https://intelligence.org/files/LOGI.pdf), Yudkowsky described a seed AI as a system designed to understand and modify itself, and stressed that recursive self-improvement is a consequence of seed AI, not a cheap way to build AI.
 
-In 2026, Favaro and Clark of the Anthropic Institute gave a more concrete definition in [When AI builds itself](https://www.anthropic.com/institute/recursive-self-improvement): an AI system fully autonomously designing and developing its own successor. What these accounts share is that the improvement acts on the thing doing the improving, so the next round might go faster. Where they differ is how far the loop has actually closed today.
+In 2026, Favaro and Clark of the Anthropic Institute gave a more concrete definition in [When AI builds itself](https://www.anthropic.com/institute/recursive-self-improvement): "an AI system capable of fully autonomously designing and developing its own successor". What these accounts share is that the improvement acts on the thing doing the improving, so the next round might go faster. Where they differ is how far the loop has actually closed today.
 
 ## Four things people call "self-improvement"
 
@@ -24,6 +24,8 @@ The split below is an operational definition for teaching (each example is cited
 | (d) Self-generated training data and self-play | Model weights, but through a fixed update algorithm designed by people | The model supplies data, rationales, or rewards | Ground-truth answers, code execution, or the model's own judgement | STaR, ReST-EM, Self-Rewarding LMs, Absolute Zero, R-Zero |
 
 Both (a) and (d) change weights. The difference is who designs the update: in (d) it is a human-written "filter, then fine-tune" or DPO/RL loop; in (a) it would have to be the model. Everyday use of "RSI" usually means (a), or (c) pushed until humans are out of the loop, while most published systems labelled "self-improving" are (b) or (d). A July 2026 [survey](https://arxiv.org/abs/2607.07663) by Chen, Wang and Qu counted 1,250 papers and reports that nearly all of them study bounded self-refinement, not closed loops.
+
+<!-- paper-figure:rsi-survey-taxonomy -->
 
 This series uses one teaching example throughout: **a model that writes Python functions, plus a test suite that accepts or rejects them.** "Generate solutions, keep the ones the tests accept, fine-tune on them" is type (d). An agent rewriting its own code for calling tests and splitting tasks is type (b). Agents helping researchers tune training kernels are type (c). Only when the model itself decides how to build data, change the loss and when to retrain itself is it type (a). Once the tests start accepting wrong solutions, every one of these loops is affected; the later notes keep coming back to that point.
 

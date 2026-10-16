@@ -56,6 +56,8 @@ $\lambda=0$ 时，解有无穷多个：$(1,1,0)$、$(0,0,\sqrt2)$，以及两者
 
 真实 SAE 不会对每个输入单独求最优，而是用一层编码器直接算出系数，所以同一目标下只会和最优解持平或更差。
 
+<!-- paper-figure:jumprelu-toy -->
+
 ## 死 latent、特征分裂与吸收
 
 **死 latent。** 上面的例子里，$x$ 落在对角线上时 $d_2$ 永远不会被选中。如果整个训练集都不让某个 ReLU latent 激活，它从重建项拿不到梯度，就再也回不来。Anthropic 把在 $10^7$ 个 token 上都没激活过的特征算作死特征：1M、4M、34M 三个 SAE 分别约有 2%、35%、65% 是死的，34M 那个只有约 1200 万个活着（[Templeton 等，2024-05](https://transformer-circuits.pub/2024/scaling-monosemanticity/index.html)）。OpenAI 报告，不加缓解措施时死 latent 可达 90%；用解码矩阵的转置初始化编码器，再加一个让死 latent 去拟合重建残差的辅助损失（AuxK），1600 万宽的 SAE 只有 7% 是死的（[Gao 等，2024-06](https://arxiv.org/abs/2406.04093)）。
@@ -64,7 +66,7 @@ $\lambda=0$ 时，解有无穷多个：$(1,1,0)$、$(0,0,\sqrt2)$，以及两者
 
 **吸收。** [Chanin 等（2024-09）](https://arxiv.org/abs/2409.14507)发现，当特征有层级关系时，看起来单义的父特征会在该激活的地方不激活，它的作用被子特征“吸收”了；他们认为这是优化稀疏度造成的，改字典大小或稀疏度解决不了。
 
-**换种子就变。** [Paulo & Belrose（2025-01）](https://arxiv.org/abs/2501.16615)在 Llama 3 8B 的一个 MLP 上训练 131K 宽的 SAE，只换随机种子，只有约 30% 的特征是共同的；TopK SAE 比 L1 的更依赖种子。作者的结论是：SAE 找到的是一种实用的分解，不是模型“真正在用”的特征的完整清单。
+**换种子就变。** [Paulo & Belrose（2025-01）](https://arxiv.org/abs/2501.16615)在 Llama 3 8B 的一个 MLP 上训练 131K 宽的 SAE，只换随机种子，只有约 30% 的特征是共同的；TopK SAE 比 L1 的更依赖种子。作者的结论是，SAE 找到的特征应看作“a pragmatically useful decomposition of activation space, rather than an exhaustive and universal list …”，即一种实用的分解，不是模型“真正在用”的特征的完整清单。
 
 ## 怎么给特征贴标签：自动解释和它的边界
 
@@ -109,6 +111,8 @@ SAE 也有派上用场的时候，多半是“不知道要找什么”的场合�
 ## 往哪走：transcoder、跨层字典与自然语言读出
 
 SAE 只重建同一处的激活，不说明计算怎么从一层流到下一层。[Transcoder](https://arxiv.org/abs/2406.11944) 改为用 MLP 的输入预测它的输出，作者报告在 120M、410M、1.4B 的模型上，稀疏度、忠实度和可解释性至少不输 SAE；Anthropic 的 [crosscoder](https://transformer-circuits.pub/2024/crosscoders/index.html)（2024-10）让一个特征跨多层读写，也用来比较两个模型。跨层 transcoder 是[第 3 篇](circuits.md)里归因图的基础。
+
+<!-- paper-figure:transcoder-vs-sae -->
 
 另一条路是放弃固定字典，直接让模型把激活翻译成文字。Anthropic 的 [NLA](https://transformer-circuits.pub/2026/nla/index.html)（2026-05-07）用两个从目标模型初始化的模块，一个把激活写成解释，一个从解释还原激活，用 RL 联合训练以还原残差流。作者报告它在 Claude Opus 4.6 的部署前审计里有用，同时列出局限：会编造上下文里没有的细节，说不清解释依据的是激活的哪一部分，两个模块表达能力太强，训练和使用都贵。
 

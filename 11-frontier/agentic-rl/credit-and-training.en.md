@@ -20,6 +20,8 @@ $y_{i,t}$ is the $t$-th token of trajectory $i$, and $y_{i,<t}$ is everything be
 
 Search-R1 (Jin et al., 2025-03, [paper](https://arxiv.org/abs/2503.09516) §3.1) writes this mask as an indicator $I(y_t)$ so that the policy gradient is computed only over tokens the model generated. In verl's [Agent Loop documentation](https://verl.readthedocs.io/en/latest/advance/agent_loop.html), `response_mask` is 1 for model-generated tokens and 0 for tool-response tokens. Masked tokens stay in the context, and later actions are generated while looking at them; the mask only decides where the gradient lands. Multi-agent systems draw the same line: when Kimi K2.5 ([paper](https://arxiv.org/abs/2602.02276), 2026-02) trains its parallel agents, it freezes the subagents, treats their outputs as environment observations and updates only the orchestrator with RL, to avoid ambiguous credit assignment and unstable training.
 
+<!-- paper-figure:searchr1-rollout -->
+
 ## Work it through: 3 turns, 4 trajectories
 
 Everything below is a teaching assumption. The task is to fix a bug in `parse_date` in `utils.py`. Each trajectory has at most 3 turns; after the submission in turn 3 the environment runs hidden tests: all pass gives 1, otherwise 0. We sample $G=4$ trajectories on the same task:
@@ -72,6 +74,8 @@ A(a_t^{(i)})=A^E(\tau_i)+\omega\,A^S(a_t^{(i)})
 $$
 
 $r_k^{(i)}$ is the reward of trajectory $i$ at step $k$, nonzero here only at the last step; $A^S$ is the within-group normalisation of $R_t$ inside one anchor-state group. The paper uses $\omega=1$ and $\gamma=0.95$ (Appendix E.1). In our example τ1 and τ2 are in the same state after reading the same file, so their two turn-2 edits form a two-element group: returns $[0.95\times1,\;0]$, normalised to $A^S=[+1,-1]$. The tokens of τ1's edit get $0.577+1=1.577$ in total, and τ2's get $-1.732-1=-2.732$. This comparison happens only between "two choices made from the same place", unaffected by τ3 and τ4 having taken other routes.
+
+<!-- paper-figure:gigpo-grouping -->
 
 The limits need working out too. All 4 trajectories start from the same initial state, so the turn-1 group is the whole group; the returns differ only by a common factor $\gamma^2$, so after normalising by the standard deviation $A^S$ equals $A^E$ exactly, which adds $A^E$ twice. The paper's limitations section says the method depends on state matching and that identical states can be hard to recognise in complex environments; when no state repeats, it degrades to GRPO. In the training details they merge two states whose longest-common-subsequence similarity exceeds 0.9 (§5.1). In a code repository, two trajectories may reach the same state less often than in a text environment like ALFWorld: this is a guess, and the paper did not test coding tasks.
 

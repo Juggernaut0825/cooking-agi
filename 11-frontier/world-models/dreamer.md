@@ -63,6 +63,8 @@ $$
 
 actor 和 critic 只看模型状态 $s_t=\{h_t,z_t\}$。从回放数据里取真实序列，编码成起点；然后 actor 选动作，先验预测下一个状态，各个头预测奖励和继续标志，一路滚出 $T$ 步。DreamerV3 正文写 $T=16$（超参表里记为 15），折扣 $\gamma=0.997$，$\lambda=0.95$。
 
+<!-- paper-figure:dreamerv3-training -->
+
 想象只有十几步，之后的回报交给 critic。λ-return 把两者混在一起：
 
 $$
@@ -115,13 +117,15 @@ $$
 | 版本 | 主要改动 | 作者报告的结果 |
 | --- | --- | --- |
 | [DreamerV2](https://arxiv.org/abs/2010.02193)（2020） | 随机 latent 从高斯换成 32 个各有 32 类的类别变量；KL balancing | 第一个完全在单独训练的世界模型里学行为、在 Atari 55 个任务上达到人类水平的 agent；单张 V100 不到 10 天跑完 2 亿环境步 |
-| [DreamerV3](https://arxiv.org/abs/2301.04104)（2023；[Nature 2025](https://www.nature.com/articles/s41586-025-08744-2)） | 一套固定超参；symlog 变换、KL balance 加 free bits、类别分布混入 1% 均匀分布、按百分位归一化回报、symexp twohot 输出头 | 一套配置跑 150 多个任务；第一个不用人类数据和课程、从零在 Minecraft 里拿到钻石的算法，每次 Minecraft 运行都在 1 亿环境步内找到钻石 |
+| [DreamerV3](https://arxiv.org/abs/2301.04104)（2023；[Nature 2025](https://www.nature.com/articles/s41586-025-08744-2)） | 一套固定超参；symlog 变换、KL balance 加 free bits、类别分布混入 1% 均匀分布、按百分位归一化回报、symexp twohot 输出头 | 一套配置跑 150 多个任务；摘要称它是“the first algorithm to collect diamonds in Minecraft from scratch without human data or curricula”（第一个不用人类数据和课程、从零在 Minecraft 里拿到钻石的算法），每次 Minecraft 运行都在 1 亿环境步内找到钻石 |
 
 这些改动大多为了“不调参也能跑”：奖励尺度可能差几个数量级，所以用 $\operatorname{symlog}(x)=\operatorname{sign}(x)\ln(|x|+1)$ 压缩目标；1% 的均匀混合让类别分布永远不会变成确定的，KL 不会突然暴涨。论文的算力对比是 VPT 用 720 张 GPU 训练 9 天拿到钻石，DreamerV3 用 1 张 GPU 训练 9 天；但 DreamerV3 用的是 MineRL 比赛的动作空间，里面有抽象的合成动作。
 
 ## Dreamer 4：换成视频世界模型，只用离线数据
 
 Google DeepMind 的 [Dreamer 4](https://arxiv.org/abs/2509.24527)（Hafner、Yan、Lillicrap，2025-09）保留“在想象里训练”，把 RSSM 换成可扩展的视频世界模型；论文附录 F 说，RSSM 推理很轻，但难以扩展到多样的数据。
+
+<!-- paper-figure:dreamer4-world-model -->
 
 - **世界模型**：因果 tokenizer（400M）加交互式 dynamics transformer（1.6B），共约 2B（§4）。训练目标 shortcut forcing 让每一帧有自己的噪声水平，网络还以步长为条件，直接预测干净的 latent；推理时每帧 4 次前向（§3.2）。这类逐帧扩散配方在[能交互的视频](interactive-video.md)一篇展开。
 - **数据**：只用 VPT 的承包商数据集，2,541 小时、360p、20 FPS、带键鼠动作的游戏录像。

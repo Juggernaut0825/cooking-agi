@@ -22,11 +22,13 @@ $x_{0:t}$ are the observations up to time $t$, usually video frames; $c_t$ is th
 | Policy evaluator | Policy actions → rollout inside the model → success or not | Real-robot evaluation | Whether the model's ranking matches the real ranking | WorldEval, WorldGym, Veo evaluator, dWorldEval, Ctrl-World, 1X |
 | The policy itself | Current view + task → predicted future → action | A separately trained VLA policy | Closed-loop success, latency, generalisation | DreamZero, Cosmos Policy, 1X NEO, Praxis-1 |
 
-[WorldArena](https://arxiv.org/abs/2602.08971) (Shang et al., February 2026 paper) tested 14 embodied world models in exactly these three uses, data engine, policy evaluator and planner, and concluded that good visuals do not mean usefulness on embodied tasks; the authors call it a perception–functionality gap. [World-in-World](https://arxiv.org/abs/2510.18135) (October 2025, ICLR 2026 Oral) also reports that closed-loop task success depends more on controllability than on visual quality.
+[WorldArena](https://arxiv.org/abs/2602.08971) (Shang et al., February 2026 paper) tested 14 embodied world models in exactly these three uses, data engine, policy evaluator and planner, and concluded in the abstract that "high visual quality does not necessarily translate into strong embodied task capability"; the authors call it a perception–functionality gap. [World-in-World](https://arxiv.org/abs/2510.18135) (October 2025, ICLR 2026 Oral) also reports that closed-loop task success depends more on controllability than on visual quality.
 
 ## Job one: generating data
 
 The abstract of [DreamGen](https://arxiv.org/abs/2505.12705) (NVIDIA GEAR et al., May 2025 paper) describes the pipeline: adapt an image-to-video model to the target robot, then generate videos of familiar or new tasks in varied scenes; the videos have no action labels, so pseudo-actions are inferred with a latent action model or an inverse dynamics model (IDM). This is the same idea as Genie's latent actions in the [interactive video note](interactive-video.en.md). The paper calls this synthetic data neural trajectories, and reports that a humanoid learned 22 new behaviours from teleoperation data for a single pick-and-place task in a single environment.
+
+<!-- paper-figure:dreamgen-overview -->
 
 The cost counts too. The [DreamGen paper](https://arxiv.org/abs/2505.12705) reports that its 240k-sample RoboCasa set took 54 hours on 1,500 L40 GPUs, which is $1500\times54=81{,}000$ GPU-hours, or about $81{,}000/240{,}000\approx0.34$ GPU-hours per sample, roughly 20 minutes of GPU time per sample. Whether a real demonstration is expensive has to be judged against that figure.
 
@@ -61,6 +63,8 @@ Estimating a new policy's performance without deploying it is called off-policy 
 | [PiL-World](https://arxiv.org/abs/2606.05773) (June 2026) | Success-rate estimation error from 63.2% down to 12.0% | Only 3 dual-arm tasks |
 
 We read the Veo evaluator paper itself. It fine-tunes the Veo 2 text-to-video model on robotics data and evaluates policies on the ALOHA 2 bimanual platform (4 cameras, §2, §3.1); the abstract reports more than 1,600 real-world evaluations covering 8 checkpoints and 5 tasks. The Pearson 0.86 and MMRV 0.06 refer to the single strongest policy, comparing predicted and real success rates across the OOD generalisation axes of background, small distractor, large distractor and object (§4.1); the text does not state the number of points, so count them in Fig. 8. Limitations the paper states: predicted absolute success rates are lower than real ones (§3.2, §4.1); contact-rich interactions, especially with small objects, are hard to simulate (§7); each rollout is 8 seconds, and minute-scale multi-view consistent generation remains a goal (§7); success is currently judged by humans (§7).
+
+<!-- paper-figure:veo-eval-ood -->
 
 The Veo evaluator paper defines MMRV in §3.2 as follows (the metric comes from Li et al. 2024):
 

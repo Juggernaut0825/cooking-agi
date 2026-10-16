@@ -53,6 +53,8 @@ minFDE 同理取最小。这里 minADE$_3=0.67$ m、minFDE$_3=1$ m，都来自 $
 
 数据和 benchmark 常用 [Waymo Open Motion Dataset](https://arxiv.org/abs/2104.10133)。
 
+<!-- paper-figure:motionlm-joint -->
+
 ## 规划：先产生候选，再挑一条
 
 规划器拿到路线、地图、预测和自车状态，输出未来几秒的自车轨迹。几类方法的差别主要在“候选从哪来、怎么挑”：
@@ -101,6 +103,8 @@ $$
 
 [PDM](https://arxiv.org/abs/2306.07962)（Dauner 等，CoRL 2023）把上面这套做得很彻底。PDM-Closed 先在路线图上搜出要走的车道中心线，再用 IDM（一种跟车模型）沿中心线生成纵向速度：取限速的 20%、40%、60%、80%、100% 五个目标速度，各配 −1 m、0、+1 m 三个横向偏移，共 15 条候选，每条 4 s、10 Hz。其他车按匀速外推。每条候选都用 nuPlan 自己的 LQR 控制器和运动学自行车模型模拟一遍，按接近 nuPlan 评测的规则打分（守规、进度、舒适），取最高分；如果最好的那条预计 2 s 内相撞，就改成紧急制动。
 
+<!-- paper-figure:pdm-arch -->
+
 论文在 Val14 上的结果（表 2）。CLS 是闭环分数，R 表示其他车会反应、NR 表示不反应；OLS 是开环分数：
 
 | 方法 | CLS-R | CLS-NR | OLS |
@@ -110,7 +114,7 @@ $$
 | PDM-Closed | 92 | 93 | 42 |
 | Log Replay（直接回放人类轨迹） | 80 | 94 | 100 |
 
-学习的 PDM-Open 开环分数最高、闭环最差；规则的 PDM-Closed 正好反过来。直接回放人类轨迹也拿不到满分闭环，论文的解释之一是 nuPlan 的 LQR 控制器有时会偏离给定轨迹，所以 PDM-Closed 按“控制器实际会走成什么样”来评估候选。作者的结论是开环和闭环两个任务根本上不一致。PDM-Hybrid 的早期版本在 2023 年 nuPlan 挑战赛中排第一（共 25 支队伍）。
+学习的 PDM-Open 开环分数最高、闭环最差；规则的 PDM-Closed 正好反过来。直接回放人类轨迹也拿不到满分闭环，论文的解释之一是 nuPlan 的 LQR 控制器有时会偏离给定轨迹，所以 PDM-Closed 按“控制器实际会走成什么样”来评估候选。作者在引言里把这一点列为第一条发现：“Open- and closed-loop evaluation are misaligned”，即开环评测和闭环评测并不一致（[§1](https://arxiv.org/html/2306.07962v2#S1.p2)）。摘要里那句更强的话说的是另一回事：短期的精确规划和长时程的自车轨迹预测（ego-forecasting）这两个任务根本上不一致，应该分开处理。PDM-Hybrid 的早期版本在 2023 年 nuPlan 挑战赛中排第一（共 25 支队伍）。
 
 ## 学习从哪里进来
 

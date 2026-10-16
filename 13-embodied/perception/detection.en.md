@@ -78,7 +78,7 @@ Classic detectors produce several boxes for one object. Non-maximum suppression 
 
 That is also where NMS fails: if P2 were actually boxing a second person standing behind G1 at IoU 0.68, NMS would delete a true positive. The threshold is hand-tuned and hard to get right in both directions in crowded scenes.
 
-[DETR (2020)](https://arxiv.org/abs/2005.12872) treats detection as set prediction. The decoder always outputs $N$ slots (the paper uses $N=100$). During training the Hungarian algorithm finds a one-to-one matching between predictions and ground truth, padded with "no object" $\varnothing$ up to $N$:
+[DETR (2020)](https://arxiv.org/abs/2005.12872) treats detection as set prediction, which, its abstract says, streamlines the pipeline, "effectively removing the need for many hand-designed components like a non-maximum suppression procedure …". The decoder always outputs $N$ slots (the paper uses $N=100$). During training the Hungarian algorithm finds a one-to-one matching between predictions and ground truth, padded with "no object" $\varnothing$ up to $N$:
 
 $$
 \hat\sigma=\arg\min_{\sigma}\sum_{i=1}^{N}\mathcal L_{\rm match}\big(y_i,\hat y_{\sigma(i)}\big),\qquad
@@ -86,6 +86,8 @@ $$
 $$
 
 $c_i$ is the ground-truth class, $\hat p_{\sigma(i)}(c_i)$ is the probability the matched slot assigns to that class, and $\mathcal L_{\rm box}$ is a weighted sum of an L1 loss and the generalized IoU loss. Unmatched slots are trained to predict $\varnothing$, so the model itself learns not to emit duplicates. In the example above, G1 is matched to whichever of P1 and P2 is cheaper, and the other is pushed towards "no object". This is the same Hungarian algorithm as in the [tracking note](tracking.en.md); there it matches tracks at run time, here it assigns training targets.
+
+<!-- paper-figure:detr-set-prediction -->
 
 The paper's ablation shows the same thing: NMS helps the output of the first decoder layer, but at the last layers it slightly lowers AP because it removes true positives. DETR's weakness is slow convergence; [Deformable DETR](https://arxiv.org/abs/2010.04159) reports 10× fewer training epochs, and [RT-DETR](https://arxiv.org/abs/2304.08069), [D-FINE](https://arxiv.org/abs/2410.13842), [DEIM](https://arxiv.org/abs/2412.04234) and [RF-DETR](https://arxiv.org/abs/2511.09554) then brought this line to real time.
 
@@ -100,6 +102,8 @@ The YOLO line also dropped NMS in 2026. The [YOLO26 paper (2026-06-02)](https://
 | Promptable concept segmentation | Image or video + noun phrase or exemplar box | Masks and IDs for every matching instance | [SAM 3](https://arxiv.org/abs/2511.16719): 56.4 box AP on COCO, 53.6 box AP on LVIS ([README](https://github.com/facebookresearch/sam3)); about 30 ms for an image with 100+ objects on an H200 | Auto-labelling, long-tail concepts, finding "every X" in video |
 
 Earlier open-vocabulary work includes [GLIP](https://arxiv.org/abs/2112.03857), [OWL-ViT](https://arxiv.org/abs/2205.06230) / [OWLv2](https://arxiv.org/abs/2306.09683), [YOLO-World](https://arxiv.org/abs/2401.17270) and [YOLOE](https://arxiv.org/abs/2503.07465). SAM 3 (2025-11-20) merges it with segmentation: given a short noun phrase (such as "yellow school bus") or an exemplar box, it returns masks and IDs for every matching instance in an image or video. It combines a DETR-style detector and a memory-based video tracker that share one backbone; a presence head separately decides "is this concept in the image at all", decoupling recognition from localisation (paper abstract).
+
+<!-- paper-figure:sam3-arch -->
 
 Read numbers together with their conditions. The same SAM 3 scores 56.4 box AP on COCO (Table 1 of the paper lists it as a zero-shot result); on the 100 multi-domain datasets of [RF100-VL](https://arxiv.org/abs/2505.20612) its zero-shot average is only 15.2 AP, with 2.6 on the medical group; fine-tuning on about 10 labelled instances per class (10-shot) gives 36.5 on average, and full fine-tuning 61.6 (paper v2, Tables 36 and 37, author-reported). Appendix B of the paper says so itself: zero-shot, it struggles with fine-grained out-of-domain concepts (such as aircraft types and medical terms), especially in niche domains like thermal imagery; prompts must be simple noun phrases, and long referring expressions need a multimodal LLM alongside.
 

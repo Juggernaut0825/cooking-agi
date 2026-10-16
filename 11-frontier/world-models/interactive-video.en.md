@@ -58,6 +58,8 @@ inference: only the LAM codebook is kept; the player enters an integer 0-7 → c
 
 The key is the LAM decoder. It cannot see the future frame, so only the action code can tell it what changed between past and future. And the codebook has only $|A|=8$ codes (the paper says this size was chosen so humans can play), too small to hold a whole image; it can only carry the most important change. The paper gives no numbered loss equation for the LAM, only a prose description.
 
+<!-- paper-figure:genie-lam -->
+
 ### Walking through 8 codes (a teaching example)
 
 Suppose that after training the codebook holds the 8 vectors below. The numbers are invented so you can compute by hand; real codebooks have more dimensions, and what each code means is only learned by people playing with it afterwards.
@@ -138,6 +140,8 @@ Other players of the same period (frame rates and resolutions are self-reported 
 **Control and stability.** [WorldMark](https://arxiv.org/abs/2604.21686) (Xu et al., April 2026 paper) gave 10 models one shared WASD action vocabulary and 500 test cases, and found that the fastest responders are often the least stable and the best-looking model ranks last on direction accuracy. [WBench](https://arxiv.org/abs/2605.25874) (Meituan LongCat and Fudan, May 2026 paper, 289 cases, 20 models) found no model strong on every dimension.
 
 **Physics and drift.** On 2026-01-29 Google wrote that Project Genie's worlds may not follow prompts or physics. In autoregressive generation every frame is conditioned on the model's own past output, so small errors carry forward; this is the same family of problem as rollout error accumulation in [model-based RL](../../05-post-training/deep-rl/model-based.en.md). The Dreamer 4 paper argues that v-prediction's high-frequency outputs accumulate errors over long frame-by-frame rollouts, and so predicts clean latents directly (see the [Dreamer note](dreamer.en.md)).
+
+<!-- paper-figure:gamengen-drift -->
 
 There are several ways to keep out-of-view content. The trade-offs below are our analysis, not the vendors' conclusions:
 

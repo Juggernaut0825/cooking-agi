@@ -76,6 +76,8 @@ $\bar r_{\rm solve}$ is the solver's average success over $G$ Monte Carlo attemp
 
 The first three rows are the paper's intuition: a task that is never solved and one that is always solved give the solver no learning signal, so the proposer earns nothing. The fourth row comes straight from the formula: the reward peaks not at a 0.5 success rate but at tasks that are solved only occasionally; with $G=4$ the maximum is $1-1/4=0.75$. This is the same difficulty STaR faced: no success at all means no signal.
 
+<!-- paper-figure:azr-loop -->
+
 "Zero" means no human-curated tasks or answers; a pretrained base model and a code executor are still required. §4.2 reports that AZR-Coder-7B beats the previous best zero-setting model by 1.8 points on average, and beats models trained on expert-curated code data by 0.3 points on the coding average; with Llama-3.1-8B the authors also observed concerning chains of thought (their "uh-oh moment"). [R-Zero](https://arxiv.org/abs/2508.05004) (2025-08) splits one base model into a Challenger and a Solver that co-evolve; the abstract reports +6.49 on math and +7.54 on general reasoning for Qwen3-4B-Base, both relative to the base model.
 
 ## The ceiling the verifier sets: the generation-verification gap
@@ -93,6 +95,8 @@ J(f_{t+1})-J(f_t)\;\ge\;\operatorname{gap}(f_t,g)-\varepsilon_{\rm update}
 $$
 
 The same premise also caps the improvement at $\operatorname{gap}+\varepsilon_{\rm update}$, so **one round is worth about one gap**; when the model verifies no better than it generates (gap ≤ 0), the loop has nothing to learn. The paper also notes that fine-tuning sometimes beats this amount, for example when the model learns the required answer format, and that this part is not self-improvement.
+
+<!-- paper-figure:gv-gap-definitions -->
 
 The paper's measurements (§4–5): the relative gap grows monotonically with pre-training FLOPs; small models such as Qwen-1.5 0.5B, Qwen-2 0.5B and Llama-2 7B show a non-positive gap for nearly all verification methods; factual tasks show no significant gap; in iterated runs the gap falls to near zero within two or three rounds, at a similar rate across model sizes; and pass@k at large $k$ drops over rounds, meaning effective diversity shrinks.
 

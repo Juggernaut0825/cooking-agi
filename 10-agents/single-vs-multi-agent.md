@@ -34,7 +34,7 @@ token 和延迟的账留到下面的算例里算（每个上下文都要带一�
 
 ### Anthropic 的 Research 系统（2025-06-13）
 
-Anthropic 在[工程博客](https://www.anthropic.com/engineering/multi-agent-research-system)里介绍了自己的多 agent 调研系统：一个 lead agent 制定计划，并行派出多个 subagent 搜索，再汇总。最常被引用的一句是：在内部 research eval 上，以 Claude Opus 4 为 lead、Claude Sonnet 4 为 subagent 的多 agent 系统，比单 agent 的 Claude Opus 4 高 90.2%。文中举的例子是找出标普 500 信息技术板块公司的全部董事，单 agent 靠缓慢的顺序搜索没找全。
+Anthropic 在[工程博客](https://www.anthropic.com/engineering/multi-agent-research-system)里介绍了自己的多 agent 调研系统：一个 lead agent 制定计划，并行派出多个 subagent 搜索，再汇总。最常被引用的一句在[讲多 agent 好处的一节](https://www.anthropic.com/engineering/multi-agent-research-system#benefits-of-a-multi-agent-system)：以 Claude Opus 4 为 lead、Claude Sonnet 4 为 subagent 的多 agent 系统“outperformed single-agent Claude Opus 4 by 90.2% on our internal research eval”，即在内部 research eval 上比单 agent 的 Claude Opus 4 高 90.2%。文中举的例子是找出标普 500 信息技术板块公司的全部董事，单 agent 靠缓慢的顺序搜索没找全。
 
 这句话**没说的**同样要记住：没有给两边的绝对分数，没说 90.2% 是相对提升还是百分点，没说两边的 token 预算和工具调用次数是否相同，评测集也没有公开。按文章自己的解释，两边花的 token 多半并不相同：在 BrowseComp 上，三个因素解释了 95% 的表现差异，其中 token 用量单独解释 80%（另两个是工具调用次数和模型选择）；agent 通常比聊天多用约 4 倍 token，多 agent 系统约 15 倍。作者的结论是，多 agent 有效主要因为它能花够多的 token，所以只适合价值高到付得起这些 token 的任务。文章也写明，需要所有 agent 共享同一上下文、或 agent 之间依赖很多的领域目前不适合，多数编程任务里真正能并行的部分比调研少。
 
@@ -50,11 +50,15 @@ Cemri 等人的 [Why Do Multi-Agent LLM Systems Fail?](https://arxiv.org/abs/250
 
 MAST 有 14 种失败模式，分成三类。按 v3 的图 1：系统设计问题（不遵守任务或角色设定、重复步骤、不知道何时结束等）占 44.2%；agent 之间不对齐（不追问澄清、偏离任务、扣住关键信息不传等）占 32.3%；任务验证问题（过早结束、没验证或验证错）占 23.5%。引言报告这些系统的失败率在 41% 到 86.7% 之间。它测的是“多 agent 系统为什么失败”，没有在同预算下和单 agent 对比。
 
+<!-- paper-figure:mast-taxonomy -->
+
 ### 控制预算以后的比较（2025–2026）
 
 - Google Research、Google DeepMind 和 MIT 的 Kim 等人在 [Towards a Science of Scaling Agent Systems](https://arxiv.org/abs/2512.08296)（预印本）的 v3（2026-04）里，在 6 个 agent benchmark、5 种结构（单 agent 和 4 种多 agent）、3 个模型家族上跑了 260 个配置，并称统一了工具、prompt 和计算预算（v1、v2 是 4 个 benchmark、180 个配置，引用时要写明版本）。相对单 agent 的变化，从可分解的金融分析任务上的 +80.8%，到顺序规划任务 PlanCraft 上的 −70.0%；在 PlanCraft 上，4 种多 agent 结构全部变差（−39% 到 −70%）。他们的回归还显示，单 agent 基线超过约 45% 时，再加 agent 的收益转为负。
 - Stanford 的 Tran 和 Kiela 在 [Single-Agent LLMs Outperform Multi-Agent Systems on Multi-Hop Reasoning Under Equal Thinking Token Budgets](https://arxiv.org/abs/2604.02460)（预印本，2026-04）里固定“思考 token”预算，在 FRAMES 和 MuSiQue 4-hop 上比较单 agent 和 5 种多 agent 结构。除了 100 token 这个几乎没法推理的最低预算，单 agent 在各个预算下都是最好，或与最好的统计上无差别；论文还称单 agent 实际用掉的思考 token 更少。只有在人为大量遮盖或替换上下文 token 之后，多 agent 才变得有竞争力，但这项测试只用了一个模型（Qwen3-30B-A3B）、只和顺序式多 agent 比。他们还指出，API 预算控制上的偏差（尤其是 Gemini 2.5）和 benchmark 本身的问题，都可能抬高多 agent 的表面收益。注意这是纯文本多跳推理，不调工具。
 - Gao 等人的 [Single-agent or Multi-agent Systems? Why Not Both?](https://arxiv.org/abs/2505.18286)（2025-05）在多种 agent 应用上比较后报告，模型越强，多 agent 相对单 agent 的优势越小。
+
+<!-- paper-figure:agent-scaling-benchmarks -->
 
 放在一起，比较一致的结论是：**任务能拆成互不依赖的信息流时，拆分可能有用；顺序依赖强、或单 agent 已经做得不错时，拆分常常帮倒忙。** 截至 2026-10-15，前两篇预印本在 arXiv 上都没有标注正式发表信息；具体百分比依赖各自的预算定义和基线，不宜直接搬到你的任务上。
 

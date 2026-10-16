@@ -19,11 +19,15 @@
 | 在中间步骤上搜索 | 按步打分，只保留有希望的前缀 | 过程奖励模型或价值估计 | beam search、Tree of Thoughts | 搜索把打分器的漏洞找出来 |
 | 生成后检查、修改 | 让程序或模型检查，再改 | 检查器，或会自我检查的模型 | 单元测试、Lean、证明验证器 | 检查的规格和真正想问的问题不一致 |
 
+<!-- paper-figure:snell-search-methods -->
+
 ## 两条轴：并行和串行
 
 并行是同时生成 N 份互不依赖的回答，再用投票或验证器挑一份。只要服务端放得下，延迟几乎不随 N 增加，费用随 N 线性增加。串行是在一条链里多想，或者看着上一版改下一版：后面的步骤能用上前面的发现，代价是延迟跟着长度涨。
 
-Snell 等在 PaLM 2-S* 和 MATH 数据集上发现，两条轴适合的题不一样：简单题从串行修改里得到的收益更多，难题上最好在两边之间找一个比例。今天的系统多半两条都用。DeepSeekMath-V2（2025-11）每题先生成 64 份证明、每份验证 64 次，再挑高分的修改，最多迭代 16 轮；OpenAI 的 GPT-5 system card（2025-08）说 ChatGPT 里的 gpt-5-thinking-pro 用的是“并行测试时计算”设置；Google DeepMind 说在 IMO 2025 拿到金牌分数的 Gemini Deep Think 会同时探索并组合多个候选解。后两者没有公开具体做法。
+Snell 等在 PaLM 2-S* 和 MATH 数据集上发现，各种方法的效果“critically varies depending on the difficulty of the prompt”（[摘要](https://arxiv.org/abs/2408.03314)），即很大程度上取决于题目难度，两条轴适合的题也不一样：简单题从串行修改里得到的收益更多，难题上最好在两边之间找一个比例。今天的系统多半两条都用。DeepSeekMath-V2（2025-11）每题先生成 64 份证明、每份验证 64 次，再挑高分的修改，最多迭代 16 轮；OpenAI 的 GPT-5 system card（2025-08）说 ChatGPT 里的 gpt-5-thinking-pro 用的是“并行测试时计算”设置；Google DeepMind 说在 IMO 2025 拿到金牌分数的 Gemini Deep Think 会同时探索并组合多个候选解。后两者没有公开具体做法。
+
+<!-- paper-figure:snell-parallel-sequential -->
 
 本系列用同一个教学例子：**一道答案可以核对的数学题，模型单次答对的概率是 $p$。** 第 1 篇看采样多少次、怎么挑；第 2 篇看一条链怎么被训练得更长，长度又怎么控制；第 3 篇看发布里的数字该怎么比较。
 

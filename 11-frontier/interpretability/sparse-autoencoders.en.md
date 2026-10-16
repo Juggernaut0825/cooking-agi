@@ -56,6 +56,8 @@ At both values of $\lambda$, using only $d_3$ wins (the KKT conditions confirm i
 
 A real SAE does not solve this optimisation separately for every input; a single-layer encoder computes the coefficients directly, so under the same objective it can only match the optimum or do worse.
 
+<!-- paper-figure:jumprelu-toy -->
+
 ## Dead latents, feature splitting, and absorption
 
 **Dead latents.** In the example above, $d_2$ is never chosen when $x$ lies on the diagonal. If no input in the whole training set makes a ReLU latent fire, it gets no gradient from the reconstruction term and never comes back. Anthropic counts a feature as dead if it has not fired over $10^7$ tokens: the 1M, 4M and 34M SAEs had roughly 2%, 35% and 65% dead features, and the 34M one had only about 12 million alive ([Templeton et al., May 2024](https://transformer-circuits.pub/2024/scaling-monosemanticity/index.html)). OpenAI reports up to 90% dead latents without mitigations; initialising the encoder as the transpose of the decoder and adding an auxiliary loss in which dead latents fit the reconstruction residual (AuxK) left only 7% dead in a 16-million-wide SAE ([Gao et al., June 2024](https://arxiv.org/abs/2406.04093)).
@@ -64,7 +66,7 @@ A real SAE does not solve this optimisation separately for every input; a single
 
 **Absorption.** [Chanin et al. (September 2024)](https://arxiv.org/abs/2409.14507) found that when features form a hierarchy, a seemingly monosemantic parent feature fails to fire where it should, because its role is "absorbed" by child features; they attribute this to optimising for sparsity and find that changing dictionary size or sparsity does not fix it.
 
-**Change the seed and the features change.** [Paulo & Belrose (January 2025)](https://arxiv.org/abs/2501.16615) trained 131K-wide SAEs on an MLP of Llama 3 8B, changing only the random seed, and found only about 30% of features shared; TopK SAEs depend on the seed more than L1 ones. The authors conclude that an SAE finds a pragmatically useful decomposition, not a complete list of the features the model "truly uses".
+**Change the seed and the features change.** [Paulo & Belrose (January 2025)](https://arxiv.org/abs/2501.16615) trained 131K-wide SAEs on an MLP of Llama 3 8B, changing only the random seed, and found only about 30% of features shared; TopK SAEs depend on the seed more than L1 ones. The authors conclude that the features an SAE finds should be viewed as "a pragmatically useful decomposition of activation space, rather than an exhaustive and universal list …" of the features the model uses.
 
 ## How features get labels: automated interpretation and its limits
 
@@ -109,6 +111,8 @@ In 2026 both views are heard: a preprint reports that with a supervised pipeline
 ## Where it is heading: transcoders, cross-layer dictionaries, and natural-language readouts
 
 An SAE only reconstructs the activation at one place; it does not say how computation flows from one layer to the next. A [transcoder](https://arxiv.org/abs/2406.11944) instead predicts an MLP's output from its input; its authors report that on models of 120M, 410M and 1.4B parameters it is at least on par with SAEs on sparsity, faithfulness and interpretability. Anthropic's [crosscoder](https://transformer-circuits.pub/2024/crosscoders/index.html) (October 2024) lets one feature read and write across several layers and is also used to compare two models. Cross-layer transcoders are the basis of the attribution graphs in [note 3](circuits.en.md).
+
+<!-- paper-figure:transcoder-vs-sae -->
 
 Another route drops the fixed dictionary and has a model translate activations into text directly. Anthropic's [NLA](https://transformer-circuits.pub/2026/nla/index.html) (2026-05-07) uses two modules initialised from the target model, one that writes an activation as an explanation and one that reconstructs the activation from the explanation, trained jointly with RL to reconstruct the residual stream. The authors report it was useful in the pre-deployment audit of Claude Opus 4.6 and list its limits: it invents details that are not in the context, it cannot say which part of the activation an explanation rests on, the two modules are very expressive, and it is expensive to train and to use.
 

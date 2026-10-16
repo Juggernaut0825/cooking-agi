@@ -69,7 +69,7 @@ LeCun 2022 takes VICReg as an example (§4.5.1): a variance term keeps each embe
 
 I-JEPA and V-JEPA 2 use this one. The target encoder's parameters $\bar\theta$ receive no gradient; they are an exponential moving average of the context encoder's parameters, $\bar\theta\leftarrow m\bar\theta+(1-m)\theta$, with $m$ rising from 0.996 to 1.0 in I-JEPA (Appendix A). One step: $\bar\theta=1$, $\theta$ suddenly becomes 0, and after the update $\bar\theta=0.996$; even if $\theta$ stays at 0, $\bar\theta$ is still about 0.67 after 100 steps. The target moves slowly.
 
-I-JEPA calls the EMA target encoder essential (§3), and V-JEPA 2 also says stop-gradient plus EMA prevents collapse. But no term in the loss explicitly forbids collapse; this is a design that works empirically, and LeJEPA's title calls such techniques heuristics.
+I-JEPA calls the EMA target encoder essential (§3), and V-JEPA 2 also says stop-gradient plus EMA prevents collapse. But no term in the loss explicitly forbids collapse; this is a design that works empirically, and LeJEPA's [title](https://arxiv.org/abs/2511.08544) calls such techniques heuristics: "Without the Heuristics".
 
 ### Fix three: require embeddings to look standard Gaussian
 
@@ -100,6 +100,8 @@ $$
 
 The teacher-forcing term feeds real features at every step, with $T=15$; the rollout term makes the model continue from its own predictions, with $T=2$ in practice. The total loss is the sum of the two.
 
+<!-- paper-figure:vjepa2-ac-training -->
+
 ## Planning with embedding distances
 
 Encode the goal image as $z_g$. Planning means finding an action sequence whose predicted future embedding is closest to $z_g$ (§3.2, Eq. 5):
@@ -109,6 +111,8 @@ E(\hat a_{1:T};z_k,s_k,z_g)=\big\|P(\hat a_{1:T};s_k,z_k)-z_g\big\|_1
 $$
 
 The paper minimises this energy with [CEM](../../05-post-training/deep-rl/planning-and-control.en.md): sample action sequences from zero-mean, unit-variance Gaussians, refit the mean and variance to the lowest-energy batch, repeat a few times and return the mean; execute only the first action and re-plan after seeing the new frame, which is MPC. Every sampled action is confined to an L1 ball of radius 0.075, so the end effector moves at most about 13 cm; the paper's reason is that large actions are out of the models' training distribution (§4.1).
+
+<!-- paper-figure:vjepa2-ac-planning -->
 
 Compute one round with the cup (teaching numbers). Replace the 16×16×1408 feature map with 2 numbers: (how many cm the cup moved along the table, how far it tipped, 0–1). The current $z_k=(0,0)$; in the goal image the cup has moved 3 cm and stands upright, $z_g=(3,0)$. With a planning horizon of 1, compare 3 candidates:
 

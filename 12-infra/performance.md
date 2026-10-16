@@ -82,7 +82,7 @@ $B$ 再大，算术强度也只会逼近 $(1.4\times10^{10}+2.15\times10^{9})/5.
 
 ## MFU 与 HFU：分子分母各算什么 {#mfu}
 
-PaLM 论文（[Chowdhery 等，2022，§4.1 与附录 B](https://arxiv.org/abs/2204.02311)）提出 model FLOPs utilization：观测到的 tokens/s，除以硬件按峰值算力运行时理论上能达到的 tokens/s。关键在于，理论值只计前向加反向必需的运算，**不计重算（rematerialization）**。对 dense decoder，每个 token 需要 $6N$ 次矩阵乘运算（前向 $2N$、反向 $4N$），attention 里的矩阵乘再加 $12LHQT$：
+PaLM 论文（[Chowdhery 等，2022，§4.1 与附录 B](https://arxiv.org/abs/2204.02311)）提出 model FLOPs utilization：观测到的 tokens/s，除以硬件按峰值算力运行时理论上能达到的 tokens/s。关键在于，论文写明理论最大吞吐“only accounts for the required operations to compute the forward+backward passes, and not rematerialization”（[§4.1](https://arxiv.org/html/2204.02311v5#S4.SS1)），即只计前向加反向必需的运算，**不计重算（rematerialization）**。对 dense decoder，每个 token 需要 $6N$ 次矩阵乘运算（前向 $2N$、反向 $4N$），attention 里的矩阵乘再加 $12LHQT$：
 
 $$
 \mathrm{MFU}=\frac{\text{tokens/s}\times(6N+12LHQT)}{n_{\rm GPU}\times P_{\rm peak}}.

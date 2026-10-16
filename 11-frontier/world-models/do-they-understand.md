@@ -29,7 +29,7 @@
 
 ## 一个定理：能完成多步目标，策略里就藏着世界模型
 
-[Richens 等](https://arxiv.org/abs/2506.01622)（Google DeepMind，ICML 2025）的论文 v1 标题是“…need world models”，现在改为 “General agents contain world models”。我们读了原文，条件如下：
+[Richens 等](https://arxiv.org/abs/2506.01622)（Google DeepMind，ICML 2025）的论文 v1 标题是“…need world models”，现在改为 “General agents contain world models”。摘要的核心结论是 “any agent capable of generalizing to multi-step goal-directed tasks must have learned a predictive model …”，即任何能泛化到多步、目标导向任务的智能体，一定学到了一个（关于环境的）预测模型。我们读了原文，条件如下：
 
 - **环境**：controlled Markov process，即没有奖励的 MDP；有限、连通、平稳，且智能体完全可观测（§2.2、§2.4）。
 - **智能体**：目标条件策略；对所有深度不超过 $n$ 的复合目标，成功概率至少是最优的 $(1-\delta)$ 倍（§2.4）。只假设“有能力”，不假设理性。
@@ -67,11 +67,15 @@ $h$ 是模型某层的激活，$w,b$ 是探针参数，$\hat y$ 是读出的变�
 
 读得出（第 1 层）成立，在使用（第 2 层）不成立，行为一致（第 3 层）在新起点上失败。Othello-GPT 做了干预，比只做探针更进一步；但也有可解释性研究认为它跑的可能是“一堆启发式”而不是一个连贯算法，那篇 [Alignment Forum 文章](https://www.alignmentforum.org/posts/gcpNuEZnxAPayaKBY)未经同行评审。
 
+<!-- paper-figure:othello-intervention -->
+
 ## 行为测试说“常常不一致”
 
 [Vafa 等 2024](https://arxiv.org/abs/2406.03689)（NeurIPS 2024）借用 Myhill–Nerode 定理的思路：在确定性有限自动机里，两段历史若到达同一个状态，允许的后续必须完全相同；到达不同状态，就一定有某个后续能把它们区分开。据此可以测两件事：同一状态的不同历史，模型是否同等对待（压缩）；不同状态，模型能否区分（区分）。
 
 论文在曼哈顿出租车路线上训练 Transformer：下一步合法率约 1.00，序列压缩的 precision 却只有 0.10–0.50；做最短路的模型遇到 10% 的随机绕路时，合法路线从 0.99 掉到 0.08。
+
+<!-- paper-figure:vafa-manhattan-maps -->
 
 换成杯子（教学设定，假设没有惯性、摩擦处处相同）：历史 (a) 先推 3 厘米再推 2 厘米，历史 (b) 一次推 5 厘米，两者让杯子停在同一个位置，之后的合理预测应当相同。如果模型说 (a) 杯子还在桌上、(b) 杯子掉了，它跟踪的是“最后一次推了多少”，而不是杯子。
 

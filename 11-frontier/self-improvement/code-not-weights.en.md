@@ -30,6 +30,8 @@ repeat:
 
 In the coding example, the thing evolved is the function body, and $h$ might be "hidden-test pass rate plus run time". People write $h$ and AlphaEvolve does not change it, so the previous note's problem of tests accepting wrong solutions carries over unchanged: whatever $h$ lets through is where evolution may head.
 
+<!-- paper-figure:alphaevolve-loop -->
+
 The evaluation cascade (§2.4) means the user supplies test cases of increasing difficulty, and a new program moves to the next tier only if it does well enough on all earlier tiers; new programs are also run at small scale first, so faulty ones are filtered early. Properties hard to write into $h$ can be judged by LLM-generated feedback. The program database (§2.5) borrows from MAP-Elites and island-based population models, so the population does not crowd around one local optimum.
 
 ### Reported results, and where the "self" comes in
@@ -66,6 +68,8 @@ Why call it self-referential: self-improvement is posed as a coding task, so a b
 
 Children worse than their parents are kept as stepping stones: the paper reports that on SWE-bench the agents at iterations 4 and 56 temporarily scored below their parents, yet continuing along that path later produced an agent that beat all its predecessors.
 
+<!-- paper-figure:dgm-archive -->
+
 ### Choosing a parent: work it once
 
 The sampling rule in Appendix C.2 (Eqs. 1–7):
@@ -93,7 +97,7 @@ Change one condition: suppose C has no children yet. Then $w_C=0.731$, the total
 - **Results (§4.4).** After 80 iterations, SWE-bench goes from 20.0% to 50.0% and the full Polyglot benchmark from 14.2% to 30.7%. Gains transfer to other FMs and languages: the best agent evolved on Polyglot reaches 24.5% on SWE-bench, above the initial 20.0%.
 - **Cost (Appendix E.1).** One SWE-bench run takes about 2 weeks and about US$22,000; each of the two ablation baselines costs about US$10,000.
 - **Ablations (§4).** Without self-improvement (the initial agent always does the modifying, which replicates ADAS), early gains taper off quickly. Without open-ended exploration (only the latest agent is kept), one bad modification makes later improvement harder. Both fall short of the full DGM on both benchmarks.
-- **Limits (§6).** The authors state that DGM is inherently limited by the capabilities of the underlying FM; experiments ran in sandboxes under human oversight. Appendix H records objective hacking; see the [previous note](generate-verify-train.en.md).
+- **Limits (§6).** The authors state that DGM "is inherently limited by the capabilities of the underlying FM" ([§6](https://arxiv.org/html/2505.22954v3#S6)); experiments ran in sandboxes under human oversight. Appendix H records objective hacking; see the [previous note](generate-verify-train.en.md).
 
 ## Later variants: SICA, HGM, AIDE²
 

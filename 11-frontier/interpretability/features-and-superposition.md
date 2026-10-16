@@ -22,6 +22,8 @@ $d_i$ 是第 $i$ 个特征的方向（单位向量），$a_i(x)\ge 0$ 是输入 
 
 但它是工作假设，不是定理。[Engels 等（2024-05）](https://arxiv.org/abs/2405.14860)在 GPT-2 和 Mistral 7B 里找到排成一个圆的星期几和月份，这是不可再拆的二维特征；他们又在 Mistral 7B 和 Llama 3 8B 上用干预实验说明，模型做“星期几加几天”这类模运算时用的正是这个圆。[Toy Models 一文](https://transformer-circuits.pub/2022/toy_model/index.html)也列了好几种互相竞争的“特征”定义，作者明说不想过早定死。
 
+<!-- paper-figure:circular-features -->
+
 ## 探针：准确率说明什么，不说明什么
 
 线性探针（[Alain & Bengio，2016](https://arxiv.org/abs/1610.01644)）冻结模型，只在激活上训练一个逻辑回归：
@@ -33,6 +35,8 @@ $$
 $w,c$ 是探针参数，$\sigma$ 是 sigmoid。准确率高，说明标签 $y$ 的信息可以从 $h$ 里线性读出。它没说明两件事：模型的输出用没用到这个信息（[它真的懂世界吗](../world-models/do-they-understand.md)里的推杯子算例就是读得出、却没在用）；以及读出靠的是表示本身，还是探针自己的拟合能力。
 
 第二件事，[Hewitt & Liang（2019）](https://arxiv.org/abs/1909.03368)用控制任务来测：给每个词型随机指定一个固定标签，这种标签和语言结构无关，探针只能靠记住“哪个词对应哪个标签”来学会。然后定义选择性（selectivity）= 真实任务准确率 − 控制任务准确率。
+
+<!-- paper-figure:control-task-probes -->
 
 ### 算一次选择性
 

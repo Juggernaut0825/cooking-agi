@@ -60,6 +60,8 @@ $$
 
 3DGS is fast because of how it renders. The screen is first cut into 16×16-pixel tiles, all Gaussians are sorted once by "tile ID plus depth" with a GPU radix sort, and then the pixels in each tile blend front to back and stop when the transmittance is nearly used up. There is no repeated network query along a ray and no per-pixel sort.
 
+<!-- paper-figure:3dgs-pipeline -->
+
 ## One calculation: four Gaussians make one pixel
 
 A teaching example. One pixel is covered by four Gaussians, already sorted from near to far. $g$ is the Gaussian's value at this pixel, $\exp(-\tfrac12m^2)$, where $m$ is the Mahalanobis distance from the pixel to the Gaussian's centre: $g=1$ when the pixel sits exactly at the centre, and $g=0.5$ when $m^2=2\ln2\approx1.39$.
@@ -126,7 +128,9 @@ One top-down calculation (a teaching example, $x$ to the right, $z$ forward, in 
 | (0, 5), end of the log | 2.0 | Blocked |
 | (−3.5, 0), the planner now changes lanes 3.5 m to the left | 1.375 | Visible |
 
-Throughout the log this value stays between 2.25 and 2.0, so the pedestrian never appears in any frame, and the reconstructed scene contains no Gaussians for them. The new viewpoint after the lane change should see the pedestrian, but the render shows empty road or a blob of unconstrained Gaussians. The 3DGS paper's own limitations section says as much: poorly observed regions produce artefacts. Waymo's [blog post](https://waymo.com/blog/2026/02/the-waymo-world-model-a-new-frontier-for-autonomous-driving-simulation/) of 2026-02-06 makes exactly this point: when the simulated route differs too much from the original drive, purely reconstructive methods (such as 3DGS) break down visually because observations are missing.
+Throughout the log this value stays between 2.25 and 2.0, so the pedestrian never appears in any frame, and the reconstructed scene contains no Gaussians for them. The new viewpoint after the lane change should see the pedestrian, but the render shows empty road or a blob of unconstrained Gaussians. The 3DGS paper's own [limitations section](https://arxiv.org/html/2308.04079v1#S7.SS4) says as much: "In regions where the scene is not well observed we have artifacts …". Waymo's [blog post](https://waymo.com/blog/2026/02/the-waymo-world-model-a-new-frontier-for-autonomous-driving-simulation/) of 2026-02-06 makes exactly this point: when the simulated route differs too much from the original drive, purely reconstructive methods (such as 3DGS) break down visually because observations are missing.
+
+<!-- paper-figure:3dgs-sparse-views -->
 
 | Approach | Example | What it adds | Cost |
 | --- | --- | --- | --- |

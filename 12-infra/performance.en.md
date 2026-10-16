@@ -82,7 +82,7 @@ Prefill is the opposite: it processes thousands of tokens of one request at once
 
 ## MFU and HFU: what goes in the numerator and denominator {#mfu}
 
-The PaLM paper ([Chowdhery et al., 2022, §4.1 and Appendix B](https://arxiv.org/abs/2204.02311)) proposed model FLOPs utilization: observed tokens/s divided by the tokens/s the hardware could theoretically reach at peak compute. The key point is that the theoretical value counts only the operations required for the forward and backward passes, **not rematerialization**. For a dense decoder, each token needs $6N$ matrix-multiply operations ($2N$ forward, $4N$ backward), plus $12LHQT$ for the matrix multiplies inside attention:
+The PaLM paper ([Chowdhery et al., 2022, §4.1 and Appendix B](https://arxiv.org/abs/2204.02311)) proposed model FLOPs utilization: observed tokens/s divided by the tokens/s the hardware could theoretically reach at peak compute. The key point is that the theoretical maximum throughput, in the paper's words, "only accounts for the required operations to compute the forward+backward passes, and not rematerialization" ([§4.1](https://arxiv.org/html/2204.02311v5#S4.SS1)). For a dense decoder, each token needs $6N$ matrix-multiply operations ($2N$ forward, $4N$ backward), plus $12LHQT$ for the matrix multiplies inside attention:
 
 $$
 \mathrm{MFU}=\frac{\text{tokens/s}\times(6N+12LHQT)}{n_{\rm GPU}\times P_{\rm peak}}.

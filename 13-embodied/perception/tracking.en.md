@@ -110,6 +110,8 @@ The Hungarian algorithm only maximises total IoU; it does not guarantee the righ
 
 Continue the example. In the next frame T2 walks behind a pole. The detector puts D4 at T2's predicted position, but with a score of only 0.35; it also puts D5, score 0.25, on a poster. The common practice keeps only boxes above a score threshold ([ByteTrack](https://arxiv.org/abs/2110.06864) uses 0.5 in its illustration), so D4 is dropped and T2 goes unmatched; under SORT's settings it is deleted, and the person gets a new ID on reappearing.
 
+<!-- paper-figure:bytetrack-byte -->
+
 ByteTrack's association method, BYTE, keeps almost every box and runs two rounds split by a score threshold $\tau$ (Algorithm 1 in the paper):
 
 ```text

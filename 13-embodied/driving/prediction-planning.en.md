@@ -53,6 +53,8 @@ Some major forecasting models, each described from its abstract:
 
 The [Waymo Open Motion Dataset](https://arxiv.org/abs/2104.10133) is a common dataset and benchmark.
 
+<!-- paper-figure:motionlm-joint -->
+
 ## Planning: generate candidates, then pick one
 
 The planner takes the route, map, forecasts and ego state and outputs the ego trajectory for the next few seconds. Method families differ mainly in "where candidates come from and how one is picked":
@@ -101,6 +103,8 @@ The table says three more things:
 
 [PDM](https://arxiv.org/abs/2306.07962) (Dauner et al., CoRL 2023) does all of the above thoroughly. PDM-Closed first searches the route graph for the lane centreline to follow, then uses IDM (a car-following model) to generate the longitudinal speed along it: five target speeds at 20%, 40%, 60%, 80% and 100% of the speed limit, each with three lateral offsets of −1 m, 0 and +1 m, giving 15 candidates of 4 s at 10 Hz. Other vehicles are extrapolated at constant velocity. Each candidate is simulated with nuPlan's own LQR controller and kinematic bicycle model, scored by rules close to nuPlan's evaluation (rule compliance, progress, comfort), and the best is taken; if the best is expected to collide within 2 s, the output becomes an emergency brake.
 
+<!-- paper-figure:pdm-arch -->
+
 The paper's Val14 results (Table 2). CLS is the closed-loop score, with R meaning other vehicles react and NR that they do not; OLS is the open-loop score:
 
 | Method | CLS-R | CLS-NR | OLS |
@@ -110,7 +114,7 @@ The paper's Val14 results (Table 2). CLS is the closed-loop score, with R meanin
 | PDM-Closed | 92 | 93 | 42 |
 | Log Replay (replaying the human trajectory) | 80 | 94 | 100 |
 
-The learned PDM-Open has the best open-loop score and the worst closed-loop score; the rule-based PDM-Closed is the reverse. Even replaying the human trajectory does not get a perfect closed-loop score; one of the paper's explanations is that nuPlan's LQR controller sometimes drifts from the given trajectory, which is why PDM-Closed scores candidates by what the controller will actually drive. The authors conclude that the open-loop and closed-loop tasks are fundamentally misaligned. A preliminary version of PDM-Hybrid ranked first in the 2023 nuPlan challenge (out of 25 teams).
+The learned PDM-Open has the best open-loop score and the worst closed-loop score; the rule-based PDM-Closed is the reverse. Even replaying the human trajectory does not get a perfect closed-loop score; one of the paper's explanations is that nuPlan's LQR controller sometimes drifts from the given trajectory, which is why PDM-Closed scores candidates by what the controller will actually drive. The authors list this as the first finding in their introduction: "Open- and closed-loop evaluation are misaligned" ([§1](https://arxiv.org/html/2306.07962v2#S1.p2)). The stronger claim in the abstract is about something else: that precise short-term planning and long-horizon ego-forecasting are fundamentally at odds and should be handled separately. A preliminary version of PDM-Hybrid ranked first in the 2023 nuPlan challenge (out of 25 teams).
 
 ## Where learning comes in
 

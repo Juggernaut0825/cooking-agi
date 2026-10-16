@@ -19,7 +19,7 @@ The news keeps saying "AI chips are in short supply." Short of what, exactly? Is
 | Final test | Packaged chips → passing parts, binned by specification | Test time and equipment |
 | Boards and systems | Chips → modules, servers, racks | Power, cooling, networking and system assembly |
 
-The design company need not own a fab. NVIDIA states that the GH100 in the H100 is fabricated on "the TSMC 4N process customized for NVIDIA" ([Hopper architecture blog](https://developer.nvidia.com/blog/nvidia-hopper-architecture-in-depth/), 2022-03). HBM comes from memory makers; Micron, for example, sells HBM3E publicly ([Micron product page](https://www.micron.com/products/memory/hbm/hbm3e)). An AI chip needs three things at once, good logic dies, HBM and packaging, and is not shippable if any one is missing.
+The design company need not own a fab. NVIDIA states that the GH100 in the H100 is "fabricated using the TSMC 4N process customized for NVIDIA …" ([Hopper architecture blog](https://developer.nvidia.com/blog/nvidia-hopper-architecture-in-depth/#nvidia_h100_gpu_architecture_in-depth), H100 architecture section, 2022-03). HBM comes from memory makers; Micron, for example, sells HBM3E publicly ([Micron product page](https://www.micron.com/products/memory/hbm/hbm3e)). An AI chip needs three things at once, good logic dies, HBM and packaging, and is not shippable if any one is missing.
 
 ## What a process node name does and does not tell you
 

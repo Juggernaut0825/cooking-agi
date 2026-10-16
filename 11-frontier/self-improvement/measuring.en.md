@@ -23,6 +23,8 @@ $$
 
 $t$ is the geometric mean time of successful human baselines on the task; $h$ and $\beta$ are fitted. At $t=h$, $\sigma(0)=0.5$, so $h$ is the 50% horizon. Continuously scored tasks are turned into success or failure with a threshold chosen to represent human performance, and each task is weighted by the inverse square root of the size of its task family, so that large families do not dominate.
 
+<!-- paper-figure:metr-logistic-fits -->
+
 ### Work it once
 
 A teaching example with made-up numbers: one model runs 10 times on each of four task groups.
@@ -58,7 +60,9 @@ In the last two rows every group succeeds more than half the time, so the 50% po
 
 ## Trend numbers, and the premises behind them
 
-METR's 2025-03 paper reports that the frontier horizon has doubled about every 7 months since 2019, possibly faster in 2024; its extrapolation to month-long software tasks within 5 years is explicitly conditional. METR's [Time Horizon 1.1](https://metr.org/blog/2026-1-29-time-horizon-1-1/), released 2026-01-29, grew the suite from 170 to 228 tasks and the tasks of 8 hours or more from 14 to 31; the post-2023 doubling time is 131 days (165 under the old TH1), and since 2024 it is 89 days (109 under TH1). METR's current [data file](https://metr.org/assets/benchmark_results_1_1.yaml) gives 128.7 days (95% CI 104.4–158.0) for 2023 onward, excluding models whose 50% point is above 16 hours.
+METR's 2025-03 paper reports in its [abstract](https://arxiv.org/abs/2503.14499) that the frontier horizon has been "doubling approximately every seven months since 2019, though the trend may have accelerated in 2024"; its extrapolation to month-long software tasks within 5 years is explicitly conditional. METR's [Time Horizon 1.1](https://metr.org/blog/2026-1-29-time-horizon-1-1/), released 2026-01-29, grew the suite from 170 to 228 tasks and the tasks of 8 hours or more from 14 to 31; the post-2023 doubling time is 131 days (165 under the old TH1), and since 2024 it is 89 days (109 under TH1). METR's current [data file](https://metr.org/assets/benchmark_results_1_1.yaml) gives 128.7 days (95% CI 104.4–158.0) for 2023 onward, excluding models whose 50% point is above 16 hours.
+
+<!-- paper-figure:metr-time-horizon -->
 
 Converting 131 days: a year is about $365/131\approx2.8$ doublings, so the horizon would multiply by about 6.9 per year. That is arithmetic on a past trend, not a forecast. Read such numbers together with four premises:
 

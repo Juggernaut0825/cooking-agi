@@ -532,3 +532,835 @@ height = 558
 changes = "resized"
 zh = "Tülu 3 配方总览：面向通用能力和目标能力的数据整理、训练策略，以及分别用于开发阶段和最终评测阶段的标准化评测。"
 en = "The Tülu 3 recipe: data curation for general and targeted capabilities, training strategies, and a standardized evaluation suite for development and final evaluation."
+
+# --- infra set: infra, multi-agent, decision support, online eval (link cards) -----
+
+[[figure]]
+id = "pope-cost-latency"
+paper = "Efficiently Scaling Transformer Inference"
+credit = "Pope et al., 2022"
+arxiv = "2211.05102"
+figure = 1
+url = "https://arxiv.org/html/2211.05102v1#S1.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+zh = "PaLM 各规模模型推理时的成本与延迟（帕累托前沿，上下文 2048）：左图是生成阶段每个 token 的延迟，右图是处理 2048 个输入 token 的时间，每个点标出芯片数 C 和 batch 大小 B。batch 小的配置延迟低、每个 token 更贵，batch 大的更便宜、延迟更高，和正文手算的组 batch 取舍是同一件事。"
+en = "Cost versus latency for PaLM models at inference (Pareto frontier, context 2048). Left: per-token latency while generating. Right: time to process 2,048 input tokens. Each point is labelled with chip count C and batch size B. Small-batch settings are fast but cost more per token; large-batch settings are cheaper and slower. This is the same batching trade-off the hand calculation above works through."
+
+[[figure]]
+id = "fa3-pingpong"
+paper = "FlashAttention-3"
+credit = "Shah et al., 2024"
+arxiv = "2407.08608"
+figure = 1
+url = "https://arxiv.org/html/2407.08608v2#S3.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2407.08608-fig1.webp"
+width = 1600
+height = 327
+changes = "resized"
+zh = "FlashAttention-3 在 Hopper 上的 pingpong 调度：两个 warpgroup 轮流工作，一个做 softmax 时，另一个在跑矩阵乘（GEMM），softmax 的时间就藏在了矩阵乘后面；同一颜色表示同一轮迭代。这就是正文说的把分块矩阵乘和 softmax 交错执行。"
+en = "FlashAttention-3's ping-pong schedule on Hopper: two warpgroups take turns, so while one computes softmax the other runs its matrix multiplies (GEMMs), and the softmax time hides behind them. The same colour marks the same iteration. This is the interleaving of block matmuls and softmax described in the text."
+
+[[figure]]
+id = "mast-taxonomy"
+paper = "Why Do Multi-Agent LLM Systems Fail? (MAST)"
+credit = "Cemri et al., 2025"
+arxiv = "2503.13657"
+figure = 1
+url = "https://arxiv.org/html/2503.13657v3#S0.F1"
+license = "CC BY-NC-ND 4.0"
+license_url = "https://creativecommons.org/licenses/by-nc-nd/4.0/"
+zh = "MAST 分类法：14 种失败模式分成系统设计、agent 之间不对齐、任务验证三类，并按通常出现在执行的哪个阶段排开；百分比是它们在 1642 条执行轨迹里的占比。正文引用的 44.2%、32.3%、23.5% 就出自这张图。"
+en = "The MAST taxonomy: 14 failure modes grouped into system design, inter-agent misalignment and task verification, laid out by the stage of execution where each usually occurs. Percentages give each mode's and category's share across 1,642 execution traces. The 44.2%, 32.3% and 23.5% cited in the text come from this figure."
+
+[[figure]]
+id = "agent-scaling-benchmarks"
+paper = "Towards a Science of Scaling Agent Systems"
+credit = "Kim et al., 2025"
+arxiv = "2512.08296"
+figure = 2
+url = "https://arxiv.org/html/2512.08296v3#S4.F2"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "六个 agent benchmark 上，单 agent 与四种多 agent 结构的表现分布，百分比是相对单 agent 均值的变化。Finance Agent 上多 agent 全部提升（+57% 到 +80.8%），PlanCraft 上全部下降（−39% 到 −70%）：拆分有没有用，取决于任务结构。"
+en = "Performance of a single agent and four multi-agent designs on six agent benchmarks; percentages are changes relative to the single-agent mean. On Finance Agent every multi-agent design gains (+57% to +80.8%), while on PlanCraft every one loses (-39% to -70%). Whether splitting helps depends on how the task is structured."
+
+[[figure]]
+id = "bansal-complementary"
+paper = "Does the Whole Exceed its Parts?"
+credit = "Bansal et al., 2021"
+arxiv = "2006.14779"
+figure = 1
+url = "https://arxiv.org/html/2006.14779v3#S1.F1"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "Bansal 等的研究设定：以往研究里 AI 单独就比人和团队都强，解释带来的提升说明不了互补；这篇特意挑人和 AI 准确率相近的任务，问团队能否同时超过双方，以及解释是否比只显示 AI 的把握更有用。"
+en = "Bansal et al.'s setup. In earlier studies the AI alone already beat both the person and the team, so gains from explanations said nothing about complementarity. This study picks tasks where people and the AI are similarly accurate, then asks whether the team can beat both, and whether explanations help more than simply showing the AI's confidence."
+
+[[figure]]
+id = "schemmer-reliance-cases"
+paper = "Appropriate Reliance on AI Advice"
+credit = "Schemmer et al., 2023"
+arxiv = "2302.02187"
+figure = 1
+url = "https://arxiv.org/html/2302.02187v3#S3.F1"
+license = "CC BY-NC-ND 4.0"
+license_url = "https://creativecommons.org/licenses/by-nc-nd/4.0/"
+zh = "“先自己判断、再看 AI”流程里，人的初判（对或错）、AI 建议（对或错）和最后是否采纳 AI 的所有组合。RAIR 和 RSR 分别从其中两类情形算出：初判错而 AI 对时改对的比例，初判对而 AI 错时坚持的比例。"
+en = "In a decide-first-then-see-the-AI workflow, every combination of the person's initial judgement (right or wrong), the AI's advice (right or wrong) and whether the person finally follows the AI. RAIR and RSR are each computed from one pair of these cases: switching to the right answer when the initial judgement was wrong and the AI right, and keeping one's own answer when the initial judgement was right and the AI wrong."
+
+[[figure]]
+id = "ppi-intervals"
+paper = "Prediction-Powered Inference"
+credit = "Angelopoulos et al., 2023"
+arxiv = "2301.09633"
+figure = 1
+url = "https://arxiv.org/html/2301.09633v4#S2.F1"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "七个应用里三种置信区间的对比：只用少量人工标签的经典区间、把模型预测直接当真值的插补区间，以及 prediction-powered 区间。插补区间很窄，却常常不覆盖真值；PPI 区间仍然有效，又比经典区间窄。放到线上评估里，插补就相当于直接相信 judge。"
+en = "Three kinds of confidence interval across seven applications: classical intervals that use only the small labeled set, imputation intervals that treat model predictions as ground truth, and prediction-powered intervals. Imputation intervals are narrow but often miss the true value; PPI intervals stay valid and are narrower than classical ones. In online evaluation, imputation is the same as trusting the judge outright."
+
+# --- embodied set: perception, driving, robot learning (link cards) ---------------
+
+[[figure]]
+id = "detr-set-prediction"
+paper = "DETR"
+credit = "Carion et al., 2020"
+arxiv = "2005.12872"
+figure = 1
+url = "https://arxiv.org/html/2005.12872v3#S1.F1"
+license = "CC0 1.0"
+license_url = "https://creativecommons.org/publicdomain/zero/1.0/"
+image = "2005.12872-fig1.webp"
+width = 925
+height = 174
+changes = "converted"
+zh = "DETR 把检测当作集合预测：CNN 加 Transformer 一次并行输出一组固定数量的预测；训练时用二分图匹配把每个真值框唯一地配给一个预测，没配上的预测要学会输出“无物体”。正文里的 Hungarian 配对就是这一步。"
+en = "DETR treats detection as set prediction: a CNN plus a transformer outputs a fixed-size set of predictions in parallel; during training, bipartite matching assigns each ground-truth box to exactly one prediction, and unmatched predictions learn to output “no object”. This is the Hungarian matching step described above."
+
+[[figure]]
+id = "sam3-arch"
+paper = "SAM 3"
+credit = "Carion et al., 2025"
+arxiv = "2511.16719"
+figure = 4
+url = "https://arxiv.org/html/2511.16719v2#S3.F4"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "SAM 3 的结构总览：DETR 式的图像检测器和带记忆的视频跟踪器共用一个 Perception Encoder 骨干；文字或示例框提示先和图像特征融合，再由 object query 解码。presence token 只判断概念在不在图里，每个 query 只负责定位（论文 §3；更细的结构见附录图 11）。"
+en = "SAM 3 architecture overview: a DETR-style image detector and a memory-based video tracker share one Perception Encoder backbone; text or exemplar prompts are fused with the image features before object queries decode them. A presence token decides only whether the concept is in the image, so each query only has to localise (paper §3; Figure 11 in the appendix has the detailed diagram)."
+
+[[figure]]
+id = "bytetrack-byte"
+paper = "ByteTrack"
+credit = "Zhang et al., 2021"
+arxiv = "2110.06864"
+figure = 2
+url = "https://arxiv.org/html/2110.06864v3#S0.F2"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "(a) 所有检测框和它们的分数；(b) 以往方法只关联分数高于 0.5 的框，被遮挡的低分框被扔掉，轨迹断开；(c) BYTE 也关联低分框：虚线是 Kalman 预测的框，两个低分框靠和预测框的高 IoU 接回原轨迹。"
+en = "(a) All detection boxes with their scores. (b) Earlier methods associate only boxes scoring above 0.5, so occluded low-score boxes are thrown away and tracks break. (c) BYTE also associates low-score boxes: the dashed boxes are Kalman predictions, and the two low-score boxes rejoin their tracks through high IoU with them."
+
+[[figure]]
+id = "dust3r-arch"
+paper = "DUSt3R"
+credit = "Wang et al., 2023"
+arxiv = "2312.14132"
+figure = 2
+url = "https://arxiv.org/html/2312.14132v3#S2.F2"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "DUSt3R 的网络：两张图用共享的 ViT 编码器分别编码，两个 Transformer 解码器通过交叉注意力不断交换信息，最后两个回归头输出两张 pointmap 和置信度图。两张 pointmap 都表示在第一张图的相机坐标系里，所以对应关系和相对位姿可以直接从输出里读出来。"
+en = "DUSt3R's network: a shared ViT encoder encodes the two images, two transformer decoders keep exchanging information through cross-attention, and two regression heads output two pointmaps with confidence maps. Both pointmaps are expressed in the first image's camera frame, so correspondences and relative pose can be read directly from the output."
+
+[[figure]]
+id = "vggt-arch"
+paper = "VGGT"
+credit = "Wang et al., 2025"
+arxiv = "2503.11651"
+figure = 2
+url = "https://arxiv.org/html/2503.11651v1#S1.F2"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "VGGT 的结构：每张图先由 DINO 切成 patch token，再加一个用来估计相机的 camera token；网络交替做单帧内和跨全部帧的自注意力，最后相机头输出内外参，DPT 头输出深度图、pointmap 这类稠密结果。表里说的“一次前向”就是这条通路。"
+en = "VGGT's architecture: DINO turns each image into patch tokens and a camera token is appended for camera prediction; the network alternates frame-wise and global self-attention, then a camera head outputs intrinsics and extrinsics and a DPT head produces dense outputs such as depth maps and pointmaps. This is the single forward pass in the table."
+
+[[figure]]
+id = "3dgs-pipeline"
+paper = "3D Gaussian Splatting"
+credit = "Kerbl et al., 2023"
+arxiv = "2308.04079"
+figure = 2
+url = "https://arxiv.org/html/2308.04079v1#S2.F2"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2308.04079-fig2.webp"
+width = 975
+height = 180
+changes = "converted"
+zh = "3DGS 的优化流程：从 SfM 的稀疏点云出发建立一组三维 Gaussian，一边优化它们的参数，一边自适应地控制密度（复制、拆分、删除）；训练和渲染都用基于 tile 的快速光栅化器，所以训练完可以实时漫游。"
+en = "The 3DGS optimization pipeline: starting from the sparse SfM point cloud it creates a set of 3D Gaussians, then optimizes their parameters while adaptively controlling their density (clone, split, prune); training and rendering both use the fast tile-based rasterizer, so the trained scene can be navigated in real time."
+
+[[figure]]
+id = "3dgs-sparse-views"
+paper = "3D Gaussian Splatting"
+credit = "Kerbl et al., 2023"
+arxiv = "2308.04079"
+figure = 12
+url = "https://arxiv.org/html/2308.04079v1#S7.F12"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+zh = "在和训练视角重叠很少的视角下，3DGS 会出现伪影（右），Mip-NeRF360 也一样（左）。场景不是驾驶日志，但失效方式就是正文说的：渲染相机离开拍摄过的路线以后，重建就不可信了。"
+en = "In views with little overlap with the training views, 3DGS produces artifacts (right), and so does Mip-NeRF360 (left). The scene is not a driving log, but this is how reconstruction fails in the way the note describes, once the rendering camera leaves the captured route."
+
+[[figure]]
+id = "lss-lift"
+paper = "Lift-Splat-Shoot"
+credit = "Philion and Fidler, 2020"
+arxiv = "2008.05711"
+figure = 3
+url = "https://arxiv.org/html/2008.05711v1#S2.F3"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "LSS 的 lift 一步：每个像素预测一个在离散深度上的分布 α 和一个上下文向量 c，射线上每个深度点的特征是两者的外积。正文那个 4 档深度的算例就是这张图的缩小版。"
+en = "LSS's lift step: for each pixel the network predicts a distribution α over discrete depths and a context vector c, and the feature at each depth point along the ray is their outer product. The four-bin worked example above is a scaled-down version of this figure."
+
+[[figure]]
+id = "bevformer-arch"
+paper = "BEVFormer"
+credit = "Li et al., 2022"
+arxiv = "2203.17270"
+figure = 2
+url = "https://arxiv.org/html/2203.17270v2#S3.F2"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2203.17270-fig2.webp"
+width = 1564
+height = 583
+changes = "converted"
+zh = "BEVFormer 的整体结构：(a) 编码层由网格状的 BEV query、时序自注意力和空间交叉注意力组成；(b) 在空间交叉注意力里，每个 BEV query 只和它投影落到的图像区域交互；(c) 在时序自注意力里，每个 query 同时看当前时刻的 BEV query 和上一时刻的 BEV 特征。"
+en = "BEVFormer's overall architecture: (a) an encoder layer contains grid-shaped BEV queries, temporal self-attention and spatial cross-attention; (b) in spatial cross-attention each BEV query interacts only with image features in the regions its projection lands on; (c) in temporal self-attention each query attends to the current BEV queries and the previous BEV features."
+
+[[figure]]
+id = "uniad-pipeline"
+paper = "UniAD"
+credit = "Hu et al., 2022"
+arxiv = "2212.10156"
+figure = 2
+url = "https://arxiv.org/html/2212.10156v2#S1.F2"
+license = "CC BY-NC-SA 4.0"
+license_url = "https://creativecommons.org/licenses/by-nc-sa/4.0/"
+zh = "UniAD 的流水线：跟踪、建图、运动预测、占用预测都写成 Transformer 解码器，用 task query 作接口一节接一节往下传，最后一个基于注意力的规划器输出自车航点；整条链为规划联合优化。表里“用 query 串起来”的结构就是这张图。"
+en = "The UniAD pipeline: tracking, mapping, motion forecasting and occupancy prediction are all transformer decoders, linked node to node through task queries, and an attention-based planner at the end outputs ego waypoints; the whole chain is optimized jointly for planning. This is the query-linked structure listed in the table."
+
+[[figure]]
+id = "navsim2-pseudosim"
+paper = "Pseudo-Simulation (NAVSIM v2)"
+credit = "Cao et al., 2025"
+arxiv = "2506.04218"
+figure = 1
+url = "https://arxiv.org/html/2506.04218v3#S1.F1"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "伪仿真。上：从一个真实观测 (a) 出发，用面向驾驶场景的 3DGS 变体预先生成几个合成起点 (b, c, d)，评测前就渲染好，不在线交互。下：两阶段打分，第一阶段评 (a) 上的计划，第二阶段评合成起点上的计划，并按起点离第一阶段终点的远近加权。"
+en = "Pseudo-simulation. Top: from one real observation (a), a driving-specific 3DGS variant pre-generates synthetic start states (b, c, d) before evaluation rather than online. Bottom: two-stage scoring; stage 1 scores the plan for (a), stage 2 scores the plans from the synthetic starts, each weighted by how close its start is to the stage-1 endpoint."
+
+[[figure]]
+id = "pdm-arch"
+paper = "PDM"
+credit = "Dauner et al., 2023"
+arxiv = "2306.07962"
+figure = 2
+url = "https://arxiv.org/html/2306.07962v2#S3.F2"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "PDM 的结构：PDM-Closed 先选中心线、预测周围环境，生成速度和横向偏移各不相同的候选轨迹，逐条仿真、打分后选一条；PDM-Hybrid 再加一个学习模块，只修正远期航点，限制学习部分在闭环里的影响。"
+en = "PDM's architecture: PDM-Closed selects a centerline, forecasts the environment, creates trajectory proposals with different speeds and lateral offsets, and simulates and scores them to pick one; PDM-Hybrid adds a learned module that corrects only long-term waypoints, limiting the learned model's influence in closed loop."
+
+[[figure]]
+id = "motionlm-joint"
+paper = "MotionLM"
+credit = "Seff et al., 2023"
+arxiv = "2309.16534"
+figure = 1
+url = "https://arxiv.org/html/2309.16534v1#S1.F1"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "MotionLM 对一组交通参与者自回归地生成离散的运动 token，一次解码出彼此一致的交互式未来，而不是给每辆车各出一份独立的边缘预测。"
+en = "MotionLM autoregressively generates discrete motion tokens for a set of agents, decoding one consistent interactive future for all of them instead of an independent marginal forecast for each vehicle."
+
+[[figure]]
+id = "dp-multimodal"
+paper = "Diffusion Policy"
+credit = "Chi et al., 2023"
+arxiv = "2303.04137"
+figure = 4
+url = "https://arxiv.org/html/2303.04137v1#S4.F4"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "Push-T 上的多峰行为：在同一个状态下，末端可以从左边或右边推块。Diffusion Policy 两种都学到了，每次 rollout 只走一种；LSTM-GMM 和 IBC 偏向其中一种，BET 缺少动作的时间一致性，在两种之间摇摆。（v1 的编号；后续版本里是图 3。）"
+en = "Multimodal behaviour on Push-T: from the same state the end effector can push the block from the left or the right. Diffusion Policy learns both and commits to one per rollout; LSTM-GMM and IBC are biased toward one mode, and BET, lacking temporal action consistency, fails to commit. (v1 numbering; Fig. 3 in later versions.)"
+
+[[figure]]
+id = "act-chunking"
+paper = "ACT"
+credit = "Zhao et al., 2023"
+arxiv = "2304.13705"
+figure = 4
+url = "https://arxiv.org/html/2304.13705v1#S3.F4"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "ACT 怎样执行动作：一次预测一整块动作（action chunking），而且每一步都查询策略，把重叠的几个块在同一时刻的预测加权平均（temporal ensembling），不再“看一步、做一步”地交替。"
+en = "How ACT executes actions: it predicts a whole chunk of actions at a time and, querying the policy every step, averages the overlapping chunks' predictions for the same timestep (temporal ensembling), instead of alternating one observation with one action."
+
+[[figure]]
+id = "openvla-arch"
+paper = "OpenVLA"
+credit = "Kim et al., 2024"
+arxiv = "2406.09246"
+figure = 2
+url = "https://arxiv.org/html/2406.09246v1#S3.F2"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2406.09246-fig2.webp"
+width = 1600
+height = 594
+changes = "resized"
+zh = "OpenVLA 的结构：输入一张图像和一句指令，输出 7 维机器人动作。三部分：拼接 DINOv2 和 SigLIP 特征的视觉编码器，把视觉特征映射到语言嵌入空间的投影器，以及 Llama 2 7B 主干；动作由主干以离散 token 的形式生成。"
+en = "OpenVLA's architecture: given an image observation and a language instruction, it predicts 7-D robot actions. It has three parts: a vision encoder that concatenates DINOv2 and SigLIP features, a projector into the language embedding space, and the Llama 2 7B backbone, which generates the actions as discrete tokens."
+
+[[figure]]
+id = "pi0-overview"
+paper = "π0"
+credit = "Black et al., 2024"
+arxiv = "2410.24164"
+figure = 3
+url = "https://arxiv.org/html/2410.24164v1#S2.F3"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "π0 的框架：用自有的灵巧操作数据加开源数据组成预训练混合，训练一个 flow matching VLA。它由较大的 VLM 主干（从 PaliGemma 初始化）和处理机器人状态与动作的较小动作专家组成，得到的模型可以控制动作空间不同的多种机器人。"
+en = "The π0 framework: a pre-training mixture of the authors' own dexterous-manipulation data and open-source data trains a flow-matching VLA made of a larger VLM backbone (initialized from PaliGemma) and a smaller action expert for robot states and actions; the resulting model can control several robots with different action spaces."
+
+# --- frontier set: world models (link cards) --------------------------------------
+
+[[figure]]
+id = "dreamerv3-training"
+paper = "DreamerV3"
+credit = "Hafner et al., 2023"
+arxiv = "2301.04104"
+figure = 3
+url = "https://arxiv.org/html/2301.04104v2#Sx1.F3"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+zh = "DreamerV3 的训练过程。(a) 世界模型把观测编码成离散表示 z，由带循环状态 h 的序列模型在给定动作下预测，并重建输入来塑造表示；(b) actor 和 critic 只在世界模型想象出的表示轨迹上学习。"
+en = "DreamerV3's training process. (a) The world model encodes observations into discrete representations z, which a sequence model with recurrent state h predicts from actions, and reconstructs the inputs to shape them. (b) The actor and critic learn only from trajectories of these representations imagined by the world model."
+
+[[figure]]
+id = "dreamer4-world-model"
+paper = "Dreamer 4"
+credit = "Hafner et al., 2025"
+arxiv = "2509.24527"
+figure = 2
+url = "https://arxiv.org/html/2509.24527v1#S3.F2"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "Dreamer 4 的世界模型设计：因果 tokenizer 把图像块压成低维 latent；交互式 dynamics transformer 在动作、噪声水平、步长和 latent 交错排列的序列上，用 shortcut forcing 去噪。预训练后插入任务 token，从中预测动作、奖励和价值。"
+en = "Dreamer 4's world model: a causal tokenizer squeezes image patches into low-dimensional latents, and an interactive dynamics transformer denoises them with shortcut forcing over an interleaved sequence of actions, noise levels, step sizes and latents. After pretraining, inserted task tokens predict actions, rewards and values."
+
+[[figure]]
+id = "vjepa2-ac-training"
+paper = "V-JEPA 2"
+credit = "Assran et al., 2025"
+arxiv = "2506.09985"
+figure = 6
+url = "https://arxiv.org/html/2506.09985v1#S3.F6"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+zh = "V-JEPA 2-AC 的两项训练损失。左：teacher forcing，预测器每一步拿当前帧的真实表示，预测下一步的表示；右：rollout，把预测器自己的输出喂回去、往前多预测几步，减少滚动时的误差累积。"
+en = "V-JEPA 2-AC's two training losses. Left: teacher forcing, where the predictor takes the real representation of the current frame and predicts the next one. Right: rollout, where the predictor's own outputs are fed back so it learns to predict several steps ahead with less error accumulation."
+
+[[figure]]
+id = "vjepa2-ac-planning"
+paper = "V-JEPA 2"
+credit = "Assran et al., 2025"
+arxiv = "2506.09985"
+figure = 7
+url = "https://arxiv.org/html/2506.09985v1#S4.F7"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2506.09985-fig7.webp"
+width = 976
+height = 276
+changes = "converted"
+zh = "用 V-JEPA 2-AC 规划：在固定步数内用交叉熵方法（CEM）搜索动作序列，让想象出的未来表示和目标图片表示之间的 L1 距离最小；每轮用最好的一批动作更新高斯的均值和方差，最后返回均值。"
+en = "Planning with V-JEPA 2-AC: the cross-entropy method searches for an action sequence over a fixed horizon that minimises the L1 distance between the imagined future representation and the goal image's representation, refitting Gaussian means and variances to the best samples each round and returning the mean."
+
+[[figure]]
+id = "genie-lam"
+paper = "Genie"
+credit = "Bruce et al., 2024"
+arxiv = "2402.15391"
+figure = 4
+url = "https://arxiv.org/html/2402.15391v1#S2.F4"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "Genie 的潜在动作模型（LAM）：编码器看过去的帧和下一帧，给出一个量化后的潜在动作；解码器只看过去的帧和这个动作，必须重建下一帧，于是动作代码被迫说明“变了什么”。全程不需要动作标签。"
+en = "Genie's latent action model: the encoder sees past frames and the next frame and outputs a quantised latent action; the decoder sees only the past frames and that action and must reconstruct the next frame, so the code is forced to describe what changed. No action labels are needed."
+
+[[figure]]
+id = "gamengen-drift"
+paper = "GameNGen"
+credit = "Valevski et al., 2024"
+arxiv = "2408.14837"
+figure = 4
+url = "https://arxiv.org/html/2408.14837v2#S3.F4"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+zh = "自回归漂移：玩家站着不动的一段 50 帧轨迹，每 10 帧取一帧。上：不加噪声增强，20–30 步后画质迅速变差；下：训练时给上下文帧加噪声，同一轨迹不再退化。"
+en = "Auto-regressive drift on a 50-frame trajectory in which the player stands still, showing every 10th frame. Top: without noise augmentation, quality degrades fast after 20–30 steps. Bottom: with noise added to the context frames during training, the same trajectory does not degrade."
+
+[[figure]]
+id = "dreamgen-overview"
+paper = "DreamGen"
+credit = "Jang et al., 2025"
+arxiv = "2505.12705"
+figure = 2
+url = "https://arxiv.org/html/2505.12705v2#S1.F2"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+zh = "DreamGen 的流程：先在遥操作轨迹上微调视频世界模型；给定首帧和语言指令生成视频；视频没有动作标签，就用潜在动作模型或逆动力学模型推出伪动作，得到 neural trajectories；最后用它们训练视觉运动策略。"
+en = "The DreamGen pipeline: fine-tune a video world model on teleoperated trajectories, generate videos from an initial frame and a language instruction, infer pseudo-actions with a latent action model or an inverse dynamics model to form neural trajectories, then train visuomotor policies on them."
+
+[[figure]]
+id = "veo-eval-ood"
+paper = "Veo world simulator"
+credit = "Gemini Robotics Team, 2025"
+arxiv = "2512.10675"
+figure = 8
+url = "https://arxiv.org/html/2512.10675v2#S4.F8"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2512.10675-fig8.webp"
+width = 488
+height = 423
+changes = "converted"
+zh = "最强的那个策略（论文叫 Policy A）在背景、干扰物、新物体等分布外泛化轴上的成功率：Veo (Robotics) 的预测和真机结果并排对照。论文说，靠它能把这几条轴按难度排对顺序；正文的读数要回到这张图去数点。"
+en = "Success rates of the strongest policy (Policy A in the paper) across out-of-distribution axes such as backgrounds, distractors and novel objects, with Veo (Robotics) predictions next to real-world results. The paper says the predictions rank the axes by difficulty correctly; the note's numbers are read off this figure."
+
+[[figure]]
+id = "othello-intervention"
+paper = "Othello-GPT"
+credit = "Li et al., 2022"
+arxiv = "2210.13382"
+figure = 2
+url = "https://arxiv.org/html/2210.13382v5#S4.F2"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2210.13382-fig2.webp"
+width = 1032
+height = 722
+changes = "converted"
+zh = "Othello-GPT 的干预实验：(A) 只把一个格子（如 E6）从白改成黑；(B) 探针读出的棋盘状态被改动后，模型预测的合法走法跟着变了；(C) 从某一层起，在最后一个 token 上逐层替换内部表示再继续计算。这一步检验的是“在使用”，不只是“读得出”。"
+en = "Othello-GPT's intervention experiment. (A) Flip a single tile, such as E6, from white to black. (B) After the probed board state is edited, the model's predicted legal moves change accordingly. (C) From a chosen layer on, the internal representation at the last token is replaced layer by layer before computation resumes. This tests use, not just readability."
+
+[[figure]]
+id = "vafa-manhattan-maps"
+paper = "Implicit world models"
+credit = "Vafa et al., 2024"
+arxiv = "2406.03689"
+figure = 3
+url = "https://arxiv.org/html/2406.03689v3#S3.F3"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+zh = "从三个模型生成的路线反推出的曼哈顿地图：真实世界模型（左）、加了噪声的真实模型（中）、在随机游走上训练的 Transformer（右）。放大处黑色是真实街道，红色是重建算法加出的假街道：Transformer 的下一步几乎总是合法，反推出的地图却一团乱。"
+en = "Maps of Manhattan reconstructed from routes produced by three models: the true world model (left), the true model with added noise (middle) and a Transformer trained on random walks (right). In the zoomed views, black edges are real streets and red ones are false streets added by the reconstruction: the Transformer's next steps are almost always valid, yet its implied map is a mess."
+
+# --- frontier: deep RL model notes ------------------------------------------------
+
+[[figure]]
+id = "worldmodels-agent"
+paper = "World Models"
+credit = "Ha and Schmidhuber, 2018"
+arxiv = "1803.10122"
+figure = 8
+url = "https://arxiv.org/html/1803.10122v4#S2.F8"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "1803.10122-fig8.webp"
+width = 820
+height = 602
+changes = "converted"
+zh = "World Models 智能体的流程图：V（VAE）把每帧观测压成 latent z，M（MDN-RNN）根据 z 和动作更新隐藏状态 h，C（线性控制器）只看 z 和 h 输出动作。这是“先压缩、再在 latent 里预测”的一个早期版本。"
+en = "Flow diagram of the World Models agent: V (a VAE) compresses each observation into a latent z, M (an MDN-RNN) updates its hidden state h from z and the action, and C (a linear controller) outputs actions from z and h only. An early form of compressing first and predicting in latent space."
+
+[[figure]]
+id = "muzero-model"
+paper = "MuZero"
+credit = "Schrittwieser et al., 2019"
+arxiv = "1911.08265"
+figure = 1
+url = "https://arxiv.org/html/1911.08265v2#S3.F1"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "MuZero 怎样规划、行动和训练。(A) 表示函数 h 把历史观测编码成隐藏状态，动力学函数 g 给出奖励和下一个隐藏状态，预测函数 f 给出策略和价值，MCTS 在这些隐藏状态上搜索；(B) 按根节点访问次数采样动作；(C) 展开 K 步，只训练它预测策略、价值和奖励，不要求重建观测。"
+en = "How MuZero plans, acts and trains. (A) A representation function h encodes past observations into a hidden state, a dynamics function g gives a reward and the next hidden state, a prediction function f gives a policy and a value, and MCTS searches over these hidden states. (B) Actions are sampled from the root's visit counts. (C) The model is unrolled K steps and trained only to predict policy, value and reward, with no observation reconstruction."
+
+# --- frontier: self-improvement ---------------------------------------------------
+
+[[figure]]
+id = "rsi-survey-taxonomy"
+paper = "RSI survey"
+credit = "Chen et al., 2026"
+arxiv = "2607.07663"
+figure = 1
+url = "https://arxiv.org/html/2607.07663v2#Sx2.SSx2.fig1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+zh = "综述的两轴分类：四列是改进落在哪里（部署时自我演化、训练时自我迭代、自我评估、自动研究），三行是谁来验证（人在回路中、人在回路上、闭环），格子里是代表系统。作者指出文献几乎都落在中间一行，闭环那一行很稀。"
+en = "The survey's two-axis taxonomy: four columns say where the improvement lands (deployment-time self-evolution, training-time self-iteration, self-evaluation, auto research) and three rows say who validates it (human in the loop, human on the loop, closed loop), with representative systems in each cell. The authors note that the literature sits almost entirely in the middle row, and the closed-loop row is sparse."
+
+[[figure]]
+id = "azr-loop"
+paper = "Absolute Zero"
+credit = "Zhao et al., 2025"
+arxiv = "2505.03335"
+figure = 3
+url = "https://arxiv.org/html/2505.03335v3#S2.F3"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2505.03335-fig3.webp"
+width = 1252
+height = 479
+changes = "converted"
+zh = "Absolute Zero 的回路：同一个模型先出题，环境（代码执行器）把题变成验证过的题目和答案，并给出题者一个“可学性”奖励；再由它解题，和标准答案比对拿解题奖励。出题和解题两个角色一起训练。"
+en = "The Absolute Zero loop: one model proposes a task, the environment (a code executor) turns it into a validated problem and answer and returns a learnability reward to the proposer; the same model then solves the problem and is rewarded for matching the answer. The proposer and solver roles are trained jointly."
+
+[[figure]]
+id = "gv-gap-definitions"
+paper = "Mind the Gap"
+credit = "Song et al., 2024"
+arxiv = "2412.02674"
+figure = 2
+url = "https://arxiv.org/html/2412.02674v2#S2.F2"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "以拒绝采样为例，把 Song 等自我改进框架里的关键定义画在一张图上（为简单起见只看一个 prompt），对照正文的 Definition 2.1 看 gap 指的是哪一段差。"
+en = "Rejection sampling used as an example to visualise the key definitions of Song et al.'s self-improvement framework, for a single prompt; read it alongside Definition 2.1 in the note to see which difference the gap measures."
+
+[[figure]]
+id = "alphaevolve-loop"
+paper = "AlphaEvolve"
+credit = "Novikov et al., 2025"
+arxiv = "2506.13131"
+figure = 2
+url = "https://arxiv.org/html/2506.13131v1#S2.F2"
+license = "CC BY-NC-ND 4.0"
+license_url = "https://creativecommons.org/licenses/by-nc-nd/4.0/"
+zh = "AlphaEvolve 的发现流程展开图：用户给出标好可改部分的初始程序、评估代码和配置；prompt 采样器从程序库取程序拼成 prompt，LLM 生成代码 diff，评估器打分，好的程序存回程序库，循环往复。正文的伪代码就是按这张图改写的。"
+en = "AlphaEvolve's discovery process in detail: the user supplies an initial program with the blocks to evolve marked, evaluation code and configuration; a prompt sampler builds prompts from the program database, LLMs propose code diffs, evaluators score the new programs, and promising ones go back into the database. The note's pseudocode follows this figure."
+
+[[figure]]
+id = "dgm-archive"
+paper = "Darwin Gödel Machine"
+credit = "Zhang et al., 2025"
+arxiv = "2505.22954"
+figure = 3
+url = "https://arxiv.org/html/2505.22954v3#S4.F3"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+zh = "DGM 在 SWE-bench 上的一次运行。左：agent archive 的树，每个节点是一个 coding agent，颜色表示得分，边表示谁改出了谁，很多通向突破的路径经过得分较低的节点；右：最好得分随迭代上升，最终最好 agent 的谱系中途有两次下跌。"
+en = "One DGM run on SWE-bench. Left: the archive as a tree, where each node is a coding agent coloured by score and edges show which agent produced which; many paths to innovation pass through lower-scoring nodes. Right: the best score rises over iterations, while the lineage of the final best agent dips twice along the way."
+
+[[figure]]
+id = "metr-logistic-fits"
+paper = "METR time horizon"
+credit = "Kwa et al., 2025"
+arxiv = "2503.14499"
+figure = 4
+url = "https://arxiv.org/html/2503.14499v4#S3.F4"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+zh = "每个模型的成功率随任务人类用时的变化，以及拟合出的逻辑曲线：曲线降到 50% 处对应的人类用时，就是这个模型的 50% time horizon。"
+en = "Each model's success rate against human task time, with the fitted logistic curve; the human time at which the curve crosses 50% is that model's 50% time horizon."
+
+[[figure]]
+id = "metr-time-horizon"
+paper = "METR time horizon"
+credit = "Kwa et al., 2025"
+arxiv = "2503.14499"
+figure = 1
+url = "https://arxiv.org/html/2503.14499v4#S1.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2503.14499-fig1.webp"
+width = 1600
+height = 879
+changes = "resized"
+zh = "前沿模型的 50% time horizon 随发布时间的变化（纵轴取对数），过去 6 年大约每 7 个月翻一倍；阴影是按任务族、任务和尝试做分层 bootstrap 得到的 95% 置信区间。"
+en = "The 50% time horizon of frontier models by release date (log scale), doubling roughly every 7 months over six years; the shaded band is a 95% confidence interval from a hierarchical bootstrap over task families, tasks and attempts."
+
+# --- frontier: test-time compute --------------------------------------------------
+
+[[figure]]
+id = "snell-search-methods"
+paper = "Compute-optimal test-time scaling"
+credit = "Snell et al., 2024"
+arxiv = "2408.03314"
+figure = 2
+url = "https://arxiv.org/html/2408.03314v1#S5.F2"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2408.03314-fig2.webp"
+width = 1600
+height = 793
+changes = "converted"
+zh = "三种用 PRM 花测试时计算的方法：best-of-N 写完整份答案再按 PRM 末步分数挑；beam search 每一步只留 PRM 打分最高的 M 个前缀；lookahead 给每个候选步再往前滚 k 步后才打分，花的计算更多。"
+en = "Three ways to spend test-time compute with a PRM: best-of-N writes full answers and picks by the PRM's final score; beam search keeps the top M prefixes by PRM score at each step; lookahead search rolls each candidate step k steps further before scoring it, which costs more compute."
+
+[[figure]]
+id = "snell-parallel-sequential"
+paper = "Compute-optimal test-time scaling"
+credit = "Snell et al., 2024"
+arxiv = "2408.03314"
+figure = 5
+url = "https://arxiv.org/html/2408.03314v1#S6.F5"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+zh = "并行采样和串行修改。左：并行是独立生成 N 份，串行是每一份都看着前几份来改；右：两者都能用验证器挑最好的，也可以把预算分给几条串行链，先在链内挑、再跨链挑。"
+en = "Parallel sampling versus sequential revisions. Left: parallel sampling generates N answers independently, while sequential revision conditions each attempt on the earlier ones. Right: either way a verifier can pick the best, and the budget can be split across several sequential chains, choosing within each chain and then across chains."
+
+[[figure]]
+id = "monkeys-coverage-selection"
+paper = "Large Language Monkeys"
+credit = "Brown et al., 2024"
+arxiv = "2407.21787"
+figure = 7
+url = "https://arxiv.org/html/2407.21787v3#S4.F7"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2407.21787-fig7.webp"
+width = 1600
+height = 535
+changes = "converted"
+zh = "覆盖率（有完美验证器时的成绩）和几种常用挑选方法（多数投票、奖励模型挑选、奖励模型加权投票）随采样数的变化：覆盖率接近 100%，各种挑选方法却在 100 个样本之前就饱和，一直低于覆盖率。"
+en = "Coverage (performance with an oracle verifier) against common selection methods (majority voting, reward-model selection, reward-model-weighted voting) as the number of samples grows: coverage gets close to 100%, but every selection method saturates before 100 samples and stays below it."
+
+[[figure]]
+id = "lightman-prm-grading"
+paper = "Let's Verify Step by Step"
+credit = "Lightman et al., 2023"
+arxiv = "2305.20050"
+figure = 2
+url = "https://arxiv.org/html/2305.20050v1#S2.F2"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "PRM 给同一道题的两份解答逐步打分：左边正确，右边有错；绿色背景表示 PRM 给这一步打分高，红色表示低。PRM 找出了错误解答里出错的那一步。"
+en = "A PRM grading two solutions to the same problem step by step: the left one is correct, the right one is not; a green background means a high PRM score for that step and red a low one. The PRM finds the step where the incorrect solution goes wrong."
+
+[[figure]]
+id = "r1zero-training"
+paper = "DeepSeek-R1"
+credit = "DeepSeek-AI, 2025"
+arxiv = "2501.12948"
+figure = 1
+url = "https://arxiv.org/html/2501.12948v2#S2.F1"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "DeepSeek-R1-Zero 的 RL 训练过程：(a) AIME 准确率（pass@1 和 16 票投票）随训练步数上升，横线是人类参赛者的平均成绩；(b) 训练集上的平均回答长度随之稳步变长，而奖励里没有任何一项要求它“多想”。"
+en = "DeepSeek-R1-Zero during RL training: (a) AIME accuracy (pass@1 and 16-sample voting) rises with training steps, shown against the average human contestant; (b) the average response length on the training set grows steadily, although nothing in the reward asks for longer thinking."
+
+[[figure]]
+id = "drgrpo-bias"
+paper = "Dr. GRPO"
+credit = "Liu et al., 2025"
+arxiv = "2503.20783"
+figure = 4
+url = "https://arxiv.org/html/2503.20783v2#S3.F4"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2503.20783-fig4.webp"
+width = 1600
+height = 225
+changes = "converted"
+zh = "GRPO 里的两种偏差：有效 advantage 是无偏 advantage 被重新加权后的结果。按组内标准差归一化，会给不同题目不同权重（蓝圈大小）；按回答长度归一化，会给不同长度的回答不同权重（橙色箭头长短），于是长的错误回答每个 token 受罚更轻。"
+en = "The two biases in GRPO: the effective advantage is a reweighted version of the unbiased one. Normalising by the group's standard deviation weights questions differently (size of the blue circles), and normalising by response length weights responses differently (length of the orange arrows), so long wrong answers are penalised less per token."
+
+[[figure]]
+id = "rlvr-search-trees"
+paper = "RLVR reasoning boundary"
+credit = "Yue et al., 2025"
+arxiv = "2504.13837"
+figure = 1
+url = "https://arxiv.org/html/2504.13837v5#S0.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+zh = "左：基座模型和 RLVR 模型对同一道题反复采样得到的搜索树。题 A 上 RL 把概率集中到有奖励的路径，采样更高效；题 B 上基座有正确路径，RL 模型却没有了。右：训练越久，pass@1 上升，pass@256 能覆盖的题却变少。"
+en = "Left: search trees from repeated sampling by a base model and its RLVR-trained version on the same problem. On problem A, RL concentrates probability on rewarded paths and samples them more efficiently; on problem B, the base model has a correct path that the RL model has lost. Right: as training goes on, pass@1 rises while pass@256 coverage falls."
+
+[[figure]]
+id = "matharena-contamination"
+paper = "MathArena"
+credit = "Balunović et al., 2025"
+arxiv = "2505.23281"
+figure = 4
+url = "https://arxiv.org/html/2505.23281v3#S4.F4"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+zh = "新旧两年竞赛的对比（AIME、HMMT）：黑色虚线是人类成绩的分位数，落在这条线上方的模型很可能受了旧题污染。"
+en = "Old versus new competitions (AIME, HMMT): the black dotted line marks quantiles of human performance, and models above it are likely contaminated on the older problems."
+
+# --- frontier: agentic RL ---------------------------------------------------------
+
+[[figure]]
+id = "taubench-overview"
+paper = "τ-bench"
+credit = "Yao et al., 2024"
+arxiv = "2406.12045"
+figure = 1
+url = "https://arxiv.org/html/2406.12045v1#S1.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+zh = "τ-bench 的设定：agent 一边调用数据库 API 工具，一边和 LLM 扮演的用户多轮对话，还要遵守领域政策文档。右边是航空场景的一条轨迹：agent 按政策拒绝改签基础经济舱，改为提议取消后重订。"
+en = "The τ-bench setup: an agent calls database API tools and talks with an LLM-simulated user over several turns while following a domain policy document. On the right, an airline trajectory in which the agent follows policy, refuses to change a basic-economy flight and proposes cancelling and rebooking instead."
+
+[[figure]]
+id = "osworld-infra"
+paper = "OSWorld"
+credit = "Xie et al., 2024"
+arxiv = "2404.07972"
+figure = 2
+url = "https://arxiv.org/html/2404.07972v2#S2.F2"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2404.07972-fig2.webp"
+width = 1076
+height = 460
+changes = "converted"
+zh = "OSWorld 的环境结构：配置文件负责初始化任务，agent 在虚拟机里交互，结束后做后处理、取回文件和信息，再运行评估函数；多个环境可以在一台机器上并行，用于训练或评测。正文清单里的任务与初始状态、动作空间、检查器和隔离，在图里都有对应。"
+en = "OSWorld's environment infrastructure: a configuration file initialises the task, the agent interacts with a virtual machine, then post-processing retrieves files and information and an evaluation function runs; many environments can run in parallel on one host for training or evaluation. Each item in the note's list (task and initial state, action space, checker, isolation) has a place in it."
+
+[[figure]]
+id = "baker-hack-cot"
+paper = "CoT monitoring"
+credit = "Baker et al., 2025"
+arxiv = "2503.11926"
+figure = 1
+url = "https://arxiv.org/html/2503.11926v1#S1.F1"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "一个前沿推理模型在 RL 训练中被抓到的 reward hacking：它在思维链里写道，测试只检查某一个函数，真正实现会“很难”，于是决定“糊弄”过去，让 verify 永远返回 true。这是 GPT-4o 监控器在一次前沿 RL 运行中发现的真实例子。"
+en = "Reward hacking caught during RL training of a frontier reasoning model: its chain of thought notes that the tests only check one function and that a genuine fix would be hard, then decides to 'fudge' it by making verify always return true. A real example flagged by a GPT-4o monitor during a frontier RL run."
+
+[[figure]]
+id = "searchr1-rollout"
+paper = "Search-R1"
+credit = "Jin et al., 2025"
+arxiv = "2503.09516"
+figure = 1
+url = "https://arxiv.org/html/2503.09516v5#S3.F1"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "Search-R1 在 PPO 和 GRPO 下的训练示意：rollout 时 LLM 和搜索引擎多轮交互，检索回来的内容留在上下文里。正文说的“检索 token 不进 loss”，针对的就是这样的轨迹。"
+en = "Search-R1 training with PPO and GRPO: during rollout the LLM interacts with the search engine over several turns, and the retrieved text stays in the context. The note's point that retrieved tokens are kept out of the loss applies to trajectories like this."
+
+[[figure]]
+id = "gigpo-grouping"
+paper = "GiGPO"
+credit = "Feng et al., 2025"
+arxiv = "2505.10978"
+figure = 1
+url = "https://arxiv.org/html/2505.10978v3#S4.F1"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "多轮 agent 训练的三种做法。左：原版 GRPO 对整条轨迹算 episode 级 advantage；中：为每个状态额外 rollout 来构造步级分组，反馈细但代价太高；右：GiGPO 把不同轨迹里从同一状态出发的动作归成一组，不加 rollout 就得到步级信用。"
+en = "Three ways to train multi-turn agents. Left: vanilla GRPO computes episode-level advantages over whole trajectories. Middle: extra per-state rollouts build step-level groups, giving fine-grained feedback at prohibitive cost. Right: GiGPO groups the actions taken from the same state across existing trajectories, getting step-level credit without extra rollouts."
+
+# --- frontier: interpretability ---------------------------------------------------
+
+[[figure]]
+id = "circular-features"
+paper = "Multi-dimensional features"
+credit = "Engels et al., 2024"
+arxiv = "2405.14860"
+figure = 1
+url = "https://arxiv.org/html/2405.14860v3#S1.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2405.14860-fig1.webp"
+width = 670
+height = 243
+changes = "converted"
+zh = "GPT-2 small 第 7 层里，星期、月份和 20 世纪年份的表示排成圆环，颜色表示产生这个表示的 token。它们是通过聚类 SAE 字典方向找到的二维特征，不能再拆成一维方向。"
+en = "Days of the week, months of the year and years of the 20th century lie on circles in layer 7 of GPT-2 small, coloured by the token that produced each representation. Found by clustering SAE dictionary directions, they are two-dimensional features that do not split into one-dimensional directions."
+
+[[figure]]
+id = "control-task-probes"
+paper = "Probe control tasks"
+credit = "Hewitt and Liang, 2019"
+arxiv = "1909.03368"
+figure = 1
+url = "https://arxiv.org/html/1909.03368v1#S0.F1"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "控制任务的构造：给词表里每个词型随机指定一个输出，每个 token 都取它所属词型的输出，与上下文无关。输入输出空间和真实任务（如词性标注）一样，但探针只有靠记忆才能学会。"
+en = "How a control task is built: each word type in the vocabulary gets a random output, and every token takes its type's output regardless of context. The input and output spaces match the real task (such as part-of-speech tagging), but a probe can learn it only by memorising."
+
+[[figure]]
+id = "jumprelu-toy"
+paper = "JumpReLU SAEs"
+credit = "Rajamanoharan et al., 2024"
+arxiv = "2407.14435"
+figure = 1
+url = "https://arxiv.org/html/2407.14435v3#S1.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2407.14435-fig1.webp"
+width = 1600
+height = 355
+changes = "converted"
+zh = "为什么 JumpReLU（或 TopK）比 ReLU 更适合 SAE：特征不激活时预激活值也不总是负的，ReLU 会留下假阳性；靠调低编码器偏置去掉假阳性，又会系统性地低估激活值（收缩）；JumpReLU 用一个独立阈值截掉阈值以下的值，阈值以上原样保留。"
+en = "A toy model of why JumpReLU (or TopK) beats ReLU for SAEs: when a feature is inactive its pre-activation is low but not always negative, so ReLU lets false positives through; lowering the encoder bias removes them but systematically underestimates magnitudes (shrinkage); JumpReLU's separate threshold screens out values below it and leaves those above untouched."
+
+[[figure]]
+id = "transcoder-vs-sae"
+paper = "Transcoders"
+credit = "Dunefsky et al., 2024"
+arxiv = "2406.11944"
+figure = 1
+url = "https://arxiv.org/html/2406.11944v2#S1.F1"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+zh = "SAE、MLP transcoder 和 MLP 子层的对比：SAE 学的是重建同一处的激活，transcoder 学的是模仿 MLP 子层从输入到输出的映射，所以能替换 MLP、用来画电路（论文的 HTML 版没有单独的图片文件，所以这里只放链接）。"
+en = "SAEs, MLP transcoders and MLP sublayers compared: an SAE learns to reconstruct activations at one place, while a transcoder imitates an MLP sublayer's input-output behaviour, so it can stand in for the MLP when tracing circuits (the paper's HTML version has no separate image file, so this is a link)."
+
+[[figure]]
+id = "rome-causal-trace"
+paper = "ROME"
+credit = "Meng et al., 2022"
+arxiv = "2202.05262"
+figure = 1
+url = "https://arxiv.org/html/2202.05262v5#S1.F1"
+license = "arXiv non-exclusive license"
+license_url = "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
+zh = "causal tracing 的做法：(a) 正常跑一遍；(b) 破坏主语 token 后再跑一遍；(c) 把选定的内部激活恢复成干净值，看输出能否回到原来的预测；(e–g) 分别画出每个隐藏状态、只恢复 MLP、只恢复注意力时的因果效应。"
+en = "Causal tracing: (a) run the network normally; (b) run it again with the subject token corrupted; (c) restore selected internal activations to their clean values and see whether the original prediction returns. Panels (e–g) map the causal effect of each hidden state, of MLP activations only and of attention only."
+
+[[figure]]
+id = "ioi-circuit"
+paper = "IOI circuit"
+credit = "Wang et al., 2022"
+arxiv = "2211.00593"
+figure = 2
+url = "https://arxiv.org/html/2211.00593v1#S2.F2"
+license = "CC BY 4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+image = "2211.00593-fig2.webp"
+width = 1600
+height = 656
+changes = "converted"
+zh = "GPT-2 small 里实现间接宾语识别（IOI）的电路：左边的输入 token 进入残差流，各类 attention head 在位置之间搬运信息；query 和输出箭头表示写到哪个位置，key/value 箭头表示从哪里读。正文说的 duplicate token、S-inhibition、name mover 等角色都在图里。"
+en = "The circuit in GPT-2 small that performs indirect object identification: input tokens on the left enter the residual stream, and classes of attention heads move information between positions; query and output arrows show where a head writes, key/value arrows where it reads. The roles named in the note, such as duplicate token, S-inhibition and name mover heads, all appear in it."

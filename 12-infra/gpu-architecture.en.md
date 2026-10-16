@@ -163,6 +163,8 @@ Programs never write 4×4 directly. At the PTX level you can see how the interfa
 
 One `mma.sync` equals 32 of the 4×4×4 tiles above (4,096 / 128). The trend: each instruction does more work, runs more asynchronously, and is issued by fewer threads. With fewer threads and registers spent feeding the Tensor Cores, the remaining warps can move data or compute softmax; [FlashAttention-3](https://arxiv.org/abs/2407.08608) on Hopper uses warp specialization to overlap data movement with compute and interleaves block-wise matmul with softmax (see also [attention kernels](../00-foundations/deep-dives/attention-kernels.en.md)). The actual code is left to [CUDA](cuda.en.md) and libraries such as CUTLASS.
 
+<!-- paper-figure:fa3-pingpong -->
+
 ## Data types: what each Tensor Core generation added
 
 | Format | Sign / exponent / mantissa bits | First Tensor Core support | Notes |

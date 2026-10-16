@@ -46,6 +46,8 @@ The example is deliberately extreme. Real demonstrations are rarely exactly 50/5
 
 [Diffusion Policy](https://arxiv.org/abs/2303.04137v1) (Columbia, TRI, MIT, 2023-03) writes the policy as conditional denoising: starting from noise, it denoises a sequence of actions conditioned on the observation. The paper's T-block pushing example shows a state from which the block can be approached on the left or on the right; the policy learned both and commits to one of them in each rollout (§IV-A, Fig. 4). The authors report an average improvement of 46.9% over the previous best methods across 11 tasks from 4 benchmarks.
 
+<!-- paper-figure:dp-multimodal -->
+
 Flow matching is another way to train the same family of generative models. The objective and a 1-D example are in the [Qwen-Image note](../../03-multimodal-learning/image-generation.en.md); this note keeps its notation: time runs from the noise end $t=0$ to the data end $t=1$, $x_t=(1-t)\epsilon+ta$, and the model learns a velocity. Applied to the obstacle example, it shows why the number of sampling steps matters.
 
 Teaching setup: no network is trained; we use the **ideal** velocity field for this two-point distribution, so the only source of error is the number of integration steps. Given $a=\pm1$, $x_t$ is normal with mean $ta$ and standard deviation $1-t$, so:
@@ -83,6 +85,8 @@ Diffusion-type models are not the only heads that can represent "several answers
 
 [ACT](https://arxiv.org/abs/2304.13705v1) (Action Chunking with Transformers, Stanford, 2023-04) reads an observation every $k$ steps and outputs the next $k$ actions at once. The paper's reason: the number of decisions drops to $1/k$, which shortens the task's effective horizon $k$-fold and directly targets compounding error (§IV-A). Diffusion Policy adds a second reason: if each step is sampled independently from a multimodal distribution, consecutive steps can come from different modes and the motion jitters between two valid routes (§IV-C).
 
+<!-- paper-figure:act-chunking -->
+
 ### Worked example: choosing the chunk length (teaching example)
 
 Setup: 50 Hz control, 20 ms per step. During the first 4 steps in front of the cup, the image does not yet show which side the arm has started toward, so each decision the policy makes is a fresh coin flip, half left and half right; after 4 steps the arm is clearly on one side and the policy follows through. Separately, at some moment someone bumps the cup, and the policy only notices at its next observation.
@@ -106,7 +110,7 @@ How real systems handle this tension:
 - **ACT's ablation.** With temporal ensembling off and averaged over 4 simulated settings, success is 1% at $k=1$, 44% at $k=100$, and slightly lower at $k=200$ and $400$; the authors attribute the dip to near open-loop control, too little reactivity, and the difficulty of modeling long sequences (§VI-A).
 - **ACT's temporal ensembling.** The policy is queried at every step, so each time step receives predictions from several chunks, which are averaged with weights $w_i=\exp(-m\,i)$, where $w_0$ goes to the oldest prediction. The authors find both chunking and temporal ensembling important for success.
 - **Diffusion Policy's receding horizon.** It reads the latest $T_o$ observation steps, predicts $T_p$ steps, executes $T_a$ of them and then predicts again (§II-C). This is the same idea as [MPC executing only the first action](../../05-post-training/deep-rl/model-based.en.md), with several actions executed at a time. The paper's ablation in Fig. 6 describes the choice of $T_a$ as a trade-off between temporal consistency and responsiveness.
-- **What π0 does.** It outputs 50 steps at once; 50 Hz robots re-run inference after executing 25 steps (0.5 s), 20 Hz robots after 16 (0.8 s). The appendix says temporal ensembling was tried early on and hurt policy performance, so chunks are executed open loop ([Appendix D](https://arxiv.org/abs/2410.24164v1)).
+- **What π0 does.** It outputs 50 steps at once; 50 Hz robots re-run inference after executing 25 steps (0.5 s), 20 Hz robots after 16 (0.8 s). The appendix says: "We tried temporal ensembling … early on and found that it hurt policy performance …", so chunks are executed open loop ([Appendix A-D](https://arxiv.org/html/2410.24164v1#A1.SS4)).
 
 ACT finds temporal ensembling important and π0 finds it harmful; the two papers differ in model, action head and tasks, so this does not settle which is right. Our inference: if chunks come from a multimodal sampler, averaging one chunk that chose left with one that chose right brings you back to 0, while ACT decodes deterministically at test time, so its chunks are more likely to agree. Neither paper tests this directly.
 

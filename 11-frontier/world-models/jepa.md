@@ -69,7 +69,7 @@ LeCun 2022 以 VICReg 为例（§4.5.1）：方差项要求每个 embedding 维�
 
 I-JEPA 和 V-JEPA 2 用这一招。目标编码器的参数 $\bar\theta$ 不接收梯度，只是 context encoder 参数的指数滑动平均：$\bar\theta\leftarrow m\bar\theta+(1-m)\theta$，I-JEPA 里 $m$ 从 0.996 升到 1.0（附录 A）。算一步：$\bar\theta=1$，$\theta$ 突然变成 0，更新后 $\bar\theta=0.996$；即使 $\theta$ 一直停在 0，100 步后 $\bar\theta$ 还有约 0.67。目标移动得很慢。
 
-I-JEPA 称 EMA 目标编码器必不可少（§3），V-JEPA 2 也说 stop-gradient 加 EMA 防止了塌缩。但损失里并没有一项明确禁止塌缩，这是经验上有效的设计；LeJEPA 的标题就把这类做法叫作 heuristics。
+I-JEPA 称 EMA 目标编码器必不可少（§3），V-JEPA 2 也说 stop-gradient 加 EMA 防止了塌缩。但损失里并没有一项明确禁止塌缩，这是经验上有效的设计；LeJEPA 的[标题](https://arxiv.org/abs/2511.08544)就把这类做法叫作 heuristics：“Without the Heuristics”（不靠那些启发式技巧）。
 
 ### 办法三：要求 embedding 像标准高斯
 
@@ -100,6 +100,8 @@ $$
 
 teacher forcing 项每一步都喂真实特征，$T=15$；rollout 项让模型接着自己的预测往前滚，实际取 $T=2$。总损失是两项之和。
 
+<!-- paper-figure:vjepa2-ac-training -->
+
 ## 用 embedding 距离做规划
 
 把目标图片编码成 $z_g$。规划就是找一串动作，让预测的未来 embedding 离 $z_g$ 最近（§3.2，式 5）：
@@ -109,6 +111,8 @@ E(\hat a_{1:T};z_k,s_k,z_g)=\big\|P(\hat a_{1:T};s_k,z_k)-z_g\big\|_1
 $$
 
 论文用 [CEM](../../05-post-training/deep-rl/planning-and-control.md) 最小化这个能量：从零均值、单位方差的高斯里采样动作序列，用能量最低的一批更新均值和方差，重复几轮，返回均值；只执行第一个动作，看到新画面后重新规划，也就是 MPC。每个采样的动作被限制在半径 0.075 的 L1 球里，末端最多移动约 13 cm，论文的理由是大动作偏离了模型的训练分布（§4.1）。
+
+<!-- paper-figure:vjepa2-ac-planning -->
 
 用推杯子算一次（教学数字）。把 16×16×1408 的特征图换成 2 个数：（杯子沿桌面移动了几 cm，倾倒程度 0–1）。当前 $z_k=(0,0)$；目标图片里杯子前移 3 cm、立着，$z_g=(3,0)$。规划步数取 1，比较 3 个候选：
 

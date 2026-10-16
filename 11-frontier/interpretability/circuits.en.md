@@ -20,6 +20,8 @@ $y$ is the output metric you care about, such as the probability of the correct 
 
 [ROME (Meng et al., February 2022)](https://arxiv.org/abs/2202.05262) is a classic use. On GPT-2 XL, they took 1,000 facts the model knows and added Gaussian noise with 3 times the standard deviation to the subject token embeddings, which dropped the average probability of the correct answer from 27.0% to 8.47%; then they restored clean hidden states one at a time. The average total effect was 18.6%, and the strongest single states were at the last subject token around layer 15 (average indirect effect 8.7%); at that position, MLP contributions peaked at 6.6% while attention reached only 1.6%. From this the authors concluded that facts are stored in mid-layer MLPs, and they edited facts by directly modifying those MLPs' weights.
 
+<!-- paper-figure:rome-causal-trace -->
+
 Two caveats. [Hase et al. (January 2023)](https://arxiv.org/abs/2301.04213) found that the layers causal tracing points to do not predict which layer is best to edit: localising and editing are different things. [Zhang & Nanda (September 2023)](https://arxiv.org/abs/2309.16042) found that changing the metric (probability or logit difference) or the corruption method (adding noise or swapping in a different sentence) can change the localisation result.
 
 ## By hand: patching a 3-node network (a teaching example)
@@ -57,13 +59,15 @@ Now path patching ([Goldowsky-Dill et al., April 2023](https://arxiv.org/abs/230
 
 Their circuit has 26 heads in 7 classes. Roughly: duplicate token heads and induction heads (helped by previous token heads) detect that John appeared twice; S-inhibition heads write this into the queries of the name mover heads so that they do not attend to John; name mover heads at the end of the sentence attend to the remaining name, Mary, and copy it to the output; negative name mover heads write in the opposite direction and lower confidence; backup name mover heads do little normally and take over only when the name movers are removed. Components are "removed" by mean ablation: replaced with their average activation over a distribution of sentences containing three different names.
 
+<!-- paper-figure:ioi-circuit -->
+
 Saying "these heads form a circuit" is not enough, so they test three criteria. Let $F(\cdot)$ be the average logit difference:
 
 - **Faithfulness**: keeping only the circuit, $F(C)$ is close to the full model's $F(M)$. They measure $|F(M)-F(C)|=0.46$, 13% of 3.56, so the circuit recovers 87%.
 - **Completeness**: removing any set of components $K$ from the circuit should have about the same effect as removing $K$ from the full model.
 - **Minimality**: every component in the circuit is necessary for some $K$.
 
-Completeness exists precisely for backups. Go back to the example above: the circuit {A, B} (with C ablated) outputs 3.0, a faithfulness of 86%, which looks fine; but remove B and the full model still gives 2.0 (C steps in) while the circuit gives 0, a large gap showing that C was left out. The authors themselves write that the three criteria support their explanation but also point to gaps in their understanding. The scope of the claim is GPT-2 small, sentences generated from 15 templates, and the choice of mean ablation.
+Completeness exists precisely for backups. Go back to the example above: the circuit {A, B} (with C ablated) outputs 3.0, a faithfulness of 86%, which looks fine; but remove B and the full model still gives 2.0 (C steps in) while the circuit gives 0, a large gap showing that C was left out. The authors themselves write in the [abstract](https://arxiv.org/abs/2211.00593): "Though these criteria support our explanation, they also point to remaining gaps in our understanding." The scope of the claim is GPT-2 small, sentences generated from 15 templates, and the choice of mean ablation.
 
 Finding circuits was later automated: on GPT-2 small's "greater-than" task, ACDC selected 68 of 32,000 edges, all of which had been found by earlier manual work, and rediscovered all 5 of the 5 component types ([Conmy et al., April 2023](https://arxiv.org/abs/2304.14997)). Separately, [Makelov et al. (November 2023)](https://arxiv.org/abs/2311.17030) warn that patching a subspace can activate a normally dormant parallel pathway and create an illusion; they also treat IOI as a success case, because the earlier manual circuit analysis tells you where the feature lives.
 

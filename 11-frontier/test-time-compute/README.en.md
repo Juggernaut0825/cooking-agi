@@ -19,11 +19,15 @@ Once training is done the weights stay fixed; any extra computation spent answer
 | Search over intermediate steps | Score each step, keep only promising prefixes | A process reward model or value estimate | Beam search, Tree of Thoughts | The search finds the scorer's blind spots |
 | Generate, check, revise | A program or model checks, then the answer is revised | A checker, or a model that checks itself | Unit tests, Lean, proof verifiers | The specification being checked differs from the question you care about |
 
+<!-- paper-figure:snell-search-methods -->
+
 ## Two axes: parallel and sequential
 
 Parallel means generating N independent answers at once and picking one by vote or verifier. As long as the server has room, latency barely grows with N while cost grows linearly. Sequential means thinking longer within one chain, or revising each version after looking at the previous one: later steps can use earlier findings, at the price of latency that grows with length.
 
-On PaLM 2-S* and the MATH dataset, Snell et al. found that the two axes suit different problems: easy problems gain more from sequential revision, while on hard problems the best budget is a mix of both. Most systems today use both. DeepSeekMath-V2 (2025-11) starts each problem with 64 proofs, verifies each one 64 times, then revises the high scorers for up to 16 rounds; OpenAI's GPT-5 system card (2025-08) says gpt-5-thinking-pro in ChatGPT uses a "parallel test time compute" setting; Google DeepMind says the Gemini Deep Think that reached a gold-medal score at IMO 2025 explores and combines several candidate solutions at once. The last two did not publish the details.
+On PaLM 2-S* and the MATH dataset, Snell et al. found that the effectiveness of each approach "critically varies depending on the difficulty of the prompt" ([abstract](https://arxiv.org/abs/2408.03314)), and that the two axes suit different problems: easy problems gain more from sequential revision, while on hard problems the best budget is a mix of both. Most systems today use both. DeepSeekMath-V2 (2025-11) starts each problem with 64 proofs, verifies each one 64 times, then revises the high scorers for up to 16 rounds; OpenAI's GPT-5 system card (2025-08) says gpt-5-thinking-pro in ChatGPT uses a "parallel test time compute" setting; Google DeepMind says the Gemini Deep Think that reached a gold-medal score at IMO 2025 explores and combines several candidate solutions at once. The last two did not publish the details.
+
+<!-- paper-figure:snell-parallel-sequential -->
 
 This series uses one teaching example throughout: **a math problem whose answer can be checked, where the model answers correctly with probability $p$ on a single try.** Note 1 asks how many samples to draw and how to pick; note 2 asks how one chain gets trained to be longer and how its length is controlled; note 3 asks how to compare the numbers in release posts.
 

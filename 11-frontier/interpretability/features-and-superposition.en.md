@@ -22,6 +22,8 @@ The evidence for this goes back a long way. In word vectors, "king − man + wom
 
 But it is a working assumption, not a theorem. [Engels et al. (May 2024)](https://arxiv.org/abs/2405.14860) found days of the week and months of the year arranged on a circle in GPT-2 and Mistral 7B, an irreducible two-dimensional feature, and used interventions on Mistral 7B and Llama 3 8B to show that the model uses exactly this circle for modular arithmetic such as "which day is it a few days after Monday". The [Toy Models paper](https://transformer-circuits.pub/2022/toy_model/index.html) also lists several competing definitions of "feature", and its authors say plainly that they do not want to settle on one too early.
 
+<!-- paper-figure:circular-features -->
+
 ## Probes: what accuracy does and does not show
 
 A linear probe ([Alain & Bengio, 2016](https://arxiv.org/abs/1610.01644)) freezes the model and trains only a logistic regression on the activations:
@@ -33,6 +35,8 @@ $$
 $w,c$ are the probe's parameters and $\sigma$ is the sigmoid. High accuracy means the information in label $y$ can be read linearly from $h$. It does not show two things: whether the model's output uses this information (the pushed-cup example in [Do they actually understand the world?](../world-models/do-they-understand.en.md) is readable but unused), and whether the readout comes from the representation itself or from the probe's own capacity to fit.
 
 For the second, [Hewitt & Liang (2019)](https://arxiv.org/abs/1909.03368) use control tasks: give each word type a random but fixed label. Such labels have nothing to do with linguistic structure, so a probe can learn them only by memorising which word goes with which label. Selectivity is then defined as accuracy on the real task minus accuracy on the control task.
+
+<!-- paper-figure:control-task-probes -->
 
 ### Computing selectivity once
 

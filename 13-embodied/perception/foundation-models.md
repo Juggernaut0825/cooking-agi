@@ -85,6 +85,8 @@ $$
 
 反过来，pointmap 里藏着相机。已知点 $(1,0.5,5)$ 落在 $u=1160$，假设主点在图像中心，$f=(u-c_x)Z/X=200\times5/1=1000$。DUSt3R §3.3 就是这样对所有像素做稳健拟合来求焦距的（假设主点居中、像素是正方形）。两张图时更有用：DUSt3R 把两张图的 pointmap 都放在第一张图的相机坐标系里，同一个三维点在两张图里的位置就是对应关系；把同一张图在两个坐标系里的点云对齐（Procrustes 有闭式解，更稳健的是 PnP 加 RANSAC），就得到相对位姿。它的输出只到一个未知尺度：训练 loss 先把预测和真值各自按“所有点到原点的平均距离”归一化，消掉的正是上一节的 $k$。
 
+<!-- paper-figure:dust3r-arch -->
+
 ## 一次前向拿到相机、深度和点
 
 传统做法是先匹配特征、跑 structure-from-motion 求相机，再做稠密重建，每一步都是迭代优化，[下一篇](reconstruction.md)会拆开讲。下面这条线把它变成网络的一次前向：
@@ -100,6 +102,8 @@ $$
 | 2025-11 | [Depth Anything 3](https://arxiv.org/abs/2511.10647) | 任意张图，有无位姿都行 → 一致的深度和射线 | 普通 DINO 式 Transformer，只用一个 depth-ray 目标 |
 | 2025-12 | [D4RT](https://arxiv.org/abs/2512.08924) | 一段视频 → 深度、时空对应和相机，场景里的东西可以在动 | 查询式解码器，可以问任意时刻、任意点；CVPR 2026 最佳论文（[闭幕页](https://cvpr.thecvf.com/Conferences/2026/News/Closing)） |
 
+<!-- paper-figure:vggt-arch -->
+
 几处值得停下来看：
 
 - **输出是冗余的。** VGGT 同时给深度、相机和 pointmap，[官方 README](https://github.com/facebookresearch/vggt) 写明：用深度加相机反投影出的点，通常比 pointmap 分支直接给的点更准。冗余可以拿来做一致性检查。
@@ -107,7 +111,7 @@ $$
 - **z 深度和沿射线的距离不是一回事。** 上例像素的射线方向是 $(0.2,0.1,1)$，长度 $\sqrt{1.05}\approx1.025$。z 深度 5 m，沿射线的距离就是 $5\times1.025\approx5.12$ m。离主点越远，两者差得越多；把一个当另一个用，图像边缘的点会被成片推远。
 - **尺度从哪来，要逐个模型查。** DUSt3R 只到尺度；[CUT3R](https://arxiv.org/abs/2501.12387) 和 MapAnything 输出米制；Depth Anything 3 的米制靠 Metric 和 Nested 两个版本。
 
-所有对比数字都是作者自报。例如 Depth Anything 3 称相机位姿平均比 VGGT 好 44.3%、几何好 25.1%，这是在作者自己新建的基准上测的。
+所有对比数字都是作者自报。例如 Depth Anything 3 的[摘要](https://arxiv.org/abs/2511.10647)写的是“surpassing prior SOTA VGGT by an average of 44.3% in camera pose accuracy …”，即相机位姿平均比此前最好的 VGGT 高 44.3%，几何高 25.1%；这是在作者自己新建的基准上测的。
 
 ## 能不能商用：常见 checkpoint 的许可
 

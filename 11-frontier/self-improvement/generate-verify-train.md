@@ -76,6 +76,8 @@ $\bar r_{\rm solve}$ 是解题者对同一道题做 $G$ 次 Monte Carlo 尝试�
 
 前三行是论文的直觉：一次都解不出和次次都能解出的题，对解题者都没有学习信号，出题者也拿不到奖励。第 4 行是直接按公式算出来的：奖励最高的不是成功率 0.5 的题，而是“偶尔能解出”的题；$G=4$ 时最多拿到 $1-1/4=0.75$。这和 STaR 的困难是同一件事：没有一次成功，就没有信号。
 
+<!-- paper-figure:azr-loop -->
+
 “Zero”指的是不用人工整理的题目和答案；预训练好的 base model 和代码执行器仍然少不了。论文 §4.2 报告 AZR-Coder-7B 的平均分比此前最好的 zero 设置模型高 1.8 分，在代码平均分上比用专家整理代码数据训练的模型高 0.3 分；在 Llama-3.1-8B 上还观察到令人担忧的推理链（作者称为“uh-oh moment”）。[R-Zero](https://arxiv.org/abs/2508.05004)（2025-08）从同一个 base model 分出 Challenger 和 Solver 共同演化，摘要报告 Qwen3-4B-Base 在数学上 +6.49、通用推理上 +7.54，都是相对 base model 的提升。
 
 ## 验证器给的上限：generation–verification gap
@@ -93,6 +95,8 @@ J(f_{t+1})-J(f_t)\;\ge\;\operatorname{gap}(f_t,g)-\varepsilon_{\rm update}
 $$
 
 同一个前提也意味着提升不会超过 $\operatorname{gap}+\varepsilon_{\rm update}$，所以**一轮大约只值一个 gap**；模型验证不比生成强（gap ≤ 0）时，回路没有东西可学。论文也提醒，有时微调后得分超过这个量，例如模型学会了要求的答案格式，这部分不算自我改进。
+
+<!-- paper-figure:gv-gap-definitions -->
 
 论文的测量（§4–5）：相对 gap 随预训练 FLOPs 单调增大；Qwen-1.5 0.5B、Qwen-2 0.5B、Llama-2 7B 等小模型在几乎所有验证方式下 gap 都不为正；事实类任务上没有显著 gap；迭代时 gap 在两三轮内降到接近 0，不同大小的模型饱和速度相近；大 $k$ 的 pass@k 随轮数下降，说明有效多样性在减少。
 

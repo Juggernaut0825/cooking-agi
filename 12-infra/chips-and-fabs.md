@@ -19,7 +19,7 @@
 | 最终测试 | 封装好的芯片 → 合格品，按规格分档 | 测试时间和设备 |
 | 板卡与系统 | 芯片 → 模块、服务器、机柜 | 供电、散热、网络和整机组装 |
 
-设计公司不一定自己有工厂。NVIDIA 自己说明，H100 的 GH100 是用“为 NVIDIA 定制的 TSMC 4N 工艺”制造的（[Hopper 架构博客](https://developer.nvidia.com/blog/nvidia-hopper-architecture-in-depth/)，2022-03）。HBM 来自存储厂，例如 Micron 公开销售 HBM3E（[Micron 产品页](https://www.micron.com/products/memory/hbm/hbm3e)）。一颗 AI 芯片要凑齐好的逻辑 die、HBM 和封装三样，缺哪样都出不了货。
+设计公司不一定自己有工厂。NVIDIA 自己的说法是，H100 用的 GH100 “fabricated using the TSMC 4N process customized for NVIDIA …”，即用为 NVIDIA 定制的 TSMC 4N 工艺制造（[Hopper 架构博客](https://developer.nvidia.com/blog/nvidia-hopper-architecture-in-depth/#nvidia_h100_gpu_architecture_in-depth)讲 H100 架构的一节，2022-03）。HBM 来自存储厂，例如 Micron 公开销售 HBM3E（[Micron 产品页](https://www.micron.com/products/memory/hbm/hbm3e)）。一颗 AI 芯片要凑齐好的逻辑 die、HBM 和封装三样，缺哪样都出不了货。
 
 ## 制程名字说了什么，没说什么
 
