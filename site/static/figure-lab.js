@@ -1060,6 +1060,158 @@
     ]);
   };
 
+  function andList(xs) { return xs.length < 2 ? xs.join('') : xs.slice(0, -1).join(', ') + ' and ' + xs[xs.length - 1]; }
+
+  /* 12-infra/performance §three-ops and §decode-batching: H100 SXM5 peaks (989.4 TFLOPS dense BF16,
+     133.8 non-Tensor Core, 3.352 TB/s); an elementwise add, a 7B decode step and an 8192³ GEMM, then
+     decode batches counting weights only, and weights plus a 4096-token KV cache per request. */
+  F.roofline = function () {
+    const peak = 989.4e12, vector = 133.8e12, bw = 3.352e12, params = 7e9;
+    const op = (flops, bytes) => ({I: flops / bytes, perf: Math.min(peak, bw * flops / bytes) / 1e12, ms: Math.max(flops / peak, bytes / bw) * 1e3});
+    const n = 8192, weights = 2 * params, perToken = 2 * params;
+    const kv = 2 * 32 * 8 * 128 * 2 * 4096, attention = 4 * 128 * 4096 * 32 * 32;
+    const decode = (B, withKV) => {
+      const o = op(B * (perToken + (withKV ? attention : 0)), weights + (withKV ? B * kv : 0));
+      return {...o, B, tokens: B / o.ms * 1e3, gib: (weights + B * kv) / 2 ** 30, weightGib: weights / 2 ** 30, kvGib: B * kv / 2 ** 30};
+    };
+    const add = op(1e8, 6e8), gemm = op(2 * n ** 3, 3 * n * n * 2), single = decode(1, false);
+    const plain = [1, 64, 295, 512].map(B => decode(B, false)), cached = [1, 8, 64].map(B => decode(B, true));
+    const full = decode(128, true), limit = (perToken + attention) / kv;
+    const ridge = peak / bw, vectorRidge = vector / bw;
+    const base = {peak: peak / 1e12, vector: vector / 1e12, bw: bw / 1e12, ridge, vectorRidge, add, gemm, single, plain, cached, full, limit};
+    const sig = x => Number(x.toPrecision(3)).toLocaleString('en-US');
+    const ms = x => x.toPrecision(3), r = Math.round;
+    return frames([
+      {...base, stage: 0, zh: `H100 SXM5 的 roofline，两个坐标轴都是对数刻度。斜线是 ${base.bw} TB/s × I，水平线是 dense BF16 峰值 ${base.peak} TFLOPS，两线交在 I ≈ ${r(ridge)}。虚线是非 Tensor Core 的 ${base.vector} TFLOPS，和斜线交在约 ${r(vectorRidge)}。`,
+        en: `The H100 SXM5 roofline, with both axes logarithmic. The slope is ${base.bw} TB/s × I, the flat line the dense BF16 peak of ${base.peak} TFLOPS; they meet at I ≈ ${r(ridge)}. The dashed line is the non-Tensor Core ${base.vector} TFLOPS, which meets the slope near ${r(vectorRidge)}.`},
+      {...base, stage: 1, zh: `BF16 逐元素加：读 4 字节、写 2 字节、做 1 次加法，I = 1/6。它落在斜线上，最多 ${add.perf.toFixed(2)} TFLOPS，约为峰值的 ${(add.perf / base.peak * 100).toFixed(2)}%。`,
+        en: `BF16 elementwise add: 4 bytes read, 2 written, one addition, so I = 1/6. It sits on the slope at ${add.perf.toFixed(2)} TFLOPS at most, about ${(add.perf / base.peak * 100).toFixed(2)}% of the peak.`},
+      {...base, stage: 2, zh: `7B 模型 decode，batch 1：每个权重读 2 字节、做 2 FLOP，I ≈ ${r(single.I)}，上限 ${single.perf.toFixed(2)} TFLOPS。读一遍权重至少 ${ms(single.ms)} ms，一条请求最多 ${sig(single.tokens)} tokens/s。`,
+        en: `7B decode at batch 1: each weight costs 2 bytes and does 2 FLOP, so I ≈ ${r(single.I)} and the ceiling is ${single.perf.toFixed(2)} TFLOPS. Reading the weights once takes at least ${ms(single.ms)} ms: ${sig(single.tokens)} tokens/s for one request at most.`},
+      {...base, stage: 3, zh: `BF16 GEMM，M = N = K = 8192：I = 8192/3 ≈ ${r(gemm.I)}，在屋脊点右边，顶到的是水平线。按峰值要 ${ms(gemm.ms)} ms，瓶颈在算力。`,
+        en: `BF16 GEMM with M = N = K = 8192: I = 8192/3 ≈ ${r(gemm.I)}, right of the ridge, so the flat line is the limit. At peak it takes ${ms(gemm.ms)} ms; compute is the bottleneck.`},
+      {...base, stage: 4, zh: `decode 组 batch，先只算权重：每步权重只读一遍，运算随 B 增长，I ≈ B。B = 1、64、295 时点沿斜线右移，tokens/s 从 ${sig(plain[0].tokens)} 涨到 ${sig(plain[2].tokens)}；B = 512 已在水平线上，仍约 ${sig(plain[3].tokens)}。`,
+        en: `Batching decode, weights only: the weights are read once per step while the work grows with B, so I ≈ B. At B = 1, 64 and 295 the point climbs the slope and tokens/s rises from ${sig(plain[0].tokens)} to ${sig(plain[2].tokens)}; B = 512 is already on the flat line, still about ${sig(plain[3].tokens)}.`},
+      {...base, stage: 5, zh: `再加上每条请求 4096 个 token 的 KV cache：B = 1、8、64 时 I 只有 ${cached.map(c => c.I.toFixed(1)).join('、')}。KV 不能在请求之间共用，B 再大，I 也只逼近 ${r(limit)}，离 ${r(ridge)} 很远。`,
+        en: `Now add a 4096-token KV cache per request: at B = 1, 8 and 64, I is only ${andList(cached.map(c => c.I.toFixed(1)))}. KV cannot be shared between requests, so however large B gets, I only approaches ${r(limit)}, far from ${r(ridge)}.`},
+      {...base, stage: 6, zh: `B = 128 时，权重加 KV 已约 ${r(full.gib)} GiB，几乎占满 80 GB 显存。在这个上下文长度下，先碰到的是 KV 的带宽和容量，而不是算力。`,
+        en: `At B = 128 the weights plus KV already take about ${r(full.gib)} GiB, nearly all of the 80 GB. At this context length, KV bandwidth and capacity run out before compute does.`},
+      {...base, stage: 7, done: true, zh: `两条轨迹：只算权重时，B = ${plain[2].B} 走到屋脊点 ${r(ridge)}；加上 KV 后停在约 ${r(limit)}。图上都是按峰值规格算的上限，不是 benchmark。`,
+        en: `Two trajectories: counting weights only, B = ${plain[2].B} reaches the ridge at ${r(ridge)}; with KV, they stall near ${r(limit)}. Everything here is a ceiling computed from peak specifications, not a benchmark.`}
+    ]);
+  };
+
+  /* 12-infra/gpu-architecture §latency hiding: each warp issues W = 30 independent instructions, then
+     waits L = 300 cycles for memory; one scheduler holding N warps uses U ≈ min(1, N·W/(W + L)) of its
+     issue slots (teaching numbers). Registers set N: 65,536 per SM, at most 64 warps, 4 schedulers. */
+  F.latencyHiding = function (W = 30, L = 300, wider = 60) {
+    const use = (N, w) => Math.min(1, N * w / (w + L));
+    const perScheduler = regs => Math.min(64, 65536 / (32 * regs)) / 4;
+    const pct = x => Math.round(x * 100) + '%';
+    const state = (N, w, extra) => ({N, W: w, L, period: w + L, U: use(N, w), ...extra});
+    const table = [32, 64, 128].map(regs => ({regs, N: perScheduler(regs), U: use(perScheduler(regs), W)}));
+    const [r32, r64, r128] = table, fill = (W + L) / W, fillWide = (wider + L) / wider;
+    return frames([
+      {...state(1, W), stage: 0, zh: `一个 scheduler 上只有 1 个 warp：它发射 ${W} 条指令（${W} 个周期），再等显存 ${L} 个周期。${W + L} 个周期里只有 ${W} 个在发射，U = ${W}/${W + L} ≈ ${pct(use(1, W))}。`,
+        en: `One scheduler with a single warp: it issues ${W} instructions (${W} cycles), then waits ${L} cycles for memory. Only ${W} of every ${W + L} cycles issue anything: U = ${W}/${W + L} ≈ ${pct(use(1, W))}.`},
+      {...state(r128.N, W), regs: 128, stage: 1, zh: `每线程用 128 个寄存器时，一个 SM 只放得下 ${r128.N * 4} 个 warp，每个 scheduler ${r128.N} 个。一个在等，下一个接着发射：U = ${r128.N} × ${W} / ${W + L} ≈ ${pct(r128.U)}。`,
+        en: `At 128 registers per thread, an SM holds only ${r128.N * 4} warps, ${r128.N} per scheduler. While one waits, the next issues: U = ${r128.N} × ${W} / ${W + L} ≈ ${pct(r128.U)}.`},
+      {...state(r64.N, W), regs: 64, stage: 2, zh: `降到 64 个寄存器：每个 scheduler ${r64.N} 个 warp，U = ${r64.N} × ${W} / ${W + L} ≈ ${pct(r64.U)}。还有 ${W + L - r64.N * W} 个周期空着。`,
+        en: `At 64 registers: ${r64.N} warps per scheduler, U = ${r64.N} × ${W} / ${W + L} ≈ ${pct(r64.U)}. ${W + L - r64.N * W} cycles are still empty.`},
+      {...state(fill, W), stage: 3, zh: `${fill} 个 warp 正好把 ${W + L} 个周期排满：第 1 个 warp 等完 ${L} 个周期，又刚好轮到它。U = 100%，需要 ${W + L}/${W} = ${fill} 个。`,
+        en: `With ${fill} warps, all ${W + L} cycles are filled exactly: when the first warp finishes its ${L}-cycle wait, its turn comes round again. U = 100%; it takes ${W + L}/${W} = ${fill}.`},
+      {...state(fillWide, wider), stage: 4, zh: `另一条路：每个线程多算几个独立元素，W 从 ${W} 提到 ${wider}。一轮变成 ${wider} + ${L} = ${wider + L} 个周期，${fillWide} 个 warp 就能排满：${fillWide} × ${wider} / ${wider + L} = 100%。`,
+        en: `Another route: each thread computes a few more independent elements, raising W from ${W} to ${wider}. A round is now ${wider} + ${L} = ${wider + L} cycles, and ${fillWide} warps fill it: ${fillWide} × ${wider} / ${wider + L} = 100%.`},
+      {...state(r32.N, W), stage: 5, done: true, table, zh: `回到 W = ${W}，按寄存器数排：每线程 ${table.map(x => x.regs).join('、')} 个寄存器，每个 scheduler 能挂 ${table.map(x => x.N).join('、')} 个 warp，U 是 ${table.map(x => pct(x.U)).join('、')}。周期数是教学假设，不是 H100 的实测延迟。`,
+        en: `Back to W = ${W}, by register count: at ${andList(table.map(x => x.regs))} registers per thread, each scheduler holds ${andList(table.map(x => x.N))} warps, and U is ${andList(table.map(x => pct(x.U)))}. The cycle counts are teaching assumptions, not measured H100 latencies.`}
+    ]);
+  };
+
+  /* 12-infra/cuda §tiling: C = AB with n = 4. Untiled, each thread reads a row of A and a column of B;
+     with T = 2, each block copies one T×T sub-block of A and one of B into shared memory per phase. */
+  F.tilingReads = function (n = 4, T = 2) {
+    const grid = () => Array.from({length: n}, () => Array(n).fill(0));
+    const total = m => m.flat().reduce((a, b) => a + b, 0);
+    const naive = outputs => {
+      const a = grid(), b = grid();
+      outputs.forEach(([i, j]) => { for (let k = 0; k < n; k++) { a[i][k]++; b[k][j]++; } });
+      return {a, b};
+    };
+    const tiled = steps => {
+      const a = grid(), b = grid();
+      steps.forEach(([bi, bj, p]) => { for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) { a[bi * T + y][p * T + x]++; b[p * T + y][bj * T + x]++; } });
+      return {a, b};
+    };
+    const all = [], blocks = [], phases = n / T;
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) all.push([i, j]);
+    for (let bi = 0; bi < phases; bi++) for (let bj = 0; bj < phases; bj++) for (let p = 0; p < phases; p++) blocks.push([bi, bj, p]);
+    const tile = all.filter(([i, j]) => i < T && j < T);
+    const state = (counts, extra) => ({...counts, reads: total(counts.a) + total(counts.b), n, T, ...extra});
+    const one = naive([[0, 0]]), wide = naive(all), first = tiled([[0, 0, 0]]), both = tiled([[0, 0, 0], [0, 0, 1]]), done = tiled(blocks);
+    const big = 4096, bigT = 32, gb = reads => reads * 4 / 1e9;
+    const untiledGB = Math.round(gb(2 * big ** 3) / 10) * 10, tiledGB = Math.round(gb(2 * big ** 3 / bigT));
+    const perElement = c => c.a[0][0];
+    const macs = T * T * T;
+    return frames([
+      {...state(one, {now: one, outputs: [[0, 0]], stage: 0}), zh: `不分块，先看一个输出 C₀₀：它的线程读 A 的第 0 行和 B 的第 0 列，各 ${n} 个元素，共 ${total(one.a) + total(one.b)} 次 global 读取。`,
+        en: `Without tiling, start with one output, C₀₀: its thread reads row 0 of A and column 0 of B, ${n} elements each, ${total(one.a) + total(one.b)} global reads in all.`},
+      {...state(wide, {outputs: all, stage: 1}), zh: `${n * n} 个输出都这样读：${n * n} × ${2 * n} = ${total(wide.a) + total(wide.b)} 次。A 和 B 只有 ${2 * n * n} 个不同的元素，每个被读了 ${perElement(wide)} 遍：A 的一个元素被同一行的 ${n} 个输出各读一次。`,
+        en: `All ${n * n} outputs read this way: ${n * n} × ${2 * n} = ${total(wide.a) + total(wide.b)} reads. A and B hold only ${2 * n * n} distinct elements, so each is read ${perElement(wide)} times; an element of A is read once by each of the ${n} outputs in its row.`},
+      {...state(first, {now: first, block: [0, 0], phase: 0, outputs: tile, macs, stage: 2}), zh: `T = ${T} 分块。block (0, 0) 负责 C 左上的 ${T}×${T}。第 1 阶段：${T * T} 个线程各读 A 的一个、B 的一个，把 A[0:2, 0:2] 和 B[0:2, 0:2] 搬进 shared memory，共 ${total(first.a) + total(first.b)} 次读取；同步之后在片上做 ${T}×${T}×${T} = ${macs} 次乘加。`,
+        en: `Tiling with T = ${T}. Block (0, 0) owns the top-left ${T}×${T} of C. Phase 1: each of its ${T * T} threads reads one element of A and one of B, copying A[0:2, 0:2] and B[0:2, 0:2] into shared memory, ${total(first.a) + total(first.b)} reads; after a sync, ${T}×${T}×${T} = ${macs} multiply-adds happen on chip.`},
+      {...state(both, {now: tiled([[0, 0, 1]]), block: [0, 0], phase: 1, outputs: tile, finished: true, macs: 2 * macs, stage: 3}), zh: `第 2 阶段：搬 A[0:2, 2:4] 和 B[2:4, 0:2]，又是 ${2 * T * T} 次。这个 block 一共 ${phases} × (${T * T} + ${T * T}) = ${total(both.a) + total(both.b)} 次，C 左上的 ${T * T} 个输出算完了。`,
+        en: `Phase 2: copy A[0:2, 2:4] and B[2:4, 0:2], ${2 * T * T} more reads. The block makes ${phases} × (${T * T} + ${T * T}) = ${total(both.a) + total(both.b)} reads in all, and the top-left ${T * T} outputs of C are done.`},
+      {...state(done, {outputs: all, finished: true, stage: 4}), zh: `${phases * phases} 个 block 都这样做：${phases * phases} × ${total(both.a) + total(both.b)} = ${total(done.a) + total(done.b)} 次。每个元素只被读 n/T = ${perElement(done)} 遍：同一个 block 的线程通过 shared memory 共用它。`,
+        en: `All ${phases * phases} blocks do the same: ${phases * phases} × ${total(both.a) + total(both.b)} = ${total(done.a) + total(done.b)} reads. Each element is read only n/T = ${perElement(done)} times, because the threads of a block share it through shared memory.`},
+      {...state(done, {outputs: all, finished: true, stage: 5, done: true, untiled: total(wide.a) + total(wide.b), untiledGB, tiledGB}),
+        zh: `${total(wide.a) + total(wide.b)} → ${total(done.a) + total(done.b)}，即 2n³ → 2n³/T。n = ${big}、T = ${bigT}、FP32 时，是约 ${untiledGB} GB 对约 ${tiledGB} GB 的读取；可 BPG 在 V100 上实测，有效带宽只从 119.9 GB/s 提到 195.5 GB/s，远不到 ${bigT} 倍。`,
+        en: `${total(wide.a) + total(wide.b)} → ${total(done.a) + total(done.b)}, that is 2n³ → 2n³/T. At n = ${big}, T = ${bigT} and FP32, that is about ${untiledGB} GB of reads against about ${tiledGB} GB; yet in the BPG's V100 measurement, effective bandwidth rose only from 119.9 GB/s to 195.5 GB/s, far short of ${bigT}×.`}
+    ]);
+  };
+
+  /* 12-infra/cpu-architecture §row vs column: a 64 × 64 float32 matrix stored by rows (16 floats per
+     64-byte line, 256 lines), walked by rows or by columns through a toy LRU cache of 8 or 64 lines. */
+  F.cacheWalk = function (n = 64, perLine = 16, small = 8, large = 64) {
+    const run = (byRow, capacity, steps = n * n) => {
+      const cache = new Map(), loaded = new Set(), lineZero = Array(perLine).fill('');
+      let misses = 0, last = null;
+      for (let step = 0; step < steps; step++) {
+        const i = byRow ? Math.floor(step / n) : step % n, j = byRow ? step % n : Math.floor(step / n);
+        const line = Math.floor((i * n + j) / perLine), hit = cache.has(line);
+        if (hit) cache.delete(line); else misses++;
+        cache.set(line, true);                                   // most recently used goes last
+        if (cache.size > capacity) cache.delete(cache.keys().next().value);
+        loaded.add(line);
+        last = {i, j, line, hit};
+        if (line === 0) lineZero[j] = hit ? 'hit' : 'miss';
+      }
+      return {byRow, capacity, misses, accesses: steps, cache: [...cache.keys()], loaded: [...loaded], last, lineZero, useful: 4 * steps / misses};
+    };
+    const rowStart = run(true, small, perLine), row = run(true, small), colFirst = run(false, small, n), colNext = run(false, small, n + 1);
+    const col = run(false, small), colLargeStart = run(false, large, n * perLine), colLarge = run(false, large);
+    const fmt = x => x.toLocaleString('en-US'), rate = w => `${(w.misses / w.accesses * 100).toFixed(2).replace(/\.?0+$/, '')}%`;
+    const bars = [row, col, colLarge].map(w => w.misses);
+    const lines = n * n / perLine;
+    return frames([
+      {...rowStart, bars: [], stage: 0, zh: `按行走，前 ${perLine} 次访问：(0, 0) 缺失，它所在的整个 64 字节的 line 搬进 cache；(0, 1)…(0, ${perLine - 1}) 都在这个 line 里，${perLine - 1} 次命中。缺失 ${rowStart.misses} / 访问 ${rowStart.accesses}。`,
+        en: `Row walk, first ${perLine} accesses: (0, 0) misses, and its whole 64-byte line comes into the cache; (0, 1)…(0, ${perLine - 1}) sit in the same line, so ${perLine - 1} hits. Misses ${rowStart.misses} / accesses ${rowStart.accesses}.`},
+      {...row, bars: bars.slice(0, 1), stage: 1, zh: `按行走完：每 ${perLine} 次访问才换一个 line，${lines} 个 line 各缺失一次。缺失 ${fmt(row.misses)} / 访问 ${fmt(row.accesses)} = ${rate(row)}。`,
+        en: `Row walk done: a new line only every ${perLine} accesses, one miss for each of the ${lines} lines. ${fmt(row.misses)} misses / ${fmt(row.accesses)} accesses = ${rate(row)}.`},
+      {...colFirst, bars: bars.slice(0, 1), stage: 2, zh: `按列走，第 0 列：(0, 0)、(1, 0)…(${n - 1}, 0) 相邻两次隔一整行（256 字节），落在 ${colFirst.misses} 个不同的 line 上。cache 只放得下 ${small} 个，边装边踢，最后只剩第 ${n - small}–${n - 1} 行的。缺失 ${colFirst.misses} / 访问 ${colFirst.accesses}。`,
+        en: `Column walk, column 0: (0, 0), (1, 0), …, (${n - 1}, 0) are a whole row (256 bytes) apart and land in ${colFirst.misses} different lines. The cache holds only ${small}, evicting as it loads; only those of rows ${n - small}–${n - 1} are left. Misses ${colFirst.misses} / accesses ${colFirst.accesses}.`},
+      {...colNext, bars: bars.slice(0, 1), stage: 3, zh: `第 1 列从 (0, 1) 开始。它和 (0, 0) 在同一个 line 上，可这个 line 早被踢掉了：又是缺失。缺失 ${colNext.misses} / 访问 ${colNext.accesses}。`,
+        en: `Column 1 starts at (0, 1). It shares a line with (0, 0), but that line was evicted long ago: another miss. Misses ${colNext.misses} / accesses ${colNext.accesses}.`},
+      {...col, bars: bars.slice(0, 2), stage: 4, zh: `按列走完：${fmt(col.accesses)} 次访问次次缺失。每搬进 64 字节只用到 ${col.useful} 字节（一个 float），有效带宽只剩 1/${64 / col.useful}。`,
+        en: `Column walk done: all ${fmt(col.accesses)} accesses miss. Each 64-byte line brought in delivers only ${col.useful} useful bytes (one float): 1/${64 / col.useful} of the bandwidth.`},
+      {...colLargeStart, bars: bars.slice(0, 2), stage: 5, zh: `同样按列走，cache 换成 ${large} 个 line：第 0 列碰到的 ${n} 个 line 正好放得下，第 1–${perLine - 1} 列全部命中。前 ${perLine} 列：缺失 ${fmt(colLargeStart.misses)} / 访问 ${fmt(colLargeStart.accesses)}。`,
+        en: `The same column walk with a ${large}-line cache: the ${n} lines that column 0 touches all fit, and columns 1–${perLine - 1} hit. First ${perLine} columns: ${fmt(colLargeStart.misses)} misses / ${fmt(colLargeStart.accesses)} accesses.`},
+      {...colLarge, bars: bars.slice(0, 3), stage: 6, zh: `走完 ${n} 列：每 ${perLine} 列换一批 line，缺失 ${fmt(colLarge.misses)} / 访问 ${fmt(colLarge.accesses)}，和按行走一样。`,
+        en: `All ${n} columns: a new batch of lines every ${perLine} columns, ${fmt(colLarge.misses)} misses / ${fmt(colLarge.accesses)} accesses, the same as the row walk.`},
+      {...colLarge, bars, stage: 7, done: true, zh: `三种走法的缺失次数：${bars.map(fmt).join('、')}。这是玩具 LRU cache；真实 CPU 有多级 cache、组相联和硬件预取，要实测。`,
+        en: `Misses for the three walks: ${andList(bars.map(fmt))}. This is a toy LRU cache; real CPUs have several cache levels, set associativity and hardware prefetchers, so measure.`}
+    ]);
+  };
+
   if (typeof module !== 'undefined' && module.exports) module.exports = {F, frames};
   if (typeof document === 'undefined' || !scope.AlgoLab) return;
 
@@ -2357,6 +2509,277 @@
         n.circle.setAttribute('class', 'algo-cell' + (frame.wrong && i === 2 ? ' is-bad' : now ? ' is-change' : frame.R[i] != null && frame.stage >= 1 ? ' is-keep' : ''));
       });
       back.forEach((p, i) => p.classList.toggle('is-hidden', !(frame.R[i] != null && frame.stage >= 2)));
+    };
+  }});
+
+  FIGURES['step-roofline'] = name => stepper(name, F.roofline(), {height: 300, readouts: f => {
+    const sig = x => Number(x.toPrecision(3)).toLocaleString('en-US'), r = Math.round, dots = xs => xs.join(' · ');
+    if (f.stage === 0) return [[t('屋脊点', 'ridge point'), `${f.peak} / ${f.bw} ≈ ${r(f.ridge)}`, 'key'], [t('非 Tensor Core 屋脊点', 'non-Tensor Core ridge'), `${f.vector} / ${f.bw} ≈ ${r(f.vectorRidge)}`]];
+    if (f.stage === 1) return [['I', `1/6 ≈ ${f.add.I.toFixed(2)}`], [t('上限', 'ceiling'), `${f.add.perf.toFixed(2)} TFLOPS`, 'bad'], [t('时间下限', 'time lower bound'), `${f.add.ms.toFixed(2)} ms`]];
+    if (f.stage === 2) return [['I', `≈ ${r(f.single.I)}`], [t('上限', 'ceiling'), `${f.single.perf.toFixed(2)} TFLOPS`], [t('每步下限', 'step lower bound'), `${f.single.ms.toPrecision(3)} ms`], ['tokens/s', sig(f.single.tokens), 'key']];
+    if (f.stage === 3) return [['I', `≈ ${r(f.gemm.I)}`], [t('上限', 'ceiling'), `${f.peak} TFLOPS`, 'good'], [t('时间下限', 'time lower bound'), `${f.gemm.ms.toPrecision(3)} ms`]];
+    if (f.stage === 4) return f.plain.map(p => [t(`B = ${p.B}，每步 ${p.ms.toPrecision(3)} ms`, `B = ${p.B}, ${p.ms.toPrecision(3)} ms per step`), `${sig(p.tokens)} tokens/s`, p.B === f.plain[2].B ? 'key' : '']);
+    if (f.stage === 5) return [...f.cached.map(p => [t(`B = ${p.B}，I = ${p.I.toFixed(1)}`, `B = ${p.B}, I = ${p.I.toFixed(1)}`),`${sig(p.tokens)} tokens/s`]), [t('B 再大', 'as B grows'), `I → ${r(f.limit)}`, 'bad']];
+    if (f.stage === 6) return [['B', String(f.full.B)], [t('权重 + KV', 'weights + KV'), `≈ ${r(f.full.gib)} GiB / 80 GB`, 'bad']];
+    return [[t('只算权重', 'weights only'), `I → ${r(f.ridge)}`, 'good'], [t('加上 KV', 'with KV'), `I → ≈ ${r(f.limit)}`, 'bad']];
+  }, setup(svg) {
+    const px0 = 80, py0 = 24, ph = 230, top = Math.log10(2000), bottom = -1;
+    const X = I => px0 + (Math.log10(I) + 1) * 100, Y = P => py0 + (top - Math.log10(P)) / (top - bottom) * ph;
+    const f0 = F.roofline()[0], axis = Y(0.1), right = X(1e4), r = Math.round;
+    svg.append(s('line', {x1: px0, y1: axis, x2: right, y2: axis, class: 'algo-edge'}), s('line', {x1: px0, y1: axis, x2: px0, y2: py0 - 6, class: 'algo-edge'}));
+    [[0.1, '0.1'], [1, '1'], [10, '10'], [100, '100'], [1000, '1000'], [1e4, '10⁴']].forEach(([I, label]) => {
+      svg.append(s('line', {x1: X(I), x2: X(I), y1: axis, y2: axis + 4, class: 'algo-edge'}));
+      V.text(svg, X(I), axis + 17, label, 'algo-idx', 'middle');
+    });
+    [0.1, 1, 10, 100, 1000].forEach(P => {
+      svg.append(s('line', {x1: px0 - 4, x2: px0, y1: Y(P), y2: Y(P), class: 'algo-edge'}));
+      V.text(svg, px0 - 8, Y(P) + 4, String(P), 'algo-idx', 'end');
+    });
+    V.text(svg, px0 - 30, py0 - 12, t('可达 TFLOPS（对数）', 'attainable TFLOPS (log)'), 'algo-head');
+    V.text(svg, (px0 + right) / 2, axis + 36, t('算术强度 I（FLOP/byte，对数）', 'arithmetic intensity I (FLOP/byte, log)'), 'algo-head', 'middle');
+    svg.append(s('polyline', {points: [[0.1, f0.bw * 0.1], [f0.ridge, f0.peak], [1e4, f0.peak]].map(([I, P]) => `${X(I).toFixed(1)},${Y(P).toFixed(1)}`).join(' '), class: 'algo-edge is-look-line', fill: 'none'}));
+    svg.append(s('line', {x1: X(f0.vectorRidge), y1: Y(f0.vector), x2: right, y2: Y(f0.vector), class: 'algo-edge algo-dash'}));
+    V.text(svg, X(f0.ridge) - 40, Y(f0.peak) + 4, `dense BF16 ${f0.peak}`, 'algo-idx', 'end');
+    V.text(svg, right, Y(f0.vector) + 15, t(`非 Tensor Core ${f0.vector}`, `non-Tensor Core ${f0.vector}`), 'algo-idx', 'end');
+    V.text(svg, px0 + 10, 100, t(`斜线 = ${f0.bw} TB/s × I`, `slope = ${f0.bw} TB/s × I`), 'algo-idx');
+    const ridgeLabel = V.text(svg, X(f0.ridge) + 8, Y(f0.peak) + 18, t(`屋脊点 ≈ ${r(f0.ridge)}`, `ridge ≈ ${r(f0.ridge)}`), 'algo-idx');
+    const limitLine = s('line', {x1: X(f0.limit), x2: X(f0.limit), y1: Y(f0.bw * f0.limit), y2: axis, class: 'algo-edge algo-dash is-bad'});
+    svg.append(limitLine);
+    const limitLabel = V.text(svg, X(f0.limit) - 5, axis - 6, `I → ${r(f0.limit)}`, 'algo-warn', 'end');
+    const point = (p, label, dx, dy, anchor = 'start') => {
+      const c = s('circle', {cx: X(p.I), cy: Y(p.perf), r: 6, class: 'algo-cell'});
+      svg.append(c);
+      return {c, l: V.text(svg, X(p.I) + dx, Y(p.perf) + dy, label, 'algo-note', anchor)};
+    };
+    const add = point(f0.add, t('逐元素加', 'elementwise add'), 8, 14), single = point(f0.single, 'decode, B = 1', 8, 14), gemm = point(f0.gemm, 'GEMM 8192³', 0, -12, 'middle');
+    const plain = f0.plain.map((p, i) => point(p, i ? String(p.B) : `B = ${p.B}`, ...[[8, 16], [-8, -9, 'end'], [0, -12, 'middle'], [6, -12]][i]));
+    const cached = f0.cached.map((p, i) => point(p, i ? String(p.B) : `B = ${p.B}`, -8, -8, 'end'));
+    const full = point(f0.full, String(f0.full.B), 12, 6);
+    const legend = [['is-change', t('只算权重', 'weights only'), px0], ['is-bad', t('加上每条请求 4096 token 的 KV', 'plus a 4096-token KV per request'), px0 + 140]].map(([cls, label, x]) => {
+      const g = s('g');
+      g.append(s('circle', {cx: x + 6, cy: axis + 56, r: 6, class: 'algo-cell ' + cls}));
+      V.text(g, x + 18, axis + 60, label, 'algo-note');
+      svg.append(g);
+      return g;
+    });
+    const gauge = s('g'), gx = 372, gw = 200, card = 80;
+    svg.append(gauge);
+    V.text(gauge, gx, 196, t(`B = ${f0.full.B} 时的显存`, `memory at B = ${f0.full.B}`), 'algo-head');
+    gauge.append(s('rect', {x: gx, y: 204, width: gw, height: 14, rx: 3, class: 'algo-ghost'}),
+      s('rect', {x: gx, y: 204, width: f0.full.weightGib / card * gw, height: 14, rx: 3, class: 'algo-cell is-look'}),
+      s('rect', {x: gx + f0.full.weightGib / card * gw, y: 204, width: f0.full.kvGib / card * gw, height: 14, rx: 3, class: 'algo-cell is-bad'}));
+    V.text(gauge, gx, 234, `${t('权重', 'weights')} ${r(f0.full.weightGib)} + KV ${r(f0.full.kvGib)} ≈ ${r(f0.full.gib)} GiB / ${card} GB`, 'algo-idx');
+    const set = (item, on, cls, labelOn = on) => {
+      item.c.setAttribute('class', 'algo-cell' + (cls ? ' ' + cls : '') + (on ? '' : ' is-hidden'));
+      show(item.l, labelOn);
+    };
+    return frame => {
+      const st = frame.stage;
+      set(add, st >= 1 && st <= 3, st === 1 ? 'is-change' : '');
+      set(single, st >= 2 && st <= 3, st === 2 ? 'is-change' : '');
+      set(gemm, st === 3, 'is-change');
+      plain.forEach(p => set(p, st >= 4, st === 5 || st === 6 ? 'is-change is-out' : 'is-change', st === 4 || st === 7));
+      cached.forEach(p => set(p, st >= 5, 'is-bad'));
+      set(full, st >= 6, 'is-bad');
+      show(limitLine, st >= 5); show(limitLabel, st >= 5);
+      show(ridgeLabel, st <= 3);
+      show(legend[0], st >= 4); show(legend[1], st >= 5);
+      show(gauge, st === 6);
+    };
+  }});
+
+  FIGURES['step-latency-hiding'] = name => stepper(name, F.latencyHiding(), {height: 300, readouts: f => {
+    const pct = x => Math.round(x * 100) + '%';
+    if (f.done) return f.table.map(row => [t(`每线程 ${row.regs} 个寄存器`, `${row.regs} registers per thread`), t(`${row.N} 个 warp → ${pct(row.U)}`, `${row.N} warps → ${pct(row.U)}`), row.U === 1 ? 'good' : '']);
+    const exact = f.N * f.W === f.period;
+    return [[t('每个 scheduler 的 warp', 'warps per scheduler'), String(f.N)], ['W + L', `${f.W} + ${f.L} = ${f.period}`],
+      ['U', `${f.N > 1 ? f.N + ' × ' : ''}${f.W} / ${f.period} ${exact ? '=' : '≈'} ${pct(f.U)}`, f.U === 1 ? 'good' : 'key']];
+  }, setup(svg) {
+    const x0 = 100, k = 1.3, X = c => x0 + c * k, rowY = i => 74 + i * 19, h = 14, maxRows = 11, pct = x => Math.round(x * 100) + '%';
+    const axis = s('line', {x1: X(0), y1: 34, y2: 34, class: 'algo-edge'});
+    svg.append(axis);
+    const ticks = [0, 1, 2].map(() => { const l = s('line', {y1: 30, y2: 38, class: 'algo-edge'}); svg.append(l); return l; });
+    const wLabel = V.text(svg, 0, 26, '', 'algo-idx', 'middle'), lLabel = V.text(svg, 0, 26, '', 'algo-idx', 'middle'), endLabel = V.text(svg, 0, 38, '', 'algo-idx');
+    const slotHead = V.text(svg, x0 - 8, 57, t('发射槽', 'issue slots'), 'algo-head', 'end');
+    const slots = Array.from({length: maxRows}, () => { const r = s('rect', {y: 45, height: 16, rx: 3, class: 'algo-cell'}); svg.append(r); return r; });
+    const uLabel = V.text(svg, 0, 58, '', 'algo-strong');
+    const rows = Array.from({length: maxRows}, (_, i) => {
+      const g = s('g');
+      svg.append(g);
+      V.text(g, x0 - 8, rowY(i) + 11, `warp ${i + 1}`, 'algo-idx', 'end');
+      const issue = s('rect', {y: rowY(i), height: h, rx: 2, class: 'algo-cell is-change'});
+      const wait = s('rect', {y: rowY(i), height: h, rx: 2, class: 'algo-ghost'}), wrap = s('rect', {x: X(0), y: rowY(i), height: h, rx: 2, class: 'algo-ghost'});
+      g.append(issue, wait, wrap);
+      return {g, issue, wait, wrap};
+    });
+    const waitNote = V.text(svg, 0, rowY(0) + 11, t('等显存', 'waiting for memory'), 'algo-idx', 'middle');
+    const table = [0, 1, 2].map(i => {
+      const g = s('g'), y = 90 + i * 66;
+      svg.append(g);
+      const label = V.text(g, x0, y, '', 'algo-note');
+      const cells = Array.from({length: maxRows}, () => { const r = s('rect', {y: y + 8, height: 16, rx: 3, class: 'algo-cell'}); g.append(r); return r; });
+      const u = V.text(g, 0, y + 21, '', 'algo-strong');
+      return {g, label, cells, u};
+    });
+    return frame => {
+      const {N, W, L, period, done} = frame, count = period / W;
+      axis.setAttribute('x2', X(period));
+      [0, W, period].forEach((c, i) => { ticks[i].setAttribute('x1', X(c)); ticks[i].setAttribute('x2', X(c)); });
+      wLabel.setAttribute('x', X(W / 2)); wLabel.textContent = `W = ${W}`;
+      lLabel.setAttribute('x', X(W + L / 2)); lLabel.textContent = `L = ${L}`;
+      endLabel.setAttribute('x', X(period) + 6); endLabel.textContent = t(`${period} 周期`, `${period} cycles`);
+      slots.forEach((r, i) => {
+        r.setAttribute('x', X(i * W) + 1); r.setAttribute('width', W * k - 2);
+        r.setAttribute('class', done || i >= count ? 'algo-cell is-hidden' : i < N ? 'algo-cell ' + (frame.U === 1 ? 'is-keep' : 'is-change') : 'algo-ghost');
+      });
+      show(slotHead, !done);
+      uLabel.setAttribute('x', X(period) + 10);
+      uLabel.textContent = done ? '' : `U ${N * W === period ? '=' : '≈'} ${pct(frame.U)}`;
+      rows.forEach((row, i) => {
+        show(row.g, !done && i < N);
+        row.issue.setAttribute('x', X(i * W)); row.issue.setAttribute('width', W * k);
+        row.wait.setAttribute('x', X((i + 1) * W)); row.wait.setAttribute('width', Math.max(0, period - (i + 1) * W) * k);
+        row.wrap.setAttribute('width', i * W * k);
+      });
+      waitNote.setAttribute('x', X(W + L / 2));
+      show(waitNote, !done);
+      table.forEach((row, i) => {
+        show(row.g, Boolean(done));
+        if (!done) return;
+        const entry = frame.table[i];
+        row.label.textContent = t(`每线程 ${entry.regs} 个寄存器 → 每个 scheduler ${entry.N} 个 warp`, `${entry.regs} registers per thread → ${entry.N} warps per scheduler`);
+        row.cells.forEach((c, j) => {
+          c.setAttribute('x', X(j * W) + 1); c.setAttribute('width', W * k - 2);
+          c.setAttribute('class', j >= count ? 'algo-cell is-hidden' : j < entry.N ? 'algo-cell ' + (entry.U === 1 ? 'is-keep' : 'is-change') : 'algo-ghost');
+        });
+        row.u.setAttribute('x', X(period) + 10);
+        row.u.textContent = pct(entry.U);
+      });
+    };
+  }});
+
+  FIGURES['step-tiling-reads'] = name => stepper(name, F.tilingReads(), {height: 300, readouts: f => {
+    if (f.done) return [[t('不分块', 'untiled'), String(f.untiled), 'bad'], [t('T = 2 分块', 'T = 2 tiling'), String(f.reads), 'good'],
+      [t('n = 4096、T = 32 时的读取', 'reads at n = 4096, T = 32'), `≈ ${f.untiledGB} GB → ≈ ${f.tiledGB} GB`, 'wide'], [t('V100 实测有效带宽（BPG）', 'V100 measured effective bandwidth (BPG)'), t('119.9 → 195.5 GB/s，不是 32 倍', '119.9 → 195.5 GB/s, not 32×'), 'wide']];
+    const flat = [...f.a.flat(), ...f.b.flat()], same = flat.every(v => v === flat[0]) && flat[0] > 0;
+    return [[t('global 读取', 'global reads'), String(f.reads), f.stage === 1 ? 'bad' : f.stage === 4 ? 'good' : 'key'],
+      [t('每个元素读几遍', 'reads per element'), same ? String(flat[0]) : '—'],
+      [t('片上乘加（这个 block）', 'on-chip multiply-adds (this block)'), f.macs ? String(f.macs) : '—']];
+  }, setup(svg) {
+    const n = 4, T = 2, size = 30, gap = 4, step = size + gap, y0 = 50, span = n * step - gap;
+    const matrix = (x, head, indices) => {
+      V.text(svg, x + span / 2, 22, head, 'algo-head', 'middle');
+      if (indices) for (let i = 0; i < n; i++) {
+        V.text(svg, x + i * step + size / 2, y0 - 7, String(i), 'algo-idx', 'middle');
+        V.text(svg, x - 6, y0 + i * step + size / 2 + 4, String(i), 'algo-idx', 'end');
+      }
+      const cells = [];
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) cells.push(cell(svg, x + j * step, y0 + i * step, size, size, '', 'algo-val'));
+      return cells;
+    };
+    const A = matrix(44, 'A', true), B = matrix(234, 'B', true), C = matrix(424, 'C = AB', false);
+    V.text(svg, 205, y0 + span / 2 + 5, '×', 'algo-val', 'middle');
+    V.text(svg, 395, y0 + span / 2 + 5, '=', 'algo-val', 'middle');
+    const shared = s('g');
+    svg.append(shared);
+    const sharedHead = V.text(shared, 424, 212, '', 'algo-head');
+    V.text(shared, 418, 262, 'As', 'algo-strong', 'end');
+    V.text(shared, 512, 262, 'Bs', 'algo-strong', 'end');
+    const tileCells = x => Array.from({length: T * T}, (_, q) => cell(shared, x + (q % T) * step, 222 + Math.floor(q / T) * step, size, size, '', 'algo-small'));
+    const As = tileCells(424), Bs = tileCells(518);
+    const bar = (y, cls) => {
+      const label = V.text(svg, 44, y - 8, '', 'algo-note');
+      const rect = s('rect', {x: 44, y, height: 14, rx: 3, class: cls});
+      svg.append(rect);
+      return {label, rect};
+    };
+    const untiled = bar(222, 'algo-bar is-tall'), tiledBar = bar(264, 'algo-bar');
+    const scale = 300 / 128;
+    return frame => {
+      const now = frame.now || null, out = new Set((frame.outputs || []).map(([i, j]) => i * n + j));
+      [[A, frame.a, now && now.a], [B, frame.b, now && now.b]].forEach(([cells, counts, fresh]) => cells.forEach((c, q) => {
+        const i = Math.floor(q / n), j = q % n, v = counts[i][j];
+        c.set(v ? String(v) : '', fresh && fresh[i][j] ? 'is-change' : v ? 'is-written' : '');
+      }));
+      C.forEach((c, q) => c.set('', out.has(q) ? (frame.finished ? 'is-keep' : 'is-look') : ''));
+      show(shared, Boolean(frame.block));
+      if (frame.block) {
+        const [bi, bj] = frame.block, p = frame.phase;
+        sharedHead.textContent = t(`第 ${p + 1} 阶段 · shared memory`, `phase ${p + 1} · shared memory`);
+        As.forEach((c, q) => { const y = Math.floor(q / T), x = q % T; c.set(`A${bi * T + y}${p * T + x}`, 'is-change'); });
+        Bs.forEach((c, q) => { const y = Math.floor(q / T), x = q % T; c.set(`B${p * T + y}${bj * T + x}`, 'is-change'); });
+      }
+      const tiledStage = frame.stage >= 2, naiveReads = frame.stage === 0 ? frame.reads : frame.untiled || 2 * n ** 3;
+      untiled.label.textContent = t(`不分块：${naiveReads} 次`, `untiled: ${naiveReads} reads`);
+      untiled.rect.setAttribute('width', naiveReads * scale);
+      tiledBar.label.textContent = tiledStage ? t(`T = 2 分块：${frame.reads} 次`, `T = 2 tiling: ${frame.reads} reads`) : '';
+      tiledBar.rect.setAttribute('width', tiledStage ? frame.reads * scale : 0);
+      show(tiledBar.rect, tiledStage);
+    };
+  }});
+
+  FIGURES['step-cache-walk'] = name => stepper(name, F.cacheWalk(), {height: 330, readouts: f => {
+    const fmt = x => x.toLocaleString('en-US');
+    if (f.done) return [[t('按行走 · 8 个 line', 'by row · 8 lines'), fmt(f.bars[0])], [t('按列走 · 8 个 line', 'by column · 8 lines'), fmt(f.bars[1]), 'bad'], [t('按列走 · 64 个 line', 'by column · 64 lines'), fmt(f.bars[2]), 'good']];
+    const rate = `${(f.misses / f.accesses * 100).toFixed(2).replace(/\.?0+$/, '')}%`;
+    return [[t('缺失 / 访问', 'misses / accesses'), `${fmt(f.misses)} / ${fmt(f.accesses)}`, f.misses === f.accesses ? 'bad' : 'key'], [t('缺失率', 'miss rate'), rate],
+      [t('每搬 64 字节用到', 'useful bytes per 64-byte line'), `${f.useful} B`, f.useful < 64 ? 'bad' : 'good']];
+  }, setup(svg) {
+    const n = 64, lineW = 34, lineGap = 3, pitch = 3, x0 = 40, y0 = 48, cx = 240, bx = 420, bw = 160;
+    V.text(svg, x0, 20, t('矩阵：每行 4 个 line', 'matrix: 4 lines per row'), 'algo-head');
+    ['0–15', '16–31', '32–47', '48–63'].forEach((label, k) => V.text(svg, x0 + k * (lineW + lineGap) + lineW / 2, y0 - 7, label, 'algo-idx', 'middle'));
+    V.text(svg, x0 - 6, y0 + 4, '0', 'algo-idx', 'end');
+    V.text(svg, x0 - 6, y0 + n * pitch, '63', 'algo-idx', 'end');
+    const lines = Array.from({length: n * 4}, (_, line) => {
+      const r = s('rect', {x: x0 + (line % 4) * (lineW + lineGap), y: y0 + Math.floor(line / 4) * pitch, width: lineW, height: pitch - 0.6, 'stroke-width': 0, class: 'is-cross'});
+      svg.append(r);
+      return r;
+    });
+    [['mr-h', t('在 cache 里', 'in cache')], ['mr-w mr-dim', t('载入过，已被踢掉', 'loaded, then evicted')]].forEach(([cls, label], i) => {
+      svg.append(s('rect', {x: x0 + i * 110, y: 254, width: 10, height: 10, 'stroke-width': 0, class: cls}));
+      V.text(svg, x0 + 14 + i * 110, 263, label, 'algo-idx');
+    });
+    const cacheHead = V.text(svg, cx, 20, '', 'algo-head'), orderNote = V.text(svg, cx, 34, t('LRU：上面最久没用', 'LRU: least recent on top'), 'algo-idx');
+    const slotGroup = s('g'), gridGroup = s('g');
+    svg.append(slotGroup, gridGroup);
+    const slots = Array.from({length: 8}, (_, k) => cell(slotGroup, cx, 44 + k * 25, 120, 21, '', 'algo-small'));
+    const grid = Array.from({length: 64}, (_, k) => { const r = s('rect', {x: cx + (k % 8) * 15, y: 44 + Math.floor(k / 8) * 15, width: 13, height: 13, rx: 2, 'stroke-width': 0, class: 'is-cross'}); gridGroup.append(r); return r; });
+    V.text(svg, bx, 20, t('缺失次数', 'misses'), 'algo-head');
+    const bars = [t('按行走 · 8 个 line', 'by row · 8 lines'), t('按列走 · 8 个 line', 'by column · 8 lines'), t('按列走 · 64 个 line', 'by column · 64 lines')].map((label, i) => {
+      const y = 58 + i * 52, g = s('g');
+      svg.append(g);
+      V.text(g, bx, y - 8, label, 'algo-note');
+      g.append(s('rect', {x: bx, y, width: bw, height: 14, rx: 3, class: 'algo-ghost'}));
+      const rect = s('rect', {x: bx, y, height: 14, rx: 3, class: 'algo-bar' + (i === 1 ? ' is-tall' : '')});
+      g.append(rect);
+      return {g, rect, value: V.text(g, 0, y + 12, '', 'algo-strong')};
+    });
+    V.text(svg, bx, 222, 'line 0 = (0, 0)…(0, 15)', 'algo-head');
+    const zoom = Array.from({length: 16}, (_, j) => cell(svg, bx + (j % 8) * 25, 232 + Math.floor(j / 8) * 25, 22, 22, String(j), 'algo-idx'));
+    [['is-change', t('缺失', 'miss')], ['is-keep', t('命中', 'hit')]].forEach(([cls, label], i) => {
+      svg.append(s('rect', {x: bx + i * 70, y: 290, width: 12, height: 12, rx: 2, class: 'algo-cell ' + cls}));
+      V.text(svg, bx + 17 + i * 70, 300, label, 'algo-idx');
+    });
+    return frame => {
+      const resident = new Set(frame.cache), loaded = new Set(frame.loaded), small = frame.capacity <= 8;
+      lines.forEach((r, line) => r.setAttribute('class', resident.has(line) ? 'mr-h' : loaded.has(line) ? 'mr-w mr-dim' : 'is-cross'));
+      cacheHead.textContent = t(`cache：${frame.capacity} 个 line`, `cache: ${frame.capacity} lines`);
+      show(orderNote, small); show(slotGroup, small); show(gridGroup, !small);
+      slots.forEach((slot, k) => {
+        const line = frame.cache[k];
+        if (line == null) { slot.set('', ''); return; }
+        const row = Math.floor(line / 4), from = (line % 4) * 16;
+        slot.set(t(`行 ${row} · ${from}–${from + 15}`, `row ${row} · ${from}–${from + 15}`), line === frame.last.line ? (frame.last.hit ? 'is-look' : 'is-change') : 'is-keep');
+      });
+      grid.forEach((r, k) => r.setAttribute('class', k < frame.cache.length ? 'mr-h' : 'is-cross'));
+      bars.forEach((b, i) => {
+        const v = frame.bars[i], on = v != null;
+        show(b.g, on);
+        b.rect.setAttribute('width', on ? v / (n * n) * bw : 0);
+        b.value.setAttribute('x', bx + (on ? v / (n * n) * bw : 0) + 6);
+        b.value.textContent = on ? v.toLocaleString('en-US') : '';
+      });
+      zoom.forEach((c, j) => c.set(String(j), frame.lineZero[j] === 'miss' ? 'is-change' : frame.lineZero[j] === 'hit' ? 'is-keep' : ''));
     };
   }});
 

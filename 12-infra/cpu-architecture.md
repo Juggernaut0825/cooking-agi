@@ -60,6 +60,8 @@ $$
 - **按行走**：连续访问 16 个 float 才换一个 line，4,096 次访问只缺失 256 次，缺失率 6.25%。
 - **按列走**：相邻两次访问隔了一整行（256 字节），落在不同的 line 上。一列要碰 64 个 line，cache 只放得下 8 个；等回头访问下一列，这些 line 早被踢掉了。4,096 次访问次次缺失。
 
+<!-- widget:step-cache-walk -->
+
 ```python
 from collections import OrderedDict
 

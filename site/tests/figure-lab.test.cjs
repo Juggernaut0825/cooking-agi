@@ -281,3 +281,45 @@ test('lambda return: 0.8, 1.72, 1.044, 0.695; lambda 0 gives 0.45, lambda 1 give
   assert.equal(Number(end.R[0].toFixed(3)), -0.225);
   assert.equal(end.R[1], -1);
 });
+
+test('roofline: ridge 295, add 0.56 TFLOPS, decode 4.18 ms and 239 tokens/s, GEMM 1.11 ms; batching to 70,700 tokens/s, KV toward 30, 77 GiB at B = 128', () => {
+  const frames = F.roofline(), end = last(frames);
+  assert.equal(Math.round(end.ridge), 295);
+  assert.equal(Math.round(end.vectorRidge), 40);
+  assert.equal(Number(end.add.perf.toFixed(2)), 0.56);
+  assert.equal(Number(end.single.ms.toFixed(2)), 4.18);
+  assert.equal(Math.round(end.single.tokens), 239);
+  assert.equal(Math.round(end.gemm.I), 2731);
+  assert.equal(Number(end.gemm.ms.toFixed(2)), 1.11);
+  assert.deepEqual(end.plain.map(p => Number(p.tokens.toPrecision(3))), [239, 15300, 70600, 70700]);
+  assert.deepEqual(end.plain.map(p => Number(p.ms.toPrecision(3))), [4.18, 4.18, 4.18, 7.24]);
+  assert.deepEqual(end.cached.map(p => Number(p.I.toFixed(1))), [1.1, 7.1, 21.4]);
+  assert.deepEqual(end.cached.map(p => Number(p.tokens.toPrecision(3))), [231, 1470, 4440]);
+  assert.equal(Math.round(end.limit), 30);
+  assert.equal(Math.round(end.full.gib), 77);
+  assert.equal(end.done, true);
+});
+
+test('latency hiding: U 9%, 36%, 73%, 100% at N = 1, 4, 8, 11; W = 60 needs 6 warps; registers 32/64/128 give 16/8/4 warps', () => {
+  const frames = F.latencyHiding(), end = last(frames);
+  assert.deepEqual(frames.slice(0, 4).map(f => [f.N, Math.round(f.U * 100)]), [[1, 9], [4, 36], [8, 73], [11, 100]]);
+  assert.deepEqual([frames[4].N, frames[4].period, frames[4].U], [6, 360, 1]);
+  assert.deepEqual(end.table.map(r => [r.regs, r.N, Math.round(r.U * 100)]), [[32, 16, 100], [64, 8, 73], [128, 4, 36]]);
+});
+
+test('tiling reads: 8 for C00, 128 untiled (4 per element), 8 then 16 for block (0, 0), 64 tiled (2 per element); 550 GB vs 17 GB', () => {
+  const frames = F.tilingReads(), end = last(frames);
+  assert.deepEqual(frames.map(f => f.reads), [8, 128, 8, 16, 64, 64]);
+  assert.ok([...frames[1].a.flat(), ...frames[1].b.flat()].every(v => v === 4));
+  assert.ok([...end.a.flat(), ...end.b.flat()].every(v => v === 2));
+  assert.equal(end.untiled, 128);
+  assert.deepEqual([end.untiledGB, end.tiledGB], [550, 17]);
+});
+
+test('cache walk: row walk 1/16 then 256/4096, column walk 64/64, 65/65, 4096/4096, 64-line cache 64/1024 then 256', () => {
+  const frames = F.cacheWalk(), end = last(frames);
+  assert.deepEqual(frames.map(f => [f.misses, f.accesses]), [[1, 16], [256, 4096], [64, 64], [65, 65], [4096, 4096], [64, 1024], [256, 4096], [256, 4096]]);
+  assert.deepEqual(frames[2].cache, [224, 228, 232, 236, 240, 244, 248, 252]);
+  assert.equal(frames[4].useful, 4);
+  assert.deepEqual(end.bars, [256, 4096, 256]);
+});

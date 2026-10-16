@@ -49,6 +49,8 @@ Bytes are counted for the ideal case where every input is read once and every ou
 
 **Decode.** When generating one token, each weight takes part in a single multiply-add (2 FLOP) but costs 2 bytes to read from memory, so $I\approx1$. A 7B model's BF16 weights are about $1.4\times10^{10}$ bytes; reading them once takes at least $1.4\times10^{10}/3.352\times10^{12}\approx4.18$ ms, so a single request tops out at about 239 tokens/s, while the arithmetic itself needs only 0.014 ms. NVIDIA's guide gives an example of the same kind: a fully connected layer at batch size 1 is a matrix-vector product (GEMV) with arithmetic intensity below 1, and is always memory-bound.
 
+<!-- widget:step-roofline -->
+
 ## Decode: why a bigger batch moves toward compute-bound {#decode-batching}
 
 ### Weights only
@@ -60,7 +62,7 @@ In one decode step the weights are read once no matter how many requests are in 
 | 1 | 4.18 ms | 0.014 ms | 4.18 ms | 239 |
 | 64 | 4.18 ms | 0.91 ms | 4.18 ms | 15,300 |
 | 295 | 4.18 ms | 4.17 ms | 4.18 ms | 70,600 |
-| 512 | 4.18 ms | 7.25 ms | 7.25 ms | 70,700 |
+| 512 | 4.18 ms | 7.24 ms | 7.24 ms | 70,700 |
 
 While $B$ is below 295, that is, while $I$ is still left of the ridge point, adding a request barely changes the step time, so throughput grows linearly with $B$. Past $B\approx295$, throughput stops growing; each step just gets slower and every request waits longer. This is why serving engines work so hard to form batches.
 

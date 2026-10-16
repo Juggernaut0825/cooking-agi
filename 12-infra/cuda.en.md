@@ -153,6 +153,8 @@ Tiling cuts $C$ into $T\times T$ tiles and gives each block one tile. Take $T=2$
 | no tiling (each thread reads one row and one column) | — | — | $2n^3=128$ |
 | tiling with $T=2$ | 2 phases × (4 + 4) = 16 | 4 | $2n^3/T=64$ |
 
+<!-- widget:step-tiling-reads -->
+
 In general, tiling cuts global reads from $2n^3$ to $2n^3/T$: each element is read $n/T$ times instead of $n$ times. With $n=4096$, $T=32$ and FP32, the untiled kernel issues about $1.37\times10^{11}$ reads (about 550 GB) and the tiled one about $4.3\times10^{9}$ (about 17 GB), while the three matrices themselves are only about 0.2 GB.
 
 ```cpp

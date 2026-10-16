@@ -60,6 +60,8 @@ A $64\times64$ float32 matrix stored row-major (the default in C, NumPy and PyTo
 - **Row by row**: 16 consecutive floats share a line, so 4,096 accesses miss only 256 times, a 6.25% miss rate.
 - **Column by column**: consecutive accesses are a full row (256 bytes) apart and land on different lines. One column touches 64 lines while the cache holds 8; by the time you come back for the next column, those lines are long gone. All 4,096 accesses miss.
 
+<!-- widget:step-cache-walk -->
+
 ```python
 from collections import OrderedDict
 

@@ -610,6 +610,10 @@ FIGURE_LAB = [
     ("step-evaluator-rank", "相关系数 0.98，第一名还是选错了", "A correlation of 0.98, and still the wrong winner", "step"),
     ("step-mcts-visits", "六次模拟：访问次数变成策略标签", "Six simulations: visit counts become a policy target", "step"),
     ("step-lambda-return", "从后往前算 λ-return", "Computing a λ-return backwards", "step"),
+    ("step-roofline", "同一张 roofline：三个操作，再加 decode batch", "One roofline: three operations, then decode batching", "step"),
+    ("step-latency-hiding", "几个 warp 才藏得住 300 个周期的等待", "How many warps hide a 300-cycle wait?", "step"),
+    ("step-tiling-reads", "数 global 读取：不分块 128 次，分块 64 次", "Counting global reads: 128 untiled, 64 tiled", "step"),
+    ("step-cache-walk", "同一个矩阵：按行走 256 次缺失，按列走 4,096 次", "One matrix: 256 misses by row, 4,096 by column", "step"),
 ]
 for _name, _zh, _en, _kind in [(name, zh, en, "step") for name, zh, en in ALGO_LAB] + FIGURE_LAB:
     _kicker = 'data-zh="动画" data-en="Step by step"' if _kind == "step" else 'data-zh="图解" data-en="Diagram"'

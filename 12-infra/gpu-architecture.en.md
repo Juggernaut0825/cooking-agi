@@ -67,6 +67,8 @@ $$
 
 Take $L=300$ and $W=30$ (teaching assumptions, not measured H100 latencies): a warp uses only 30 issue cycles out of every 330, so you need $N\ge 330/30=11$ warps to fill the slots.
 
+<!-- widget:step-latency-hiding -->
+
 How many warps fit is often set by registers. An H100 SM has 65,536 32-bit registers and at most 64 resident warps; split evenly over 4 schedulers, that is at most 16 each.
 
 | Registers per thread | Registers per warp | Resident warps per SM | Per scheduler | $U$ in this example |
