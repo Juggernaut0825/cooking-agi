@@ -110,7 +110,7 @@ $$
 
 - **输出是冗余的。** VGGT 同时给深度、相机和 pointmap，[官方 README](https://github.com/facebookresearch/vggt) 写明：用深度加相机反投影出的点，通常比 pointmap 分支直接给的点更准。冗余可以拿来做一致性检查。
 - **“深度加射线”是一种因子化。** 三维点等于相机中心加上“沿射线的距离乘射线方向”。Depth Anything 3 的论点是只预测这一个 depth-ray 目标就够；[MapAnything 的 README](https://github.com/facebookresearch/map-anything) 把 `ray_directions`、`depth_along_ray`、`depth_z`、`camera_poses` 和 `pts3d` 分开输出。
-- **z 深度和沿射线的距离不是一回事。** 上例像素的射线方向是 $(0.2,0.1,1)$，长度 $\sqrt{1.05}\approx1.025$。z 深度 5 m，沿射线的距离就是 $5\times1.025\approx5.12$ m。离主点越远，两者差得越多；把一个当另一个用，图像边缘的点会被成片推远。
+- **z 深度和沿射线的距离不是一回事。** 上例像素的射线方向是 $(0.2,0.1,1)$，长度 $\sqrt{1.05}\approx1.025$。z 深度 5 m，沿射线的距离就是 $5\times1.025\approx5.12$ m。离主点越远，两者差得越多。把 z 深度当成沿射线的距离去反投影，边缘的点会被成片拉近（上例算出的 z 只有 $5/1.025\approx4.88$ m）；反过来把沿射线的距离当 z 深度用，就会被成片推远（5.12 m）。
 - **尺度从哪来，要逐个模型查。** DUSt3R 只到尺度；[CUT3R](https://arxiv.org/abs/2501.12387) 和 MapAnything 输出米制；Depth Anything 3 的米制靠 Metric 和 Nested 两个版本。
 
 所有对比数字都是作者自报。例如 Depth Anything 3 的[摘要](https://arxiv.org/abs/2511.10647)写的是“surpassing prior SOTA VGGT by an average of 44.3% in camera pose accuracy …”，即相机位姿平均比此前最好的 VGGT 高 44.3%，几何高 25.1%；这是在作者自己新建的基准上测的。
@@ -146,7 +146,7 @@ $$
 | 把一张相对深度图整体乘 $k$，用同一个 $K$ 投回图像 | 每个点的像素位置都不变 | 模型的相对深度是对的 |
 | 用一个激光雷达点定出 $k$ | 所有像素都有了米数 | 其他像素的形状误差也被修好了 |
 | 仿射不变输出只给一个已知距离 | $(s,t)$ 有无数组解 | 随便取一组就能用 |
-| 把 `depth_z` 当成沿射线距离去反投影 | 图像边缘的点被成片推远 | 是模型在边缘不准 |
+| 把 `depth_z` 当成沿射线距离去反投影 | 图像边缘的点被成片拉近 | 是模型在边缘不准 |
 | 冻结骨干上的 linear probe 分数高 | 需要的信息线性可读 | 全量微调后排名不变 |
 
 ## 截至 2026 年 10 月

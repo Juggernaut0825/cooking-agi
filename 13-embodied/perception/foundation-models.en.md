@@ -110,7 +110,7 @@ A few things worth pausing on:
 
 - **The outputs are redundant.** VGGT returns depth, cameras and a pointmap; its [official README](https://github.com/facebookresearch/vggt) says that points unprojected from depth plus cameras are usually more accurate than those from the pointmap branch. The redundancy can be used as a consistency check.
 - **"Depth plus ray" is a factorisation.** A 3D point equals the camera centre plus "distance along the ray times ray direction". Depth Anything 3 argues that predicting this one depth-ray target is enough; the [MapAnything README](https://github.com/facebookresearch/map-anything) outputs `ray_directions`, `depth_along_ray`, `depth_z`, `camera_poses` and `pts3d` separately.
-- **z-depth and distance along the ray are not the same thing.** The example pixel's ray direction is $(0.2,0.1,1)$, of length $\sqrt{1.05}\approx1.025$. A z-depth of 5 m is a distance along the ray of $5\times1.025\approx5.12$ m. The further from the principal point, the bigger the gap; use one as the other and the points near the image edges are pushed away wholesale.
+- **z-depth and distance along the ray are not the same thing.** The example pixel's ray direction is $(0.2,0.1,1)$, of length $\sqrt{1.05}\approx1.025$. A z-depth of 5 m is a distance along the ray of $5\times1.025\approx5.12$ m. The further from the principal point, the bigger the gap. Unproject z-depth as if it were distance along the ray and the points near the image edges are pulled in wholesale (in the example the recovered z is only $5/1.025\approx4.88$ m); use distance along the ray as z-depth and they are pushed away (5.12 m).
 - **Check where the scale comes from, model by model.** DUSt3R is up to scale; [CUT3R](https://arxiv.org/abs/2501.12387) and MapAnything output metric; Depth Anything 3 gets metric scale from its Metric and Nested versions.
 
 All comparison numbers are author-reported. For example, the Depth Anything 3 [abstract](https://arxiv.org/abs/2511.10647) reports "surpassing prior SOTA VGGT by an average of 44.3% in camera pose accuracy …", and 25.1% on geometry, measured on a benchmark the authors built themselves.
@@ -146,7 +146,7 @@ Licences really do change: VGGT added a commercial checkpoint on 2025-07-29 ([RE
 | Multiply a relative depth map by $k$ and project it back with the same $K$ | Every point lands on the same pixel | That the model's relative depth is correct |
 | Fix $k$ with one lidar point | Every pixel now has a value in metres | That shape errors at other pixels are fixed too |
 | Give affine-invariant output only one known distance | Infinitely many $(s,t)$ solutions | That any one of them will do |
-| Unproject `depth_z` as if it were distance along the ray | Points near the image edges pushed away wholesale | That the model is inaccurate at the edges |
+| Unproject `depth_z` as if it were distance along the ray | Points near the image edges pulled in wholesale | That the model is inaccurate at the edges |
 | A high linear-probe score on a frozen backbone | The needed information is linearly readable | That the ranking survives full fine-tuning |
 
 ## As of October 2026
