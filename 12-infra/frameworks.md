@@ -90,6 +90,8 @@ $$
 | bias 进 GEMM epilogue（如 `addmm`），ReLU 单独一个 kernel | 64 MiB | 约 34 µs |
 | bias 和 ReLU 都进 GEMM epilogue | 0 | 0 |
 
+<!-- widget:step-fusion-traffic -->
+
 再看 GEMM 本身：至少读 $x$、$w$，写一份输出，共 96 MiB，按 2 TB/s 约 50 µs；运算量是 $2MNK\approx1.37\times10^{11}$ FLOP，按 **500 TFLOP/s 的教学算力**约 275 µs。在这个形状下，GEMM 受算力限制；eager 的逐元素部分约相当于 GEMM 时间的 24%，融合一次后约 12%。2 TB/s 和 500 TFLOP/s 只是方便手算的整数，不是某张卡的规格；真实数字要看具体 SKU、精度和实际达到的效率，见 [NVIDIA 各代 GPU](nvidia-generations.md) 和[性能](performance.md#roofline)里的 roofline。
 
 **换一个条件：** 把 $M$ 从 4096 改成 8，像 decode 时一次只有 8 个 token。一个中间结果只剩 64 KiB，eager 逐元素部分共 256 KiB，按 2 TB/s 约 0.13 µs。GEMM 仍要读完整个 $w$（32 MiB，约 17 µs），运算只要约 0.5 µs，变成读权重受限。假设每个算子在 CPU 侧要花 5 µs 准备和提交（**教学假设**，实际值随 CPU、PyTorch 版本和算子变化，要用 profiler 测），两个逐元素算子就花 10 µs CPU 时间，去提交 0.13 µs 的 GPU 工作。层数一多，GPU 就在等 CPU。这时融合省下的主要是提交次数，不是字节；CUDA Graphs 则把一整段提交合并成一次。

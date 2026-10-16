@@ -74,6 +74,8 @@ With the v1.37 defaults, the scheduler places one Pod at a time; the NodeResourc
 | Add gang scheduling | S4a (4) | S4b (4) | T8 (8) | 16 | T16 |
 | Gang scheduling plus bin-packing on GPUs | S4a+S4b (8) | T16 (8) | T16 (8) | 24 | T8 |
 
+<!-- widget:step-gang-scheduling -->
+
 The first row is the worst: T16's first Pod takes C, its second Pod finds no node with 8 free GPUs, and the processes that did start sit waiting for the other half of the ranks; A and B have 4 free GPUs each, 8 in total, but cannot form one 8-GPU Pod, so T8 waits too. Only 8 of the 24 GPUs are doing work. If a second identical T16 arrives, the two jobs may each take one node and each wait for its other half, and neither can ever start: a deadlock.
 
 Second row: gang scheduling sees that T16's two Pods cannot both be placed, so it binds neither, C goes to T8, and 16 GPUs are doing work. The cost is that T16 waits for two whole nodes to become free at the same time, which without priorities or reservations may take indefinitely long. The third row [switches the scheduler to the MostAllocated bin-packing strategy](https://kubernetes.io/docs/concepts/scheduling-eviction/resource-bin-packing/) with a weight on GPUs: the two small jobs squeeze onto one node, leaving two whole nodes for T16, and all 24 GPUs are doing work; now T8 waits for A to free up. Which order is better depends on priorities and quotas; bin-packing is not better in every case.

@@ -1526,6 +1526,215 @@
     ]);
   };
 
+  /* 12-infra/chips-and-fabs: one 300 mm wafer, D0 defects per cm² (teaching value 0.1), Poisson yield.
+     Sites come from DPW ≈ π(d/2)²/A − πd/√(2A); the drawn grid is the 0.5 mm shift that fits the most
+     whole dies (657, 151 and 71 in the note); the defects are one fixed pseudo-random draw. */
+  const dieLayouts = {};
+  F.goodDies = function (d0 = 0.1) {
+    const d = 300, R = d / 2, wafer = Math.PI * R * R;
+    const layout = (w, h) => dieLayouts[w + 'x' + h] || (dieLayouts[w + 'x' + h] = (() => {
+      let best = null;
+      for (let a = 0; a < w; a += 0.5) for (let b = 0; b < h; b += 0.5) {
+        const whole = [], edge = [];
+        for (let x = a - Math.ceil((R + a) / w) * w; x < R; x += w) for (let y = b - Math.ceil((R + b) / h) * h; y < R; y += h) {
+          const far = Math.max(x * x, (x + w) ** 2) + Math.max(y * y, (y + h) ** 2);
+          const nx = Math.max(x, Math.min(0, x + w)), ny = Math.max(y, Math.min(0, y + h));
+          if (far <= R * R) whole.push([x, y]);
+          else if (nx * nx + ny * ny < R * R) edge.push([x, y]);
+        }
+        if (!best || whole.length > best.whole.length) best = {whole, edge};
+      }
+      return best;
+    })());
+    let seed = 20261015;
+    const rand = () => {
+      seed = (seed + 0x6D2B79F5) | 0;
+      let q = Math.imul(seed ^ (seed >>> 15), seed | 1);
+      q ^= q + Math.imul(q ^ (q >>> 7), q | 61);
+      return ((q ^ (q >>> 14)) >>> 0) / 4294967296;
+    };
+    const count = Math.round(d0 * wafer / 100);
+    const defects = Array.from({length: count}, () => { const r = R * Math.sqrt(rand()), angle = 2 * Math.PI * rand(); return [r * Math.cos(angle), r * Math.sin(angle)]; });
+    const dpw = A => Math.floor(wafer / A - Math.PI * d / Math.sqrt(2 * A)), good = (dd, A) => Math.round(dpw(A) * Math.exp(-dd * A / 100));
+    const compare = [0.05, 0.1, 0.2].map(dd => ({d0: dd, pairs: Math.floor(good(dd, 400) / 2), mono: good(dd, 800)}));
+    const sizes = [[10, 10], [20, 20], [25, 32]].map(([w, h]) => {
+      const A = w * h, sites = dpw(A);
+      const Y = Math.exp(-d0 * A / 100), good = Math.round(sites * Y), {whole, edge} = layout(w, h);
+      const hit = whole.map(([x, y]) => defects.some(([px, py]) => px >= x && px < x + w && py >= y && py < y + h));
+      return {w, h, A, sites, Y, good, whole, edge, hit, exponent: Number((d0 * A / 100).toFixed(2)), ring: Math.PI * d / Math.sqrt(2 * A)};
+    });
+    const [small, half, big] = sizes, pairs = Math.floor(half.good / 2), mono = big.good, drop = Math.round(small.good / big.good);
+    const cm2 = (wafer / 100).toFixed(1), e = z => `e^−${z.exponent} = ${z.Y.toFixed(3)}`;
+    const base = {d0, R, sizes, defects, count, pairs, mono, drop, area: cm2};
+    return frames([
+      {...base, stage: 0, size: null, zh: `一片 300 mm 晶圆，面积约 ${cm2} cm²。设缺陷密度 D₀ = ${d0} 个/cm²（教学假设，晶圆厂一般不公开真实值）：平均约 ${count} 个缺陷，随机落在晶圆上。图上的点是一次随机抽样。`,
+        en: `A 300 mm wafer, about ${cm2} cm². Take a defect density of D₀ = ${d0} per cm² (a teaching value; fabs generally do not publish real ones): about ${count} defects land at random. The dots are one random draw.`},
+      {...base, stage: 1, size: 0, zh: `100 mm²（10 × 10 mm）：公式给出 ${small.sites} 个位置，图里的网格放得下 ${small.whole.length} 个完整格。Poisson 良率 ${e(small)}，约 ${small.good} 块好 die；红框是沾上缺陷的 die。`,
+        en: `100 mm² (10 × 10 mm): the formula gives ${small.sites} sites; the grid drawn here fits ${small.whole.length} whole squares. Poisson yield ${e(small)}, about ${small.good} good dies; red squares caught a defect.`},
+      {...base, stage: 2, size: 1, edge: true, zh: `400 mm²（20 × 20 mm）：${half.sites} 个位置，良率 ${e(half)}，约 ${half.good} 块好 die。虚线格是边上放不下的残缺 die，公式第二项 πd/√(2A) ≈ ${Math.round(half.ring)} 扣的就是这一圈。`,
+        en: `400 mm² (20 × 20 mm): ${half.sites} sites, yield ${e(half)}, about ${half.good} good dies. The dashed squares are partial dies at the edge; the formula's second term, πd/√(2A) ≈ ${Math.round(half.ring)}, subtracts this ring.`},
+      {...base, stage: 3, size: 2, zh: `800 mm²（25 × 32 mm，放得进 26 × 33 mm 的视场）：${big.sites} 个位置，良率 ${e(big)}，约 ${big.good} 块好 die。面积大 8 倍，好 die 少了 ${drop} 倍：切得少，坏得又多。`,
+        en: `800 mm² (25 × 32 mm, inside the 26 × 33 mm field): ${big.sites} sites, yield ${e(big)}, about ${big.good} good dies. An area 8x larger gives ${drop}x fewer good dies: fewer fit, and more of them are bad.`},
+      {...base, stage: 4, size: 1, tested: true, zh: `把 800 mm² 拆成两块 400 mm²：同一片晶圆约 ${half.good} 块好 die。封装前测出哪块是好的（known good die），两两配成 ${pairs} 对；整块的只有约 ${mono} 块。`,
+        en: `Split the 800 mm² die into two 400 mm² dies: the same wafer gives about ${half.good} good dies. Test them before packaging (known good die) and pair them: ${pairs} pairs, against about ${mono} monolithic dies.`},
+      {...base, stage: 5, size: 1, tested: true, compare, done: true, zh: `D₀ = ${d0}：拆开是 ${pairs} 对，整块是 ${mono} 块。缺陷越密，拆开越划算。这笔账还没算片间接口占的面积和封装良率。`,
+        en: `D₀ = ${d0}: ${pairs} pairs when split, ${mono} dies when monolithic. The denser the defects, the more splitting pays. This arithmetic still leaves out the die-to-die interface area and packaging yield.`}
+    ]);
+  };
+
+  /* 12-infra/frameworks §memory arithmetic: y = relu(x @ w + b) in BF16, M = N = K = 4096, a teaching
+     bandwidth of 2 TB/s and compute rate of 500 TFLOP/s; then M = 8 with 5 µs of CPU per submission. */
+  F.fusionTraffic = function (M = 4096, N = 4096, K = 4096, bytes = 2, bw = 2e12, peak = 500e12, cpu = 5, small = 8) {
+    const MiB = 2 ** 20, us = b => b / bw * 1e6, gemm = 2 * M * N * K / peak * 1e6, one = M * N * bytes;
+    const kernel = (name, reads, writes, isGemm = false) => ({name, reads, writes, gemm: isGemm,
+      time: isGemm ? gemm : us((reads.length + writes.length) * one)});
+    const variant = kernels => {
+      const traffic = kernels.filter(k => !k.gemm).reduce((sum, k) => sum + (k.reads.length + k.writes.length) * one, 0);
+      return {kernels, traffic, mib: traffic / MiB, time: us(traffic), share: us(traffic) / gemm};
+    };
+    const eager = variant([kernel('mm', ['x', 'w'], ['xw'], true), kernel('add', ['xw'], ['xw+b']), kernel('relu', ['xw+b'], ['y'])]);
+    const fused = variant([kernel('mm', ['x', 'w'], ['xw'], true), kernel('bias+ReLU', ['xw'], ['y'])]);
+    const addmm = variant([kernel('addmm', ['x', 'w'], ['xw+b'], true), kernel('relu', ['xw+b'], ['y'])]);
+    const epilogue = variant([kernel('GEMM+bias+ReLU', ['x', 'w'], ['y'], true)]);
+    // M = 8: the GEMM is bound by reading all of w; add and relu each read and write one small intermediate
+    const oneSmall = small * N * bytes, weights = K * N * bytes;
+    const gemmSmall = Math.max(us(weights), 2 * small * N * K / peak * 1e6), each = us(2 * oneSmall), elementwise = us(4 * oneSmall);
+    const timeline = launches => {
+      const ready = launches.length === 1 ? [cpu, cpu, cpu] : [cpu, 2 * cpu, 3 * cpu];
+      let clock = 0;
+      const gpu = [['mm', gemmSmall], ['add', each], ['relu', each]].map(([name, dur], i) => {
+        const t0 = Math.max(clock, ready[i]);
+        clock = t0 + dur;
+        return {name, t0, t1: clock, ready: ready[i]};
+      });
+      return {cpu: launches.map((name, i) => ({name, t0: i * cpu, t1: (i + 1) * cpu})), gpu, cpuTotal: launches.length * cpu, gpuEnd: clock};
+    };
+    const perOp = timeline(['mm', 'add', 'relu']), graph = timeline(['graph']);
+    const r = Math.round, pct = x => Math.round(x * 100) + '%', mib = one / MiB;
+    const large = {view: 'bytes', M, N, K, gemm, unit: mib, eager};
+    const tiny = {view: 'time', M: small, N, K, gemmSmall, elementwise, weightsMiB: weights / MiB, cpu, eager, perOp};
+    return frames([
+      {...large, stage: 0, variant: eager, zh: `M = N = K = 4096，BF16。eager 下是 mm → add → relu 三个 kernel。橙色箭头是逐元素部分的读写，每支 ${mib} MiB：共 ${eager.mib} MiB，按 2 TB/s 约 ${r(eager.time)} µs，约为 GEMM ${r(gemm)} µs 的 ${pct(eager.share)}。`,
+        en: `M = N = K = 4096 in BF16. Eager mode runs three kernels, mm → add → relu. The orange arrows are the elementwise reads and writes, ${mib} MiB each: ${eager.mib} MiB in all, about ${r(eager.time)} µs at 2 TB/s, about ${pct(eager.share)} of the GEMM's ${r(gemm)} µs.`},
+      {...large, stage: 1, variant: fused, zh: `GEMM 之后接一个融合的 bias+ReLU kernel：读一次 xw、写一次 y，xw+b 不再进显存。${fused.mib} MiB，约 ${r(fused.time)} µs，约为 GEMM 的 ${pct(fused.share)}。`,
+        en: `After the GEMM, one fused bias+ReLU kernel reads xw once and writes y once; xw+b never reaches memory. ${fused.mib} MiB, about ${r(fused.time)} µs, about ${pct(fused.share)} of the GEMM.`},
+      {...large, stage: 2, variant: addmm, zh: `另一种：bias 放进 GEMM 的 epilogue（如 addmm），ReLU 单独一个 kernel。这次省掉的是 xw，读写同样是 ${addmm.mib} MiB。`,
+        en: `Another way: bias goes into the GEMM epilogue (as in addmm) and ReLU stays a kernel of its own. This time xw disappears; the traffic is again ${addmm.mib} MiB.`},
+      {...large, stage: 3, variant: epilogue, zh: `bias 和 ReLU 都放进 epilogue：GEMM 写回结果时顺手算完，逐元素部分的读写是 ${epilogue.mib}。乘法一次没少，省的是显存往返。`,
+        en: `Put both bias and ReLU in the epilogue: the GEMM finishes them as it writes its result, so the elementwise traffic is ${epilogue.mib}. Not one multiplication was saved; the memory round trips were.`},
+      {...tiny, stage: 4, line: perOp, zh: `M 改成 8，像 decode 一次 8 个 token。GEMM 仍要读完整个 w（${weights / MiB} MiB，约 ${r(gemmSmall)} µs）；add 和 relu 加起来约 ${elementwise.toFixed(2)} µs。每个算子 CPU 花 ${cpu} µs 提交（教学假设）：两个逐元素算子用 ${2 * cpu} µs CPU，换 ${elementwise.toFixed(2)} µs 的 GPU 工作。`,
+        en: `Set M to 8, as when decoding 8 tokens at a time. The GEMM still reads all of w (${weights / MiB} MiB, about ${r(gemmSmall)} µs); add and relu together take about ${elementwise.toFixed(2)} µs. Each operator costs ${cpu} µs of CPU to submit (a teaching assumption): the two elementwise operators spend ${2 * cpu} µs of CPU on ${elementwise.toFixed(2)} µs of GPU work.`},
+      {...tiny, stage: 5, line: graph, done: true, zh: `CUDA Graph 把三次提交合成一次：按一次提交 ${cpu} µs 算，CPU 从 ${perOp.cpuTotal} µs 降到 ${graph.cpuTotal} µs，GPU 上的工作不变。小 M 时省的是提交次数；大 M 时省的是字节，${eager.mib} MiB → 0。`,
+        en: `A CUDA Graph turns the three submissions into one: at ${cpu} µs per submission, CPU time drops from ${perOp.cpuTotal} µs to ${graph.cpuTotal} µs, and the GPU work is unchanged. At small M the saving is submissions; at large M it is bytes, ${eager.mib} MiB → 0.`}
+    ]);
+  };
+
+  /* 12-infra/nvidia-generations §70B: batch 1, weights only (2 bytes per parameter in BF16/FP16, 1 in FP8),
+     weights split evenly, communication ignored, 100% of peak bandwidth: t ≥ P·b / (n·B). */
+  F.decodeFloor = function () {
+    const P = 70e9, per = {BF16: 2, FP16: 2, FP8: 1}, gb = prec => P * per[prec] / 1e9;
+    const card = (id, name, mem, bw, prec, frame) => {
+      const n = Math.ceil(gb(prec) / mem), range = Array.isArray(bw) ? bw : [bw];
+      const total = range.map(b => n * b), ms = total.map(b => gb(prec) / b);
+      return {id, name, mem, bw: range, prec, n, total, ms, gb: gb(prec), frame};
+    };
+    const cards = [
+      card('h100-bf16', 'H100 SXM', 80, 3.352, 'BF16', 1), card('h100-fp8', 'H100 SXM', 80, 3.352, 'FP8', 1),
+      card('v100', 'V100 SXM2', 32, 0.9, 'FP16', 2), card('a100', 'A100 80GB SXM', 80, 2.039, 'BF16', 2),
+      card('h200', 'H200 SXM', 141, 4.8, 'BF16', 3),
+      card('b200', 'B200', 180, 8, 'FP8', 4), card('b300', 'B300', 262, 8, 'FP8', 4),
+      card('rubin', 'Rubin', 288, [19.2, 22], 'FP8', 5),
+      card('rtx', 'RTX PRO 6000', 96, 1.792, 'FP8', 6), card('spark', 'DGX Spark', 128, 0.273, 'FP8', 6)];
+    const by = Object.fromEntries(cards.map(c => [c.id, c]));
+    const ms = x => (x >= 100 ? x.toFixed(0) : x.toFixed(1));
+    const floor = c => c.ms.length > 1 ? `${ms(Math.min(...c.ms))}–${ms(Math.max(...c.ms))}` : ms(c.ms[0]);
+    const one = (n, cap) => (n === 1 ? (cap ? 'One' : 'one') : String(n));
+    const tb = c => String(Number(c.total[0].toFixed(3)));
+    const base = {cards, lines: [{prec: 'BF16', gb: gb('BF16')}, {prec: 'FP8', gb: gb('FP8')}]};
+    const upTo = k => ({shown: cards.filter(c => c.frame <= k).map(c => c.id), fresh: cards.filter(c => c.frame === k).map(c => c.id)});
+    const [h1, h2, v, a, h, b2, b3, rb, rtx, spark] = cards;
+    return frames([
+      {...base, ...upTo(0), stage: 0, zh: `只算权重、batch 1：每个 token 把全部权重从显存读一遍，下限 t = 字节数 ÷ 这组卡的总带宽。两条虚线是 BF16 的 ${h1.gb} GB 和 FP8 的 ${h2.gb} GB，两根轴都是对数。`,
+        en: `Weights only, batch 1: each token reads all the weights from memory once, so the floor is t = bytes ÷ the total bandwidth of the cards used. The two dashed lines are ${h1.gb} GB for BF16 and ${h2.gb} GB for FP8; both axes are logarithmic.`},
+      {...base, ...upTo(1), stage: 1, zh: `${h1.n} 张 H100 跑 BF16：${h1.gb} GB ÷ (${h1.n} × ${h1.bw[0]} TB/s) ≈ ${floor(h1)} ms。${h2.n} 张跑 FP8：${h2.gb} GB ÷ ${h2.bw[0]} TB/s，也是 ${floor(h2)} ms。字节减半等于带宽翻倍，还少用一张卡。`,
+        en: `${h1.n} H100s in BF16: ${h1.gb} GB ÷ (${h1.n} × ${h1.bw[0]} TB/s) ≈ ${floor(h1)} ms. ${one(h2.n, true)} in FP8: ${h2.gb} GB ÷ ${h2.bw[0]} TB/s, also ${floor(h2)} ms. Halving the bytes is like doubling the bandwidth, and it uses one card fewer.`},
+      {...base, ...upTo(2), stage: 2, zh: `${v.n} 张 V100（FP16）：总带宽 ${v.n} × ${v.bw[0]} = ${tb(v)} TB/s，${floor(v)} ms。${a.n} 张 A100：${a.n} × ${a.bw[0]} = ${tb(a)} TB/s，${floor(a)} ms。在这条线上，只有总带宽说了算，卡多可以赢过卡新。`,
+        en: `${v.n} V100s (FP16): ${v.n} × ${v.bw[0]} = ${tb(v)} TB/s in total, ${floor(v)} ms. ${a.n} A100s: ${a.n} × ${a.bw[0]} = ${tb(a)} TB/s, ${floor(a)} ms. On this line only the total bandwidth counts, so more cards can beat newer ones.`},
+      {...base, ...upTo(3), stage: 3, zh: `${h.n} 张 H200（${h.mem} GB）就放得下 BF16 的 ${h.gb} GB，几乎没有余量：${h.gb} GB ÷ ${h.bw[0]} TB/s ≈ ${floor(h)} ms，比 ${h1.n} 张 H100 慢。它省的是卡数，不是时间。`,
+        en: `${one(h.n, true)} H200 (${h.mem} GB) holds the ${h.gb} GB of BF16 weights with almost no headroom: ${h.gb} GB ÷ ${h.bw[0]} TB/s ≈ ${floor(h)} ms, slower than ${h1.n} H100s. It saves cards, not time.`},
+      {...base, ...upTo(4), stage: 4, zh: `${b2.n} 张 B200 跑 FP8：${b2.gb} GB ÷ ${b2.bw[0]} TB/s ≈ ${floor(b2)} ms。B300 的带宽也是 ${b3.bw[0]} TB/s，落在同一个点上；它多出来的显存用来放 KV cache、组更大的 batch。`,
+        en: `${one(b2.n, true)} B200 in FP8: ${b2.gb} GB ÷ ${b2.bw[0]} TB/s ≈ ${floor(b2)} ms. B300 also has ${b3.bw[0]} TB/s and lands on the same point; its extra memory goes to KV cache and larger batches.`},
+      {...base, ...upTo(5), stage: 5, zh: `Rubin（已宣布）跑 FP8：官方页面的带宽有 ${rb.bw[0]} 和 ${rb.bw[1]} TB/s 两种说法，下限是 ${floor(rb)} ms，画成线上的一段。`,
+        en: `Rubin (announced) in FP8: official pages give either ${rb.bw[0]} or ${rb.bw[1]} TB/s, so the floor is ${floor(rb)} ms, drawn as a stretch of the line.`},
+      {...base, ...upTo(6), stage: 6, zh: `工作站：${rtx.n} 张 RTX PRO 6000 放得下 FP8 的 70B，${rtx.bw[0]} TB/s，${floor(rtx)} ms；DGX Spark 也放得下，但只有 ${spark.bw[0]} TB/s，每个 token 至少 ${floor(spark)} ms，约每秒 ${Math.round(1000 / spark.ms[0])} 个 token。`,
+        en: `Workstations: ${one(rtx.n)} RTX PRO 6000 holds the 70B model in FP8, ${rtx.bw[0]} TB/s, ${floor(rtx)} ms; DGX Spark fits it too, but at ${spark.bw[0]} TB/s each token takes at least ${floor(spark)} ms, about ${Math.round(1000 / spark.ms[0])} tokens per second.`},
+      {...base, ...upTo(6), fresh: [], stage: 7, done: true, zh: '所有点都落在两条线上：下限只取决于字节数和这组卡的总带宽，和这一代的算力无关。前提是 batch 1、只算权重、带宽用满峰值、不算通信。',
+        en: 'Every point sits on one of the two lines: the floor depends only on the bytes and the total bandwidth of the cards, not on the generation\'s FLOPs. This assumes batch 1, weights only, 100% of peak bandwidth and no communication.'}
+    ].map(f => ({...f, by})));
+  };
+
+  /* 12-infra/kubernetes §gang scheduling: nodes A, B, C with 8 GPUs each; jobs arrive S4a (4), S4b (4),
+     T16 (2 Pods × 8, trains only when both run) and T8 (8). The default places one Pod at a time on the
+     emptiest node (so S4b lands on B, as the note assumes); bin-packing picks the fullest node that fits. */
+  F.gangScheduling = function () {
+    const nodes = ['A', 'B', 'C'], size = 8, total = nodes.length * size;
+    const jobs = [{name: 'S4a', pods: [4]}, {name: 'S4b', pods: [4]}, {name: 'T16', pods: [8, 8]}, {name: 'T8', pods: [8]}];
+    const second = {name: 'T16′', pods: [8, 8]};
+    const podCount = Object.fromEntries([...jobs, second].map(j => [j.name, j.pods.length]));
+    const label = (job, i) => (job.pods.length > 1 ? `${job.name} Pod ${i}` : job.name);
+    const wants = job => ({name: job.name, gpus: job.pods.length > 1 ? `${job.pods.length} × ${job.pods[0]}` : String(job.pods[0])});
+    const summarize = (pods, queued) => {
+      const running = p => pods.filter(q => q.job === p.job).length === podCount[p.job];
+      const placed = pods.map(p => ({...p, of: podCount[p.job], running: running(p)}));
+      const sum = list => list.reduce((s, p) => s + p.gpus, 0);
+      const free = Object.fromEntries(nodes.map(n => [n, size - sum(placed.filter(p => p.node === n))]));
+      return {pods: placed, queued, working: sum(placed.filter(p => p.running)), held: sum(placed.filter(p => !p.running)), free};
+    };
+    const place = (list, {gang = false, pack = false, from = null} = {}) => {
+      const pods = from ? from.pods.map(p => ({job: p.job, pod: p.pod, gpus: p.gpus, node: p.node})) : [];
+      const queued = from ? from.queued.slice() : [];
+      list.forEach(job => {
+        const left = Object.fromEntries(nodes.map(n => [n, size - pods.filter(p => p.node === n).reduce((s, p) => s + p.gpus, 0)]));
+        const picks = job.pods.map(gpus => {
+          const fits = nodes.filter(n => left[n] >= gpus);
+          if (!fits.length) return null;
+          const node = fits.reduce((best, n) => ((pack ? left[n] < left[best] : left[n] > left[best]) ? n : best));
+          left[node] -= gpus;
+          return node;
+        });
+        if (gang && picks.includes(null)) { queued.push(wants(job)); return; }
+        picks.forEach((node, i) => { if (node) pods.push({job: job.name, pod: i, gpus: job.pods[i], node}); else queued.push({name: label(job, i), gpus: String(job.pods[i])}); });
+      });
+      return summarize(pods, queued);
+    };
+    const start = summarize([], jobs.map(wants));
+    const plain = place(jobs), gang = place(jobs, {gang: true}), packed = place(jobs, {gang: true, pack: true});
+    // a second T16 arrives; suppose S4a has finished and A goes to the new job's first Pod
+    const stuck = place([second], {from: {pods: plain.pods.filter(p => p.job !== 'S4a'), queued: plain.queued}});
+    const ring = split => {
+      const owner = split.flatMap(([node, n]) => Array(n).fill(node));
+      return {split, owner, cross: owner.filter((o, i) => o !== owner[(i + 1) % owner.length]).length};
+    };
+    const rings = [ring([['B', 8], ['C', 8]]), ring([['A', 4], ['B', 4], ['C', 8]])];
+    const base = {nodes, size, total, jobs};
+    return frames([
+      {...base, ...start, stage: 0, zh: `3 台节点 A、B、C，每台 8 张卡，共 ${total} 张。依次来了 S4a（4 卡）、S4b（4 卡）、T16（2 个 Pod，各 8 卡，所有 rank 到齐才开始）和 T8（8 卡）。总需求 32 张，必然有人排队。`,
+        en: `Three nodes A, B and C with 8 GPUs each, ${total} in total. Jobs arrive in order: S4a (4 GPUs), S4b (4), T16 (2 Pods of 8; it starts only when every rank is present) and T8 (8). Demand is 32 GPUs, so someone must queue.`},
+      {...base, ...plain, stage: 1, zh: `默认 scheduler 一个 Pod 一个 Pod 地放，打分只看 CPU 和内存：S4a 到 A，S4b 假设到 B，T16 的第一个 Pod 拿下 C，第二个找不到剩 8 张卡的节点。A、B 各剩 ${plain.free.A} 张，合起来 ${plain.free.A + plain.free.B} 张，也放不下 T8。只有 ${plain.working} 张卡在干活。`,
+        en: `The default scheduler places one Pod at a time and scores only CPU and memory: S4a lands on A, S4b (we assume) on B, and T16's first Pod takes C; the second finds no node with 8 free GPUs. A and B have ${plain.free.A} free each, ${plain.free.A + plain.free.B} in total, yet T8 cannot fit either. Only ${plain.working} GPUs are working.`},
+      {...base, ...stuck, stage: 2, deadlock: true, zh: `再来一个同样的 T16′。假设 S4a 先结束，A 空出来后先给了 T16′ 的第一个 Pod：两个任务各占一台整机、各等另一半，${stuck.held} 张卡占着却没在算。没有第二台整机空出来，谁也开始不了：可能死锁。`,
+        en: `Now a second, identical T16′ arrives. Suppose S4a finishes and A goes to the first Pod of T16′: each job holds a whole node and waits for its other half, so ${stuck.held} GPUs are held but idle. Until another whole node frees up, neither can start: a possible deadlock.`},
+      {...base, ...gang, stage: 3, zh: `回到原来的顺序，加上成组调度：T16 的两个 Pod 不能同时放下，就一个也不绑定，C 留给 T8，${gang.working} 张卡在干活。代价是 T16 要等两台整机同时空出来。`,
+        en: `Back to the original order, now with gang scheduling: T16's two Pods cannot both be placed, so neither is bound, and C goes to T8; ${gang.working} GPUs are working. The cost is that T16 waits for two whole nodes to be free at once.`},
+      {...base, ...packed, stage: 4, zh: `成组调度，再换成 MostAllocated 装箱并给 GPU 加权：S4a、S4b 挤进 A，留出 B、C 两台整机给 T16，${packed.working} 张卡都在干活。这时轮到 T8 等 A 空出来。`,
+        en: `Gang scheduling plus MostAllocated bin-packing weighted on GPUs: S4a and S4b squeeze onto A, leaving B and C whole for T16, and all ${packed.working} GPUs are working. Now T8 waits for A to free up.`},
+      {...base, ...packed, rings, stage: 5, zh: `放得下，还要放得近。T16 的 16 个 rank 按节点顺序排成环：整机放在 2 台上，${rings[0].cross} 条边走网络；拆成 4 卡的 Pod 摊在 3 台上，就有 ${rings[1].cross} 条。`,
+        en: `Fitting is not enough; placement should be close too. Put T16's 16 ranks in a ring in node order: on 2 whole nodes, ${rings[0].cross} edges cross the network; split into 4-GPU Pods over 3 nodes, ${rings[1].cross} do.`},
+      {...base, ...packed, rings, all: [plain, gang, packed], stage: 6, done: true, zh: `同样 ${total} 张卡，三种放法：${plain.working}、${gang.working}、${packed.working} 张在干活。哪种顺序更好取决于优先级和配额，装箱不是在任何情况下都更优。`,
+        en: `The same ${total} GPUs, three placements: ${plain.working}, ${gang.working} and ${packed.working} working. Which order is better depends on priorities and quotas; bin-packing is not better in every case.`}
+    ]);
+  };
+
   if (typeof module !== 'undefined' && module.exports) module.exports = {F, frames};
   if (typeof document === 'undefined' || !scope.AlgoLab) return;
 
@@ -3706,6 +3915,353 @@
       show(zTok, st >= 1);
       show(zFlow, st >= 3);
       show(zoom[2], st >= 5);
+    };
+  }});
+
+  FIGURES['step-good-dies'] = name => stepper(name, {modes: [0.1, 0.05, 0.2].map(d0 => ({id: 'd' + d0, zh: `D₀ = ${d0}`, en: `D₀ = ${d0}`, frames: F.goodDies(d0)}))}, {height: 312, readouts: f => {
+    if (f.stage === 0) return [[t('晶圆面积', 'wafer area'), `${f.area} cm²`], ['D₀', `${f.d0} / cm²`], [t('缺陷', 'defects'), `≈ ${f.count}`]];
+    const z = f.sizes[f.size];
+    if (f.stage <= 3) return [[t('每片位置（公式）', 'sites (formula)'), String(z.sites)], [t('图中完整格', 'whole squares drawn'), String(z.whole.length)],
+      [t('Poisson 良率', 'Poisson yield'), z.Y.toFixed(3)], [t('好 die', 'good dies'), `≈ ${z.good}`, 'key']];
+    return [[t('2 块 400 mm²', '2 × 400 mm²'), `${z.good} → ${f.pairs} ${t('对', 'pairs')}`, 'good'], [t('整块 800 mm²', 'monolithic 800 mm²'), `≈ ${f.mono}`, f.done ? 'bad' : ''],
+      ...(f.done ? [[t('没算进去', 'left out'), t('接口面积 · 封装良率', 'interface area · package yield')]] : [])];
+  }, setup(svg) {
+    const k = 130 / 150, cx = 150, cy = 160, X = x => cx + x * k, Y = y => cy + y * k;
+    const head = V.text(svg, cx, 4, '', 'algo-head', 'middle');
+    svg.append(s('circle', {cx, cy, r: 150 * k, class: 'algo-edge'}));
+    const dies = s('g'), dots = s('g');
+    svg.append(dies, dots);
+    V.text(svg, cx, cy + 150 * k + 36, t('300 mm 晶圆（示意）', '300 mm wafer (schematic)'), 'algo-idx', 'middle');
+    const px = 318, pw = 290;
+    V.text(svg, px, 24, t('每片晶圆：位置 × 良率 ≈ 好 die', 'per wafer: sites × yield ≈ good dies'), 'algo-head');
+    const rows = [0, 1, 2].map(i => {
+      const y = 54 + i * 50, g = s('g');
+      V.text(g, px, y, ['100', '400', '800'][i] + ' mm²', 'algo-strong');
+      const sum = V.text(g, px + 84, y, '', 'algo-note');
+      const sites = s('rect', {x: px, y: y + 8, width: 0, height: 12, rx: 3, class: 'algo-ghost'});
+      const good = s('rect', {x: px, y: y + 8, width: 0, height: 12, rx: 3, class: 'algo-bar'});
+      g.append(sites, good);
+      svg.append(g);
+      return {g, sum, sites, good};
+    });
+    const split = s('g');
+    V.text(split, px, 214, t('拆开 vs 整块（同一片晶圆）', 'split vs monolithic (same wafer)'), 'algo-head');
+    const bars = [0, 1].map(i => {
+      const y = 240 + i * 40, label = V.text(split, px, y, '', 'algo-note');
+      const bar = s('rect', {x: px, y: y + 8, width: 0, height: 12, rx: 3, class: 'algo-bar'});
+      split.append(bar);
+      return {label, bar};
+    });
+    svg.append(split);
+    const table = s('g'), cols = [px, px + 92, px + 206];
+    V.text(table, px, 214, t('拆开 vs 整块：换一个 D₀', 'split vs monolithic at each D₀'), 'algo-head');
+    [t('D₀（/cm²）', 'D₀ (/cm²)'), '2 × 400 mm²', t('800 mm² 整块', '800 mm² whole')].forEach((h, i) => V.text(table, cols[i], 240, h, 'algo-note'));
+    const cells = [0, 1, 2].map(r => cols.map(x => V.text(table, x, 262 + r * 20, '', 'algo-note')));
+    svg.append(table);
+    let drawn = '';
+    return frame => {
+      const z = frame.size == null ? null : frame.sizes[frame.size], key = `${frame.d0}|${frame.size}|${frame.edge ? 1 : 0}|${frame.tested ? 1 : 0}`;
+      if (key !== drawn) {
+        dies.textContent = '';
+        dots.textContent = '';
+        if (z) {
+          const box = ([x, y], cls, extra = {}) => dies.append(s('rect', {x: X(x) + 0.7, y: Y(y) + 0.7, width: z.w * k - 1.4, height: z.h * k - 1.4, class: cls, ...extra}));
+          if (frame.edge) z.edge.forEach(p => box(p, 'algo-ghost'));
+          z.whole.forEach((p, i) => box(p, 'algo-reach' + (z.hit[i] ? ' is-bad-band' + (frame.tested ? ' is-out' : '') : ''), {'stroke-width': 0.8}));
+        }
+        frame.defects.forEach(([x, y]) => dots.append(s('circle', {cx: X(x), cy: Y(y), r: 1.7, class: 'algo-strong'})));
+        drawn = key;
+      }
+      head.textContent = z ? `${z.A} mm² · ${z.w} × ${z.h} mm` : `D₀ = ${frame.d0} / cm²`;
+      const scale = frame.sizes[0].sites;
+      rows.forEach((row, i) => {
+        const zz = frame.sizes[i];
+        show(row.g, frame.stage >= i + 1);
+        row.sum.textContent = `${zz.sites} × ${zz.Y.toFixed(3)} ≈ ${zz.good}`;
+        row.sites.setAttribute('width', zz.sites / scale * pw);
+        row.good.setAttribute('width', zz.good / scale * pw);
+        row.good.setAttribute('class', 'algo-bar' + (frame.size === i && frame.stage <= 3 ? ' is-now' : ''));
+      });
+      show(split, frame.stage === 4);
+      show(table, Boolean(frame.compare));
+      (frame.compare || []).forEach((c, r) => {
+        const now = c.d0 === frame.d0;
+        [String(c.d0), t(`${c.pairs} 对`, `${c.pairs} pairs`), t(`${c.mono} 块`, `${c.mono}`)].forEach((text, i) => { cells[r][i].textContent = text; cells[r][i].setAttribute('class', now ? 'algo-strong' : 'algo-note'); });
+      });
+      const half = frame.sizes[1], top = frame.sizes[2].sites;
+      bars[0].label.textContent = t(`2 × 400 mm²：${half.good} 块好 die → ${frame.pairs} 对`, `2 × 400 mm²: ${half.good} good → ${frame.pairs} pairs`);
+      bars[0].bar.setAttribute('width', frame.pairs / top * pw);
+      bars[1].label.textContent = t(`800 mm² 整块：${frame.mono} 块`, `800 mm² monolithic: ${frame.mono}`);
+      bars[1].bar.setAttribute('width', frame.mono / top * pw);
+    };
+  }});
+
+  FIGURES['step-fusion-traffic'] = name => stepper(name, F.fusionTraffic(), {height: 250, readouts: f => {
+    if (f.view === 'bytes') {
+      const v = f.variant;
+      return [[t('逐元素读写', 'elementwise traffic'), `${v.mib} MiB`, v.mib ? '' : 'good'],
+        [t('按 2 TB/s', 'at 2 TB/s'), v.mib ? `≈ ${Math.round(v.time)} µs` : '0'],
+        [t(`占 GEMM ${Math.round(f.gemm)} µs`, `of the GEMM’s ${Math.round(f.gemm)} µs`), v.mib ? `≈ ${Math.round(v.share * 100)}%` : '0%', f.stage === 0 ? 'bad' : f.stage === 3 ? 'good' : 'key']];
+    }
+    const l = f.line;
+    return [[t('CPU 提交', 'CPU submissions'), `${l.cpu.length} × ${f.cpu} = ${l.cpuTotal} µs`, f.done ? 'good' : 'bad'],
+      [t('GPU 工作', 'GPU work'), `≈ ${Math.round(f.gemmSmall)} + ${f.elementwise.toFixed(2)} µs`],
+      f.done ? [t('M = 4096 时的逐元素读写', 'elementwise traffic at M = 4096'), `${f.eager.mib} → 0 MiB`, 'good']
+        : [t('两个逐元素算子', 'two elementwise operators'), `${2 * f.cpu} µs CPU → ${f.elementwise.toFixed(2)} µs GPU`, 'bad']];
+  }, setup(svg) {
+    const arrow = name + '-arrow';
+    svg.append(V.markers(arrow));
+    const bytes = s('g'), time = s('g');
+    svg.append(bytes, time);
+    // bytes view: kernels in time order on the left, tensors in HBM on the right
+    const first = F.fusionTraffic()[0];
+    V.text(bytes, 40, 20, `M = N = K = ${first.M} · BF16`, 'algo-head');
+    V.text(bytes, 530, 20, t('显存（HBM）', 'HBM'), 'algo-head', 'middle');
+    const names = ['x', 'w', 'xw', 'xw+b', 'y'], sx = 470, sw = 120, sh = 26, slotY = i => 34 + i * 38;
+    const slots = names.map((n, i) => cell(bytes, sx, slotY(i), sw, sh, n, 'algo-val algo-small'));
+    const bx = 40, bw = 210, bh = 46, boxY = i => 34 + i * 62;
+    const boxes = [0, 1, 2].map(i => {
+      const g = s('g'), rect = s('rect', {x: bx, y: boxY(i), width: bw, height: bh, rx: 8, class: 'algo-cell'});
+      g.append(rect);
+      const title = V.text(g, bx + bw / 2, boxY(i) + 20, '', 'algo-strong', 'middle'), sub = V.text(g, bx + bw / 2, boxY(i) + 37, '', 'algo-note', 'middle');
+      bytes.append(g);
+      return {g, rect, title, sub};
+    });
+    const lines = Array.from({length: 7}, () => { const l = s('line', {}); bytes.append(l); return l; });
+    const ly = 238;
+    bytes.append(s('line', {x1: 40, y1: ly, x2: 72, y2: ly, class: 'algo-edge is-look-line', 'marker-end': `url(#${arrow}-blue)`}));
+    V.text(bytes, 80, ly + 4, t('GEMM 自己的读写', 'the GEMM’s own traffic'), 'algo-note');
+    bytes.append(s('line', {x1: 262, y1: ly, x2: 294, y2: ly, class: 'algo-edge is-change', 'marker-end': `url(#${arrow})`}));
+    V.text(bytes, 302, ly + 4, t('逐元素读写', 'elementwise traffic'), 'algo-note');
+    V.text(bytes, 590, ly + 4, t(`每支 ${first.unit} MiB`, `${first.unit} MiB per arrow`), 'algo-idx', 'end');
+    // time view: a CPU lane that submits and a GPU lane that runs, for M = 8
+    const T = x => 110 + x * 21, laneCpu = 48, laneGpu = 130, lh = 32;
+    V.text(time, 40, 20, `M = ${F.fusionTraffic()[4].M} · N = K = ${first.N}`, 'algo-head');
+    V.text(time, 40, laneCpu + 21, 'CPU', 'algo-strong');
+    V.text(time, 40, laneGpu + 21, 'GPU', 'algo-strong');
+    time.append(s('line', {x1: T(0), y1: 196, x2: T(24), y2: 196, class: 'algo-edge'}));
+    [0, 5, 10, 15, 20].forEach(x => { time.append(s('line', {x1: T(x), y1: 196, x2: T(x), y2: 201, class: 'algo-edge'})); V.text(time, T(x), 215, x === 20 ? '20 µs' : String(x), 'algo-idx', 'middle'); });
+    const idle = s('rect', {x: T(0), y: laneGpu, width: T(5) - T(0), height: lh, rx: 6, class: 'algo-ghost'});
+    time.append(idle);
+    V.text(time, (T(0) + T(5)) / 2, laneGpu + 21, t('空闲', 'idle'), 'algo-idx', 'middle');
+    const bar = () => { const rect = s('rect', {y: 0, height: lh, rx: 4, class: 'algo-cell'}); time.append(rect); return {rect, label: V.text(time, 0, 0, '', 'algo-strong', 'middle')}; };
+    const cpuBoxes = [0, 1, 2].map(bar), gpuBoxes = [0, 1, 2].map(bar);
+    const links = [0, 1, 2].map(() => { const l = s('line', {class: 'algo-edge algo-dash', 'marker-end': `url(#${arrow})`}); time.append(l); return l; });
+    const tinyLabel = V.text(time, 0, laneGpu + lh + 18, '', 'algo-note', 'end');
+    const free = V.text(time, 0, laneCpu + 21, t('之后 CPU 空着', 'CPU free from here'), 'algo-note', 'middle');
+    return frame => {
+      bytes.classList.toggle('is-hidden-layer', frame.view !== 'bytes');
+      time.classList.toggle('is-hidden-layer', frame.view !== 'time');
+      if (frame.view === 'bytes') {
+        const v = frame.variant, used = new Set(v.kernels.flatMap(q => [...q.reads, ...q.writes]));
+        slots.forEach((c, i) => { c.set(names[i], used.has(names[i]) ? '' : 'algo-ghost'); c.label.classList.toggle('is-dim', !used.has(names[i])); });
+        let n = 0;
+        boxes.forEach((b, i) => {
+          const q = v.kernels[i];
+          show(b.g, Boolean(q));
+          if (!q) return;
+          b.title.textContent = q.name;
+          b.sub.textContent = `≈ ${Math.round(q.time)} µs`;
+          b.rect.setAttribute('class', 'algo-cell' + (q.gemm ? '' : ' is-change'));
+          const ends = [...q.reads.map(r => [r, 'read']), ...q.writes.map(w => [w, 'write'])];
+          ends.forEach(([tensor, dir], j) => {
+            const at = boxY(i) + (j + 1) * bh / (ends.length + 1), slot = slotY(names.indexOf(tensor)) + sh / 2 + (dir === 'read' ? 5 : -5);
+            const line = lines[n++], tone = q.gemm ? ['algo-edge is-look-line', `url(#${arrow}-blue)`] : ['algo-edge is-change', `url(#${arrow})`];
+            const [x1, y1, x2, y2] = dir === 'read' ? [sx, slot, bx + bw + 3, at] : [bx + bw, at, sx - 3, slot];
+            Object.entries({x1, y1, x2, y2, class: tone[0], 'marker-end': tone[1]}).forEach(([key, value]) => line.setAttribute(key, value));
+          });
+        });
+        lines.forEach((line, i) => { if (i >= n) line.setAttribute('class', 'algo-edge is-hidden'); });
+        return;
+      }
+      const l = frame.line, graph = l.cpu.length === 1;
+      cpuBoxes.forEach((b, i) => {
+        const q = l.cpu[i];
+        show(b.rect, Boolean(q)); show(b.label, Boolean(q));
+        if (!q) return;
+        Object.entries({x: T(q.t0) + 1, y: laneCpu, width: T(q.t1) - T(q.t0) - 2}).forEach(([key, value]) => b.rect.setAttribute(key, value));
+        b.rect.setAttribute('class', 'algo-cell' + (graph ? ' is-keep' : q.name === 'mm' ? '' : ' is-change'));
+        b.label.setAttribute('x', (T(q.t0) + T(q.t1)) / 2); b.label.setAttribute('y', laneCpu + 21);
+        b.label.textContent = graph ? 'CUDA Graph' : q.name;
+      });
+      gpuBoxes.forEach((b, i) => {
+        const q = l.gpu[i], x = i === 0 ? T(q.t0) : T(l.gpu[0].t1) + (i - 1) * 4, w = i === 0 ? T(q.t1) - T(q.t0) : 3;
+        Object.entries({x, y: laneGpu, width: w}).forEach(([key, value]) => b.rect.setAttribute(key, value));
+        b.rect.setAttribute('class', 'algo-cell' + (i ? ' is-change' : ''));
+        b.label.setAttribute('x', x + w / 2); b.label.setAttribute('y', laneGpu + 21);
+        b.label.textContent = i ? '' : t(`mm：读 w ${frame.weightsMiB} MiB ≈ ${Math.round(frame.gemmSmall)} µs`, `mm: read w, ${frame.weightsMiB} MiB ≈ ${Math.round(frame.gemmSmall)} µs`);
+        const from = graph ? l.cpu[0].t1 : l.cpu[i].t1;
+        Object.entries({x1: T(from), y1: laneCpu + lh + 2, x2: x + (i ? 1.5 : 0), y2: laneGpu - 3}).forEach(([key, value]) => links[i].setAttribute(key, value));
+      });
+      const end = T(l.gpu[0].t1) + 7;
+      tinyLabel.setAttribute('x', end);
+      tinyLabel.textContent = t(`add + relu 共 ${frame.elementwise.toFixed(2)} µs`, `add + relu: ${frame.elementwise.toFixed(2)} µs in all`);
+      free.setAttribute('x', (T(l.cpuTotal) + T(24)) / 2);
+      show(free, graph);
+    };
+  }});
+
+  FIGURES['step-decode-floor'] = name => stepper(name, F.decodeFloor(), {height: 340, readouts: f => {
+    const ms = x => (x >= 100 ? x.toFixed(0) : x.toFixed(1));
+    if (f.stage === 0) return [[t('BF16 / FP16 权重', 'BF16 / FP16 weights'), `${f.lines[0].gb} GB`], [t('FP8 权重', 'FP8 weights'), `${f.lines[1].gb} GB`], [t('每 token 下限', 'per-token floor'), t('字节 ÷ 总带宽', 'bytes ÷ total bandwidth'), 'key']];
+    if (f.done) return [[t('前提', 'assumes'), t('batch 1 · 只算权重 · 带宽用满峰值 · 不算通信', 'batch 1 · weights only · 100% of peak bandwidth · no communication'), 'key wide']];
+    return f.fresh.map(id => {
+      const c = f.by[id], total = c.total.map(b => String(Number(b.toFixed(3)))).join('–'), floor = c.ms.map(ms).sort((a, b) => a - b).join('–');
+      return [`${c.n}× ${c.name} · ${c.prec}`, `${c.gb} GB ÷ ${total} TB/s ≈ ${floor} ms`, 'key'];
+    });
+  }, setup(svg) {
+    const x0 = 70, x1 = 600, y0 = 24, y1 = 294, bmin = 0.07, bmax = 30, tmin = 1.5, tmax = 400, lg = Math.log10;
+    const X = b => x0 + (lg(b) - lg(bmin)) / (lg(bmax) - lg(bmin)) * (x1 - x0), Y = ms => y0 + (lg(tmax) - lg(ms)) / (lg(tmax) - lg(tmin)) * (y1 - y0);
+    svg.append(s('line', {x1: x0, y1, x2: x1, y2: y1, class: 'algo-edge'}), s('line', {x1: x0, y1: y0, x2: x0, y2: y1, class: 'algo-edge'}));
+    [0.1, 0.3, 1, 3, 10, 30].forEach(b => { svg.append(s('line', {x1: X(b), y1, x2: X(b), y2: y1 + 5, class: 'algo-edge'})); V.text(svg, X(b), y1 + 19, String(b), 'algo-idx', 'middle'); });
+    [2, 5, 10, 20, 50, 100, 200].forEach(ms => { svg.append(s('line', {x1: x0 - 5, y1: Y(ms), x2: x0, y2: Y(ms), class: 'algo-edge'})); V.text(svg, x0 - 9, Y(ms) + 4, String(ms), 'algo-idx', 'end'); });
+    V.text(svg, (x0 + x1) / 2, y1 + 38, t('这组卡的总带宽（TB/s，对数）', 'total bandwidth of the cards used (TB/s, log)'), 'algo-head', 'middle');
+    V.text(svg, x0 - 40, 12, t('每个 token 的下限（ms，对数）', 'per-token floor (ms, log)'), 'algo-head');
+    // t = GB / (TB/s) in ms: one dashed line per precision, labelled along the line
+    const angle = Math.atan2(Y(1) - Y(10), X(10) - X(1)) * 180 / Math.PI;
+    F.decodeFloor()[0].lines.forEach(({prec, gb}, i) => {
+      const lo = Math.max(bmin, gb / tmax), hi = Math.min(bmax, gb / tmin);
+      svg.append(s('line', {x1: X(lo), y1: Y(gb / lo), x2: X(hi), y2: Y(gb / hi), class: 'algo-edge algo-dash'}));
+      const bx = i ? 0.44 : 0.47, ax = X(bx), ay = Y(gb / bx) + (i ? 16 : -7);
+      svg.append(s('text', {x: ax, y: ay, class: 'algo-note', transform: `rotate(${angle.toFixed(1)} ${ax.toFixed(1)} ${ay.toFixed(1)})`, text: `${prec === 'BF16' ? 'BF16 / FP16' : prec} · ${gb} GB`}));
+    });
+    const pair = s('line', {class: 'algo-edge algo-dash'});
+    svg.append(pair);
+    // labels: BF16 points to the upper right (stacked when they crowd), FP8 points to the left
+    // [x, y, anchor, how]: 'leader' = fixed spot with a leader line, 'at' = fixed spot, otherwise offsets from the point
+    const spot = {'h100-bf16': [482, 156, 'start', 'at'], v100: [500, 112, 'start', 'leader'], a100: [500, 92, 'start', 'leader'], h200: [500, 132, 'start', 'leader'],
+      'h100-fp8': [-10, 4, 'end'], b200: [-10, 4, 'end'], rtx: [-10, 4, 'end'], spark: [-10, 4, 'end'], rubin: [-10, 6, 'end']};
+    const marks = F.decodeFloor()[0].cards.map(c => {
+      const g = s('g'), pts = c.total.map(b => [X(b), Y(c.gb / b)]);
+      const span = pts.length > 1 ? s('line', {x1: pts[0][0], y1: pts[0][1], x2: pts[1][0], y2: pts[1][1], class: 'algo-edge'}) : null;
+      if (span) g.append(span);
+      const dots = pts.map(([x, y]) => { const d = s('circle', {cx: x, cy: y, r: pts.length > 1 ? 3.5 : 5, class: 'algo-cell'}); g.append(d); return d; });
+      const [px, py] = pts[0], sp = spot[c.id];
+      let label = null, sub = null;
+      if (sp) {
+        const lx = sp[3] ? sp[0] : px + sp[0], ly = sp[3] ? sp[1] : py + sp[1];
+        if (sp[3] === 'leader') g.append(s('line', {x1: px + 3, y1: py - 3, x2: lx - 4, y2: ly - 4, class: 'algo-edge'}));
+        label = V.text(g, lx, ly, '', 'algo-strong', sp[2]);
+        if (c.id === 'rubin') sub = V.text(g, lx, ly + 16, t('官方页面数字不一', 'official pages disagree'), 'algo-note', 'end');
+      }
+      svg.append(g);
+      return {c, g, dots, span, label, sub};
+    });
+    return frame => {
+      const shown = new Set(frame.shown), fresh = new Set(frame.fresh);
+      marks.forEach(m => {
+        show(m.g, shown.has(m.c.id));
+        m.dots.forEach(d => d.setAttribute('class', 'algo-cell ' + (fresh.has(m.c.id) ? 'is-change' : 'is-look')));
+        if (m.span) m.span.setAttribute('class', 'algo-edge ' + (fresh.has(m.c.id) ? 'is-change' : 'is-look-line'));
+        if (!m.label) return;
+        const b300 = shown.has('b300') && m.c.id === 'b200';
+        m.label.textContent = m.c.id === 'rubin' ? t(`${m.c.n}× Rubin（已宣布）`, `${m.c.n}× Rubin (announced)`) : `${m.c.n}× ${m.c.name.replace(/( 80GB)? SXM2?$/, '')}${b300 ? ' = B300' : ''}`;
+      });
+      const h1 = frame.by['h100-bf16'], h2 = frame.by['h100-fp8'];
+      Object.entries({x1: X(h2.total[0]) + 6, y1: Y(h2.ms[0]), x2: X(h1.total[0]) - 6, y2: Y(h1.ms[0])}).forEach(([key, value]) => pair.setAttribute(key, value));
+      show(pair, frame.stage === 1);
+    };
+  }});
+
+  FIGURES['step-gang-scheduling'] = name => stepper(name, F.gangScheduling(), {height: 250, readouts: f => {
+    if (f.stage === 5) return [[t('跨网络的边', 'edges across the network'), `${f.rings[0].cross} vs ${f.rings[1].cross}`, 'key'], [t('整机 2 台', 'whole, 2 nodes'), f.rings[0].split.map(([, n]) => n).join(' + ')], [t('拆开 3 台', 'split, 3 nodes'), f.rings[1].split.map(([, n]) => n).join(' + ')]];
+    if (f.done) return [[t('默认', 'default'), `${f.all[0].working} / ${f.total}`, 'bad'], [t('成组', 'gang'), `${f.all[1].working} / ${f.total}`, 'key'], [t('成组 + 装箱', 'gang + bin-pack'), `${f.all[2].working} / ${f.total}`, 'good']];
+    return [[t('在干活', 'working'), `${f.working} / ${f.total}`, f.working === f.total ? 'good' : 'key'], [t('占着在等', 'held, waiting'), String(f.held), f.held ? 'bad' : ''],
+      [t('空闲', 'free'), f.nodes.map(n => `${n} ${f.free[n]}`).join(' · ')], [t('排队', 'queued'), f.queued.map(q => q.name).join(', ') || '—']];
+  }, setup(svg) {
+    const x0 = 64, size = 24, pitch = 28, rowY = i => 40 + i * 62;
+    const grid = s('g'), queue = s('g'), rings = s('g'), summary = s('g');
+    svg.append(grid, queue, rings, summary);
+    V.text(grid, x0, 22, t('节点（每台 8 张卡）', 'nodes (8 GPUs each)'), 'algo-head');
+    const nodeRows = ['A', 'B', 'C'].map((n, r) => {
+      V.text(grid, x0 - 22, rowY(r) + 17, n, 'algo-strong', 'middle');
+      const squares = Array.from({length: 8}, (_, i) => { const q = s('rect', {x: x0 + i * pitch, y: rowY(r), width: size, height: size, rx: 4, class: 'algo-cell'}); grid.append(q); return q; });
+      const labels = [0, 1].map(() => V.text(grid, 0, rowY(r) + size + 17, '', 'algo-note', 'middle'));
+      return {squares, labels};
+    });
+    [['is-keep', t('在干活', 'working')], ['is-change', t('占着在等', 'held, waiting')], ['', t('空闲', 'free')]].forEach(([cls, label], i) => {
+      svg.append(s('rect', {x: x0 + i * 140, y: 222, width: 13, height: 13, rx: 3, class: 'algo-cell ' + cls}));
+      V.text(svg, x0 + i * 140 + 19, 233, label, 'algo-note');
+    });
+    const qx = 340;
+    V.text(queue, qx, 22, t('排队', 'queued'), 'algo-head');
+    const items = [0, 1, 2, 3].map(i => cell(queue, qx, 34 + i * 36, 190, 28, '', 'algo-val algo-small'));
+    const warn = V.text(queue, qx, 186, t('可能死锁', 'possible deadlock'), 'algo-warn');
+    // the ring frame: T16's 16 ranks in node order
+    const ringDraw = (cx, title) => {
+      const g = s('g'), r = 50;
+      V.text(g, cx, 22, title, 'algo-head', 'middle');
+      const at = i => [cx + r * Math.cos(-Math.PI / 2 + i * Math.PI / 8), 104 + r * Math.sin(-Math.PI / 2 + i * Math.PI / 8)];
+      const edges = Array.from({length: 16}, (_, i) => { const [ax, ay] = at(i), [bx, by] = at((i + 1) % 16); const l = s('line', {x1: ax, y1: ay, x2: bx, y2: by, class: 'algo-edge'}); g.append(l); return l; });
+      Array.from({length: 16}, (_, i) => { const [x, y] = at(i); g.append(s('circle', {cx: x, cy: y, r: 4, class: 'algo-cell'})); });
+      const hops = Array.from({length: 16}, (_, i) => { const [ax, ay] = at(i), [bx, by] = at((i + 1) % 16); const c = s('circle', {cx: (ax + bx) / 2, cy: (ay + by) / 2, r: 3.5, class: 'algo-cell is-bad'}); g.append(c); return c; });
+      const letters = [0, 1, 2].map(() => V.text(g, 0, 0, '', 'algo-strong', 'middle'));
+      const count = V.text(g, cx, 182, '', 'algo-warn', 'middle');
+      rings.append(g);
+      return {cx, edges, hops, letters, count, at};
+    };
+    const ringViews = [ringDraw(400, t('整机放 2 台', 'whole: 2 nodes')), ringDraw(548, t('4 卡 Pod 摊在 3 台', '4-GPU Pods: 3 nodes'))];
+    // the last frame: the three placements side by side
+    const minis = [t('默认', 'default'), t('成组', 'gang'), t('成组 + 装箱', 'gang + bin-pack')].map((title, k) => {
+      const mx = 50 + k * 200, g = s('g');
+      V.text(g, mx, 24, title, 'algo-head');
+      const rows = ['A', 'B', 'C'].map((n, r) => {
+        V.text(g, mx - 13, 55 + r * 26, n, 'algo-idx', 'middle');
+        return Array.from({length: 8}, (_, i) => { const q = s('rect', {x: mx + i * 21, y: 40 + r * 26, width: 18, height: 18, rx: 3, class: 'algo-cell'}); g.append(q); return q; });
+      });
+      const count = V.text(g, mx, 140, '', 'algo-strong'), queued = V.text(g, mx, 162, '', 'algo-note');
+      summary.append(g);
+      return {rows, count, queued};
+    });
+    const paint = (state, squaresOf) => {
+      const used = {A: 0, B: 0, C: 0}, spans = [];
+      state.pods.forEach(p => {
+        const row = squaresOf(p.node);
+        for (let i = 0; i < p.gpus; i++) row[used[p.node] + i].setAttribute('class', 'algo-cell ' + (p.running ? 'is-keep' : 'is-change'));
+        spans.push({p, start: used[p.node]});
+        used[p.node] += p.gpus;
+      });
+      return spans;
+    };
+    return frame => {
+      const last = Boolean(frame.done);
+      [grid, queue].forEach(g => g.classList.toggle('is-hidden-layer', last));
+      queue.classList.toggle('is-hidden-layer', last || frame.stage === 5);
+      rings.classList.toggle('is-hidden-layer', frame.stage !== 5);
+      summary.classList.toggle('is-hidden-layer', !last);
+      nodeRows.forEach(row => { row.squares.forEach(q => q.setAttribute('class', 'algo-cell')); row.labels.forEach(l => { l.textContent = ''; }); });
+      const spans = paint(frame, node => nodeRows['ABC'.indexOf(node)].squares), seen = {A: 0, B: 0, C: 0};
+      spans.forEach(({p, start}) => {
+        const label = nodeRows['ABC'.indexOf(p.node)].labels[seen[p.node]++];
+        label.setAttribute('x', x0 + (start + p.gpus / 2) * pitch - 2);
+        label.textContent = p.of > 1 ? `${p.job} · Pod ${p.pod}` : p.job;
+      });
+      items.forEach((c, i) => {
+        const q = frame.queued[i];
+        c.set(q ? `${q.name} · ${q.gpus} ${t('卡', 'GPUs')}` : '', q ? '' : 'is-hidden');
+      });
+      show(warn, Boolean(frame.deadlock));
+      if (frame.rings) ringViews.forEach((view, k) => {
+        const ring = frame.rings[k];
+        view.edges.forEach((l, i) => l.setAttribute('class', 'algo-edge' + (ring.owner[i] !== ring.owner[(i + 1) % 16] ? ' is-bad' : '')));
+        view.hops.forEach((c, i) => show(c, ring.owner[i] !== ring.owner[(i + 1) % 16]));
+        let first = 0;
+        ring.split.forEach(([node, n], j) => {
+          const [x, y] = view.at(first + (n - 1) / 2), dx = x - view.cx, dy = y - 104, len = Math.hypot(dx, dy) || 1;
+          view.letters[j].setAttribute('x', view.cx + dx / len * 66);
+          view.letters[j].setAttribute('y', 104 + dy / len * 66 + 4);
+          view.letters[j].textContent = node;
+          first += n;
+        });
+        view.letters.forEach((l, j) => show(l, j < ring.split.length));
+        view.count.textContent = t(`${ring.cross} 条边走网络`, `${ring.cross} cross the network`);
+      });
+      if (last) frame.all.forEach((state, k) => {
+        minis[k].rows.forEach(row => row.forEach(q => q.setAttribute('class', 'algo-cell')));
+        paint(state, node => minis[k].rows['ABC'.indexOf(node)]);
+        minis[k].count.textContent = t(`${state.working} / ${frame.total} 在干活`, `${state.working} / ${frame.total} working`);
+        minis[k].queued.textContent = `${t('排队', 'queued')}: ${state.queued.map(q => q.name).join(', ')}`;
+      });
     };
   }});
 

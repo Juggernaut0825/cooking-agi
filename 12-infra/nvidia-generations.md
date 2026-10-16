@@ -145,6 +145,8 @@ $P=70\times10^9$ 是参数量，$b$ 是每参数字节数，$M$ 是每卡显存�
 | RTX PRO 6000 工作站版 | 96 GB · 1.792 TB/s | 2 张 · 39.1 ms | 1 张 · 39.1 ms |
 | DGX Spark（GB10） | 128 GB 统一内存 · 0.273 TB/s | 放不下 | 1 台 · 256 ms |
 
+<!-- widget:step-decode-floor -->
+
 最后两行出自 [RTX PRO 6000](https://www.nvidia.com/en-us/products/workstations/professional-desktop-gpus/rtx-pro-6000/) 和 [DGX Spark](https://www.nvidia.com/en-us/products/workstations/dgx-spark/) 产品页。逐行看能读出几件事：
 
 - **在 H100 上，FP8 一张卡和 BF16 两张卡的下限一样**，都是 20.9 ms：字节数减半，相当于带宽翻倍，卡却少用一张。

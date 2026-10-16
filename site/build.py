@@ -622,6 +622,10 @@ FIGURE_LAB = [
     ("step-open-closed-loop", "开环 L2 一样，闭环结局相反", "Same open-loop L2, opposite closed-loop outcomes", "step"),
     ("step-flow-euler-steps", "Euler 步数太少，动作退回均值", "Too few Euler steps fall back to the mean", "step"),
     ("step-vla-latency", "一块 50 × 7 的动作，时间花在哪", "Where the time goes in one 50 × 7 action chunk", "step"),
+    ("step-good-dies", "好 die 比面积掉得更快", "Good dies fall faster than die area grows", "step"),
+    ("step-fusion-traffic", "relu(x @ w + b)：字节和 CPU 时间花在哪", "relu(x @ w + b): where the bytes and the CPU time go", "step"),
+    ("step-decode-floor", "70B 的 decode 下限 = 权重字节 ÷ 总带宽", "70B decode floor = weight bytes ÷ total bandwidth", "step"),
+    ("step-gang-scheduling", "同样 24 张卡，三种放法", "The same 24 GPUs, three placements", "step"),
 ]
 for _name, _zh, _en, _kind in [(name, zh, en, "step") for name, zh, en in ALGO_LAB] + FIGURE_LAB:
     _kicker = 'data-zh="动画" data-en="Step by step"' if _kind == "step" else 'data-zh="图解" data-en="Diagram"'

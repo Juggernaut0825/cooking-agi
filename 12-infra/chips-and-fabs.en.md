@@ -67,6 +67,8 @@ Real defects tend to cluster, so Poisson is pessimistic for large dies. [Murphy 
 | 400 mm² (4 cm²) | 143 | $e^{-0.4}=0.670$ | ~96 | 0.679 |
 | 800 mm² (8 cm²) | 64 | $e^{-0.8}=0.449$ | ~29 | 0.474 |
 
+<!-- widget:step-good-dies -->
+
 An area 8x larger gives 20x fewer good dies: fewer dies per wafer is one factor, more of them bad is another. Shifting the grid in 0.5 mm steps and directly counting full dies that fit gives 657, 151 and 71 on an ideal wafer, slightly more than the formula; real wafers also lose an edge-exclusion ring and scribe lanes, so the counts are lower. The numbers move, but the conclusion that good dies fall faster than area grows does not.
 
 ## Cut it in two and join the halves: the chiplet arithmetic
