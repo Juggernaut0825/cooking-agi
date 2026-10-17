@@ -69,9 +69,9 @@ For each question:
    Score 2: stay on the concept from a different angle. Score 3-4: move on or go harder.
 
 After the last question, run `interview.py report` and summarise: per-topic results, the 2-3
-concepts to review, and the exact note files to read (as GitHub links:
-`https://github.com/tianyi-zhang-02/cooking-agi/blob/main/<note path>`; the Chinese original of
-`x.en.md` is `x.md`).
+concepts to review, and the notes to read, linked to their pages on the site (the `on the site:`
+link that `read` and `reveal` print; the pages have the interactive figures). For a user who writes
+in Chinese, link the Chinese page instead: drop `.en` from the link (`x.en.html` → `x.html`).
 
 ## Rules
 

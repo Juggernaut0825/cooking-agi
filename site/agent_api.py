@@ -144,6 +144,15 @@ def note_questions(text: str):
     return out
 
 
+def site_path(rel: str) -> str:
+    """The page a note becomes on the site (mirrors build.Page): x/y.en.md -> x/y.en.html,
+    x/README.md -> x/index.html."""
+    path = Path(rel)
+    en = path.name.endswith(".en.md")
+    name = path.name[:-6] if en else path.name[:-3]
+    return (path.parent / (("index" if name == "README" else name) + (".en.html" if en else ".html"))).as_posix()
+
+
 def build(out: Path) -> dict:
     """Write the API under out/ (the built site). Returns the counts."""
     nav = tomllib.loads((SITE / "nav.toml").read_text(encoding="utf-8"))
@@ -165,14 +174,16 @@ def build(out: Path) -> dict:
         title = note_title(text, en.stem)
         qs = note_questions(text)
         draft = "Draft, pending review" in text
-        notes[rel] = {"title": title, "source": repo_url + rel, "zh_source": repo_url + src.relative_to(ROOT).as_posix(),
-                      "draft": draft, "text": clean_md(text)}
+        zh_rel = src.relative_to(ROOT).as_posix()
+        url = f"{origin}/{site_path(rel)}"
+        notes[rel] = {"title": title, "url": url, "zh_url": f"{origin}/{site_path(zh_rel)}",
+                      "source": repo_url + rel, "zh_source": repo_url + zh_rel, "draft": draft, "text": clean_md(text)}
         topic["notes"].append({"path": rel, "title": title, "questions": len(qs)})
         topic["questions"] += len(qs)
         for kind, section, q, answer in qs:
             qid = hashlib.sha1(f"{rel}\n{q}".encode()).hexdigest()[:8]
             bank.append({"id": qid, "topic": tid, "kind": kind, "question": q, "answer": answer,
-                         "note": rel, "note_title": title, "section": section, "draft": draft})
+                         "note": rel, "note_title": title, "note_url": url, "section": section, "draft": draft})
     topics = [t for t in topics.values() if t["notes"]]
     counts = {"topics": len(topics), "notes": len(notes), "questions": len(bank),
               "with_answers": sum(1 for b in bank if b["answer"])}

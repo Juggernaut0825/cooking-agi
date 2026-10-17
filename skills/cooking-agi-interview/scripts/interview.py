@@ -169,13 +169,21 @@ def cmd_read(args):
     if not note:
         sys.exit(f"no note at {args.path}  (paths are listed by: interview.py notes TOPIC)")
     draft = "  [draft, pending the site owner's review]" if note.get("draft") else ""
-    print(f"# {path}\n# source: {note['source']}{draft}\n")
+    print(f"# {path}{draft}\n# on the site: {note.get('url', note['source'])}\n# source: {note['source']}\n")
     if not args.section:
         print(note["text"])
         return
     words = [w.lower() for w in args.section]
-    parts = re.split(r"(?m)^(?=#{2,3} )", note["text"])
-    hits = [p for p in parts if p.startswith("#") and all(w in p.splitlines()[0].lower() for w in words)]
+    parts = re.split(r"(?m)^(?=#{2,4} )", note["text"])
+    hits, depth = [], 0
+    for part in parts:
+        level = len(part) - len(part.lstrip("#")) if part.startswith("#") else 0
+        if depth and level and level <= depth:
+            depth = 0  # the matched section has ended
+        if not depth and level and all(w in part.splitlines()[0].lower() for w in words):
+            depth = level  # a matching heading: keep it with its subsections
+        if depth:
+            hits.append(part)
     if hits:
         print("\n".join(h.rstrip() + "\n" for h in hits))
     else:
@@ -221,7 +229,8 @@ def cmd_reveal(args):
     if not q:
         sys.exit(f"no question with id {args.id}")
     draft = "  [draft, pending the site owner's review]" if q.get("draft") else ""
-    print(f"Q: {q['question']}\nnote: {q['note']}  — {q['note_title']}  (section: {q['section']}){draft}\n")
+    print(f"Q: {q['question']}\nnote: {q['note']}  — {q['note_title']}  (section: {q['section']}){draft}")
+    print(f"on the site: {q['note_url']}\n" if q.get("note_url") else "")
     print(q["answer"] or "(no written answer: read the note above and grade against it)")
 
 

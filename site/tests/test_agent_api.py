@@ -2,6 +2,7 @@
 from pathlib import Path
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -94,6 +95,20 @@ class AgentApiTests(unittest.TestCase):
         asked = self.run_script("ask", "-n", "1000").stdout
         self.assertFalse([q["id"] for q in concepts if f"[{q['id']}]" in asked])
         self.assertIn(f"[{concepts[0]['id']}]", self.run_script("ask", "-n", "1000", "--kind", "concept").stdout)
+
+    def test_note_links_match_the_site_pages(self):
+        import build
+        for path, note in self.notes.items():
+            page = build.Page(ROOT / path, None, "en")
+            self.assertEqual(note["url"], f"https://tianyi-zhang-02.github.io/cooking-agi/{page.url}")
+            self.assertEqual(note["zh_url"], note["url"].replace(".en.html", ".html"))
+        self.assertTrue(all(q["note_url"] == self.notes[q["note"]]["url"] for q in self.bank))
+
+    def test_section_keeps_its_subsections(self):
+        nested = re.compile(r"(?m)^## (.+)\n(?:(?!^## ).*\n)*?^### (.+)$")
+        path, match = next((p, m) for p, n in self.notes.items() if (m := nested.search(n["text"])))
+        out = self.run_script("read", path, "--section", *match.group(1).split()[:3]).stdout
+        self.assertIn("### " + match.group(2), out)
 
     def test_read_one_section(self):
         path, note = next((p, n) for p, n in self.notes.items() if "## Self-check" in n["text"])
