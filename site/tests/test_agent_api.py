@@ -110,6 +110,12 @@ class AgentApiTests(unittest.TestCase):
         out = self.run_script("read", path, "--section", *match.group(1).split()[:3]).stdout
         self.assertIn("### " + match.group(2), out)
 
+    def test_section_words_in_the_title_do_not_select_the_whole_note(self):
+        path = "00-foundations/core/decoding.en.md"  # title: "Decoding strategies: temperature, top-k, top-p"
+        out = self.run_script("read", path, "--section", "top-k").stdout
+        self.assertNotIn("# Decoding strategies", out.split("\n", 3)[-1])
+        self.assertLess(len(out), len(self.notes[path]["text"]) / 2)
+
     def test_read_one_section(self):
         path, note = next((p, n) for p, n in self.notes.items() if "## Self-check" in n["text"])
         out = self.run_script("read", path, "--section", "self-check").stdout

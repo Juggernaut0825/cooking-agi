@@ -177,7 +177,7 @@ def cmd_read(args):
     parts = re.split(r"(?m)^(?=#{2,4} )", note["text"])
     hits, depth = [], 0
     for part in parts:
-        level = len(part) - len(part.lstrip("#")) if part.startswith("#") else 0
+        level = len(part) - len(part.lstrip("#")) if part.startswith("##") else 0  # not the title (#)
         if depth and level and level <= depth:
             depth = 0  # the matched section has ended
         if not depth and level and all(w in part.splitlines()[0].lower() for w in words):
@@ -188,7 +188,7 @@ def cmd_read(args):
         print("\n".join(h.rstrip() + "\n" for h in hits))
     else:
         print("no section heading contains: " + " ".join(args.section) + "\nheadings:")
-        print("\n".join("  " + p.splitlines()[0] for p in parts if p.startswith("#")))
+        print("\n".join("  " + p.splitlines()[0] for p in parts if p.startswith("##")))
 
 
 def cmd_ask(args):
