@@ -54,7 +54,7 @@ class LanguageEntryTests(unittest.TestCase):
         for language, target in [('en', 'index.zh.html'), ('zh', 'index.html?lang=en')]:
             page = self.home[language]
             build.build_page(page, [], self.nav['site']['repo'], self.known)
-            output = build.assemble(page, self.sections, [], self.nav, 'test',
+            output = build.assemble(page, self.sections, self.nav, 'test',
                                     (build.SITE / 'template.html').read_text())
             elements = Elements(output).elements
             self.assertIn(('html', {'lang': 'en' if language == 'en' else 'zh-Hans',
@@ -80,7 +80,7 @@ class LanguageEntryTests(unittest.TestCase):
                 r'<!-- repository-only -->(.*?)<!-- /repository-only -->',
                 source, re.S).group(1)
             self.assertIn('badge.svg', repository_block)
-            self.assertIn(f'.github/media/promo.{language}.webp', repository_block)
+            self.assertIn(f'.github/media/hero.{language}.svg', repository_block)
             self.assertIn('https://tianyi-zhang-02.github.io/cooking-agi/', repository_block)
             build.build_page(page, [], self.nav['site']['repo'], self.known)
             self.assertNotIn('repository-only', page.body)
@@ -132,7 +132,7 @@ class LanguageEntryTests(unittest.TestCase):
                              '<a href="index.html?lang=en#start-here">English</a>')
         for page in [self.home['en'], self.home['zh'], build.BY_SRC['learn/README.md']['en']]:
             build.build_page(page, [], self.nav['site']['repo'], self.known)
-            output = build.assemble(page, self.sections, [], self.nav, 'test',
+            output = build.assemble(page, self.sections, self.nav, 'test',
                                     (build.SITE / 'template.html').read_text())
             for tag, attrs in Elements(output).elements:
                 href = attrs.get('href', '')
@@ -162,6 +162,21 @@ class LanguageEntryTests(unittest.TestCase):
             self.assertIn('location.hash', output)
             self.assertIn('href="index.html?lang=en"', output)
 
+    def test_redirect_to_a_home_section_keeps_language_and_drops_old_anchor(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(build, 'OUT', Path(folder)):
+            build.write_redirects({'redirects': {
+                'community/old.en.html': 'index.html#contributors',
+                'community/old.html': 'index.zh.html#contributors',
+            }}, self.known)
+            english = (Path(folder) / 'community/old.en.html').read_text()
+            chinese = (Path(folder) / 'community/old.html').read_text()
+            self.assertIn('url=../index.html?lang=en#contributors', english)
+            self.assertIn('url=../index.zh.html#contributors', chinese)
+            for output in (english, chinese):
+                self.assertNotIn('location.hash', output)
+            with self.assertRaises(ValueError):
+                build.write_redirects({'redirects': {'old.html': 'missing.html#contributors'}}, self.known)
+
     def test_readme_parity_checks_actual_bilingual_content(self):
         english = (build.ROOT / 'README.md').read_text()
         chinese = (build.ROOT / 'README.zh.md').read_text()
@@ -176,7 +191,7 @@ class LanguageEntryTests(unittest.TestCase):
             route_section = re.split(r'(?m)^## ', text)[1]
             self.assertEqual(len(re.findall(r'(?m)^- \*\*\[', route_section)), 5)
             local = {target.split('#')[0] for target in re.findall(r'\]\(([^)]+)\)', text)
-                     if not target.startswith(('https:', 'http:'))}
+                     if not target.startswith(('https:', 'http:', '#'))}
             for target in local:
                 self.assertTrue((build.ROOT / target).is_file(), target)
             routes[language] = {target.replace('.en.md', '.md') for target in local
@@ -221,7 +236,7 @@ class LanguageEntryTests(unittest.TestCase):
     def test_new_home_details_do_not_shift_legacy_chinese_anchors(self):
         page = self.home['zh']
         build.build_page(page, [], self.nav['site']['repo'], self.known)
-        expected = [('_1', '从哪里开始'), ('_2', '内容地图'), ('roadmap', '路线图'), ('_3', '加入我们！'),
+        expected = [('_1', '从哪里开始'), ('_2', '内容一览'), ('roadmap', '路线图'), ('contributors-reviewers', '贡献者与审稿人（Contributors / Reviewers）'), ('_3', '加入我们！'),
                     ('_4', '本地阅读与检查'), ('_5', '为什么整理这些'), ('_6', '更新记录')]
         self.assertEqual([(heading['id'], heading['name']) for heading in page.toc], expected)
         self.assertIn('id="how-to-use-the-notes"', page.body)
