@@ -100,6 +100,8 @@ def clean_md(md: str) -> str:
     md = re.sub(r"<nav\b.*?</nav>", "", md, flags=re.S)
     md = re.sub(r"!\[([^\]]*)\]\([^)]*\)", lambda m: f"[figure: {m.group(1)}]" if m.group(1) else "", md)
     md = re.sub(r"<summary>(.*?)</summary>", lambda m: f"\n**{text_of(m.group(1))}**\n", md, flags=re.S)
+    # card fields written back to back (<small>02 / Engine</small><strong>Schedule work</strong>) keep a separator
+    md = re.sub(r"</(small|strong|span|em|b|i|code)>(?=<(small|strong|span|em|b|i|code)\b)", " — ", md)
     md = re.sub(r"</?(details|div|span|figure|figcaption|section|aside|p|ol|ul|strong|em|b|i|small|code|br)\b[^>]*>",
                 lambda m: {"<li>": "- "}.get(m.group(0), ""), md)
     md = re.sub(r"<li\b[^>]*>", "- ", md).replace("</li>", "")

@@ -116,6 +116,11 @@ class AgentApiTests(unittest.TestCase):
         self.assertNotIn("# Decoding strategies", out.split("\n", 3)[-1])
         self.assertLess(len(out), len(self.notes[path]["text"]) / 2)
 
+    def test_card_fields_do_not_run_together(self):
+        text = self.notes["06-systems/inference-frameworks.en.md"]["text"]
+        self.assertIn("Generation engine — Schedule work and reuse state", text)
+        self.assertNotIn("engineSchedule", text)
+
     def test_read_one_section(self):
         path, note = next((p, n) for p, n in self.notes.items() if "## Self-check" in n["text"])
         out = self.run_script("read", path, "--section", "self-check").stdout
