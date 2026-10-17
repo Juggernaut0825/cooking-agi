@@ -1510,8 +1510,10 @@ def build_page(page: Page, terms, repo: str, known: set):
     if page.lang == "zh":
         body, used = annotate(body, glossary_for_page(page, terms))
     body = rewrite_links(body, page, repo, known)
-    # stable targets for the question bank, whatever the heading slug turned out to be
-    body = re.sub(r'(<h[23] id="[^"]*">)(?=[^<]*(?:面试|[Ii]nterview))', r'<a id="interview"></a>\1', body, count=1)
+    # stable targets for the question bank, whatever the heading slug turned out to be (notes only:
+    # the home page's "interview coach" heading is not a question bank)
+    if page.url not in {"index.html", "index.zh.html"}:
+        body = re.sub(r'(<h[23] id="[^"]*">)(?=[^<]*(?:面试|[Ii]nterview))', r'<a id="interview"></a>\1', body, count=1)
     body = body.replace('<div class="taste-check', '<div id="self-check" class="taste-check', 1)
     page.body = wrap_tables(body)
     page.toc = [{"id": t["id"], "name": strip_tags(t["name"]), "level": t["level"],
