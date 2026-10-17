@@ -132,12 +132,29 @@ def cmd_notes(args):
     print("\nread one with: interview.py read PATH")
 
 
+def find_note(path):
+    """A note by repository path; also accepts links copied from a note (../x.en.md#part),
+    Chinese paths (x.md) and site URLs (.../x.en.html)."""
+    notes = load("notes.json")
+    p = re.sub(r"[#?].*$", "", path.strip()).split("cooking-agi/")[-1]
+    p = re.sub(r"^(\./|\.\./)+", "", p)
+    p = re.sub(r"\.en\.html$|\.html$", ".en.md", p)
+    if p.endswith(".md") and not p.endswith(".en.md"):
+        p = p[:-3] + ".en.md"
+    if p.endswith("/index.en.md"):
+        p = p[:-len("index.en.md")] + "README.en.md"
+    if p in notes:
+        return p, notes[p]
+    ends = [k for k in notes if k.endswith("/" + p) or k == p]
+    return (ends[0], notes[ends[0]]) if len(ends) == 1 else (None, None)
+
+
 def cmd_read(args):
-    note = load("notes.json").get(args.path)
+    path, note = find_note(args.path)
     if not note:
         sys.exit(f"no note at {args.path}  (paths are listed by: interview.py notes TOPIC)")
     draft = "  [draft, pending the site owner's review]" if note.get("draft") else ""
-    print(f"# source: {note['source']}{draft}\n")
+    print(f"# {path}\n# source: {note['source']}{draft}\n")
     print(note["text"])
 
 

@@ -74,6 +74,18 @@ class AgentApiTests(unittest.TestCase):
         self.assertEqual(self.run_script("record", qid, "3", "--gap", "units").returncode, 0)
         self.assertIn("1 answers", self.run_script("report").stdout)
 
+    def test_read_accepts_links_copied_from_notes(self):
+        target = "12-infra/performance.en.md"
+        for given in (target, "../../12-infra/performance.en.md#mfu", "12-infra/performance.md",
+                      "https://tianyi-zhang-02.github.io/cooking-agi/12-infra/performance.html"):
+            result = self.run_script("read", given)
+            self.assertEqual(result.returncode, 0, (given, result.stderr))
+            self.assertIn(target, result.stdout.splitlines()[0])
+
+    def test_meta_records_build_time(self):
+        meta = json.loads((self.out / agent_api.API / "meta.json").read_text(encoding="utf-8"))
+        self.assertRegex(meta["built"], r"^\d{4}-\d\d-\d\dT")
+
     def test_offline_uses_the_cache_or_says_why_not(self):
         offline = "http://127.0.0.1:9/api/v1"
         with tempfile.TemporaryDirectory() as cache:

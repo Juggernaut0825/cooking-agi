@@ -32,6 +32,7 @@ import json
 import re
 import sys
 import tomllib
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -181,7 +182,9 @@ def build(out: Path) -> dict:
     (dest / "topics.json").write_text(dump(topics), encoding="utf-8")
     (dest / "bank.json").write_text(dump(bank), encoding="utf-8")
     (dest / "notes.json").write_text(dump(notes), encoding="utf-8")
-    (dest / "meta.json").write_text(dump({"version": 1, "repo": site["repo"], **counts}), encoding="utf-8")
+    built = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    (dest / "meta.json").write_text(dump({"version": 1, "built": built, "repo": site["repo"], **counts}),
+                                    encoding="utf-8")
     (out / "llms.txt").write_text(llms_txt(site, origin, topics, counts), encoding="utf-8")
     return counts
 
