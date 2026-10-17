@@ -122,12 +122,12 @@ def note_questions(text: str):
         is_interview = bool(re.search(r"interview", h, re.I))
         is_quick = bool(re.search(r"quick (learning|review)", h, re.I))
         for tag, q, answer in top_level_details(body):
-            if not q or re.match(r"(deep dive|deeper|code|show|full|derivation)", q, re.I):
+            if not q or re.match(r"(deep dive|deeper|code|show|full|derivation|worked example)", q, re.I):
                 continue
-            if 'class="interview"' in tag or 'class="qa"' in tag or is_interview:
-                kind = "interview"
-            elif is_quick:
+            if is_quick or q.lower().startswith("quick learning"):  # summary cards ("Match, normalize, aggregate ..."), not questions
                 kind = "concept"
+            elif 'class="interview"' in tag or 'class="qa"' in tag or is_interview:
+                kind = "interview"
             else:
                 continue
             q = re.sub(r"^(Q?\d+[.、:)]|Q:)\s*", "", q)

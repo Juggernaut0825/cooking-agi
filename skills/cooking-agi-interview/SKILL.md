@@ -17,7 +17,7 @@ Paths below are relative to this skill's folder (the folder that holds this file
 | --- | --- |
 | `scripts/interview.py` | Picks questions, reveals reference answers, records scores, reports weak areas, searches and prints notes. Python 3 standard library only. |
 | API `topics.json` | ~60 topics in the site's own order, each with its notes. |
-| API `bank.json` | ~330 questions pulled from the notes; ~200 have a written reference answer. |
+| API `bank.json` | ~320 questions pulled from the notes; ~200 have a written reference answer. Also ~20 `concept` summary cards, which `ask` leaves out unless `--kind concept`. |
 | API `notes.json` | ~310 English notes as plain markdown. The ground truth for grading: print one with `interview.py read PATH`. |
 | `references/rubric.md` | Scoring rubric and feedback format. Read it before grading the first answer. |
 | `references/formats.md` | Session formats (mock loop, drill, rapid-fire, system design, coding, teach-back). |
@@ -53,7 +53,8 @@ For each question:
 3. **Wait** for the user's answer. Never answer for them. If they say "I don't know", give one
    nudge (a smaller sub-question), then move to feedback if they are still stuck.
 4. **Ground yourself before grading.** `interview.py reveal ID` for bank questions, and read
-   the relevant section of the source note (`interview.py read PATH`). Grade against the note,
+   the relevant section of the source note (`interview.py read PATH --section WORDS`, using words
+   from the section name `reveal` prints; a whole note can be 5-10k tokens). Grade against the note,
    not memory; if the note and your own knowledge disagree, say so and cite the note. Notes
    marked as drafts have not been reviewed by the site owner yet: say so when one is your source.
 5. **Follow up** like a real interviewer, 1-2 probes, aimed at the weakest part of the answer:

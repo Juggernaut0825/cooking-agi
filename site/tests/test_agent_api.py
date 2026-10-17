@@ -86,6 +86,43 @@ class AgentApiTests(unittest.TestCase):
         meta = json.loads((self.out / agent_api.API / "meta.json").read_text(encoding="utf-8"))
         self.assertRegex(meta["built"], r"^\d{4}-\d\d-\d\dT")
 
+    def test_summary_cards_are_concepts_not_questions(self):
+        concepts = [q for q in self.bank if q["kind"] == "concept"]
+        self.assertTrue(concepts)
+        self.assertFalse([q["question"] for q in self.bank if q["kind"] == "interview"
+                          and q["question"].lower().startswith(("quick learning", "worked example"))])
+        asked = self.run_script("ask", "-n", "1000").stdout
+        self.assertFalse([q["id"] for q in concepts if f"[{q['id']}]" in asked])
+        self.assertIn(f"[{concepts[0]['id']}]", self.run_script("ask", "-n", "1000", "--kind", "concept").stdout)
+
+    def test_read_one_section(self):
+        path, note = next((p, n) for p, n in self.notes.items() if "## Self-check" in n["text"])
+        out = self.run_script("read", path, "--section", "self-check").stdout
+        self.assertIn("## Self-check", out)
+        self.assertLess(len(out), len(note["text"]))
+        self.assertIn("headings:", self.run_script("read", path, "--section", "zzz-no-such").stdout)
+
+    def test_first_online_run_caches_everything_for_offline_use(self):
+        import functools, http.server, threading
+        class Quiet(http.server.SimpleHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+        handler = functools.partial(Quiet, directory=str(self.out))
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        url = f"http://127.0.0.1:{server.server_port}/{agent_api.API}"
+        with tempfile.TemporaryDirectory() as cache:
+            env = {"COOKING_AGI_CACHE": cache}
+            self.assertEqual(self.run_script("topics", api=url, extra_env=env).returncode, 0)
+            server.shutdown()
+            server.server_close()
+            for f in Path(cache).iterdir():
+                os.utime(f, (0, 0))  # stale: the next run tries the network, fails, falls back
+            for args in (["ask", "-n", "1"], ["search", "attention"]):
+                result = self.run_script(*args, api=url, extra_env=env)
+                self.assertEqual(result.returncode, 0, (args, result.stderr))
+                self.assertIn("offline", result.stderr)
+
     def test_offline_uses_the_cache_or_says_why_not(self):
         offline = "http://127.0.0.1:9/api/v1"
         with tempfile.TemporaryDirectory() as cache:

@@ -3,8 +3,9 @@
 
     interview.py topics                      topics with question counts and your scores
     interview.py notes TOPIC                 the notes behind a topic
-    interview.py read PATH                   one note as plain markdown (PATH as listed by notes/ask)
-    interview.py ask [-t TOPIC ...] [-n N] [--kind interview|self-check] [--weak]
+    interview.py read PATH [--section WORDS] one note as plain markdown (PATH as listed by notes/ask),
+                                             or only the sections whose heading has WORDS
+    interview.py ask [-t TOPIC ...] [-n N] [--kind interview|self-check|concept] [--weak]
                                              pick questions (reference answers stay hidden)
     interview.py reveal ID                   reference answer + source note for one question
     interview.py record ID SCORE [--gap TEXT]
@@ -43,6 +44,27 @@ REFRESH = False
 _loaded = {}
 
 
+FILES = ("topics.json", "bank.json", "notes.json")
+
+
+def fetch_all():
+    """Download every API file together, so the cache is one consistent snapshot and every command
+    works offline after the first run. Returns the error if any download fails (cache untouched)."""
+    got = {}
+    try:
+        for name in FILES:
+            req = urllib.request.Request(f"{API.rstrip('/')}/{name}", headers={"User-Agent": "cooking-agi-interview"})
+            with urllib.request.urlopen(req, timeout=30) as r:
+                got[name] = r.read().decode("utf-8")
+            json.loads(got[name])
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        return e
+    CACHE.mkdir(parents=True, exist_ok=True)
+    for name, data in got.items():
+        (CACHE / name).write_text(data, encoding="utf-8")
+    return None
+
+
 def load(name):
     """topics.json / bank.json / notes.json from the API, cached for a day; stale cache if offline."""
     if name in _loaded:
@@ -51,22 +73,15 @@ def load(name):
         data = (Path(API) / name).read_text(encoding="utf-8")
     else:
         cached = CACHE / name
-        fresh = cached.exists() and time.time() - cached.stat().st_mtime < DAY
-        if fresh and not REFRESH:
-            data = cached.read_text(encoding="utf-8")
-        else:
-            try:
-                req = urllib.request.Request(f"{API.rstrip('/')}/{name}", headers={"User-Agent": "cooking-agi-interview"})
-                with urllib.request.urlopen(req, timeout=30) as r:
-                    data = r.read().decode("utf-8")
-                json.loads(data)
-                CACHE.mkdir(parents=True, exist_ok=True)
-                cached.write_text(data, encoding="utf-8")
-            except (urllib.error.URLError, OSError, ValueError) as e:
-                if not cached.exists():
-                    sys.exit(f"cannot reach {API} ({e}) and there is no cached copy yet")
-                print(f"(offline: using the cached copy of {name})", file=sys.stderr)
-                data = cached.read_text(encoding="utf-8")
+        fresh = all((CACHE / f).exists() and time.time() - (CACHE / f).stat().st_mtime < DAY for f in FILES)
+        if (REFRESH or not fresh) and not _loaded.get("_tried"):
+            _loaded["_tried"] = True  # one download attempt per run, however many files are read
+            error = _loaded["_error"] = fetch_all()
+            if error and cached.exists():
+                print(f"(offline: using the cached notes and questions; {error})", file=sys.stderr)
+        if not cached.exists():
+            sys.exit(f"cannot reach {API} ({_loaded.get('_error')}) and there is no cached copy yet")
+        data = cached.read_text(encoding="utf-8")
     _loaded[name] = json.loads(data)
     return _loaded[name]
 
@@ -155,7 +170,17 @@ def cmd_read(args):
         sys.exit(f"no note at {args.path}  (paths are listed by: interview.py notes TOPIC)")
     draft = "  [draft, pending the site owner's review]" if note.get("draft") else ""
     print(f"# {path}\n# source: {note['source']}{draft}\n")
-    print(note["text"])
+    if not args.section:
+        print(note["text"])
+        return
+    words = [w.lower() for w in args.section]
+    parts = re.split(r"(?m)^(?=#{2,3} )", note["text"])
+    hits = [p for p in parts if p.startswith("#") and all(w in p.splitlines()[0].lower() for w in words)]
+    if hits:
+        print("\n".join(h.rstrip() + "\n" for h in hits))
+    else:
+        print("no section heading contains: " + " ".join(args.section) + "\nheadings:")
+        print("\n".join("  " + p.splitlines()[0] for p in parts if p.startswith("#")))
 
 
 def cmd_ask(args):
@@ -166,7 +191,7 @@ def cmd_ask(args):
     for q in bank:
         if chosen and q["topic"] not in chosen:
             continue
-        if args.kind and q["kind"] != args.kind:
+        if (args.kind and q["kind"] != args.kind) or (not args.kind and q["kind"] == "concept"):
             continue
         a = last.get(q["id"])
         if args.weak and (not a or a["score"] > 2):
@@ -275,11 +300,14 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("topics").set_defaults(fn=cmd_topics)
     s = sub.add_parser("notes"); s.add_argument("topic"); s.set_defaults(fn=cmd_notes)
-    s = sub.add_parser("read"); s.add_argument("path"); s.set_defaults(fn=cmd_read)
+    s = sub.add_parser("read"); s.add_argument("path")
+    s.add_argument("--section", nargs="+", help="only the sections whose heading contains these words")
+    s.set_defaults(fn=cmd_read)
     s = sub.add_parser("ask")
     s.add_argument("-t", "--topic", nargs="*")
     s.add_argument("-n", type=int, default=3)
-    s.add_argument("--kind", choices=["interview", "self-check"])
+    s.add_argument("--kind", choices=["interview", "self-check", "concept"],
+                   help="concept = summary cards for teach-back and rapid review (left out by default)")
     s.add_argument("--weak", action="store_true", help="only questions you last scored 0-2 on")
     s.add_argument("--seed", type=int)
     s.set_defaults(fn=cmd_ask)

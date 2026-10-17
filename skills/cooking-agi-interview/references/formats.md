@@ -46,4 +46,5 @@ for them first.
 ## Teach-back
 
 For learning rather than testing: ask the user to explain a concept as if to a junior engineer,
-then correct and fill gaps from the note. Afterwards ask one check question and record it.
+then correct and fill gaps from the note. `interview.py ask --kind concept -t TOPIC` gives
+the notes' one-paragraph summary cards, a good starting point. Afterwards ask one check question and record it.
