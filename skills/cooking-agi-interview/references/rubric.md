@@ -38,7 +38,7 @@ Score: 2/4 — core idea right, missing the masking detail.
 ✓ What you got right: ...
 ✗ Missing / wrong: ...
 Model answer: (3-6 sentences, the way you would say it in an interview)
-Source: notes/<path> → "<section heading>"
+Source: <note path> → "<section heading>"
 ```
 
 Then either ask the follow-up or move to the next question.

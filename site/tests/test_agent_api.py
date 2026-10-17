@@ -1,0 +1,91 @@
+"""The agent data API (site/agent_api.py) and the interview skill that reads it."""
+from pathlib import Path
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "site"))
+import agent_api
+
+SCRIPT = ROOT / "skills/cooking-agi-interview/scripts/interview.py"
+
+
+class AgentApiTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.out = Path(cls.tmp.name)
+        cls.counts = agent_api.build(cls.out)
+        api = cls.out / agent_api.API
+        cls.topics = json.loads((api / "topics.json").read_text(encoding="utf-8"))
+        cls.bank = json.loads((api / "bank.json").read_text(encoding="utf-8"))
+        cls.notes = json.loads((api / "notes.json").read_text(encoding="utf-8"))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def run_script(self, *args, api=None, extra_env=None):
+        env = dict(os.environ, COOKING_AGI_API=str(api or self.out / agent_api.API),
+                   COOKING_AGI_PROGRESS=str(self.out / "progress.json"), COOKING_AGI_CACHE=str(self.out / "cache"))
+        env.update(extra_env or {})
+        return subprocess.run([sys.executable, "-I", str(SCRIPT), *args], env=env, capture_output=True, text=True)
+
+    def test_counts_and_cross_references(self):
+        self.assertGreater(self.counts["notes"], 200)
+        self.assertGreater(self.counts["questions"], 200)
+        listed = {n["path"] for t in self.topics for n in t["notes"]}
+        self.assertEqual(listed, set(self.notes))
+        self.assertTrue({q["note"] for q in self.bank} <= set(self.notes))
+        self.assertTrue((self.out / "llms.txt").read_text(encoding="utf-8").count("/api/v1/") >= 3)
+
+    def test_only_published_study_notes(self):
+        tops = {path.split("/")[0] for path in self.notes}
+        self.assertTrue(tops.isdisjoint({"career", "community", "templates", "papers", "quant"}), tops)
+        self.assertTrue(all(path.endswith(".en.md") for path in self.notes))
+
+    def test_removed_company_hiring_content_stays_out(self):
+        text = "\n".join(note["text"] for note in self.notes.values())
+        for phrase in ("Business Insider", "1point3acres", "一亩三分地"):
+            self.assertNotIn(phrase, text)
+
+    def test_drafts_are_flagged(self):
+        drafts = [path for path, note in self.notes.items() if note["draft"]]
+        self.assertTrue(drafts)
+        self.assertTrue(all(q["draft"] == self.notes[q["note"]]["draft"] for q in self.bank))
+
+    def test_no_generated_copies_in_the_skill(self):
+        skill = SCRIPT.parent.parent
+        self.assertFalse((skill / "notes").exists())
+        self.assertFalse((skill / "data").exists())
+
+    def test_interview_commands(self):
+        topic = next(t for t in self.topics if t["questions"])
+        for args in (["topics"], ["notes", topic["id"]], ["ask", "-t", topic["id"], "-n", "1", "--seed", "1"],
+                     ["search", "attention"], ["read", topic["notes"][0]["path"]]):
+            result = self.run_script(*args)
+            self.assertEqual(result.returncode, 0, (args, result.stderr))
+        qid = next(q["id"] for q in self.bank if q["topic"] == topic["id"])
+        self.assertIn("Q:", self.run_script("reveal", qid).stdout)
+        self.assertEqual(self.run_script("record", qid, "3", "--gap", "units").returncode, 0)
+        self.assertIn("1 answers", self.run_script("report").stdout)
+
+    def test_offline_uses_the_cache_or_says_why_not(self):
+        offline = "http://127.0.0.1:9/api/v1"
+        with tempfile.TemporaryDirectory() as cache:
+            empty = self.run_script("topics", api=offline, extra_env={"COOKING_AGI_CACHE": cache})
+            self.assertNotEqual(empty.returncode, 0)
+            self.assertIn("no cached copy", empty.stderr)
+            (Path(cache) / "topics.json").write_text(json.dumps(self.topics), encoding="utf-8")
+            os.utime(Path(cache) / "topics.json", (0, 0))  # stale, so a download is attempted first
+            cached = self.run_script("topics", api=offline, extra_env={"COOKING_AGI_CACHE": cache})
+            self.assertEqual(cached.returncode, 0, cached.stderr)
+            self.assertIn("offline", cached.stderr)
+
+
+if __name__ == "__main__":
+    unittest.main()

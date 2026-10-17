@@ -37,6 +37,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 import markdown
+import agent_api
 import collaboration
 import curriculum
 import prep_progress
@@ -2329,6 +2330,8 @@ def main():
 
     (OUT / "search-index.json").write_text(json.dumps(index, ensure_ascii=False),
                                            encoding="utf-8")
+    api = agent_api.build(OUT)
+    print(f"  agent API: {api['topics']} topics, {api['notes']} notes, {api['questions']} questions")
     (OUT / ".nojekyll").write_text("")
     print(f"\nbuilt -> {OUT}")
 

@@ -3,6 +3,7 @@
 
     interview.py topics                      topics with question counts and your scores
     interview.py notes TOPIC                 the notes behind a topic
+    interview.py read PATH                   one note as plain markdown (PATH as listed by notes/ask)
     interview.py ask [-t TOPIC ...] [-n N] [--kind interview|self-check] [--weak]
                                              pick questions (reference answers stay hidden)
     interview.py reveal ID                   reference answer + source note for one question
@@ -13,6 +14,9 @@
     interview.py search WORDS ...            find notes and lines that mention the words
     interview.py reset                       clear the progress log
 
+The notes and questions are read from the site's data API (rebuilt on every deploy) and cached
+for a day in ~/.cooking-agi-interview/cache; with no network the cache is used. --refresh forces a
+download. COOKING_AGI_API may point to another API URL or to a local directory (a built _site/api/v1).
 Progress lives in ~/.cooking-agi-interview/progress.json (override with COOKING_AGI_PROGRESS).
 """
 from __future__ import annotations
@@ -25,16 +29,46 @@ import random
 import re
 import sys
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent.parent
-DATA, NOTES = HERE / "data", HERE / "notes"
-PROGRESS = Path(os.environ.get("COOKING_AGI_PROGRESS", Path.home() / ".cooking-agi-interview" / "progress.json"))
+HOME = Path.home() / ".cooking-agi-interview"
+API = os.environ.get("COOKING_AGI_API", "https://tianyi-zhang-02.github.io/cooking-agi/api/v1")
+CACHE = Path(os.environ.get("COOKING_AGI_CACHE", HOME / "cache"))
+PROGRESS = Path(os.environ.get("COOKING_AGI_PROGRESS", HOME / "progress.json"))
+REPO = "https://github.com/tianyi-zhang-02/cooking-agi/blob/main/"
 DAY = 86400
+REFRESH = False
+_loaded = {}
 
 
 def load(name):
-    return json.loads((DATA / name).read_text(encoding="utf-8"))
+    """topics.json / bank.json / notes.json from the API, cached for a day; stale cache if offline."""
+    if name in _loaded:
+        return _loaded[name]
+    if Path(API).is_dir():
+        data = (Path(API) / name).read_text(encoding="utf-8")
+    else:
+        cached = CACHE / name
+        fresh = cached.exists() and time.time() - cached.stat().st_mtime < DAY
+        if fresh and not REFRESH:
+            data = cached.read_text(encoding="utf-8")
+        else:
+            try:
+                req = urllib.request.Request(f"{API.rstrip('/')}/{name}", headers={"User-Agent": "cooking-agi-interview"})
+                with urllib.request.urlopen(req, timeout=30) as r:
+                    data = r.read().decode("utf-8")
+                json.loads(data)
+                CACHE.mkdir(parents=True, exist_ok=True)
+                cached.write_text(data, encoding="utf-8")
+            except (urllib.error.URLError, OSError, ValueError) as e:
+                if not cached.exists():
+                    sys.exit(f"cannot reach {API} ({e}) and there is no cached copy yet")
+                print(f"(offline: using the cached copy of {name})", file=sys.stderr)
+                data = cached.read_text(encoding="utf-8")
+    _loaded[name] = json.loads(data)
+    return _loaded[name]
 
 
 def progress():
@@ -94,7 +128,17 @@ def cmd_notes(args):
         t = next(t for t in topics if t["id"] == tid)
         print(f"## {t['id']} — {t['title']}")
         for n in t["notes"]:
-            print(f"  notes/{n['path']}  ({n['questions']} qs)  {n['title']}")
+            print(f"  {n['path']}  ({n['questions']} qs)  {n['title']}")
+    print("\nread one with: interview.py read PATH")
+
+
+def cmd_read(args):
+    note = load("notes.json").get(args.path)
+    if not note:
+        sys.exit(f"no note at {args.path}  (paths are listed by: interview.py notes TOPIC)")
+    draft = "  [draft, pending the site owner's review]" if note.get("draft") else ""
+    print(f"# source: {note['source']}{draft}\n")
+    print(note["text"])
 
 
 def cmd_ask(args):
@@ -126,14 +170,16 @@ def cmd_ask(args):
         tag = "has reference answer" if q["answer"] else "grade against the note"
         prev = last.get(q["id"])
         seen = f" | last score {prev['score']}/4" if prev else ""
-        print(f"[{q['id']}] ({q['topic']}, {q['kind']}, {tag}{seen})\n  Q: {q['question']}\n  note: notes/{q['note']}\n")
+        draft = " | draft note" if q.get("draft") else ""
+        print(f"[{q['id']}] ({q['topic']}, {q['kind']}, {tag}{seen}{draft})\n  Q: {q['question']}\n  note: {q['note']}\n")
 
 
 def cmd_reveal(args):
     q = next((q for q in load("bank.json") if q["id"] == args.id), None)
     if not q:
         sys.exit(f"no question with id {args.id}")
-    print(f"Q: {q['question']}\nnote: notes/{q['note']}  — {q['note_title']}  (section: {q['section']})\n")
+    draft = "  [draft, pending the site owner's review]" if q.get("draft") else ""
+    print(f"Q: {q['question']}\nnote: {q['note']}  — {q['note_title']}  (section: {q['section']}){draft}\n")
     print(q["answer"] or "(no written answer: read the note above and grade against it)")
 
 
@@ -183,19 +229,19 @@ def cmd_report(args):
 def cmd_search(args):
     words = [w.lower() for w in args.words]
     hits = []
-    for f in NOTES.rglob("*.md"):
-        lines = f.read_text(encoding="utf-8").splitlines()[1:]  # line 1 is the source comment
+    for f, note in load("notes.json").items():
+        lines = note["text"].splitlines()
         low = [l.lower() for l in lines]
         score = sum(l.count(w) for l in low for w in words)
         if score and all(any(w in l for l in low) for w in words):
             heads = [i for i, l in enumerate(low) if l.startswith("#") and any(w in l for w in words)]
             body = [i for i, l in enumerate(low) if any(w in l for w in words)]
-            hits.append((score + 20 * len(heads), f, lines, (heads + body)[:4]))
+            hits.append((score + 20 * len(heads), f, lines, list(dict.fromkeys(heads + body))[:4]))
     hits.sort(key=lambda h: -h[0])
     for score, f, lines, idx in hits[:args.n]:
-        print(f"{f.relative_to(HERE)}  (score {score})")
+        print(f"{f}  (score {score})")
         for i in idx:
-            print(f"   {i + 2}: {lines[i][:140]}")
+            print(f"   {i + 1}: {lines[i][:140]}")
     if not hits:
         print("no note mentions all of:", " ".join(args.words))
 
@@ -208,9 +254,11 @@ def cmd_reset(args):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--refresh", action="store_true", help="download the notes and questions again")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("topics").set_defaults(fn=cmd_topics)
     s = sub.add_parser("notes"); s.add_argument("topic"); s.set_defaults(fn=cmd_notes)
+    s = sub.add_parser("read"); s.add_argument("path"); s.set_defaults(fn=cmd_read)
     s = sub.add_parser("ask")
     s.add_argument("-t", "--topic", nargs="*")
     s.add_argument("-n", type=int, default=3)
@@ -229,6 +277,8 @@ def main():
     s.set_defaults(fn=cmd_search)
     sub.add_parser("reset").set_defaults(fn=cmd_reset)
     args = ap.parse_args()
+    global REFRESH
+    REFRESH = args.refresh
     args.fn(args)
 
 

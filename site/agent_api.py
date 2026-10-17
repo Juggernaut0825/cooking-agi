@@ -1,20 +1,28 @@
-"""Build the installable interview skill in skills/cooking-agi-interview/ from the notes.
+"""Publish the notes as a small read-only data API for agents, next to the site.
 
-The notes stay the single source. This script copies the English notes into the skill (stripped of
-site-only markup, so an agent can read them as plain markdown) and pulls their questions into a
-question bank:
+`python site/build.py` calls build() after rendering, so the API is regenerated on every deploy and
+nothing generated is committed. The interview skill (skills/cooking-agi-interview) and any other
+agent read it over HTTPS:
+
+    <origin>/api/v1/topics.json   topics in sidebar order, each with its notes
+    <origin>/api/v1/bank.json     questions pulled from the notes, with reference answers
+    <origin>/api/v1/notes.json    every English note as plain markdown, keyed by repository path
+    <origin>/api/v1/meta.json     build time and counts
+    <origin>/llms.txt             a short index for agents
+
+Questions come from the same sources interview/questions.md uses:
 
 - interview Q&A: <details class="interview"> / <details class="qa"> anywhere, plus any top-level
   <details> under an "interview" heading (answer included)
 - quick-learning cards: <details> under a "Quick learning" heading (answer included)
 - self-check items: the <li> of a note's taste-check box (no answer: grade against the note)
 
-Topics follow site/nav.toml, so the skill's topic list matches the site's sidebar.
+Only published notes are included (site/nav.toml); the project's own pages and the career notes,
+which are a personal record rather than study material, are left out.
 
-    python site/skill_bundle.py           # rebuild the skill bundle
-    python site/skill_bundle.py --check   # exit 1 if the committed bundle is stale
+    python site/agent_api.py            # write the API into _site/ (or --out DIR) without a full build
 
-Standard library only: the skill is installed on machines that have nothing but Python.
+Standard library only.
 """
 from __future__ import annotations
 
@@ -22,21 +30,15 @@ import argparse
 import hashlib
 import json
 import re
-import shutil
 import sys
-import tempfile
 import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SITE = ROOT / "site"
-SKILL = ROOT / "skills" / "cooking-agi-interview"
-GENERATED = ("data", "notes")
-REPO_URL = "https://github.com/tianyi-zhang-02/cooking-agi/blob/main/"
-# folders that are about the project itself rather than interview material
-SKIP_DIRS = {"community", "templates", "papers"}
-# note folders the site does not list in its sidebar but that still hold review material
-EXTRA = {"quant": ("Quant review", "量化复习")}
+API = "api/v1"
+# the project's own pages, and career notes (a personal record, not study material)
+SKIP_DIRS = {"community", "templates", "papers", "career"}
 
 
 def published_sources(nav):
@@ -55,18 +57,6 @@ def published_sources(nav):
             if src not in seen:
                 seen.add(src)
                 yield sec, src
-
-
-def extra_sources():
-    """(pseudo nav section, zh source) for EXTRA folders, one topic per subfolder."""
-    for top, (en, zh) in EXTRA.items():
-        for src in sorted((ROOT / top).rglob("*.md")):
-            if src.name.endswith(".en.md"):
-                continue
-            sub = src.parent.relative_to(ROOT).as_posix()
-            name = src.parent.name.replace("-", " ")
-            yield ({"dir": sub, "en": en if sub == top else f"{en}: {name}",
-                    "zh": zh if sub == top else f"{zh}：{name}", "group": top}, src)
 
 
 def topic_id(directory: str) -> str:
@@ -153,59 +143,70 @@ def note_questions(text: str):
     return out
 
 
-def build(dest: Path) -> dict:
+def build(out: Path) -> dict:
+    """Write the API under out/ (the built site). Returns the counts."""
     nav = tomllib.loads((SITE / "nav.toml").read_text(encoding="utf-8"))
-    topics, bank = {}, []
-    for sec, src in [*published_sources(nav), *extra_sources()]:
+    site = nav["site"]
+    repo_url = f"https://github.com/{site['repo']}/blob/main/"
+    origin = site["origin"].rstrip("/")
+    topics, bank, notes = {}, [], {}
+    for sec, src in published_sources(nav):
         en = src.with_name(src.stem + ".en.md")
         rel = en.relative_to(ROOT).as_posix()
         if not en.exists() or rel.split("/")[0] in SKIP_DIRS or "/" not in rel:
+            continue
+        if rel in notes:
             continue
         text = en.read_text(encoding="utf-8")
         tid = topic_id(sec["dir"] if sec["dir"] != "." else "")
         topic = topics.setdefault(tid, {"id": tid, "title": sec["en"], "title_zh": sec["zh"],
                                         "group": sec.get("group", ""), "notes": [], "questions": 0})
-        if rel in {n["path"] for t in topics.values() for n in t["notes"]}:
-            continue
-        out = dest / "notes" / rel
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(f"<!-- source: {REPO_URL}{rel} -->\n" + clean_md(text), encoding="utf-8")
         title = note_title(text, en.stem)
         qs = note_questions(text)
+        draft = "Draft, pending review" in text
+        notes[rel] = {"title": title, "source": repo_url + rel, "zh_source": repo_url + src.relative_to(ROOT).as_posix(),
+                      "draft": draft, "text": clean_md(text)}
         topic["notes"].append({"path": rel, "title": title, "questions": len(qs)})
         topic["questions"] += len(qs)
         for kind, section, q, answer in qs:
             qid = hashlib.sha1(f"{rel}\n{q}".encode()).hexdigest()[:8]
             bank.append({"id": qid, "topic": tid, "kind": kind, "question": q, "answer": answer,
-                         "note": rel, "note_title": title, "section": section})
+                         "note": rel, "note_title": title, "section": section, "draft": draft})
     topics = [t for t in topics.values() if t["notes"]]
-    (dest / "data").mkdir(parents=True, exist_ok=True)
-    dump = lambda obj: json.dumps(obj, ensure_ascii=False, indent=1) + "\n"
-    (dest / "data" / "topics.json").write_text(dump(topics), encoding="utf-8")
-    (dest / "data" / "bank.json").write_text(dump(bank), encoding="utf-8")
-    return {"topics": len(topics), "notes": sum(len(t["notes"]) for t in topics),
-            "questions": len(bank), "with_answers": sum(1 for b in bank if b["answer"])}
+    counts = {"topics": len(topics), "notes": len(notes), "questions": len(bank),
+              "with_answers": sum(1 for b in bank if b["answer"])}
+    dest = out / API
+    dest.mkdir(parents=True, exist_ok=True)
+    dump = lambda obj: json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
+    (dest / "topics.json").write_text(dump(topics), encoding="utf-8")
+    (dest / "bank.json").write_text(dump(bank), encoding="utf-8")
+    (dest / "notes.json").write_text(dump(notes), encoding="utf-8")
+    (dest / "meta.json").write_text(dump({"version": 1, "repo": site["repo"], **counts}), encoding="utf-8")
+    (out / "llms.txt").write_text(llms_txt(site, origin, topics, counts), encoding="utf-8")
+    return counts
 
 
-def tree(d: Path) -> dict:
-    return {p.relative_to(d).as_posix(): p.read_bytes() for g in GENERATED for p in (d / g).rglob("*") if p.is_file()}
+def llms_txt(site: dict, origin: str, topics: list, counts: dict) -> str:
+    lines = [f"# {site['title_en']}", "",
+             f"> {site['tagline_en']}. Bilingual (Chinese and English) study notes on machine learning and "
+             "language models, with worked examples you can recompute.", "",
+             f"Source: https://github.com/{site['repo']}", "",
+             "## Data for agents (read-only JSON, rebuilt on every deploy)", "",
+             f"- [topics]({origin}/{API}/topics.json): {counts['topics']} topics in sidebar order, each with its notes",
+             f"- [question bank]({origin}/{API}/bank.json): {counts['questions']} questions, "
+             f"{counts['with_answers']} with reference answers",
+             f"- [notes]({origin}/{API}/notes.json): {counts['notes']} English notes as plain markdown, keyed by path",
+             f"- Interview coach skill: https://github.com/{site['repo']}/tree/main/skills/cooking-agi-interview",
+             "", "## Topics", ""]
+    lines += [f"- {t['title']} ({len(t['notes'])} notes)" for t in topics]
+    return "\n".join(lines) + "\n"
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--check", action="store_true", help="fail if the committed bundle is stale")
+    ap.add_argument("--out", type=Path, default=ROOT / "_site", help="site directory to write into")
     args = ap.parse_args()
-    if args.check:
-        with tempfile.TemporaryDirectory() as tmp:
-            stats = build(Path(tmp))
-            if tree(Path(tmp)) != tree(SKILL):
-                print("skill bundle is stale: run  python site/skill_bundle.py", file=sys.stderr)
-                return 1
-        print("skill bundle is up to date", stats)
-        return 0
-    for g in GENERATED:
-        shutil.rmtree(SKILL / g, ignore_errors=True)
-    print(build(SKILL))
+    print(build(args.out))
     return 0
 
 
